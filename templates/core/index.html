@@ -1,0 +1,142 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}
+    Painel Geral | ERP Alto Padrão
+{% endblock %}
+
+{% block page_name %}
+    Painel Geral
+{% endblock %}
+
+{% block extra_css %}
+    <link
+        rel="stylesheet"
+        href="{% static 'css/dashboard.css' %}"
+    >
+{% endblock %}
+
+{% block content %}
+    <section class="dashboard-heading">
+        <div class="dashboard-heading__content">
+            <span class="dashboard-heading__eyebrow">
+                Visão geral
+            </span>
+
+            <h1>
+                Bem-vindo,
+                <em>
+                    {{ request.user.first_name|default:request.user.username }}
+                </em>
+            </h1>
+
+            <p>
+                Selecione um módulo para continuar.
+            </p>
+        </div>
+
+        <div class="dashboard-heading__summary">
+            <strong>
+                {{ total_modulos|stringformat:"02d" }}
+            </strong>
+
+            <span>
+                módulos disponíveis
+            </span>
+        </div>
+    </section>
+
+    {% if modulos %}
+        <section class="modules">
+            <header class="modules__header">
+                <div>
+                    <span class="modules__eyebrow">
+                        Ambiente de trabalho
+                    </span>
+
+                    <h2>Módulos do sistema</h2>
+                </div>
+
+                <span class="modules__total">
+                    {{ total_modulos }} acessos
+                </span>
+            </header>
+
+            <div class="module-cards">
+                {% for modulo in modulos %}
+                    {% if modulo.url_name %}
+                        <a
+                            href="{% url modulo.url_name %}"
+                            class="module-card"
+                            data-transition-link
+                        >
+                    {% else %}
+                        <article class="module-card module-card--disabled">
+                    {% endif %}
+
+                        <header class="module-card__header">
+                            <span class="module-card__number">
+                                {{ forloop.counter|stringformat:"02d" }}
+                            </span>
+
+                            <span class="module-card__permission">
+                                {{ modulo.nivel_display }}
+                            </span>
+                        </header>
+
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon">
+                                    <use href="#icon-{{ modulo.icone }}"></use>
+                                </svg>
+                            </span>
+
+                            <div class="module-card__content">
+                                <h3>
+                                    {{ modulo.titulo }}
+                                </h3>
+
+                                <p>
+                                    {{ modulo.descricao }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <footer class="module-card__footer">
+                            {% if modulo.url_name %}
+                                <span>Acessar</span>
+
+                                <svg class="icon">
+                                    <use href="#icon-arrow"></use>
+                                </svg>
+                            {% else %}
+                                <span>Em estruturação</span>
+                            {% endif %}
+                        </footer>
+
+                        <span class="module-card__accent"></span>
+
+                    {% if modulo.url_name %}
+                        </a>
+                    {% else %}
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+    {% else %}
+        <section class="empty-access">
+            <span class="empty-access__icon">
+                <svg class="icon">
+                    <use href="#icon-lock"></use>
+                </svg>
+            </span>
+
+            <h2>Sem módulos liberados</h2>
+
+            <p>
+                Solicite acesso ao administrador.
+            </p>
+        </section>
+    {% endif %}
+{% endblock %}

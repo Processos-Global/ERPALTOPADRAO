@@ -1,0 +1,42 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Variáveis de ambiente e senhas
+.env
+.env.*
+!.env.example
+
+# Banco de dados local
+db.sqlite3
+db.sqlite3-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Django
+media/
+staticfiles/
+*.log
+
+# VS Code
+.vscode/
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store

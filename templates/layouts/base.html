@@ -1,0 +1,314 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#173f43"
+    >
+
+    <title>
+        {% block title %}
+            ERP Alto Padrão
+        {% endblock %}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/base.css' %}"
+    >
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="app-body">
+    {% include "components/icons.html" %}
+
+    <div
+        class="page-transition"
+        data-page-transition
+        aria-hidden="true"
+    >
+        <div class="page-transition__mark">
+            AP
+        </div>
+    </div>
+
+    <div class="app-shell">
+        <aside
+            class="sidebar"
+            id="appSidebar"
+            data-sidebar
+        >
+            <header class="sidebar__header">
+                <a
+                    href="{% url 'core:index' %}"
+                    class="brand"
+                    data-transition-link
+                    aria-label="ERP Alto Padrão"
+                >
+                    <span class="brand__mark">
+                        AP
+                    </span>
+
+                    <span class="brand__content">
+                        <strong>Alto Padrão</strong>
+                        <small>ERP</small>
+                    </span>
+                </a>
+
+                <button
+                    type="button"
+                    class="sidebar__mobile-close"
+                    data-sidebar-mobile-close
+                    aria-label="Fechar menu"
+                >
+                    <svg class="icon">
+                        <use href="#icon-close"></use>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="sidebar__divider"></div>
+
+            <section class="sidebar__project">
+                <span class="sidebar__section-title">
+                    Obra ativa
+                </span>
+
+                <div class="project-card">
+                    <span class="project-card__icon">
+                        <svg class="icon">
+                            <use href="#icon-building"></use>
+                        </svg>
+                    </span>
+
+                    <span class="project-card__content">
+                        <strong>
+                            {{ sidebar_obra_ativa_nome }}
+                        </strong>
+
+                        <small>
+                            {{ sidebar_obra_ativa_status }}
+                        </small>
+                    </span>
+                </div>
+            </section>
+
+            <nav
+                class="sidebar__navigation"
+                aria-label="Navegação principal"
+            >
+                <span class="sidebar__section-title">
+                    Navegação
+                </span>
+
+                <a
+                    href="{{ sidebar_dashboard.url }}"
+                    class="
+                        sidebar-link
+                        {% if sidebar_dashboard.ativo %}
+                            sidebar-link--active
+                        {% endif %}
+                    "
+                    data-transition-link
+                    title="{{ sidebar_dashboard.titulo }}"
+                >
+                    <span class="sidebar-link__icon">
+                        <svg class="icon">
+                            <use href="#icon-{{ sidebar_dashboard.icone }}"></use>
+                        </svg>
+                    </span>
+
+                    <span class="sidebar-link__text">
+                        {{ sidebar_dashboard.titulo }}
+                    </span>
+                </a>
+            </nav>
+
+            <section class="sidebar__modules">
+                <header class="sidebar__modules-header">
+                    <span class="sidebar__section-title">
+                        Módulos
+                    </span>
+
+                    <small>
+                        {{ sidebar_total_modulos }}
+                    </small>
+                </header>
+
+                <div class="sidebar__modules-list">
+                    {% for item in sidebar_modulos %}
+                        {% if item.url %}
+                            <a
+                                href="{{ item.url }}"
+                                class="
+                                    sidebar-link
+                                    {% if item.ativo %}
+                                        sidebar-link--active
+                                    {% endif %}
+                                "
+                                data-transition-link
+                                title="{{ item.titulo }}"
+                            >
+                                <span class="sidebar-link__icon">
+                                    <svg class="icon">
+                                        <use href="#icon-{{ item.icone }}"></use>
+                                    </svg>
+                                </span>
+
+                                <span class="sidebar-link__text">
+                                    {{ item.titulo }}
+                                </span>
+                            </a>
+                        {% else %}
+                            <div
+                                class="sidebar-link sidebar-link--disabled"
+                                title="{{ item.titulo }}"
+                            >
+                                <span class="sidebar-link__icon">
+                                    <svg class="icon">
+                                        <use href="#icon-{{ item.icone }}"></use>
+                                    </svg>
+                                </span>
+
+                                <span class="sidebar-link__text">
+                                    {{ item.titulo }}
+                                </span>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <footer class="sidebar__footer">
+                <div class="user-summary">
+                    <span class="user-summary__avatar">
+                        {% if request.user.first_name %}
+                            {{ request.user.first_name|first|upper }}
+                        {% else %}
+                            {{ request.user.username|first|upper }}
+                        {% endif %}
+                    </span>
+
+                    <span class="user-summary__content">
+                        <strong>
+                            {{ request.user.get_full_name|default:request.user.username }}
+                        </strong>
+
+                        <small>
+                            {% if request.user.is_superuser %}
+                                Administrador
+                            {% else %}
+                                {{ request.user.perfil_erp.get_cargo_display|default:"Usuário" }}
+                            {% endif %}
+                        </small>
+                    </span>
+                </div>
+
+                <form
+                    method="post"
+                    action="{% url 'usuarios:logout' %}"
+                    class="logout-form"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="sidebar-logout"
+                        title="Sair do sistema"
+                    >
+                        <svg class="icon">
+                            <use href="#icon-exit"></use>
+                        </svg>
+
+                        <span class="sidebar-logout__text">
+                            Sair
+                        </span>
+                    </button>
+                </form>
+            </footer>
+        </aside>
+
+        <div
+            class="sidebar-backdrop"
+            data-sidebar-backdrop
+        ></div>
+
+        <section class="app-content">
+            <header class="topbar">
+                <div class="topbar__left">
+                    <button
+                        type="button"
+                        class="topbar__toggle"
+                        data-sidebar-toggle
+                        aria-label="Recolher ou expandir menu"
+                        title="Recolher ou expandir menu"
+                    >
+                        <svg class="icon">
+                            <use href="#icon-menu"></use>
+                        </svg>
+                    </button>
+
+                    <div class="topbar__context">
+                        <strong>
+                            {% block page_name %}
+                                Painel Geral
+                            {% endblock %}
+                        </strong>
+
+                        <span>
+                            ERP Alto Padrão
+                        </span>
+                    </div>
+                </div>
+
+                <div class="topbar__account">
+                    <span class="topbar__status"></span>
+
+                    <span class="topbar__account-text">
+                        {{ request.user.first_name|default:request.user.username }}
+                    </span>
+                </div>
+            </header>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message--{{ message.tags }}">
+                            <span>{{ message }}</span>
+
+                            <button
+                                type="button"
+                                class="message__close"
+                                data-message-close
+                                aria-label="Fechar mensagem"
+                            >
+                                <svg class="icon">
+                                    <use href="#icon-close"></use>
+                                </svg>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <main class="page-content page-reveal">
+                {% block content %}{% endblock %}
+            </main>
+        </section>
+    </div>
+
+    <script src="{% static 'js/app.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

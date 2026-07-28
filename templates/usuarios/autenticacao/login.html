@@ -1,0 +1,237 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#173f43"
+    >
+
+    <title>Entrar | ERP Alto Padrão</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/base.css' %}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/login.css' %}"
+    >
+</head>
+
+<body class="login-body">
+    {% include "components/icons.html" %}
+
+    <div
+        class="page-transition"
+        data-page-transition
+        aria-hidden="true"
+    >
+        <div class="page-transition__mark">
+            <span>AP</span>
+        </div>
+    </div>
+
+    <main class="login">
+        <section class="login-visual">
+            <div class="login-visual__background"></div>
+            <div class="login-visual__grain"></div>
+
+            <header class="login-visual__header">
+                <span class="login-brand">
+                    <span class="login-brand__mark">
+                        AP
+                    </span>
+
+                    <span class="login-brand__name">
+                        Alto Padrão
+                    </span>
+                </span>
+
+                <span class="login-visual__edition">
+                    ERP
+                </span>
+            </header>
+
+            <div class="login-visual__content">
+                <span class="login-visual__eyebrow">
+                    Gestão integrada
+                </span>
+
+                <h1>
+                    Precisão em<br>
+                    cada etapa.
+                </h1>
+
+                <div class="login-visual__footer">
+                    <span>Planejar</span>
+                    <span>Executar</span>
+                    <span>Controlar</span>
+                </div>
+            </div>
+
+            <div class="login-visual__geometry">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </section>
+
+        <section class="login-access">
+            <div class="login-access__top">
+                <span class="login-access__index">
+                    01
+                </span>
+
+                <span class="login-access__caption">
+                    Acesso restrito
+                </span>
+            </div>
+
+            <div class="login-panel">
+                <div class="login-panel__heading">
+                    <span class="section-line"></span>
+
+                    <h2>Entrar</h2>
+
+                    <p>Use suas credenciais.</p>
+                </div>
+
+                {% if messages %}
+                    <div class="login-messages">
+                        {% for message in messages %}
+                            <div class="message message--{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="form-errors">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form
+                    method="post"
+                    class="login-form"
+                    data-login-form
+                >
+                    {% csrf_token %}
+
+                    <input
+                        type="hidden"
+                        name="next"
+                        value="{{ next }}"
+                    >
+
+                    <div class="floating-field">
+                        <input
+                            type="text"
+                            name="username"
+                            id="{{ form.username.id_for_label }}"
+                            value="{{ form.username.value|default:'' }}"
+                            autocomplete="username"
+                            autofocus
+                            required
+                            placeholder=" "
+                        >
+
+                        <label for="{{ form.username.id_for_label }}">
+                            Usuário
+                        </label>
+
+                        <svg class="floating-field__icon icon">
+                            <use href="#icon-user"></use>
+                        </svg>
+
+                        {% for error in form.username.errors %}
+                            <small class="field-error">
+                                {{ error }}
+                            </small>
+                        {% endfor %}
+                    </div>
+
+                    <div class="floating-field">
+                        <input
+                            type="password"
+                            name="password"
+                            id="{{ form.password.id_for_label }}"
+                            autocomplete="current-password"
+                            required
+                            placeholder=" "
+                            data-password-input
+                        >
+
+                        <label for="{{ form.password.id_for_label }}">
+                            Senha
+                        </label>
+
+                        <svg class="floating-field__icon icon">
+                            <use href="#icon-lock"></use>
+                        </svg>
+
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            data-password-toggle
+                            aria-label="Exibir senha"
+                        >
+                            <svg class="icon password-toggle__show">
+                                <use href="#icon-eye"></use>
+                            </svg>
+
+                            <svg class="icon password-toggle__hide">
+                                <use href="#icon-eye-off"></use>
+                            </svg>
+                        </button>
+
+                        {% for error in form.password.errors %}
+                            <small class="field-error">
+                                {{ error }}
+                            </small>
+                        {% endfor %}
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="login-submit"
+                        data-login-submit
+                    >
+                        <span class="login-submit__text">
+                            Acessar
+                        </span>
+
+                        <span class="login-submit__loading">
+                            Validando
+                        </span>
+
+                        <svg class="icon">
+                            <use href="#icon-arrow"></use>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <footer class="login-access__footer">
+                <span>Global Engenharia</span>
+                <span>2026</span>
+            </footer>
+        </section>
+    </main>
+
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>
