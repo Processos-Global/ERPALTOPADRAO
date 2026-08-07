@@ -1,3 +1,4 @@
+
 """
 Configurações do ERP Alto Padrão.
 
@@ -47,6 +48,11 @@ ALLOWED_HOSTS = env.list(
         "127.0.0.1",
         "localhost",
     ],
+)
+
+CSRF_TRUSTED_ORIGINS = env.list(
+    "CSRF_TRUSTED_ORIGINS",
+    default=[],
 )
 
 
@@ -266,19 +272,41 @@ MEDIA_ROOT = BASE_DIR / "media"
 # GOOGLE DRIVE
 # ============================================================
 
+# Caminho do arquivo JSON da conta de serviço.
+# Pode ser absoluto ou relativo ao BASE_DIR.
 GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE = env(
     "GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE",
     default="credenciais/google-drive.json",
 )
 
-GOOGLE_DRIVE_CRONOGRAMA_OBRA_FILE_ID = env(
-    "GOOGLE_DRIVE_CRONOGRAMA_OBRA_FILE_ID",
+# Pasta que contém os arquivos CSV do cronograma de obras.
+# O sistema buscará automaticamente o CSV modificado mais recentemente.
+CRONOGRAMA_ALTO_PADRAO_FOLDER_ID = env(
+    "CRONOGRAMA_ALTO_PADRAO_FOLDER_ID",
     default="",
 )
 
-GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FILE_ID = env(
-    "GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FILE_ID",
+# Pasta reservada para o cronograma de suprimentos.
+GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = env(
+    "GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FOLDER_ID",
     default="",
+)
+
+
+# ============================================================
+# IMPORTAÇÃO DO CRONOGRAMA
+# ============================================================
+
+# Quantidade de linhas lidas por bloco pelo Pandas.
+CRONOGRAMA_TAMANHO_BLOCO_LEITURA = env.int(
+    "CRONOGRAMA_TAMANHO_BLOCO_LEITURA",
+    default=5000,
+)
+
+# Quantidade de registros enviados por lote ao banco.
+CRONOGRAMA_TAMANHO_LOTE_BANCO = env.int(
+    "CRONOGRAMA_TAMANHO_LOTE_BANCO",
+    default=2000,
 )
 
 
@@ -297,6 +325,29 @@ SESSION_COOKIE_AGE = 60 * 60 * 8
 SESSION_SAVE_EVERY_REQUEST = True
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+
+# ============================================================
+# COOKIES
+# ============================================================
+
+SESSION_COOKIE_HTTPONLY = True
+
+CSRF_COOKIE_HTTPONLY = False
+
+SESSION_COOKIE_SAMESITE = "Lax"
+
+CSRF_COOKIE_SAMESITE = "Lax"
+
+SESSION_COOKIE_SECURE = env.bool(
+    "SESSION_COOKIE_SECURE",
+    default=False,
+)
+
+CSRF_COOKIE_SECURE = env.bool(
+    "CSRF_COOKIE_SECURE",
+    default=False,
+)
 
 
 # ============================================================
@@ -329,6 +380,11 @@ EMAIL_BACKEND = env(
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="sistema@erpaltopadrao.local",
+)
+
+EMAIL_TIMEOUT = env.int(
+    "EMAIL_TIMEOUT",
+    default=30,
 )
 
 
@@ -366,7 +422,7 @@ LOGGING = {
         },
         "arquivo": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": LOG_DIR / "erp_alto_padrao.log",
+            "filename": str(LOG_DIR / "erp_alto_padrao.log"),
             "maxBytes": 10 * 1024 * 1024,
             "backupCount": 5,
             "formatter": "detalhado",
@@ -382,6 +438,14 @@ LOGGING = {
     },
     "loggers": {
         "django": {
+            "handlers": [
+                "console",
+                "arquivo",
+            ],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "planejamento": {
             "handlers": [
                 "console",
                 "arquivo",
@@ -406,3 +470,4 @@ LOGGING = {
 # ============================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+

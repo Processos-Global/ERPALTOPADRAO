@@ -1,0 +1,491 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% load l10n %}
+
+{% block title %}Importações do Cronograma{% endblock %}
+
+{% block extra_css %}
+<style>
+    .importacoes-page {
+        padding: 24px;
+    }
+
+    .importacoes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        margin-bottom: 24px;
+    }
+
+    .importacoes-header h1 {
+        margin: 0 0 6px;
+        color: #172033;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .importacoes-header p {
+        margin: 0;
+        color: #667085;
+    }
+
+    .importacoes-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .importacoes-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 10px 16px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .importacoes-btn-primary {
+        background: #175cd3;
+        color: #ffffff;
+    }
+
+    .importacoes-btn-primary:hover {
+        background: #1849a9;
+        color: #ffffff;
+    }
+
+    .importacoes-btn-secondary {
+        background: #ffffff;
+        border-color: #d0d5dd;
+        color: #344054;
+    }
+
+    .importacoes-btn-secondary:hover {
+        background: #f9fafb;
+        color: #101828;
+    }
+
+    .importacoes-alert {
+        padding: 14px 16px;
+        margin-bottom: 18px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .importacoes-alert-success {
+        background: #ecfdf3;
+        border-color: #abefc6;
+        color: #067647;
+    }
+
+    .importacoes-alert-error {
+        background: #fef3f2;
+        border-color: #fecdca;
+        color: #b42318;
+    }
+
+    .importacoes-alert-info {
+        background: #eff8ff;
+        border-color: #b2ddff;
+        color: #175cd3;
+    }
+
+    .importacoes-card {
+        overflow: hidden;
+        background: #ffffff;
+        border: 1px solid #eaecf0;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+    }
+
+    .importacoes-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .importacoes-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .importacoes-table th {
+        padding: 12px;
+        background: #f9fafb;
+        border-bottom: 1px solid #eaecf0;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .importacoes-table td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #eaecf0;
+        color: #344054;
+        vertical-align: middle;
+    }
+
+    .importacoes-table tbody tr:hover {
+        background: #fcfcfd;
+    }
+
+    .importacoes-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .importacoes-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .importacoes-badge-success {
+        background: #dcfae6;
+        color: #067647;
+    }
+
+    .importacoes-badge-danger {
+        background: #fee4e2;
+        color: #b42318;
+    }
+
+    .importacoes-badge-warning {
+        background: #fef0c7;
+        color: #b54708;
+    }
+
+    .importacoes-badge-info {
+        background: #d1e9ff;
+        color: #175cd3;
+    }
+
+    .importacoes-badge-neutral {
+        background: #f2f4f7;
+        color: #475467;
+    }
+
+    .importacoes-file-name {
+        max-width: 290px;
+        color: #101828;
+        font-weight: 600;
+        word-break: break-word;
+    }
+
+    .importacoes-message {
+        max-width: 350px;
+        color: #667085;
+        line-height: 1.45;
+        word-break: break-word;
+    }
+
+    .importacoes-active {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #067647;
+        font-weight: 700;
+    }
+
+    .importacoes-active::before {
+        width: 8px;
+        height: 8px;
+        background: #12b76a;
+        border-radius: 50%;
+        content: "";
+    }
+
+    .importacoes-inactive {
+        color: #98a2b3;
+    }
+
+    .importacoes-empty {
+        padding: 54px 20px;
+        text-align: center;
+    }
+
+    .importacoes-empty h2 {
+        margin: 0 0 8px;
+        color: #101828;
+        font-size: 20px;
+    }
+
+    .importacoes-empty p {
+        max-width: 580px;
+        margin: 0 auto 20px;
+        color: #667085;
+        line-height: 1.6;
+    }
+
+    @media (max-width: 800px) {
+        .importacoes-page {
+            padding: 16px;
+        }
+
+        .importacoes-header {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="importacoes-page">
+
+    <div class="importacoes-header">
+        <div>
+            <h1>Importações do Cronograma</h1>
+            <p>
+                Histórico das atualizações realizadas a partir do Google Drive.
+            </p>
+        </div>
+
+        <div class="importacoes-actions">
+            <a
+                href="{% url 'planejamento:painel_cronograma' %}"
+                class="importacoes-btn importacoes-btn-secondary"
+            >
+                Voltar ao painel
+            </a>
+
+            {% if request.user.is_superuser %}
+                <form
+                    method="post"
+                    action="{% url 'planejamento:atualizar_cronograma' %}"
+                    id="formAtualizarHistorico"
+                >
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="importacoes-btn importacoes-btn-primary"
+                        id="btnAtualizarHistorico"
+                    >
+                        Buscar CSV mais recente
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div
+                class="
+                    importacoes-alert
+                    {% if message.tags == 'success' %}
+                        importacoes-alert-success
+                    {% elif message.tags == 'error' %}
+                        importacoes-alert-error
+                    {% else %}
+                        importacoes-alert-info
+                    {% endif %}
+                "
+            >
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="importacoes-card">
+        {% if importacoes %}
+            <div class="importacoes-table-wrapper">
+                <table class="importacoes-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Arquivo</th>
+                            <th>Status</th>
+                            <th>Base ativa</th>
+                            <th>Modificado no Drive</th>
+                            <th>Linhas</th>
+                            <th>Obras</th>
+                            <th>Semanas</th>
+                            <th>Executado por</th>
+                            <th>Início</th>
+                            <th>Finalização</th>
+                            <th>Mensagem</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for importacao in importacoes %}
+                            <tr>
+                                <td>{{ importacao.id }}</td>
+
+                                <td>
+                                    <div class="importacoes-file-name">
+                                        {{ importacao.nome_arquivo|default:"-" }}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if importacao.status == "CONCLUIDA" %}
+                                        <span
+                                            class="importacoes-badge importacoes-badge-success"
+                                        >
+                                            Concluída
+                                        </span>
+                                    {% elif importacao.status == "FALHOU" %}
+                                        <span
+                                            class="importacoes-badge importacoes-badge-danger"
+                                        >
+                                            Falhou
+                                        </span>
+                                    {% elif importacao.status == "VALIDANDO" %}
+                                        <span
+                                            class="importacoes-badge importacoes-badge-warning"
+                                        >
+                                            Validando
+                                        </span>
+                                    {% elif importacao.status == "PROCESSANDO" %}
+                                        <span
+                                            class="importacoes-badge importacoes-badge-info"
+                                        >
+                                            Processando
+                                        </span>
+                                    {% else %}
+                                        <span
+                                            class="importacoes-badge importacoes-badge-neutral"
+                                        >
+                                            {{ importacao.get_status_display }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if importacao.ativa %}
+                                        <span class="importacoes-active">
+                                            Ativa
+                                        </span>
+                                    {% else %}
+                                        <span class="importacoes-inactive">
+                                            Não
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if importacao.data_modificacao_drive %}
+                                        {{ importacao.data_modificacao_drive|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ importacao.linhas_importadas|default:0 }}
+                                </td>
+
+                                <td>
+                                    {{ importacao.projetos_identificados|default:0 }}
+                                </td>
+
+                                <td>
+                                    {{ importacao.semanas_identificadas|default:0 }}
+                                </td>
+
+                                <td>
+                                    {% if importacao.executado_por %}
+                                        {{ importacao.executado_por.get_full_name|default:importacao.executado_por.username }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if importacao.iniciou_em %}
+                                        {{ importacao.iniciou_em|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if importacao.finalizou_em %}
+                                        {{ importacao.finalizou_em|date:"d/m/Y H:i" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="importacoes-message">
+                                        {% if importacao.status == "FALHOU" and importacao.erro_detalhado %}
+                                            {{ importacao.erro_detalhado }}
+                                        {% else %}
+                                            {{ importacao.mensagem|default:"-" }}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="importacoes-empty">
+                <h2>Nenhuma importação registrada</h2>
+
+                <p>
+                    O cronograma ainda não foi importado do Google Drive.
+                    Execute a primeira atualização para criar a base ativa.
+                </p>
+
+                {% if request.user.is_superuser %}
+                    <form
+                        method="post"
+                        action="{% url 'planejamento:atualizar_cronograma' %}"
+                    >
+                        {% csrf_token %}
+
+                        <button
+                            type="submit"
+                            class="importacoes-btn importacoes-btn-primary"
+                        >
+                            Executar primeira importação
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const formulario = document.getElementById(
+            "formAtualizarHistorico"
+        );
+
+        const botao = document.getElementById(
+            "btnAtualizarHistorico"
+        );
+
+        if (formulario && botao) {
+            formulario.addEventListener("submit", function () {
+                botao.disabled = true;
+                botao.textContent = "Atualizando...";
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -40,3 +40,6 @@ Desktop.ini
 
 # macOS
 .DS_Store
+
+credenciais/
+*.json

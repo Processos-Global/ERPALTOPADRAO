@@ -1,0 +1,1765 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% load l10n %}
+{% load planejamento_extras %}
+
+{% block title %}Cronograma de Obras{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --pc-bg: #f5f7fb;
+    --pc-card: #ffffff;
+    --pc-border: #e4e7ec;
+    --pc-text: #101828;
+    --pc-muted: #667085;
+    --pc-primary: #175cd3;
+    --pc-primary-soft: #eff8ff;
+    --pc-danger: #b42318;
+    --pc-danger-soft: #fef3f2;
+    --pc-warning: #b54708;
+    --pc-warning-soft: #fffaeb;
+    --pc-success: #067647;
+    --pc-success-soft: #ecfdf3;
+    --pc-info: #026aa2;
+    --pc-info-soft: #f0f9ff;
+    --pc-shadow: 0 4px 18px rgba(16, 24, 40, .06);
+}
+
+.pc-page {
+    max-width: 1760px;
+    margin: 0 auto;
+    padding: 20px;
+    color: var(--pc-text);
+}
+
+.pc-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.pc-title-wrap h1 {
+    margin: 0;
+    font-size: 25px;
+    font-weight: 750;
+    letter-spacing: -.02em;
+}
+
+.pc-title-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 7px;
+    color: var(--pc-muted);
+    font-size: 13px;
+}
+
+.pc-dot { color: #d0d5dd; }
+
+.pc-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.pc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 13px;
+    border-radius: 8px;
+    border: 1px solid var(--pc-border);
+    background: #fff;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.pc-btn:hover { background: #f9fafb; color: var(--pc-text); }
+.pc-btn-primary { background: var(--pc-primary); border-color: var(--pc-primary); color: #fff; }
+.pc-btn-primary:hover { background: #1849a9; color: #fff; }
+
+.pc-filterbar {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.7fr) minmax(150px, .6fr) auto auto;
+    gap: 10px;
+    align-items: end;
+    padding: 12px;
+    margin-bottom: 14px;
+    background: var(--pc-card);
+    border: 1px solid var(--pc-border);
+    border-radius: 12px;
+    box-shadow: var(--pc-shadow);
+}
+
+.pc-field label {
+    display: block;
+    margin-bottom: 5px;
+    color: #475467;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.pc-control {
+    width: 100%;
+    height: 38px;
+    padding: 7px 10px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--pc-text);
+    font-size: 13px;
+    outline: none;
+}
+
+.pc-control:focus {
+    border-color: #84adff;
+    box-shadow: 0 0 0 3px rgba(132,173,255,.18);
+}
+
+.pc-import-pill {
+    align-self: center;
+    min-width: 0;
+    padding: 6px 10px;
+    color: var(--pc-muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.pc-import-pill strong {
+    display: block;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #344054;
+    font-size: 12px;
+}
+
+.pc-alert {
+    padding: 11px 13px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 13px;
+}
+.pc-alert-success { background: var(--pc-success-soft); border-color: #abefc6; color: var(--pc-success); }
+.pc-alert-danger { background: var(--pc-danger-soft); border-color: #fecdca; color: var(--pc-danger); }
+.pc-alert-warning { background: var(--pc-warning-soft); border-color: #fedf89; color: var(--pc-warning); }
+.pc-alert-info { background: var(--pc-primary-soft); border-color: #b2ddff; color: var(--pc-primary); }
+
+.pc-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(330px, .75fr);
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.pc-card {
+    background: var(--pc-card);
+    border: 1px solid var(--pc-border);
+    border-radius: 12px;
+    box-shadow: var(--pc-shadow);
+}
+
+.pc-progress-card { padding: 17px; }
+
+.pc-progress-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 15px;
+}
+
+.pc-progress-title {
+    color: var(--pc-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.pc-progress-value {
+    margin-top: 4px;
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 760;
+    letter-spacing: -.035em;
+}
+
+.pc-status-badge,
+.pc-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.pc-badge-danger, .pc-badge.atrasada, .pc-badge.atencao { background: #fee4e2; color: var(--pc-danger); }
+.pc-badge-warning, .pc-badge.para-iniciar, .pc-badge.para-concluir { background: #fef0c7; color: var(--pc-warning); }
+.pc-badge-success, .pc-badge.concluida, .pc-badge.concluido { background: #dcfae6; color: var(--pc-success); }
+.pc-badge-info, .pc-badge.andamento { background: #d1e9ff; color: var(--pc-primary); }
+.pc-badge-neutral, .pc-badge.planejada, .pc-badge.nao-iniciado { background: #f2f4f7; color: #475467; }
+
+.pc-progress-track {
+    position: relative;
+    height: 10px;
+    margin: 8px 0 7px;
+    overflow: hidden;
+    background: #eef2f6;
+    border-radius: 999px;
+}
+.pc-progress-plan,
+.pc-progress-real {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    border-radius: 999px;
+}
+.pc-progress-plan { background: #c7d7fe; }
+.pc-progress-real { background: var(--pc-primary); height: 6px; top: 2px; }
+
+.pc-progress-legend {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--pc-muted);
+    font-size: 11px;
+}
+
+.pc-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(110px, 1fr));
+    gap: 9px;
+    margin-top: 15px;
+}
+
+.pc-mini-kpi {
+    padding: 11px 12px;
+    background: #f8fafc;
+    border: 1px solid #eef2f6;
+    border-radius: 9px;
+}
+.pc-mini-kpi span { display: block; color: var(--pc-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.pc-mini-kpi strong { display: block; margin-top: 5px; color: var(--pc-text); font-size: 17px; }
+.pc-mini-kpi.danger strong { color: var(--pc-danger); }
+.pc-mini-kpi.success strong { color: var(--pc-success); }
+
+.pc-health-card { padding: 16px; }
+.pc-health-card h3 { margin: 0 0 12px; font-size: 14px; }
+.pc-health-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+.pc-health-item { padding: 10px; border-radius: 9px; background: #f8fafc; }
+.pc-health-item span { display:block; color:var(--pc-muted); font-size:10px; font-weight:700; text-transform:uppercase; }
+.pc-health-item strong { display:block; margin-top:4px; font-size:17px; }
+.pc-health-meta { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--pc-border); color: var(--pc-muted); font-size: 11px; line-height: 1.55; }
+
+.pc-main-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(340px, .75fr);
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.pc-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--pc-border);
+}
+.pc-card-head h2, .pc-card-head h3 { margin: 0; font-size: 14px; }
+.pc-card-head p { margin: 3px 0 0; color: var(--pc-muted); font-size: 11px; }
+.pc-card-body { padding: 14px 15px; }
+
+.pc-chart-switch { display:flex; gap:5px; padding:4px; background:#f2f4f7; border-radius:8px; }
+.pc-chart-switch button { border:0; border-radius:6px; padding:6px 9px; background:transparent; color:#667085; font-size:11px; font-weight:700; cursor:pointer; }
+.pc-chart-switch button.is-active { background:#fff; color:var(--pc-primary); box-shadow:0 1px 3px rgba(16,24,40,.08); }
+.pc-chart-box { height: 310px; }
+.pc-chart-panel[hidden] { display:none; }
+
+.pc-risk-list { display:grid; gap:8px; max-height:310px; overflow:auto; padding-right:2px; }
+.pc-risk-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 10px 11px;
+    border: 1px solid #fecdca;
+    border-left: 4px solid #f04438;
+    border-radius: 9px;
+    background: #fffafa;
+}
+.pc-risk-item strong { display:block; color:#344054; font-size:12px; line-height:1.35; }
+.pc-risk-item small { display:block; margin-top:3px; color:var(--pc-muted); font-size:10px; line-height:1.4; }
+.pc-risk-empty { padding:28px 10px; text-align:center; color:var(--pc-muted); font-size:12px; }
+
+.pc-week-card { margin-bottom: 14px; overflow:hidden; }
+.pc-week-summary { display:flex; gap:7px; flex-wrap:wrap; }
+.pc-summary-chip { display:inline-flex; gap:5px; align-items:center; padding:5px 8px; border-radius:999px; background:#f2f4f7; color:#475467; font-size:10px; font-weight:700; }
+.pc-summary-chip strong { color:var(--pc-text); }
+.pc-summary-chip.danger { background:#fef3f2; color:var(--pc-danger); }
+.pc-summary-chip.warning { background:#fffaeb; color:var(--pc-warning); }
+.pc-summary-chip.success { background:#ecfdf3; color:var(--pc-success); }
+
+.pc-table-tools { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pc-search { width:260px; max-width:100%; height:34px; padding:6px 9px; border:1px solid #d0d5dd; border-radius:7px; font-size:12px; outline:none; }
+.pc-search:focus { border-color:#84adff; box-shadow:0 0 0 3px rgba(132,173,255,.16); }
+.pc-count { padding:5px 8px; border-radius:999px; background:#f2f4f7; color:#475467; font-size:10px; font-weight:700; }
+
+.pc-table-wrap { max-height: 470px; overflow:auto; }
+.pc-table { width:100%; border-collapse:collapse; font-size:12px; }
+.pc-table th { position:sticky; top:0; z-index:3; padding:9px 10px; background:#f8fafc; border-bottom:1px solid var(--pc-border); color:#667085; font-size:10px; text-align:left; text-transform:uppercase; white-space:nowrap; }
+.pc-table td { padding:10px; border-bottom:1px solid #eef2f6; color:#344054; vertical-align:middle; }
+.pc-table tbody tr:hover { background:#f9fbff; }
+.pc-main-cell { display:block; color:var(--pc-text); font-weight:700; line-height:1.35; }
+.pc-sub-cell { display:block; margin-top:2px; color:var(--pc-muted); font-size:10px; }
+.pc-date { white-space:nowrap; font-size:11px; }
+.pc-percent { min-width:94px; }
+.pc-percent-line { display:flex; justify-content:space-between; gap:6px; margin-bottom:4px; font-size:10px; }
+.pc-bar { height:5px; overflow:hidden; background:#eaecf0; border-radius:999px; }
+.pc-bar span { display:block; height:100%; background:var(--pc-primary); border-radius:999px; }
+.pc-bar.success span { background:#17b26a; }
+.pc-reprog { color:var(--pc-warning); font-size:10px; font-weight:700; }
+.pc-empty { padding:34px 15px; text-align:center; color:var(--pc-muted); font-size:12px; }
+.pc-filter-empty { display:none; padding:24px; text-align:center; color:var(--pc-muted); font-size:12px; }
+.pc-filter-empty.is-visible { display:block; }
+tr.is-filtered-out { display:none; }
+
+.pc-detail-card { overflow:hidden; }
+.pc-tabs { display:flex; gap:3px; overflow-x:auto; padding:7px; border-bottom:1px solid var(--pc-border); background:#f8fafc; }
+.pc-tab-btn { flex:0 0 auto; border:0; border-radius:7px; padding:8px 11px; background:transparent; color:#667085; font-size:11px; font-weight:750; cursor:pointer; }
+.pc-tab-btn.is-active { background:#fff; color:var(--pc-primary); box-shadow:0 1px 4px rgba(16,24,40,.09); }
+.pc-tab-panel { padding:14px; }
+.pc-tab-panel[hidden] { display:none; }
+.pc-panel-tools { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.pc-panel-tools h3 { margin:0; font-size:14px; }
+.pc-panel-tools p { margin:3px 0 0; color:var(--pc-muted); font-size:10px; }
+
+.pc-accordion-list { display:grid; gap:7px; }
+.pc-accordion { border:1px solid var(--pc-border); border-radius:9px; background:#fff; overflow:hidden; }
+.pc-accordion summary { position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 36px 11px 12px; list-style:none; cursor:pointer; }
+.pc-accordion summary::-webkit-details-marker { display:none; }
+.pc-accordion summary::after { content:'+'; position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#667085; font-size:17px; }
+.pc-accordion[open] summary::after { content:'−'; color:var(--pc-primary); }
+.pc-accordion[open] summary { background:#f8fbff; border-bottom:1px solid var(--pc-border); }
+.pc-acc-title { min-width:0; }
+.pc-acc-title strong { display:block; font-size:12px; }
+.pc-acc-title small { display:block; margin-top:2px; color:var(--pc-muted); font-size:10px; }
+.pc-acc-metrics { display:flex; gap:9px; align-items:center; flex-wrap:wrap; justify-content:flex-end; color:#667085; font-size:10px; }
+.pc-acc-metrics strong { color:#344054; }
+.pc-acc-body { padding:11px; }
+.pc-local-block { margin-bottom:10px; border:1px solid #eef2f6; border-radius:8px; overflow:hidden; }
+.pc-local-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; background:#f8fafc; }
+.pc-local-head strong { font-size:11px; }
+.pc-local-head span { color:var(--pc-muted); font-size:10px; }
+
+.pc-check-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.pc-check-card { border:1px solid var(--pc-border); border-radius:10px; overflow:hidden; }
+.pc-check-head { padding:11px 12px; background:#f8fafc; border-bottom:1px solid var(--pc-border); }
+.pc-check-head h4 { margin:0; font-size:12px; }
+.pc-check-head p { margin:3px 0 0; color:var(--pc-muted); font-size:10px; }
+.pc-check-body { padding:10px; }
+
+.pc-info-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; }
+.pc-info-item { padding:11px; border:1px solid #eef2f6; border-radius:8px; background:#f8fafc; }
+.pc-info-item span { display:block; color:var(--pc-muted); font-size:10px; text-transform:uppercase; font-weight:700; }
+.pc-info-item strong { display:block; margin-top:4px; color:#344054; font-size:12px; }
+
+.pc-footer-meta { margin-top:10px; color:#98a2b3; font-size:10px; }
+
+.pc-supply-summary {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:9px;
+    margin-bottom:12px;
+}
+.pc-supply-kpi {
+    padding:12px;
+    border:1px solid #e4e7ec;
+    border-radius:9px;
+    background:#f8fafc;
+}
+.pc-supply-kpi span {
+    display:block;
+    color:var(--pc-muted);
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+}
+.pc-supply-kpi strong {
+    display:block;
+    margin-top:5px;
+    font-size:17px;
+    color:#344054;
+}
+.pc-supply-kpi.total {
+    background:#f0f7ff;
+    border-color:#b2ddff;
+}
+.pc-supply-kpi.total strong { color:var(--pc-primary); }
+
+.pc-discipline-budget {
+    margin-bottom:12px;
+    padding:11px;
+    border:1px solid #d1e9ff;
+    border-radius:9px;
+    background:#f8fbff;
+}
+.pc-discipline-budget-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+}
+.pc-discipline-budget-head h4 {
+    margin:0;
+    font-size:11px;
+    text-transform:uppercase;
+    color:#475467;
+    letter-spacing:.03em;
+}
+.pc-discipline-budget-head strong {
+    color:var(--pc-primary);
+    font-size:14px;
+}
+.pc-supply-activities { display:grid; gap:7px; }
+.pc-supply-activity {
+    border:1px solid #dbe7f5;
+    border-radius:8px;
+    background:#fff;
+    overflow:hidden;
+}
+.pc-supply-activity > summary {
+    background:#fff;
+    padding:10px 36px 10px 11px;
+}
+.pc-supply-activity[open] > summary {
+    background:#f8fbff;
+}
+.pc-supply-toolbar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:9px;
+}
+.pc-supply-toolbar-meta {
+    color:var(--pc-muted);
+    font-size:10px;
+}
+.pc-btn-sm {
+    min-height:30px;
+    padding:5px 9px;
+    font-size:11px;
+    border-radius:7px;
+}
+.pc-btn-danger {
+    color:var(--pc-danger);
+    border-color:#fecdca;
+    background:#fff;
+}
+.pc-btn-danger:hover { background:var(--pc-danger-soft); color:var(--pc-danger); }
+.pc-btn-link {
+    border:0;
+    background:transparent;
+    color:var(--pc-primary);
+    padding:3px 5px;
+    min-height:auto;
+}
+.pc-btn-link:hover { background:var(--pc-primary-soft); }
+
+.pc-supply-table td:last-child,
+.pc-supply-table th:last-child { text-align:right; }
+.pc-supply-actions {
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:4px;
+    white-space:nowrap;
+}
+.pc-supply-empty {
+    padding:15px;
+    border:1px dashed #d0d5dd;
+    border-radius:8px;
+    text-align:center;
+    color:var(--pc-muted);
+    font-size:11px;
+    background:#fcfcfd;
+}
+.pc-budget-value {
+    color:var(--pc-primary);
+    font-weight:750;
+    white-space:nowrap;
+}
+.pc-date-warning { color:var(--pc-warning); font-weight:700; }
+
+.pc-modal-backdrop {
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(16,24,40,.58);
+}
+.pc-modal-backdrop.is-open { display:flex; }
+.pc-modal {
+    width:min(680px,100%);
+    max-height:90vh;
+    overflow:auto;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 24px 60px rgba(16,24,40,.22);
+}
+.pc-modal-lg { width:min(980px,100%); }
+.pc-modal-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:15px 17px;
+    border-bottom:1px solid var(--pc-border);
+}
+.pc-modal-head h3 { margin:0; font-size:15px; }
+.pc-modal-head p { margin:4px 0 0; color:var(--pc-muted); font-size:11px; }
+.pc-modal-close {
+    width:32px;
+    height:32px;
+    border:0;
+    border-radius:7px;
+    background:#f2f4f7;
+    color:#475467;
+    font-size:20px;
+    cursor:pointer;
+}
+.pc-modal-body { padding:16px 17px; }
+.pc-modal-footer {
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    padding:12px 17px;
+    border-top:1px solid var(--pc-border);
+    background:#fcfcfd;
+}
+.pc-form-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:11px;
+}
+.pc-form-field.full { grid-column:1 / -1; }
+.pc-form-field label {
+    display:block;
+    margin-bottom:5px;
+    color:#475467;
+    font-size:11px;
+    font-weight:700;
+}
+.pc-form-field input,
+.pc-form-field select,
+.pc-form-field textarea {
+    width:100%;
+    min-height:38px;
+    padding:8px 10px;
+    border:1px solid #d0d5dd;
+    border-radius:8px;
+    background:#fff;
+    color:#101828;
+    font-size:12px;
+    outline:none;
+}
+.pc-form-field textarea { min-height:82px; resize:vertical; }
+.pc-form-field input:focus,
+.pc-form-field select:focus,
+.pc-form-field textarea:focus {
+    border-color:#84adff;
+    box-shadow:0 0 0 3px rgba(132,173,255,.16);
+}
+.pc-form-help { margin-top:4px; color:var(--pc-muted); font-size:10px; }
+.pc-inline-create {
+    grid-column:1 / -1;
+    padding:11px;
+    border:1px dashed #b2ddff;
+    border-radius:8px;
+    background:#f8fbff;
+}
+.pc-inline-create[hidden] { display:none; }
+.pc-catalog-create {
+    margin-bottom:14px;
+    padding:12px;
+    border:1px solid #d1e9ff;
+    border-radius:9px;
+    background:#f8fbff;
+}
+.pc-catalog-list {
+    display:grid;
+    gap:7px;
+}
+.pc-catalog-item {
+    padding:10px;
+    border:1px solid #e4e7ec;
+    border-radius:8px;
+    background:#fff;
+}
+.pc-catalog-row {
+    display:grid;
+    grid-template-columns:minmax(180px,1.5fr) minmax(130px,.7fr) minmax(190px,1.2fr) auto;
+    gap:8px;
+    align-items:end;
+}
+.pc-catalog-actions {
+    display:flex;
+    gap:5px;
+    align-items:center;
+}
+
+body.pc-modal-open { overflow:hidden; }
+
+
+@media (max-width: 1180px) {
+    .pc-overview, .pc-main-grid { grid-template-columns:1fr; }
+    .pc-kpi-strip { grid-template-columns:repeat(3,1fr); }
+    .pc-health-grid { grid-template-columns:repeat(4,1fr); }
+    .pc-supply-summary { grid-template-columns:repeat(2,1fr); }
+    .pc-catalog-row { grid-template-columns:1fr 1fr; }
+}
+
+@media (max-width: 850px) {
+    .pc-page { padding:12px; }
+    .pc-topbar { align-items:flex-start; flex-direction:column; }
+    .pc-filterbar { grid-template-columns:1fr 1fr; }
+    .pc-import-pill { grid-column:1 / -1; }
+    .pc-kpi-strip { grid-template-columns:repeat(2,1fr); }
+    .pc-health-grid { grid-template-columns:repeat(2,1fr); }
+    .pc-check-grid, .pc-info-grid { grid-template-columns:1fr 1fr; }
+    .pc-panel-tools { align-items:flex-start; flex-direction:column; }
+    .pc-search { width:100%; }
+    .pc-form-grid { grid-template-columns:1fr; }
+    .pc-form-field.full { grid-column:auto; }
+    .pc-catalog-row { grid-template-columns:1fr; }
+}
+
+@media (max-width: 560px) {
+    .pc-filterbar { grid-template-columns:1fr; }
+    .pc-kpi-strip, .pc-health-grid, .pc-check-grid, .pc-info-grid { grid-template-columns:1fr; }
+    .pc-progress-top { flex-direction:column; }
+    .pc-acc-metrics { justify-content:flex-start; }
+    .pc-accordion summary { align-items:flex-start; flex-direction:column; }
+    .pc-supply-summary { grid-template-columns:1fr; }
+    .pc-discipline-budget-head { align-items:flex-start; flex-direction:column; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pc-page">
+    <div class="pc-topbar">
+        <div class="pc-title-wrap">
+            <h1>Cronograma de Obras</h1>
+            <div class="pc-title-meta">
+                <strong>{{ projeto_selecionado|default:"Nenhuma obra selecionada" }}</strong>
+                {% if semana_selecionada != None %}<span class="pc-dot">•</span><span>Semana {{ semana_selecionada }}</span>{% endif %}
+                {% if resumo.data_atualizacao %}<span class="pc-dot">•</span><span>Atualizado em {{ resumo.data_atualizacao|date:"d/m/Y" }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="pc-actions">
+            <a href="{% url 'planejamento:historico_importacoes_cronograma' %}" class="pc-btn">Histórico</a>
+            {% if request.user.is_superuser %}
+                <form method="post" action="{% url 'planejamento:atualizar_cronograma' %}" id="formAtualizarCronograma">
+                    {% csrf_token %}
+                    <button type="submit" class="pc-btn pc-btn-primary" id="btnAtualizarCronograma">Atualizar base</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="pc-alert {% if message.tags == 'success' %}pc-alert-success{% elif message.tags == 'error' %}pc-alert-danger{% elif message.tags == 'warning' %}pc-alert-warning{% else %}pc-alert-info{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if erro_base %}<div class="pc-alert pc-alert-warning">{{ erro_base }}</div>{% endif %}
+    {% for alerta in alertas_painel %}<div class="pc-alert pc-alert-warning">{{ alerta }}</div>{% endfor %}
+
+    <form method="get" class="pc-filterbar">
+        <div class="pc-field">
+            <label for="projeto">Obra</label>
+            <select name="projeto" id="projeto" class="pc-control">
+                {% for projeto in projetos %}
+                    <option value="{{ projeto }}" {% if projeto == projeto_selecionado %}selected{% endif %}>{{ projeto }}</option>
+                {% empty %}
+                    <option value="">Nenhuma obra disponível</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="pc-field">
+            <label for="semana">Semana</label>
+            <select name="semana" id="semana" class="pc-control">
+                {% for semana in semanas %}
+                    <option value="{{ semana }}" {% if semana == semana_selecionada %}selected{% endif %}>Semana {{ semana }}</option>
+                {% empty %}
+                    <option value="">Nenhuma semana</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="pc-btn pc-btn-primary">Aplicar</button>
+        {% if importacao_ativa %}
+            <div class="pc-import-pill" title="{{ importacao_ativa.nome_arquivo }}">
+                Base ativa
+                <strong>{{ importacao_ativa.nome_arquivo|default:"-" }}</strong>
+            </div>
+        {% endif %}
+    </form>
+
+    {% if possui_dados and resumo %}
+        <section class="pc-overview">
+            <div class="pc-card pc-progress-card">
+                <div class="pc-progress-top">
+                    <div>
+                        <div class="pc-progress-title">Avanço físico acumulado</div>
+                        <div class="pc-progress-value">{{ resumo.executado|percentual }}%</div>
+                    </div>
+                    <div>
+                        {% if prazos.situacao == "NO_PRAZO" %}
+                            <span class="pc-status-badge pc-badge-success">{{ prazos.situacao_rotulo }}</span>
+                        {% elif prazos.situacao == "EM_ATRASO" %}
+                            <span class="pc-status-badge pc-badge-danger">{{ prazos.situacao_rotulo }}</span>
+                        {% else %}
+                            <span class="pc-status-badge pc-badge-neutral">{{ prazos.situacao_rotulo|default:"Sem dados" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="pc-progress-track" title="Previsto {{ resumo.previsto|percentual }}% • Executado {{ resumo.executado|percentual }}%">
+                    <span class="pc-progress-plan" style="width:{{ resumo.previsto|percentual }}%"></span>
+                    <span class="pc-progress-real" style="width:{{ resumo.executado|percentual }}%"></span>
+                </div>
+                <div class="pc-progress-legend">
+                    <span>Executado <strong>{{ resumo.executado|percentual }}%</strong></span>
+                    <span>Previsto <strong>{{ resumo.previsto|percentual }}%</strong></span>
+                </div>
+
+                <div class="pc-kpi-strip">
+                    <div class="pc-mini-kpi {% if resumo.desvio < 0 %}danger{% elif resumo.desvio > 0 %}success{% endif %}">
+                        <span>Desvio</span><strong>{{ resumo.desvio|percentual }}%</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>Aderência</span><strong>{% if prazos.aderencia_fisica != None %}{{ prazos.aderencia_fisica|percentual }}%{% else %}-{% endif %}</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>IDP</span><strong>{% if prazos.idp != None %}{{ prazos.idp|floatformat:2 }}{% else %}-{% endif %}</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>Média semanal</span><strong>{{ medias.media_real|percentual }}%</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>Previsão término</span><strong style="font-size:14px">{% if prazos.previsao_termino %}{{ prazos.previsao_termino|date:"d/m/Y" }}{% else %}-{% endif %}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pc-card pc-health-card">
+                <h3>Saúde das atividades</h3>
+                <div class="pc-health-grid">
+                    <div class="pc-health-item"><span>Atrasadas</span><strong style="color:var(--pc-danger)">{{ contadores_atividades.atrasadas|default:0 }}</strong></div>
+                    <div class="pc-health-item"><span>Para iniciar</span><strong style="color:var(--pc-warning)">{{ contadores_atividades.para_iniciar|default:0 }}</strong></div>
+                    <div class="pc-health-item"><span>Para concluir</span><strong style="color:var(--pc-warning)">{{ contadores_atividades.para_concluir|default:0 }}</strong></div>
+                    <div class="pc-health-item"><span>Em andamento</span><strong>{{ contadores_atividades.em_andamento|default:0 }}</strong></div>
+                    <div class="pc-health-item"><span>Concluídas</span><strong style="color:var(--pc-success)">{{ contadores_atividades.concluidas|default:0 }}</strong></div>
+                    <div class="pc-health-item"><span>Reprogramadas</span><strong>{{ contadores_atividades.reprogramadas|default:0 }}</strong></div>
+                </div>
+                <div class="pc-health-meta">
+                    <strong>{{ contadores_atividades.total|default:0 }}</strong> atividades no retrato atual.<br>
+                    {% if prazos.dias_diferenca_prazo != None %}Diferença de prazo: <strong>{{ prazos.dias_diferenca_prazo }} dia(s)</strong>.{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="pc-main-grid">
+            <div class="pc-card">
+                <div class="pc-card-head">
+                    <div><h2>Evolução do cronograma</h2><p>Previsto x realizado e ritmo semanal.</p></div>
+                    <div class="pc-chart-switch">
+                        <button type="button" class="is-active" data-chart-tab="curva">Curva S</button>
+                        <button type="button" data-chart-tab="avanco">Avanço semanal</button>
+                    </div>
+                </div>
+                <div class="pc-card-body">
+                    <div class="pc-chart-panel" data-chart-panel="curva"><div class="pc-chart-box"><canvas id="graficoCurvaS"></canvas></div></div>
+                    <div class="pc-chart-panel" data-chart-panel="avanco" hidden><div class="pc-chart-box"><canvas id="graficoAvancoSemanal"></canvas></div></div>
+                </div>
+            </div>
+
+            <div class="pc-card">
+                <div class="pc-card-head">
+                    <div><h2>Atenção agora</h2><p>Prioridades que merecem ação da equipe.</p></div>
+                    <span class="pc-count">{{ atividades_prioritarias|length }} prioridade(s)</span>
+                </div>
+                <div class="pc-card-body">
+                    <div class="pc-risk-list">
+                        {% for item in atividades_prioritarias %}
+                            <div class="pc-risk-item">
+                                <div>
+                                    <strong>{{ item.atividade }}</strong>
+                                    <small>{{ item.disciplina }} • {{ item.local }}</small>
+                                    <small>{{ item.responsavel|default:"Não informado" }} • término {{ item.termino_base|default:"-" }}</small>
+                                </div>
+                                <span class="pc-badge {{ item.situacao_css }}">{{ item.situacao_rotulo }}</span>
+                            </div>
+                        {% empty %}
+                            <div class="pc-risk-empty">Nenhuma atividade exige atenção neste retrato.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pc-card pc-week-card" id="programacao-semana">
+            <div class="pc-card-head">
+                <div>
+                    <h2>Programação da semana</h2>
+                    <p>Somente atividades com movimento, prazo ou execução relevante.</p>
+                </div>
+                <div class="pc-week-summary">
+                    <span class="pc-summary-chip danger">Atrasadas <strong>{{ resumo_prioridades.atrasadas|default:0 }}</strong></span>
+                    <span class="pc-summary-chip">Andamento <strong>{{ resumo_prioridades.em_andamento|default:0 }}</strong></span>
+                    <span class="pc-summary-chip warning">Para iniciar <strong>{{ resumo_prioridades.para_iniciar|default:0 }}</strong></span>
+                    <span class="pc-summary-chip success">Concluídas <strong>{{ resumo_prioridades.concluidas|default:0 }}</strong></span>
+                </div>
+            </div>
+            <div class="pc-card-head" style="padding-top:9px;padding-bottom:9px;background:#fcfcfd">
+                <div class="pc-table-tools">
+                    <input class="pc-search" type="search" placeholder="Buscar atividade, local ou responsável" data-table-search="programacao-table" aria-label="Buscar na programação">
+                    <span class="pc-count" data-table-count="programacao-table">
+                        {% if programacao_semana.limitado %}{{ programacao_semana.total_exibido }} de {{ programacao_semana.resumo.total }}{% else %}{{ programacao_semana.atividades|length }}{% endif %} atividade(s)
+                    </span>
+                </div>
+                {% if programacao_semana.limitado %}<span class="pc-badge pc-badge-warning">Lista limitada para visualização</span>{% endif %}
+            </div>
+            <div class="pc-table-wrap" id="programacao-table">
+                <table class="pc-table">
+                    <thead>
+                        <tr><th>Atividade</th><th>Responsável</th><th>Planejamento</th><th>Semana</th><th>Reprogramação</th><th>Situação</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for item in programacao_semana.atividades %}
+                            <tr data-search-row>
+                                <td><span class="pc-main-cell">{{ item.atividade }}</span><span class="pc-sub-cell">{{ item.disciplina }} • {{ item.local }}</span></td>
+                                <td>{{ item.responsavel|default:"Não informado" }}</td>
+                                <td><span class="pc-date">{{ item.inicio_base|default:"-" }} → {{ item.termino_base|default:"-" }}</span><span class="pc-sub-cell">Real: {{ item.inicio_real|default:"-" }} → {{ item.termino_real|default:"-" }}</span></td>
+                                <td>
+                                    <div class="pc-percent"><div class="pc-percent-line"><span>Prev.</span><strong>{{ item.planejado_semana|percentual }}%</strong></div><div class="pc-bar"><span style="width:{{ item.planejado_semana|percentual }}%"></span></div></div>
+                                    <div class="pc-percent" style="margin-top:6px"><div class="pc-percent-line"><span>Real.</span><strong>{{ item.realizado_semana|percentual }}%</strong></div><div class="pc-bar success"><span style="width:{{ item.realizado_semana|percentual }}%"></span></div></div>
+                                </td>
+                                <td>{% if item.reprogramada %}<span class="pc-reprog">Reprogramada</span><span class="pc-sub-cell">{{ item.termino_base_anterior|default:"-" }} → {{ item.termino_base|default:"-" }}</span>{% else %}<span class="pc-sub-cell">Sem alteração</span>{% endif %}</td>
+                                <td>
+                                    {% if item.categoria_resumo == "ATRASADA" %}<span class="pc-badge pc-badge-danger">{{ item.categoria_resumo_rotulo }}</span>
+                                    {% elif item.categoria_resumo == "PARA_INICIAR" %}<span class="pc-badge pc-badge-warning">{{ item.categoria_resumo_rotulo }}</span>
+                                    {% elif item.categoria_resumo == "CONCLUIDA" %}<span class="pc-badge pc-badge-success">{{ item.categoria_resumo_rotulo }}</span>
+                                    {% else %}<span class="pc-badge pc-badge-info">{{ item.categoria_resumo_rotulo }}</span>{% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="pc-empty">Nenhuma atividade teve movimento ou data relevante nesta semana.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="pc-filter-empty">Nenhuma atividade corresponde à busca.</div>
+            </div>
+        </section>
+
+        <section class="pc-card pc-detail-card">
+            <div class="pc-tabs" role="tablist" aria-label="Detalhes do cronograma">
+                <button type="button" class="pc-tab-btn is-active" data-detail-tab="disciplinas">Disciplinas</button>
+                <button type="button" class="pc-tab-btn" data-detail-tab="checklists">Checklists</button>
+                <button type="button" class="pc-tab-btn" data-detail-tab="marcos">Marcos</button>
+                <button type="button" class="pc-tab-btn" data-detail-tab="informacoes">Informações da obra</button>
+            </div>
+
+            <div class="pc-tab-panel" data-detail-panel="disciplinas">
+                <div class="pc-panel-tools">
+                    <div>
+                        <h3>Disciplinas, atividades e suprimentos</h3>
+                        <p>Cronograma físico e orçamento de suprimentos na mesma estrutura da obra.</p>
+                    </div>
+                    <div class="pc-table-tools">
+                        <input class="pc-search" type="search" placeholder="Buscar disciplina" data-details-search="disciplinas-lista" aria-label="Buscar disciplina">
+                        <button type="button" class="pc-btn pc-btn-sm" data-open-modal="modalCatalogoInsumos">Gerenciar insumos</button>
+                    </div>
+                </div>
+
+                <div class="pc-supply-summary">
+                    <div class="pc-supply-kpi total">
+                        <span>Orçamento de suprimentos</span>
+                        <strong>R$ {{ orcamento_suprimentos.valor_total|default:0|floatformat:2 }}</strong>
+                    </div>
+                    <div class="pc-supply-kpi">
+                        <span>Insumos cadastrados</span>
+                        <strong>{{ orcamento_suprimentos.quantidade_insumos|default:0 }}</strong>
+                    </div>
+                    <div class="pc-supply-kpi">
+                        <span>Atividades orçadas</span>
+                        <strong>{{ orcamento_suprimentos.quantidade_atividades_com_suprimentos|default:0 }}</strong>
+                    </div>
+                    <div class="pc-supply-kpi">
+                        <span>Sem orçamento</span>
+                        <strong>{{ orcamento_suprimentos.quantidade_atividades_sem_suprimentos|default:0 }}</strong>
+                    </div>
+                </div>
+
+                <div class="pc-accordion-list" id="disciplinas-lista">
+                    {% for disciplina in disciplinas %}
+                        <details class="pc-accordion" data-details-item>
+                            <summary>
+                                <div class="pc-acc-title">
+                                    <strong>{{ disciplina.nome }}</strong>
+                                    <small>
+                                        {{ disciplina.total }} atividade(s) • {{ disciplina.total_locais }} local(is)
+                                        • {{ disciplina.quantidade_insumos|default:0 }} insumo(s)
+                                        • {{ disciplina.atividades_orcadas|default:0 }} atividade(s) orçada(s)
+                                    </small>
+                                </div>
+                                <div class="pc-acc-metrics">
+                                    <span>Prev. <strong>{{ disciplina.planejado|percentual }}%</strong></span>
+                                    <span>Real. <strong>{{ disciplina.realizado|percentual }}%</strong></span>
+                                    <span>Suprimentos <strong class="pc-budget-value">R$ {{ disciplina.valor_suprimentos|default:0|floatformat:2 }}</strong></span>
+                                    <span class="pc-badge {{ disciplina.situacao_css }}">{{ disciplina.situacao_rotulo }}</span>
+                                </div>
+                            </summary>
+
+                            <div class="pc-acc-body">
+                                <div class="pc-discipline-budget">
+                                    <div class="pc-discipline-budget-head">
+                                        <div>
+                                            <h4>EAP / orçamento de suprimentos</h4>
+                                            <div class="pc-sub-cell">
+                                                {{ disciplina.atividades_orcadas|default:0 }} de {{ disciplina.total|default:0 }} atividade(s) com suprimentos cadastrados.
+                                            </div>
+                                        </div>
+                                        <strong>R$ {{ disciplina.valor_suprimentos|default:0|floatformat:2 }}</strong>
+                                    </div>
+
+                                    <div class="pc-supply-activities">
+                                        {% for atividade in disciplina.suprimentos_atividades %}
+                                            <details class="pc-accordion pc-supply-activity" id="atividade-{{ atividade.atividade_planejamento_id }}">
+                                                <summary>
+                                                    <div class="pc-acc-title">
+                                                        <strong>{{ atividade.atividade }}</strong>
+                                                        <small>{{ atividade.local }} • {{ atividade.quantidade_insumos }} insumo(s)</small>
+                                                    </div>
+                                                    <div class="pc-acc-metrics">
+                                                        <span>Prev. <strong>{{ atividade.planejado|percentual }}%</strong></span>
+                                                        <span>Real. <strong>{{ atividade.realizado|percentual }}%</strong></span>
+                                                        <span class="pc-budget-value">R$ {{ atividade.valor_total|default:0|floatformat:2 }}</span>
+                                                    </div>
+                                                </summary>
+
+                                                <div class="pc-acc-body">
+                                                    <div class="pc-supply-toolbar">
+                                                        <div class="pc-supply-toolbar-meta">
+                                                            {{ atividade.responsavel|default:"Responsável não informado" }} • {{ atividade.quantidade_insumos }} insumo(s)
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            class="pc-btn pc-btn-primary pc-btn-sm"
+                                                            data-add-supply
+                                                            data-url="{% url 'planejamento:adicionar_suprimento_atividade' atividade.atividade_planejamento_id %}"
+                                                            data-atividade="{{ atividade.atividade|escape }}"
+                                                        >
+                                                            + Adicionar insumo
+                                                        </button>
+                                                    </div>
+
+                                                    {% if atividade.suprimentos %}
+                                                        <div class="pc-table-wrap" style="max-height:340px">
+                                                            <table class="pc-table pc-supply-table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Insumo</th>
+                                                                        <th>Quantidade</th>
+                                                                        <th>Un.</th>
+                                                                        <th>Valor unitário</th>
+                                                                        <th>Total</th>
+                                                                        <th>Comprar até</th>
+                                                                        <th>Ações</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {% for suprimento in atividade.suprimentos %}
+                                                                        <tr>
+                                                                            <td>
+                                                                                <span class="pc-main-cell">{{ suprimento.insumo }}</span>
+                                                                                {% if suprimento.observacao %}
+                                                                                    <span class="pc-sub-cell">{{ suprimento.observacao }}</span>
+                                                                                {% endif %}
+                                                                            </td>
+                                                                            <td>{{ suprimento.quantidade|floatformat:4 }}</td>
+                                                                            <td>{{ suprimento.unidade_medida }}</td>
+                                                                            <td>R$ {{ suprimento.valor_unitario|floatformat:2 }}</td>
+                                                                            <td class="pc-budget-value">R$ {{ suprimento.valor_total|floatformat:2 }}</td>
+                                                                            <td>
+                                                                                {% if suprimento.data_limite_compra %}
+                                                                                    <span class="pc-date">{{ suprimento.data_limite_compra|date:"d/m/Y" }}</span>
+                                                                                {% else %}
+                                                                                    <span class="pc-sub-cell">Não definida</span>
+                                                                                {% endif %}
+                                                                            </td>
+                                                                            <td>
+                                                                                <div class="pc-supply-actions">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        class="pc-btn pc-btn-link pc-btn-sm"
+                                                                                        data-edit-supply
+                                                                                        data-url="{% url 'planejamento:editar_suprimento_atividade' suprimento.id %}"
+                                                                                        data-insumo-id="{{ suprimento.insumo_id }}"
+                                                                                        data-insumo="{{ suprimento.insumo|escape }}"
+                                                                                        data-quantidade="{{ suprimento.quantidade|unlocalize }}"
+                                                                                        data-unidade="{{ suprimento.unidade_medida }}"
+                                                                                        data-valor-unitario="{{ suprimento.valor_unitario|unlocalize }}"
+                                                                                        data-data-limite="{% if suprimento.data_limite_compra %}{{ suprimento.data_limite_compra|date:'Y-m-d' }}{% endif %}"
+                                                                                        data-observacao="{{ suprimento.observacao|default:''|escape }}"
+                                                                                        data-atividade="{{ atividade.atividade|escape }}"
+                                                                                    >
+                                                                                        Editar
+                                                                                    </button>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        class="pc-btn pc-btn-link pc-btn-sm"
+                                                                                        style="color:var(--pc-danger)"
+                                                                                        data-delete-supply
+                                                                                        data-url="{% url 'planejamento:excluir_suprimento_atividade' suprimento.id %}"
+                                                                                        data-insumo="{{ suprimento.insumo|escape }}"
+                                                                                        data-atividade="{{ atividade.atividade|escape }}"
+                                                                                    >
+                                                                                        Remover
+                                                                                    </button>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    {% endfor %}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    {% else %}
+                                                        <div class="pc-supply-empty">
+                                                            Nenhum suprimento cadastrado para esta atividade.
+                                                            Use <strong>Adicionar insumo</strong> para iniciar o orçamento.
+                                                        </div>
+                                                    {% endif %}
+                                                </div>
+                                            </details>
+                                        {% empty %}
+                                            <div class="pc-supply-empty">Nenhuma atividade permanente disponível para orçamento nesta disciplina.</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <div class="pc-panel-tools" style="margin-top:13px">
+                                    <div>
+                                        <h3 style="font-size:12px">Acompanhamento físico</h3>
+                                        <p>Locais e atividades do cronograma importado.</p>
+                                    </div>
+                                </div>
+
+                                {% for local in disciplina.locais %}
+                                    <div class="pc-local-block">
+                                        <div class="pc-local-head">
+                                            <strong>{{ local.nome }}</strong>
+                                            <span>{{ local.total }} atividade(s) • {{ local.realizado|percentual }}% executado</span>
+                                        </div>
+                                        <div class="pc-table-wrap" style="max-height:380px">
+                                            <table class="pc-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Atividade</th>
+                                                        <th>Responsável</th>
+                                                        <th>Datas</th>
+                                                        <th>Previsto</th>
+                                                        <th>Executado</th>
+                                                        <th>Situação</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in local.atividades %}
+                                                        <tr>
+                                                            <td>
+                                                                <span class="pc-main-cell">{{ item.atividade }}</span>
+                                                                {% if item.reprogramada %}
+                                                                    <span class="pc-sub-cell" style="color:var(--pc-warning)">Reprogramada</span>
+                                                                {% endif %}
+                                                            </td>
+                                                            <td>{{ item.responsavel|default:"Não informado" }}</td>
+                                                            <td>
+                                                                <span class="pc-date">Base: {{ item.inicio_base|default:"-" }} → {{ item.termino_base|default:"-" }}</span>
+                                                                <span class="pc-sub-cell">Real: {{ item.inicio_real|default:"-" }} → {{ item.termino_real|default:"-" }}</span>
+                                                            </td>
+                                                            <td class="pc-percent">
+                                                                <div class="pc-percent-line"><strong>{{ item.planejado|percentual }}%</strong></div>
+                                                                <div class="pc-bar"><span style="width:{{ item.planejado|percentual }}%"></span></div>
+                                                            </td>
+                                                            <td class="pc-percent">
+                                                                <div class="pc-percent-line"><strong>{{ item.realizado|percentual }}%</strong></div>
+                                                                <div class="pc-bar success"><span style="width:{{ item.realizado|percentual }}%"></span></div>
+                                                            </td>
+                                                            <td><span class="pc-badge {{ item.situacao_css }}">{{ item.situacao_rotulo }}</span></td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    {% empty %}
+                        <div class="pc-empty">Nenhuma disciplina física encontrada.</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="pc-tab-panel" data-detail-panel="checklists" hidden>
+                <div class="pc-panel-tools"><div><h3>Checklists</h3><p>Habite-se e Pós Habite-se ficam juntos nesta área, sem alongar o painel principal.</p></div></div>
+                <div class="pc-check-grid">
+                    {% for chave, checklist in checklists.items %}
+                        <div class="pc-check-card">
+                            <div class="pc-check-head"><h4>{{ checklist.titulo }}</h4><p>{{ checklist.total_grupos|default:0 }} grupo(s) • {{ checklist.total_itens|default:0 }} item(ns) • {{ checklist.progresso|percentual }}% concluído</p></div>
+                            <div class="pc-check-body">
+                                <div class="pc-accordion-list">
+                                    {% for grupo in checklist.grupos %}
+                                        <details class="pc-accordion">
+                                            <summary>
+                                                <div class="pc-acc-title"><strong>{{ grupo.nome }}</strong><small>{{ grupo.total }} item(ns) • {{ grupo.atrasados }} em atraso</small></div>
+                                                <div class="pc-acc-metrics"><span>Real. <strong>{{ grupo.realizado|percentual }}%</strong></span><span class="pc-badge {{ grupo.situacao_css }}">{{ grupo.situacao_rotulo }}</span></div>
+                                            </summary>
+                                            <div class="pc-acc-body">
+                                                <div class="pc-table-wrap" style="max-height:350px">
+                                                    <table class="pc-table">
+                                                        <thead><tr><th>Atividade</th><th>Responsável</th><th>Previsto</th><th>Executado</th><th>Situação</th></tr></thead>
+                                                        <tbody>
+                                                            {% for item in grupo.itens %}
+                                                                <tr>
+                                                                    <td><span class="pc-main-cell">{{ item.atividade }}</span><span class="pc-sub-cell">{{ item.disciplina }} • {{ item.local }}</span></td>
+                                                                    <td>{{ item.responsavel|default:"Não informado" }}</td>
+                                                                    <td>{{ item.planejado|percentual }}%</td>
+                                                                    <td>{{ item.realizado|percentual }}%</td>
+                                                                    <td><span class="pc-badge {{ item.situacao_checklist_css }}">{{ item.situacao_checklist_rotulo }}</span></td>
+                                                                </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    {% empty %}
+                                        <div class="pc-empty">Nenhum item preenchido neste checklist.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="pc-tab-panel" data-detail-panel="marcos" hidden>
+                <div class="pc-panel-tools"><div><h3>Marcos da semana</h3><p>Principais entregas e compromissos do período selecionado.</p></div></div>
+                <div class="pc-table-wrap" style="max-height:440px">
+                    <table class="pc-table">
+                        <thead><tr><th>Marco</th><th>Local</th><th>Responsável</th><th>Planejamento</th><th>Realizado</th><th>Situação</th></tr></thead>
+                        <tbody>
+                            {% for marco in marcos %}
+                                <tr>
+                                    <td><span class="pc-main-cell">{{ marco.nome }}</span></td>
+                                    <td>{{ marco.local }}</td>
+                                    <td>{{ marco.responsavel }}</td>
+                                    <td><span class="pc-date">{{ marco.inicio_base|default:"-" }} → {{ marco.termino_base|default:"-" }}</span></td>
+                                    <td>{{ marco.realizado|percentual }}%</td>
+                                    <td>{% if marco.situacao == "CONCLUIDO" %}<span class="pc-badge pc-badge-success">{{ marco.situacao_rotulo }}</span>{% elif marco.situacao == "ATRASADO" %}<span class="pc-badge pc-badge-danger">{{ marco.situacao_rotulo }}</span>{% else %}<span class="pc-badge pc-badge-info">{{ marco.situacao_rotulo }}</span>{% endif %}</td>
+                                </tr>
+                            {% empty %}
+                                <tr><td colspan="6" class="pc-empty">Nenhum marco encontrado para a semana.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="pc-tab-panel" data-detail-panel="informacoes" hidden>
+                <div class="pc-panel-tools"><div><h3>Informações da obra e da base</h3><p>Dados de referência ficam disponíveis sem ocupar o topo do painel.</p></div></div>
+                <div class="pc-info-grid">
+                    <div class="pc-info-item"><span>Obra</span><strong>{{ projeto_selecionado }}</strong></div>
+                    <div class="pc-info-item"><span>Semana</span><strong>{{ semana_selecionada }}</strong></div>
+                    <div class="pc-info-item"><span>Data atualização</span><strong>{% if resumo.data_atualizacao %}{{ resumo.data_atualizacao|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="pc-info-item"><span>Início-base</span><strong>{% if resumo.inicio_base %}{{ resumo.inicio_base|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="pc-info-item"><span>Término-base</span><strong>{% if resumo.termino_base %}{{ resumo.termino_base|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="pc-info-item"><span>Término real</span><strong>{% if resumo.termino_real %}{{ resumo.termino_real|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="pc-info-item"><span>Linhas importadas</span><strong>{{ importacao_ativa.linhas_importadas|default:0 }}</strong></div>
+                    <div class="pc-info-item"><span>Obras identificadas</span><strong>{{ importacao_ativa.projetos_identificados|default:0 }}</strong></div>
+                </div>
+                {% if importacao_ativa %}<div class="pc-footer-meta">Arquivo ativo: {{ importacao_ativa.nome_arquivo|default:"-" }}{% if importacao_ativa.data_modificacao_drive %} • Drive: {{ importacao_ativa.data_modificacao_drive|date:"d/m/Y H:i" }}{% endif %}</div>{% endif %}
+            </div>
+        </section>
+
+    {% else %}
+        <div class="pc-card"><div class="pc-empty"><h2 style="margin:0 0 6px;font-size:17px">Nenhum dado disponível</h2><p style="margin:0 0 14px">Não existe uma importação ativa ou não foram encontrados dados para os filtros selecionados.</p>{% if request.user.is_superuser %}<form method="post" action="{% url 'planejamento:atualizar_cronograma' %}">{% csrf_token %}<button type="submit" class="pc-btn pc-btn-primary">Executar primeira importação</button></form>{% endif %}</div></div>
+    {% endif %}
+</div>
+
+<div class="pc-modal-backdrop" id="modalAdicionarSuprimento" aria-hidden="true">
+    <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="tituloAdicionarSuprimento">
+        <form method="post" id="formAdicionarSuprimento">
+            {% csrf_token %}
+            <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+            <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+
+            <div class="pc-modal-head">
+                <div>
+                    <h3 id="tituloAdicionarSuprimento">Adicionar suprimento</h3>
+                    <p id="nomeAtividadeAdicionar">Atividade</p>
+                </div>
+                <button type="button" class="pc-modal-close" data-close-modal aria-label="Fechar">×</button>
+            </div>
+
+            <div class="pc-modal-body">
+                <div class="pc-form-grid">
+                    <div class="pc-form-field full">
+                        <label for="addInsumoId">Insumo cadastrado</label>
+                        <select name="insumo_id" id="addInsumoId">
+                            <option value="">Cadastrar um novo insumo...</option>
+                            {% for insumo in insumos_planejamento %}
+                                <option value="{{ insumo.id }}" data-unidade="{{ insumo.unidade_padrao }}">{{ insumo.nome }}{% if insumo.unidade_padrao %} — {{ insumo.get_unidade_padrao_display }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="pc-form-help">Selecione um item do catálogo ou deixe a primeira opção para criar um novo.</div>
+                    </div>
+
+                    <div class="pc-inline-create" id="addNovoInsumoBox">
+                        <div class="pc-form-grid">
+                            <div class="pc-form-field">
+                                <label for="addNovoInsumoNome">Novo insumo</label>
+                                <input type="text" name="novo_insumo_nome" id="addNovoInsumoNome" maxlength="255" placeholder="Ex.: Cimento CP-II">
+                            </div>
+                            <div class="pc-form-field">
+                                <label for="addNovoInsumoUnidade">Unidade padrão</label>
+                                <select name="novo_insumo_unidade" id="addNovoInsumoUnidade">
+                                    <option value="">Selecione</option>
+                                    {% for valor, rotulo in unidades_medida_suprimentos %}
+                                        <option value="{{ valor }}">{{ rotulo }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="addQuantidade">Quantidade</label>
+                        <input type="number" name="quantidade" id="addQuantidade" min="0.0001" step="0.0001" required>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="addUnidadeMedida">Unidade de medida</label>
+                        <select name="unidade_medida" id="addUnidadeMedida" required>
+                            <option value="">Selecione</option>
+                            {% for valor, rotulo in unidades_medida_suprimentos %}
+                                <option value="{{ valor }}">{{ rotulo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="addValorUnitario">Valor unitário</label>
+                        <input type="number" name="valor_unitario" id="addValorUnitario" min="0" step="0.0001" required>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="addDataLimite">Data limite para compra</label>
+                        <input type="date" name="data_limite_compra" id="addDataLimite">
+                    </div>
+
+                    <div class="pc-form-field full">
+                        <label for="addObservacao">Observação</label>
+                        <textarea name="observacao" id="addObservacao" placeholder="Informações complementares do item"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pc-modal-footer">
+                <button type="button" class="pc-btn" data-close-modal>Cancelar</button>
+                <button type="submit" class="pc-btn pc-btn-primary">Adicionar suprimento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pc-modal-backdrop" id="modalEditarSuprimento" aria-hidden="true">
+    <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="tituloEditarSuprimento">
+        <form method="post" id="formEditarSuprimento">
+            {% csrf_token %}
+            <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+            <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+
+            <div class="pc-modal-head">
+                <div>
+                    <h3 id="tituloEditarSuprimento">Editar suprimento</h3>
+                    <p id="nomeAtividadeEditar">Atividade</p>
+                </div>
+                <button type="button" class="pc-modal-close" data-close-modal aria-label="Fechar">×</button>
+            </div>
+
+            <div class="pc-modal-body">
+                <div class="pc-form-grid">
+                    <div class="pc-form-field full">
+                        <label for="editInsumoId">Insumo</label>
+                        <select name="insumo_id" id="editInsumoId" required>
+                            {% for insumo in insumos_planejamento %}
+                                <option value="{{ insumo.id }}" data-unidade="{{ insumo.unidade_padrao }}">{{ insumo.nome }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="editQuantidade">Quantidade</label>
+                        <input type="number" name="quantidade" id="editQuantidade" min="0.0001" step="0.0001" required>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="editUnidadeMedida">Unidade de medida</label>
+                        <select name="unidade_medida" id="editUnidadeMedida" required>
+                            {% for valor, rotulo in unidades_medida_suprimentos %}
+                                <option value="{{ valor }}">{{ rotulo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="editValorUnitario">Valor unitário</label>
+                        <input type="number" name="valor_unitario" id="editValorUnitario" min="0" step="0.0001" required>
+                    </div>
+
+                    <div class="pc-form-field">
+                        <label for="editDataLimite">Data limite para compra</label>
+                        <input type="date" name="data_limite_compra" id="editDataLimite">
+                    </div>
+
+                    <div class="pc-form-field full">
+                        <label for="editObservacao">Observação</label>
+                        <textarea name="observacao" id="editObservacao"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pc-modal-footer">
+                <button type="button" class="pc-btn" data-close-modal>Cancelar</button>
+                <button type="submit" class="pc-btn pc-btn-primary">Salvar alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pc-modal-backdrop" id="modalExcluirSuprimento" aria-hidden="true">
+    <div class="pc-modal" role="dialog" aria-modal="true" aria-labelledby="tituloExcluirSuprimento">
+        <form method="post" id="formExcluirSuprimento">
+            {% csrf_token %}
+            <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+            <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+
+            <div class="pc-modal-head">
+                <div>
+                    <h3 id="tituloExcluirSuprimento">Remover suprimento</h3>
+                    <p>O item será removido do orçamento desta atividade.</p>
+                </div>
+                <button type="button" class="pc-modal-close" data-close-modal aria-label="Fechar">×</button>
+            </div>
+
+            <div class="pc-modal-body">
+                <div class="pc-alert pc-alert-warning" style="margin:0">
+                    Deseja remover <strong id="nomeInsumoExcluir"></strong> da atividade
+                    <strong id="nomeAtividadeExcluir"></strong>?
+                    O sistema fará exclusão lógica para preservar o histórico.
+                </div>
+            </div>
+
+            <div class="pc-modal-footer">
+                <button type="button" class="pc-btn" data-close-modal>Cancelar</button>
+                <button type="submit" class="pc-btn pc-btn-danger">Remover suprimento</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="pc-modal-backdrop" id="modalCatalogoInsumos" aria-hidden="true">
+    <div class="pc-modal pc-modal-lg" role="dialog" aria-modal="true" aria-labelledby="tituloCatalogoInsumos">
+        <div class="pc-modal-head">
+            <div>
+                <h3 id="tituloCatalogoInsumos">Catálogo de insumos</h3>
+                <p>Cadastre e mantenha os materiais reutilizados no orçamento das atividades.</p>
+            </div>
+            <button type="button" class="pc-modal-close" data-close-modal aria-label="Fechar">×</button>
+        </div>
+
+        <div class="pc-modal-body">
+            <form method="post" action="{% url 'planejamento:cadastrar_insumo_planejamento' %}" class="pc-catalog-create">
+                {% csrf_token %}
+                <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+                <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+
+                <div class="pc-form-grid">
+                    <div class="pc-form-field">
+                        <label>Nome do novo insumo</label>
+                        <input type="text" name="nome" maxlength="255" required placeholder="Ex.: Concreto FCK 30">
+                    </div>
+                    <div class="pc-form-field">
+                        <label>Unidade padrão</label>
+                        <select name="unidade_padrao" required>
+                            <option value="">Selecione</option>
+                            {% for valor, rotulo in unidades_medida_suprimentos %}
+                                <option value="{{ valor }}">{{ rotulo }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="pc-form-field full">
+                        <label>Descrição</label>
+                        <input type="text" name="descricao" placeholder="Opcional">
+                    </div>
+                </div>
+
+                <div style="margin-top:9px;text-align:right">
+                    <button type="submit" class="pc-btn pc-btn-primary pc-btn-sm">Cadastrar insumo</button>
+                </div>
+            </form>
+
+            <div class="pc-panel-tools">
+                <div>
+                    <h3 style="font-size:12px">Insumos ativos</h3>
+                    <p>{{ insumos_planejamento|length }} item(ns) no catálogo.</p>
+                </div>
+            </div>
+
+            <div class="pc-catalog-list">
+                {% for insumo in insumos_planejamento %}
+                    <div class="pc-catalog-item">
+                        <form method="post" action="{% url 'planejamento:editar_insumo_planejamento' insumo.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+                            <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+
+                            <div class="pc-catalog-row">
+                                <div class="pc-form-field">
+                                    <label>Insumo</label>
+                                    <input type="text" name="nome" value="{{ insumo.nome }}" required>
+                                </div>
+                                <div class="pc-form-field">
+                                    <label>Unidade</label>
+                                    <select name="unidade_padrao" required>
+                                        {% for valor, rotulo in unidades_medida_suprimentos %}
+                                            <option value="{{ valor }}" {% if valor == insumo.unidade_padrao %}selected{% endif %}>{{ rotulo }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="pc-form-field">
+                                    <label>Descrição</label>
+                                    <input type="text" name="descricao" value="{{ insumo.descricao|default:'' }}">
+                                </div>
+                                <div class="pc-catalog-actions">
+                                    <button type="submit" class="pc-btn pc-btn-sm">Salvar</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <form method="post" action="{% url 'planejamento:desativar_insumo_planejamento' insumo.id %}" style="margin-top:7px;text-align:right">
+                            {% csrf_token %}
+                            <input type="hidden" name="projeto" value="{{ projeto_selecionado|default:'' }}">
+                            <input type="hidden" name="semana" value="{{ semana_selecionada|default:'' }}">
+                            <button type="submit" class="pc-btn pc-btn-link pc-btn-sm" style="color:var(--pc-danger)">Desativar</button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="pc-supply-empty">Nenhum insumo cadastrado ainda.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="pc-modal-footer">
+            <button type="button" class="pc-btn" data-close-modal>Fechar</button>
+        </div>
+    </div>
+</div>
+
+{{ serie|json_script:"dados-serie-cronograma" }}
+{{ avancos|json_script:"dados-avancos-cronograma" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Move os modais para o body. O layout base possui containers que podem
+    // criar stacking context e alterar o comportamento de position: fixed.
+    // No body, backdrop e janela ficam sempre relativos à viewport.
+    document.querySelectorAll(".pc-modal-backdrop").forEach(function (modal) {
+        if (modal.parentElement !== document.body) {
+            document.body.appendChild(modal);
+        }
+    });
+
+    const formAtualizar = document.getElementById("formAtualizarCronograma");
+    const btnAtualizar = document.getElementById("btnAtualizarCronograma");
+    if (formAtualizar && btnAtualizar) {
+        formAtualizar.addEventListener("submit", function () {
+            btnAtualizar.disabled = true;
+            btnAtualizar.textContent = "Atualizando...";
+        });
+    }
+
+    const projeto = document.getElementById("projeto");
+    if (projeto) {
+        projeto.addEventListener("change", function () {
+            const semana = document.getElementById("semana");
+            if (semana) semana.value = "";
+            const form = projeto.closest("form");
+            if (form) form.submit();
+        });
+    }
+
+    document.querySelectorAll("[data-chart-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const alvo = btn.dataset.chartTab;
+            document.querySelectorAll("[data-chart-tab]").forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+            document.querySelectorAll("[data-chart-panel]").forEach(function (p) { p.hidden = p.dataset.chartPanel !== alvo; });
+        });
+    });
+
+    document.querySelectorAll("[data-detail-tab]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const alvo = btn.dataset.detailTab;
+            document.querySelectorAll("[data-detail-tab]").forEach(function (b) { b.classList.toggle("is-active", b === btn); });
+            document.querySelectorAll("[data-detail-panel]").forEach(function (p) { p.hidden = p.dataset.detailPanel !== alvo; });
+        });
+    });
+
+    function abrirModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("pc-modal-open");
+    }
+
+    function fecharModal(modal) {
+        if (!modal) return;
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        if (!document.querySelector(".pc-modal-backdrop.is-open")) {
+            document.body.classList.remove("pc-modal-open");
+        }
+    }
+
+    document.querySelectorAll("[data-open-modal]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            abrirModal(btn.dataset.openModal);
+        });
+    });
+
+    document.querySelectorAll("[data-close-modal]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            fecharModal(btn.closest(".pc-modal-backdrop"));
+        });
+    });
+
+    document.querySelectorAll(".pc-modal-backdrop").forEach(function (backdrop) {
+        backdrop.addEventListener("click", function (event) {
+            if (event.target === backdrop) fecharModal(backdrop);
+        });
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key !== "Escape") return;
+        document.querySelectorAll(".pc-modal-backdrop.is-open").forEach(fecharModal);
+    });
+
+    const addForm = document.getElementById("formAdicionarSuprimento");
+    const addInsumo = document.getElementById("addInsumoId");
+    const addNovoBox = document.getElementById("addNovoInsumoBox");
+    const addNovoNome = document.getElementById("addNovoInsumoNome");
+    const addNovoUnidade = document.getElementById("addNovoInsumoUnidade");
+    const addUnidade = document.getElementById("addUnidadeMedida");
+
+    function atualizarModoNovoInsumo() {
+        if (!addInsumo || !addNovoBox) return;
+        const criando = !addInsumo.value;
+        addNovoBox.hidden = !criando;
+        if (addNovoNome) addNovoNome.required = criando;
+        if (addNovoUnidade) addNovoUnidade.required = criando;
+
+        if (!criando) {
+            const option = addInsumo.options[addInsumo.selectedIndex];
+            const unidade = option ? option.dataset.unidade : "";
+            if (unidade && addUnidade) addUnidade.value = unidade;
+        }
+    }
+
+    if (addInsumo) {
+        addInsumo.addEventListener("change", atualizarModoNovoInsumo);
+        atualizarModoNovoInsumo();
+    }
+
+    if (addNovoUnidade) {
+        addNovoUnidade.addEventListener("change", function () {
+            if (!addInsumo || addInsumo.value) return;
+            if (addUnidade) addUnidade.value = addNovoUnidade.value;
+        });
+    }
+
+    document.querySelectorAll("[data-add-supply]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (!addForm) return;
+            addForm.action = btn.dataset.url;
+            addForm.reset();
+            document.getElementById("nomeAtividadeAdicionar").textContent = btn.dataset.atividade || "Atividade";
+            atualizarModoNovoInsumo();
+            abrirModal("modalAdicionarSuprimento");
+        });
+    });
+
+    const editForm = document.getElementById("formEditarSuprimento");
+
+    document.querySelectorAll("[data-edit-supply]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (!editForm) return;
+            editForm.action = btn.dataset.url;
+            document.getElementById("nomeAtividadeEditar").textContent = btn.dataset.atividade || "Atividade";
+            document.getElementById("editInsumoId").value = btn.dataset.insumoId || "";
+            document.getElementById("editQuantidade").value = btn.dataset.quantidade || "";
+            document.getElementById("editUnidadeMedida").value = btn.dataset.unidade || "";
+            document.getElementById("editValorUnitario").value = btn.dataset.valorUnitario || "";
+            document.getElementById("editDataLimite").value = btn.dataset.dataLimite || "";
+            document.getElementById("editObservacao").value = btn.dataset.observacao || "";
+            abrirModal("modalEditarSuprimento");
+        });
+    });
+
+    const deleteForm = document.getElementById("formExcluirSuprimento");
+
+    document.querySelectorAll("[data-delete-supply]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (!deleteForm) return;
+            deleteForm.action = btn.dataset.url;
+            document.getElementById("nomeInsumoExcluir").textContent = btn.dataset.insumo || "este insumo";
+            document.getElementById("nomeAtividadeExcluir").textContent = btn.dataset.atividade || "esta atividade";
+            abrirModal("modalExcluirSuprimento");
+        });
+    });
+
+    if (window.location.hash && window.location.hash.startsWith("#atividade-")) {
+        const atividade = document.querySelector(window.location.hash);
+        if (atividade) {
+            const disciplina = atividade.closest("details[data-details-item]");
+            if (disciplina) disciplina.open = true;
+            atividade.open = true;
+            const tab = document.querySelector('[data-detail-tab="disciplinas"]');
+            if (tab) tab.click();
+            setTimeout(function () {
+                atividade.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 120);
+        }
+    }
+
+    function normalizar(valor) {
+        return (valor || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    }
+
+    document.querySelectorAll("[data-table-search]").forEach(function (campo) {
+        const alvo = document.getElementById(campo.dataset.tableSearch);
+        if (!alvo) return;
+        const linhas = Array.from(alvo.querySelectorAll("[data-search-row]"));
+        const contador = document.querySelector('[data-table-count="' + campo.dataset.tableSearch + '"]');
+        const vazio = alvo.querySelector(".pc-filter-empty");
+        campo.addEventListener("input", function () {
+            const termo = normalizar(campo.value);
+            let visiveis = 0;
+            linhas.forEach(function (linha) {
+                const ok = !termo || normalizar(linha.textContent).includes(termo);
+                linha.classList.toggle("is-filtered-out", !ok);
+                if (ok) visiveis += 1;
+            });
+            if (contador) contador.textContent = visiveis + " atividade(s)";
+            if (vazio) vazio.classList.toggle("is-visible", linhas.length > 0 && visiveis === 0);
+        });
+    });
+
+    document.querySelectorAll("[data-details-search]").forEach(function (campo) {
+        const alvo = document.getElementById(campo.dataset.detailsSearch);
+        if (!alvo) return;
+        const itens = Array.from(alvo.querySelectorAll(":scope > [data-details-item]"));
+        campo.addEventListener("input", function () {
+            const termo = normalizar(campo.value);
+            itens.forEach(function (item) { item.hidden = !!termo && !normalizar(item.textContent).includes(termo); });
+        });
+    });
+
+    const serieEl = document.getElementById("dados-serie-cronograma");
+    const avancosEl = document.getElementById("dados-avancos-cronograma");
+    const serie = serieEl ? JSON.parse(serieEl.textContent || "[]") : [];
+    const avancos = avancosEl ? JSON.parse(avancosEl.textContent || "[]") : [];
+
+    const curva = document.getElementById("graficoCurvaS");
+    if (curva && serie.length) {
+        new Chart(curva, {
+            type: "line",
+            data: {
+                labels: serie.map(i => "S" + i.semana),
+                datasets: [
+                    { label: "Previsto", data: serie.map(i => Number(i.previsto || 0) * 100), borderWidth: 2, tension: .28, fill: false },
+                    { label: "Executado", data: serie.map(i => Number(i.executado || 0) * 100), borderWidth: 2, tension: .28, fill: false }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: { legend: { position: "bottom" } },
+                scales: { y: { beginAtZero: true, suggestedMax: 100, ticks: { callback: v => v + "%" } } }
+            }
+        });
+    }
+
+    const avanco = document.getElementById("graficoAvancoSemanal");
+    if (avanco && avancos.length) {
+        new Chart(avanco, {
+            type: "bar",
+            data: {
+                labels: avancos.map(i => "S" + i.semana),
+                datasets: [
+                    { label: "Previsto", data: avancos.map(i => Number(i.avanco_previsto || 0) * 100), borderWidth: 1 },
+                    { label: "Realizado", data: avancos.map(i => Number(i.avanco_real || 0) * 100), borderWidth: 1 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: { legend: { position: "bottom" } },
+                scales: { y: { ticks: { callback: v => v + "%" } } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

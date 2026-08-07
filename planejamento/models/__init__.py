@@ -1,14 +1,17 @@
-from .atividade import AtividadeCronograma
-from .checklist import ChecklistCronograma
-from .disciplina import Disciplina
-from .importacao import ImportacaoCronograma
-from .marco import Marco
-
+from .cronograma import (
+    AtividadePlanejamento,
+    ImportacaoCronograma,
+    RegistroCronograma,
+)
+from .suprimentos import (
+    InsumoPlanejamento,
+    SuprimentoAtividade,
+)
 
 __all__ = [
-    "AtividadeCronograma",
-    "ChecklistCronograma",
-    "Disciplina",
+    "AtividadePlanejamento",
     "ImportacaoCronograma",
-    "Marco",
+    "RegistroCronograma",
+    "InsumoPlanejamento",
+    "SuprimentoAtividade",
 ]

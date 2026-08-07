@@ -1,163 +1,245 @@
 from django.contrib import admin
 
 from planejamento.models import (
-    AtividadeCronograma,
-    ChecklistCronograma,
-    Disciplina,
     ImportacaoCronograma,
-    Marco,
+    RegistroCronograma,
 )
-
-
-@admin.register(Disciplina)
-class DisciplinaAdmin(admin.ModelAdmin):
-    list_display = [
-        "nome",
-        "codigo",
-        "estrutural",
-        "ordem",
-        "ativa",
-    ]
-
-    list_filter = [
-        "estrutural",
-        "ativa",
-    ]
-
-    search_fields = [
-        "nome",
-        "codigo",
-    ]
-
-    ordering = [
-        "ordem",
-        "nome",
-    ]
 
 
 @admin.register(ImportacaoCronograma)
 class ImportacaoCronogramaAdmin(admin.ModelAdmin):
     list_display = [
         "id",
-        "obra",
-        "data_referencia",
-        "semana_inicial",
-        "semana_final",
-        "total_atividades",
+        "nome_arquivo",
+        "status",
         "ativa",
+        "linhas_importadas",
+        "projetos_identificados",
+        "semanas_identificadas",
+        "data_modificacao_drive",
+        "iniciou_em",
+        "finalizou_em",
+    ]
+
+    list_filter = [
+        "status",
+        "ativa",
+        "data_modificacao_drive",
         "criado_em",
     ]
 
-    list_filter = [
+    search_fields = [
+        "nome_arquivo",
+        "arquivo_drive_id",
+        "hash_arquivo",
+        "mensagem",
+        "erro_detalhado",
+        "executado_por__username",
+        "executado_por__email",
+    ]
+
+    readonly_fields = [
+        "status",
         "ativa",
-        "data_referencia",
-        "obra",
+        "nome_arquivo",
+        "arquivo_drive_id",
+        "data_modificacao_drive",
+        "hash_arquivo",
+        "tamanho_arquivo_bytes",
+        "total_linhas_arquivo",
+        "linhas_importadas",
+        "projetos_identificados",
+        "semanas_identificadas",
+        "mensagem",
+        "erro_detalhado",
+        "executado_por",
+        "iniciou_em",
+        "finalizou_em",
+        "criado_em",
+        "atualizado_em",
     ]
 
-    search_fields = [
-        "obra__nome",
-        "observacoes",
-    ]
+    ordering = ["-criado_em"]
+    date_hierarchy = "criado_em"
+    list_per_page = 50
 
-    ordering = [
-        "-data_referencia",
-        "-criado_em",
-    ]
+    def has_add_permission(self, request):
+        return False
 
 
-@admin.register(AtividadeCronograma)
-class AtividadeCronogramaAdmin(admin.ModelAdmin):
+@admin.register(RegistroCronograma)
+class RegistroCronogramaAdmin(admin.ModelAdmin):
     list_display = [
-        "nome_tarefa",
-        "obra",
+        "id",
+        "projeto",
         "semana",
         "disciplina",
-        "local_tarefa",
-        "percentual_previsto",
-        "percentual_executado",
-        "data_atualizacao",
-    ]
-
-    list_filter = [
-        "obra",
-        "disciplina",
-        "semana",
-        "data_atualizacao",
-    ]
-
-    search_fields = [
-        "nome_tarefa",
-        "local_tarefa",
+        "nome_tarefa_resumida",
+        "inicio_base",
+        "termino_base",
+        "inicio_real",
+        "termino_real",
+        "reprogramada",
         "responsavel",
-        "nome_projeto_original",
+        "data_atualizacao",
+        "importacao",
     ]
 
-    ordering = [
-        "obra",
+    list_filter = [
+        "importacao",
+        "projeto",
         "semana",
-        "nome_tarefa",
-    ]
-
-    raw_id_fields = [
-        "importacao_cronograma",
-        "obra",
         "disciplina",
-    ]
-
-
-@admin.register(Marco)
-class MarcoAdmin(admin.ModelAdmin):
-    list_display = [
-        "nome",
-        "obra",
-        "semana",
-        "data_prevista",
-        "data_realizada",
-        "concluido",
-    ]
-
-    list_filter = [
-        "obra",
-        "concluido",
-        "data_prevista",
+        "reprogramada",
+        "responsavel",
+        "data_atualizacao",
     ]
 
     search_fields = [
-        "nome",
-        "obra__nome",
+        "projeto",
+        "local_tarefa",
+        "nome_tarefa",
+        "disciplina",
+        "responsavel",
+        "chave_atividade",
+        "checklist_habitese",
+        "checklist_cef",
     ]
 
-    raw_id_fields = [
-        "importacao_cronograma",
-        "atividade_origem",
-    ]
-
-
-@admin.register(ChecklistCronograma)
-class ChecklistCronogramaAdmin(admin.ModelAdmin):
-    list_display = [
-        "nome",
-        "obra",
+    readonly_fields = [
+        "importacao",
+        "projeto",
         "tipo",
+        "quantidade_unidades",
         "semana",
-        "percentual_concluido",
-        "concluido",
+        "data_atualizacao",
+        "local_tarefa",
+        "nome_tarefa",
+        "inicio_real",
+        "duracao_real",
+        "termino_real",
+        "inicio_base",
+        "duracao_base",
+        "termino_base",
+        "inicio_base_anterior",
+        "termino_base_anterior",
+        "reprogramada",
+        "reprogramada_em",
+        "chave_atividade",
+        "percentual_concluida",
+        "percentual_previsto_tarefa",
+        "disciplina",
+        "checklist_habitese",
+        "checklist_cef",
+        "responsavel",
+        "peso",
+        "percentual_executado",
+        "percentual_previsto",
+        "inicio_semana",
+        "semana_anterior",
+        "semana_seguinte",
+        "inicio_semana_base",
+        "criado_em",
     ]
 
-    list_filter = [
-        "obra",
-        "tipo",
-        "concluido",
+    ordering = ["projeto", "-semana", "id"]
+    list_select_related = ["importacao"]
+    list_per_page = 100
+    date_hierarchy = "data_atualizacao"
+
+    fieldsets = [
+        (
+            "Identificação",
+            {
+                "fields": [
+                    "importacao",
+                    "projeto",
+                    "tipo",
+                    "quantidade_unidades",
+                    "semana",
+                    "data_atualizacao",
+                    "chave_atividade",
+                ]
+            },
+        ),
+        (
+            "Atividade",
+            {
+                "fields": [
+                    "local_tarefa",
+                    "nome_tarefa",
+                    "disciplina",
+                    "responsavel",
+                ]
+            },
+        ),
+        (
+            "Datas vigentes",
+            {
+                "fields": [
+                    "inicio_base",
+                    "termino_base",
+                    "inicio_real",
+                    "termino_real",
+                ]
+            },
+        ),
+        (
+            "Reprogramação",
+            {
+                "fields": [
+                    "reprogramada",
+                    "inicio_base_anterior",
+                    "termino_base_anterior",
+                    "reprogramada_em",
+                ]
+            },
+        ),
+        (
+            "Percentuais",
+            {
+                "fields": [
+                    "peso",
+                    "percentual_concluida",
+                    "percentual_previsto_tarefa",
+                    "percentual_executado",
+                    "percentual_previsto",
+                ]
+            },
+        ),
+        (
+            "Checklists",
+            {
+                "fields": [
+                    "checklist_habitese",
+                    "checklist_cef",
+                ]
+            },
+        ),
+        (
+            "Controle",
+            {
+                "fields": [
+                    "inicio_semana",
+                    "semana_anterior",
+                    "semana_seguinte",
+                    "inicio_semana_base",
+                    "criado_em",
+                ]
+            },
+        ),
     ]
 
-    search_fields = [
-        "nome",
-        "local",
-        "valor_original",
-        "obra__nome",
-    ]
+    @admin.display(description="Tarefa", ordering="nome_tarefa")
+    def nome_tarefa_resumida(self, obj):
+        texto = obj.nome_tarefa or "-"
+        return texto if len(texto) <= 70 else f"{texto[:70]}..."
 
-    raw_id_fields = [
-        "importacao_cronograma",
-        "atividade_origem",
-    ]
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.method in ("GET", "HEAD", "OPTIONS")
+
+    def has_delete_permission(self, request, obj=None):
+        return False
