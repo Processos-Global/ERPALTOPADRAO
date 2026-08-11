@@ -12,19 +12,224 @@
 
     <meta
         name="theme-color"
-        content="#173f43"
+        content="#1D91A6"
     >
 
-    <title>
-        {% block title %}
-            ERP Alto Padrão
-        {% endblock %}
-    </title>
 
     <link
         rel="stylesheet"
         href="{% static 'css/base.css' %}"
     >
+
+    <style>
+        :root {
+            /* Azul Opala Tropical - alinhado ao base.css */
+            --opal-blue: #1D91A6;
+            --opal-blue-dark: #0E5268;
+            --opal-blue-deep: #0A4054;
+            --opal-blue-soft: #DDF3F6;
+            --opal-blue-border: #BDE6EC;
+        }
+
+        .sidebar {
+            background: var(--opal-blue-deep);
+        }
+
+        .brand__mark,
+        .sidebar-link__icon,
+        .sidebar-logout,
+        .user-summary__avatar,
+        .sidebar__section-title,
+        .sidebar__modules-header small {
+            color: #ffffff;
+        }
+
+        .brand__mark,
+        .page-transition__mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand__mark .icon {
+            width: 1.15rem;
+            height: 1.15rem;
+        }
+
+        .page-transition__mark .icon {
+            width: 1.35rem;
+            height: 1.35rem;
+        }
+
+        .sidebar-link--active {
+            background: rgba(255, 255, 255, 0.10);
+            border-left-color: #ffffff;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .topbar__status {
+            background: var(--opal-blue);
+        }
+
+        .page-transition {
+            background: var(--opal-blue-deep);
+        }
+
+        .page-transition__mark {
+            border-color: rgba(255, 255, 255, 0.55);
+            color: #ffffff;
+        }
+
+        /* Estado recolhido: deixa a sidebar realmente icon-only. */
+        body.sidebar-is-collapsed .sidebar {
+            overflow-x: hidden !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar__project,
+        body.sidebar-is-collapsed .sidebar__section-title,
+        body.sidebar-is-collapsed .sidebar__modules-header,
+        body.sidebar-is-collapsed .brand__content,
+        body.sidebar-is-collapsed .sidebar-link__text,
+        body.sidebar-is-collapsed .user-summary__content,
+        body.sidebar-is-collapsed .sidebar-logout__text,
+        body.sidebar-is-collapsed .sidebar__mobile-close {
+            display: none !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar__header {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        body.sidebar-is-collapsed .brand {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+        }
+
+        body.sidebar-is-collapsed .brand__mark {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 2.5rem !important;
+            height: 2.5rem !important;
+            min-width: 2.5rem !important;
+            margin: 0 auto !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        body.sidebar-is-collapsed .brand__mark .icon {
+            display: block !important;
+            width: 1.15rem !important;
+            height: 1.15rem !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar__navigation,
+        body.sidebar-is-collapsed .sidebar__modules,
+        body.sidebar-is-collapsed .sidebar__modules-list,
+        body.sidebar-is-collapsed .sidebar__footer,
+        body.sidebar-is-collapsed .logout-form {
+            width: 100% !important;
+            min-width: 0 !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar__navigation,
+        body.sidebar-is-collapsed .sidebar__modules-list,
+        body.sidebar-is-collapsed .sidebar__footer {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-link,
+        body.sidebar-is-collapsed .sidebar-logout,
+        body.sidebar-is-collapsed .user-summary {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 2.75rem !important;
+            min-width: 2.75rem !important;
+            max-width: 2.75rem !important;
+            height: 2.75rem !important;
+            min-height: 2.75rem !important;
+            padding: 0 !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            gap: 0 !important;
+            box-sizing: border-box !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-link__icon {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex: 0 0 auto !important;
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+            min-width: 1.25rem !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            color: #ffffff !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-link__icon .icon,
+        body.sidebar-is-collapsed .sidebar-logout .icon {
+            display: block !important;
+            width: 1.05rem !important;
+            height: 1.05rem !important;
+            min-width: 1.05rem !important;
+            margin: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            color: #ffffff !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-link--active {
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-left: 0 !important;
+            box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.95) !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-link:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar__divider {
+            width: calc(100% - 2rem) !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+
+        body.sidebar-is-collapsed .user-summary {
+            border: 0 !important;
+            background: transparent !important;
+        }
+
+        body.sidebar-is-collapsed .user-summary__avatar {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+    </style>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -38,7 +243,9 @@
         aria-hidden="true"
     >
         <div class="page-transition__mark">
-            AP
+            <svg class="icon" aria-hidden="true">
+                <use href="#icon-building"></use>
+            </svg>
         </div>
     </div>
 
@@ -53,14 +260,16 @@
                     href="{% url 'core:index' %}"
                     class="brand"
                     data-transition-link
-                    aria-label="ERP Alto Padrão"
+                    aria-label="ALTO PADRÃO"
                 >
-                    <span class="brand__mark">
-                        AP
+                    <span class="brand__mark" aria-hidden="true">
+                        <svg class="icon">
+                            <use href="#icon-building"></use>
+                        </svg>
                     </span>
 
                     <span class="brand__content">
-                        <strong>Alto Padrão</strong>
+                        <strong>ALTO PADRÃO</strong>
                         <small>ERP</small>
                     </span>
                 </a>
@@ -79,29 +288,31 @@
 
             <div class="sidebar__divider"></div>
 
-            <section class="sidebar__project">
-                <span class="sidebar__section-title">
-                    Obra ativa
-                </span>
-
-                <div class="project-card">
-                    <span class="project-card__icon">
-                        <svg class="icon">
-                            <use href="#icon-building"></use>
-                        </svg>
+            {% if sidebar_obra_ativa_nome and sidebar_obra_ativa_nome != "Nenhuma obra selecionada" and sidebar_obra_ativa_status != "Sem obra ativa" %}
+                <section class="sidebar__project">
+                    <span class="sidebar__section-title">
+                        Obra ativa
                     </span>
 
-                    <span class="project-card__content">
-                        <strong>
-                            {{ sidebar_obra_ativa_nome }}
-                        </strong>
+                    <div class="project-card">
+                        <span class="project-card__icon">
+                            <svg class="icon">
+                                <use href="#icon-building"></use>
+                            </svg>
+                        </span>
 
-                        <small>
-                            {{ sidebar_obra_ativa_status }}
-                        </small>
-                    </span>
-                </div>
-            </section>
+                        <span class="project-card__content">
+                            <strong>
+                                {{ sidebar_obra_ativa_nome }}
+                            </strong>
+
+                            <small>
+                                {{ sidebar_obra_ativa_status }}
+                            </small>
+                        </span>
+                    </div>
+                </section>
+            {% endif %}
 
             <nav
                 class="sidebar__navigation"
@@ -113,12 +324,7 @@
 
                 <a
                     href="{{ sidebar_dashboard.url }}"
-                    class="
-                        sidebar-link
-                        {% if sidebar_dashboard.ativo %}
-                            sidebar-link--active
-                        {% endif %}
-                    "
+                    class="sidebar-link {% if sidebar_dashboard.ativo %}sidebar-link--active{% endif %}"
                     data-transition-link
                     title="{{ sidebar_dashboard.titulo }}"
                 >
@@ -140,52 +346,43 @@
                         Módulos
                     </span>
 
-                    <small>
-                        {{ sidebar_total_modulos }}
-                    </small>
+                    <small>2</small>
                 </header>
 
                 <div class="sidebar__modules-list">
-                    {% for item in sidebar_modulos %}
-                        {% if item.url %}
-                            <a
-                                href="{{ item.url }}"
-                                class="
-                                    sidebar-link
-                                    {% if item.ativo %}
-                                        sidebar-link--active
-                                    {% endif %}
-                                "
-                                data-transition-link
-                                title="{{ item.titulo }}"
-                            >
-                                <span class="sidebar-link__icon">
-                                    <svg class="icon">
-                                        <use href="#icon-{{ item.icone }}"></use>
-                                    </svg>
-                                </span>
+                    <a
+                        href="{% url 'planejamento:painel_cronograma' %}"
+                        class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' and request.resolver_match.url_name != 'painel_cronograma_suprimentos' and request.resolver_match.url_name != 'historico_importacoes_cronograma_suprimentos' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Cronograma de Obras"
+                    >
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-calendar"></use>
+                            </svg>
+                        </span>
 
-                                <span class="sidebar-link__text">
-                                    {{ item.titulo }}
-                                </span>
-                            </a>
-                        {% else %}
-                            <div
-                                class="sidebar-link sidebar-link--disabled"
-                                title="{{ item.titulo }}"
-                            >
-                                <span class="sidebar-link__icon">
-                                    <svg class="icon">
-                                        <use href="#icon-{{ item.icone }}"></use>
-                                    </svg>
-                                </span>
+                        <span class="sidebar-link__text">
+                            Cronograma de Obras
+                        </span>
+                    </a>
 
-                                <span class="sidebar-link__text">
-                                    {{ item.titulo }}
-                                </span>
-                            </div>
-                        {% endif %}
-                    {% endfor %}
+                    <a
+                        href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
+                        class="sidebar-link {% if request.resolver_match.url_name == 'painel_cronograma_suprimentos' or request.resolver_match.url_name == 'historico_importacoes_cronograma_suprimentos' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Cronograma de Suprimentos"
+                    >
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-building"></use>
+                            </svg>
+                        </span>
+
+                        <span class="sidebar-link__text">
+                            Cronograma de Suprimentos
+                        </span>
+                    </a>
                 </div>
             </section>
 
@@ -259,15 +456,6 @@
                     </button>
 
                     <div class="topbar__context">
-                        <strong>
-                            {% block page_name %}
-                                Painel Geral
-                            {% endblock %}
-                        </strong>
-
-                        <span>
-                            ERP Alto Padrão
-                        </span>
                     </div>
                 </div>
 
@@ -308,6 +496,53 @@
     </div>
 
     <script src="{% static 'js/app.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('appSidebar');
+            const toggle = document.querySelector('[data-sidebar-toggle]');
+
+            if (!sidebar) {
+                return;
+            }
+
+            const updateSidebarState = () => {
+                const collapsedByClass = (
+                    sidebar.classList.contains('is-collapsed') ||
+                    sidebar.classList.contains('sidebar--collapsed') ||
+                    document.body.classList.contains('sidebar-collapsed') ||
+                    document.documentElement.classList.contains('sidebar-collapsed')
+                );
+
+                const width = sidebar.getBoundingClientRect().width;
+                const collapsedByWidth = width > 0 && width <= 120;
+                const collapsed = collapsedByClass || collapsedByWidth;
+
+                document.body.classList.toggle('sidebar-is-collapsed', collapsed);
+            };
+
+            updateSidebarState();
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    window.requestAnimationFrame(function () {
+                        window.setTimeout(updateSidebarState, 80);
+                    });
+                });
+            }
+
+            window.addEventListener('resize', updateSidebarState);
+
+            new MutationObserver(updateSidebarState).observe(sidebar, {
+                attributes: true,
+                attributeFilter: ['class', 'style']
+            });
+
+            new MutationObserver(updateSidebarState).observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

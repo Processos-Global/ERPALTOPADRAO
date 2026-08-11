@@ -9,6 +9,13 @@ from .cronograma import (
     historico_importacoes_cronograma,
     painel_cronograma,
 )
+from .cronograma_suprimentos import (
+    atualizar_cronograma_suprimentos,
+    historico_importacoes_cronograma_suprimentos,
+    kanban_cronograma_suprimentos,
+    painel_cronograma_suprimentos,
+    salvar_datas_item_cronograma_suprimentos,
+)
 
 __all__ = [
     "adicionar_suprimento_atividade",
@@ -20,4 +27,9 @@ __all__ = [
     "excluir_suprimento_atividade",
     "historico_importacoes_cronograma",
     "painel_cronograma",
+    "atualizar_cronograma_suprimentos",
+    "historico_importacoes_cronograma_suprimentos",
+    "kanban_cronograma_suprimentos",
+    "painel_cronograma_suprimentos",
+    "salvar_datas_item_cronograma_suprimentos",
 ]

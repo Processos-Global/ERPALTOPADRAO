@@ -1,0 +1,1549 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Kanban de Suprimentos{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --kb-accent:#256c7d;
+    --kb-accent-dark:#1f5d6b;
+    --kb-text:#172033;
+    --kb-muted:#667085;
+    --kb-border:#e4e7ec;
+    --kb-soft:#f8fafc;
+    --kb-success:#067647;
+    --kb-success-bg:#ecfdf3;
+    --kb-warning:#b54708;
+    --kb-warning-bg:#fff4e8;
+    --kb-danger:#b42318;
+    --kb-danger-bg:#fef3f2;
+  }
+
+  .kb-page {
+    display:flex;
+    flex-direction:column;
+    gap:13px;
+    min-width:0;
+  }
+
+  .kb-head {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  .kb-title-wrap {
+    display:flex;
+    align-items:flex-start;
+    gap:11px;
+  }
+
+  .kb-title-icon {
+    width:38px;
+    height:38px;
+    border-radius:11px;
+    display:grid;
+    place-items:center;
+    background:#edf6f8;
+    color:var(--kb-accent);
+    flex:0 0 38px;
+  }
+
+  .kb-title-icon svg {
+    width:19px;
+    height:19px;
+  }
+
+  .kb-title {
+    margin:0;
+    color:var(--kb-text);
+    font-size:1.42rem;
+    font-weight:760;
+  }
+
+  .kb-subtitle {
+    margin:4px 0 0;
+    color:var(--kb-muted);
+    font-size:.84rem;
+    max-width:780px;
+  }
+
+  .kb-actions {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .kb-btn {
+    min-height:36px;
+    border:1px solid #d0d5dd;
+    background:#fff;
+    color:#344054;
+    border-radius:9px;
+    padding:7px 11px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    font-weight:650;
+    font-size:.82rem;
+    cursor:pointer;
+    text-decoration:none;
+    transition:.16s ease;
+  }
+
+  .kb-btn:hover {
+    background:#f8fafc;
+    border-color:#b8c0cc;
+    transform:translateY(-1px);
+  }
+
+  .kb-btn-primary {
+    background:var(--kb-accent);
+    border-color:var(--kb-accent);
+    color:#fff;
+  }
+
+  .kb-btn-primary:hover {
+    background:var(--kb-accent-dark);
+    border-color:var(--kb-accent-dark);
+  }
+
+  .kb-btn svg {
+    width:14px;
+    height:14px;
+  }
+
+  .kb-filters {
+    background:#fff;
+    border:1px solid var(--kb-border);
+    border-radius:12px;
+    padding:11px 12px;
+    display:grid;
+    grid-template-columns:minmax(200px,.9fr) minmax(180px,.8fr) minmax(240px,1.4fr) auto auto;
+    gap:9px;
+    align-items:end;
+    box-shadow:0 1px 2px rgba(16,24,40,.03);
+  }
+
+  .kb-field label {
+    display:block;
+    font-size:.69rem;
+    font-weight:760;
+    color:var(--kb-muted);
+    margin-bottom:5px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+
+  .kb-field select,
+  .kb-field input {
+    width:100%;
+    min-height:36px;
+    border:1px solid #d0d5dd;
+    border-radius:8px;
+    padding:7px 9px;
+    background:#fff;
+    color:#344054;
+    outline:none;
+    transition:border-color .15s, box-shadow .15s;
+    font-size:.82rem;
+  }
+
+  .kb-field select:focus,
+  .kb-field input:focus {
+    border-color:#76a7b3;
+    box-shadow:0 0 0 3px rgba(37,108,125,.10);
+  }
+
+  .kb-kpis {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .kb-kpi {
+    position:relative;
+    overflow:hidden;
+    background:#fff;
+    border:1px solid var(--kb-border);
+    border-radius:11px;
+    padding:9px 11px;
+    box-shadow:0 1px 2px rgba(16,24,40,.025);
+  }
+
+  .kb-kpi::before {
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:3px;
+    background:#d8e9ed;
+  }
+
+  .kb-kpi.is-accent::before { background:var(--kb-accent); }
+  .kb-kpi.is-warning::before { background:#f79009; }
+  .kb-kpi.is-success::before { background:#12b76a; }
+
+  .kb-kpi-label {
+    color:var(--kb-muted);
+    font-size:.67rem;
+    font-weight:760;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+
+  .kb-kpi-value {
+    display:block;
+    margin-top:2px;
+    color:var(--kb-text);
+    font-size:1.12rem;
+    font-weight:780;
+  }
+
+  .kb-kpi-help {
+    color:#98a2b3;
+    font-size:.64rem;
+    margin-top:1px;
+  }
+
+  .kb-board-toolbar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:0 2px;
+  }
+
+  .kb-board-toolbar-left {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#667085;
+    font-size:.72rem;
+  }
+
+  .kb-board-toolbar-left strong {
+    color:#344054;
+  }
+
+  .kb-filter-active {
+    display:none;
+    align-items:center;
+    gap:6px;
+    border-radius:999px;
+    padding:4px 8px;
+    background:#edf6f8;
+    color:var(--kb-accent-dark);
+    font-size:.68rem;
+    font-weight:750;
+  }
+
+  .kb-filter-active.show {
+    display:inline-flex;
+  }
+
+  .kb-board-wrap {
+    position:relative;
+    border:1px solid var(--kb-border);
+    border-radius:14px;
+    background:#f7f9fb;
+    overflow-x:auto;
+    overflow-y:hidden;
+    box-shadow:0 1px 2px rgba(16,24,40,.025);
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 transparent;
+  }
+
+  .kb-board {
+    min-width:1110px;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(210px,1fr));
+    align-items:stretch;
+  }
+
+  .kb-column {
+    min-width:0;
+    border-right:1px solid #e5e9ee;
+    background:#f8fafc;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .kb-column:last-child {
+    border-right:0;
+  }
+
+  .kb-column.is-hidden {
+    display:none;
+  }
+
+  .kb-board.stage-filtered {
+    min-width:0;
+    grid-template-columns:minmax(280px,620px);
+    justify-content:start;
+  }
+
+  .kb-column-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    min-height:44px;
+    padding:8px 9px;
+    border-bottom:1px solid #e1e6eb;
+    background:#f3f6f8;
+  }
+
+  .kb-column-title {
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+    color:#344054;
+    font-size:.69rem;
+    font-weight:790;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+
+  .kb-column-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#98a2b3;
+    flex:0 0 8px;
+  }
+
+  .kb-column[data-stage="COTACAO"] .kb-column-dot { background:#7b8ba1; }
+  .kb-column[data-stage="COMPATIBILIZACAO"] .kb-column-dot { background:#5d8590; }
+  .kb-column[data-stage="NEGOCIACAO"] .kb-column-dot { background:#3f7887; }
+  .kb-column[data-stage="CONTRATACAO"] .kb-column-dot { background:#d97706; }
+  .kb-column[data-stage="CONCLUIDO"] .kb-column-dot { background:#12b76a; }
+
+  .kb-count {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:23px;
+    height:21px;
+    padding:0 6px;
+    border-radius:999px;
+    background:#fff;
+    border:1px solid #dde3e8;
+    color:#667085;
+    font-size:.64rem;
+    font-weight:760;
+  }
+
+  .kb-column-body {
+    min-height:380px;
+    max-height:calc(100vh - 320px);
+    overflow-y:auto;
+    padding:7px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 transparent;
+  }
+
+  .kb-column-body::-webkit-scrollbar { width:7px; }
+  .kb-column-body::-webkit-scrollbar-thumb {
+    background:#cbd5e1;
+    border-radius:999px;
+  }
+
+  .kb-card {
+    width:100%;
+    text-align:left;
+    border:1px solid #e1e5ea;
+    border-radius:9px;
+    background:#fff;
+    padding:8px 9px;
+    cursor:pointer;
+    color:inherit;
+    box-shadow:0 1px 2px rgba(16,24,40,.025);
+    transition:transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+  }
+
+  .kb-card:hover {
+    transform:translateY(-1px);
+    border-color:#c7d7dc;
+    box-shadow:0 5px 14px rgba(16,24,40,.065);
+  }
+
+  .kb-card.is-late {
+    border-left:3px solid #f79009;
+    padding-left:7px;
+  }
+
+  .kb-card.is-done {
+    border-left:3px solid #12b76a;
+    padding-left:7px;
+  }
+
+  .kb-card-top {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:7px;
+  }
+
+  .kb-work {
+    max-width:145px;
+    color:var(--kb-accent-dark);
+    background:#edf6f8;
+    border:1px solid #dcecef;
+    border-radius:999px;
+    padding:2px 6px;
+    font-size:.57rem;
+    font-weight:760;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .kb-percent {
+    color:#344054;
+    font-size:.64rem;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .kb-card-title {
+    margin-top:5px;
+    color:var(--kb-text);
+    font-size:.77rem;
+    font-weight:745;
+    line-height:1.2;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .kb-card-meta {
+    margin-top:4px;
+    color:#7b8798;
+    font-size:.62rem;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .kb-card-meta svg {
+    width:10px;
+    height:10px;
+    flex:0 0 10px;
+  }
+
+  .kb-card-progress {
+    height:4px;
+    overflow:hidden;
+    border-radius:999px;
+    background:#edf0f3;
+    margin-top:6px;
+  }
+
+  .kb-card-progress span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:var(--kb-accent);
+  }
+
+  .kb-card.is-done .kb-card-progress span {
+    background:#12b76a;
+  }
+
+  .kb-card-foot {
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:6px;
+    margin-top:6px;
+    padding-top:6px;
+    border-top:1px solid #f2f4f7;
+  }
+
+  .kb-date-label {
+    display:block;
+    color:#98a2b3;
+    font-size:.52rem;
+    font-weight:780;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+  }
+
+  .kb-date {
+    color:#475467;
+    font-size:.62rem;
+    font-weight:700;
+  }
+
+  .kb-alert {
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    border-radius:999px;
+    padding:2px 5px;
+    background:var(--kb-warning-bg);
+    color:var(--kb-warning);
+    font-size:.55rem;
+    font-weight:780;
+    white-space:nowrap;
+  }
+
+  .kb-done-label {
+    display:inline-flex;
+    align-items:center;
+    gap:3px;
+    color:var(--kb-success);
+    font-size:.57rem;
+    font-weight:780;
+    white-space:nowrap;
+  }
+
+  .kb-empty-col {
+    min-height:90px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    padding:15px 10px;
+    color:#98a2b3;
+    font-size:.67rem;
+  }
+
+  .kb-empty-col.has-items {
+    display:none;
+  }
+
+  .kb-empty {
+    padding:48px 20px;
+    text-align:center;
+    color:var(--kb-muted);
+    background:#fff;
+    border:1px solid var(--kb-border);
+    border-radius:13px;
+  }
+
+  .kb-source {
+    display:none !important;
+  }
+
+  /* Modal */
+  .kb-modal-backdrop {
+    position:fixed;
+    inset:0;
+    z-index:99999;
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    padding:clamp(24px,6vh,64px) 18px 24px;
+    background:rgba(15,23,42,.52);
+    overflow-y:auto;
+    backdrop-filter:blur(2px);
+  }
+
+  .kb-modal-backdrop.open {
+    display:flex;
+  }
+
+  .kb-modal {
+    width:min(760px,100%);
+    max-height:calc(100vh - 60px);
+    overflow:auto;
+    background:#fff;
+    border-radius:15px;
+    border:1px solid rgba(255,255,255,.45);
+    box-shadow:0 24px 65px rgba(15,23,42,.30);
+    animation:kbIn .16s ease-out;
+  }
+
+  @keyframes kbIn {
+    from { opacity:0; transform:translateY(-8px) scale(.99); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  body.kb-modal-open {
+    overflow:hidden;
+  }
+
+  .kb-modal-head {
+    position:sticky;
+    top:0;
+    z-index:3;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding:17px 19px 14px;
+    border-bottom:1px solid var(--kb-border);
+    background:#fff;
+  }
+
+  .kb-modal-title-wrap {
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+
+  .kb-modal-icon {
+    width:35px;
+    height:35px;
+    border-radius:10px;
+    display:grid;
+    place-items:center;
+    background:#edf6f8;
+    color:var(--kb-accent);
+    flex:0 0 35px;
+  }
+
+  .kb-modal-icon svg {
+    width:17px;
+    height:17px;
+  }
+
+  .kb-modal-title {
+    margin:0;
+    color:var(--kb-text);
+    font-size:1.02rem;
+    font-weight:760;
+  }
+
+  .kb-modal-subtitle {
+    margin:3px 0 0;
+    color:var(--kb-muted);
+    font-size:.77rem;
+  }
+
+  .kb-close {
+    border:1px solid transparent;
+    background:transparent;
+    font-size:1.35rem;
+    line-height:1;
+    color:var(--kb-muted);
+    cursor:pointer;
+    padding:4px 7px;
+    border-radius:8px;
+  }
+
+  .kb-close:hover {
+    background:#f2f4f7;
+    color:#344054;
+  }
+
+  .kb-modal-body {
+    padding:17px 19px;
+  }
+
+  .kb-detail-top {
+    display:grid;
+    grid-template-columns:1.15fr .7fr 1fr 1fr;
+    gap:8px;
+    margin-bottom:17px;
+  }
+
+  .kb-detail-card {
+    border:1px solid var(--kb-border);
+    border-radius:10px;
+    padding:10px;
+    background:#fff;
+  }
+
+  .kb-detail-card.is-highlight {
+    background:#f8fbfc;
+    border-color:#dbe7ea;
+  }
+
+  .kb-detail-label {
+    color:#98a2b3;
+    font-size:.62rem;
+    font-weight:760;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+  }
+
+  .kb-detail-value {
+    margin-top:4px;
+    color:#344054;
+    font-size:.82rem;
+    font-weight:730;
+  }
+
+  .kb-detail-progress {
+    height:6px;
+    background:#e9eef2;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:7px;
+  }
+
+  .kb-detail-progress span {
+    display:block;
+    height:100%;
+    border-radius:inherit;
+    background:var(--kb-accent);
+  }
+
+  .kb-timeline-title {
+    margin:2px 0 9px;
+    color:#344054;
+    font-size:.76rem;
+    font-weight:770;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+
+  .kb-timeline {
+    border:1px solid var(--kb-border);
+    border-radius:11px;
+    overflow:hidden;
+  }
+
+  .kb-step {
+    display:grid;
+    grid-template-columns:minmax(145px,.9fr) minmax(120px,.75fr) minmax(120px,.75fr) minmax(88px,.6fr);
+    align-items:center;
+    border-bottom:1px solid #edf0f3;
+  }
+
+  .kb-step:last-child {
+    border-bottom:0;
+  }
+
+  .kb-step > div {
+    padding:10px 11px;
+    min-width:0;
+  }
+
+  .kb-step > div + div {
+    border-left:1px solid #edf0f3;
+  }
+
+  .kb-step-name {
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#344054;
+    font-size:.76rem;
+    font-weight:720;
+  }
+
+  .kb-step-dot {
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#c7cdd5;
+    flex:0 0 8px;
+  }
+
+  .kb-step-dot.done {
+    background:#12b76a;
+    box-shadow:0 0 0 3px #ecfdf3;
+  }
+
+  .kb-step-head {
+    color:#98a2b3;
+    font-size:.58rem;
+    font-weight:760;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+  }
+
+  .kb-step-value {
+    margin-top:3px;
+    color:#475467;
+    font-size:.72rem;
+    font-weight:680;
+  }
+
+  .kb-step-delta {
+    display:inline-flex;
+    border-radius:999px;
+    padding:3px 7px;
+    font-size:.63rem;
+    font-weight:760;
+  }
+
+  .kb-step-delta.late {
+    color:var(--kb-danger);
+    background:var(--kb-danger-bg);
+  }
+
+  .kb-step-delta.early {
+    color:var(--kb-success);
+    background:var(--kb-success-bg);
+  }
+
+  .kb-step-delta.ontime {
+    color:var(--kb-accent-dark);
+    background:#edf6f8;
+  }
+
+  .kb-step-delta.pending {
+    color:#667085;
+    background:#f2f4f7;
+  }
+
+  .kb-modal-foot {
+    position:sticky;
+    bottom:0;
+    z-index:3;
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    padding:12px 19px 15px;
+    border-top:1px solid var(--kb-border);
+    background:#fff;
+  }
+
+  @media (max-width:1050px) {
+    .kb-filters {
+      grid-template-columns:1fr 1fr 1fr auto;
+    }
+    .kb-filters .kb-clear {
+      grid-column:1 / -1;
+      justify-self:start;
+    }
+  }
+
+  @media (max-width:900px) {
+    .kb-filters {
+      grid-template-columns:1fr 1fr;
+    }
+    .kb-kpis {
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .kb-detail-top {
+      grid-template-columns:1fr 1fr;
+    }
+  }
+
+  @media (max-width:620px) {
+    .kb-title-icon {
+      display:none;
+    }
+    .kb-filters,
+    .kb-kpis,
+    .kb-detail-top {
+      grid-template-columns:1fr;
+    }
+    .kb-board-toolbar {
+      align-items:flex-start;
+      flex-direction:column;
+    }
+    .kb-modal-backdrop {
+      padding:14px 8px;
+    }
+    .kb-modal {
+      max-height:calc(100vh - 28px);
+    }
+    .kb-step {
+      grid-template-columns:1fr 1fr;
+    }
+    .kb-step > div:nth-child(3) {
+      border-left:0;
+      border-top:1px solid #edf0f3;
+    }
+    .kb-step > div:nth-child(4) {
+      border-top:1px solid #edf0f3;
+    }
+  }
+</style>
+
+<div class="kb-page">
+  <div class="kb-head">
+    <div class="kb-title-wrap">
+      <div class="kb-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="4" width="5" height="16" rx="1.5"/>
+          <rect x="10" y="4" width="5" height="10" rx="1.5"/>
+          <rect x="17" y="4" width="4" height="13" rx="1.5"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="kb-title">Kanban de Suprimentos</h1>
+        <p class="kb-subtitle">
+          Acompanhe o estágio atual de cada suprimento. Os cards são posicionados automaticamente de acordo com as datas realizadas.
+        </p>
+      </div>
+    </div>
+
+    <div class="kb-actions">
+      <a class="kb-btn" href="{% url 'planejamento:painel_cronograma_suprimentos' %}{% if filtros.obra %}?obra={{ filtros.obra }}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+        Visualização em tabela
+      </a>
+    </div>
+  </div>
+
+  {% if importacao_ativa %}
+  <form class="kb-filters" method="get" id="kb-filter-form">
+    <div class="kb-field">
+      <label for="kb-obra">Obra</label>
+      <select id="kb-obra" name="obra">
+        <option value="">Todas as obras</option>
+        {% for registro in obras %}
+        <option value="{{ registro.obra_id }}"
+          {% if filtros.obra == registro.obra_id|stringformat:"s" %}selected{% endif %}>
+          {{ registro.nome_aba }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="kb-field">
+      <label for="kb-etapa">Etapa</label>
+      <select id="kb-etapa" name="etapa">
+        <option value="">Todas as etapas</option>
+        <option value="COTACAO" {% if request.GET.etapa == "COTACAO" %}selected{% endif %}>Cotação</option>
+        <option value="COMPATIBILIZACAO" {% if request.GET.etapa == "COMPATIBILIZACAO" %}selected{% endif %}>Compatibilização</option>
+        <option value="NEGOCIACAO" {% if request.GET.etapa == "NEGOCIACAO" %}selected{% endif %}>Negociação</option>
+        <option value="CONTRATACAO" {% if request.GET.etapa == "CONTRATACAO" %}selected{% endif %}>Contratação</option>
+        <option value="CONCLUIDO" {% if request.GET.etapa == "CONCLUIDO" %}selected{% endif %}>Concluído</option>
+      </select>
+    </div>
+
+    <div class="kb-field">
+      <label for="kb-busca">Pesquisar</label>
+      <input
+        id="kb-busca"
+        type="search"
+        name="busca"
+        value="{{ filtros.busca }}"
+        placeholder="Suprimento, local, categoria ou obra"
+      >
+    </div>
+
+    <button class="kb-btn kb-btn-primary" type="submit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/>
+        <path d="m20 20-3.5-3.5"/>
+      </svg>
+      Filtrar
+    </button>
+
+    {% if filtros.obra or filtros.busca or request.GET.etapa %}
+    <a class="kb-btn kb-clear" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}">
+      Limpar filtros
+    </a>
+    {% endif %}
+  </form>
+
+  <div class="kb-kpis">
+    <div class="kb-kpi">
+      <span class="kb-kpi-label">Suprimentos</span>
+      <span class="kb-kpi-value" id="kb-kpi-total">{{ resumo.total|default:0 }}</span>
+      <div class="kb-kpi-help">cards encontrados</div>
+    </div>
+
+    <div class="kb-kpi is-accent">
+      <span class="kb-kpi-label">Avanço médio</span>
+      <span class="kb-kpi-value">{{ resumo.percentual_medio|default:0 }}%</span>
+      <div class="kb-kpi-help">média das etapas realizadas</div>
+    </div>
+
+    <div class="kb-kpi is-warning">
+      <span class="kb-kpi-label">Atrasados</span>
+      <span class="kb-kpi-value">{{ resumo.atrasados|default:0 }}</span>
+      <div class="kb-kpi-help">etapa atual fora do prazo</div>
+    </div>
+
+    <div class="kb-kpi is-success">
+      <span class="kb-kpi-label">Concluídos</span>
+      <span class="kb-kpi-value">{{ resumo.concluidos|default:0 }}</span>
+      <div class="kb-kpi-help">contratação realizada</div>
+    </div>
+  </div>
+
+  <div class="kb-board-toolbar">
+    <div class="kb-board-toolbar-left">
+      <strong>Fluxo do suprimento</strong>
+      <span>Cotação → Compatibilização → Negociação → Contratação → Concluído</span>
+    </div>
+    <span class="kb-filter-active" id="kb-active-stage-filter"></span>
+  </div>
+
+  <div class="kb-board-wrap">
+    <div class="kb-board" id="kb-board">
+
+      <section class="kb-column" data-stage="COTACAO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Cotação
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+      <section class="kb-column" data-stage="COMPATIBILIZACAO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Compatibilização
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+      <section class="kb-column" data-stage="NEGOCIACAO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Negociação
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+      <section class="kb-column" data-stage="CONTRATACAO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Contratação
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+      <section class="kb-column" data-stage="CONCLUIDO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Concluído
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!--
+    Fonte oculta dos cards.
+    Aceita tanto o contexto novo do Kanban (colunas) quanto, como fallback,
+    o contexto da visualização em tabela (categorias).
+    O JavaScript distribui os cards nas cinco colunas acima.
+  -->
+  <div class="kb-source" id="kb-source">
+    {% if colunas %}
+      {% for coluna in colunas %}
+        {% for item in coluna.itens %}
+          <button
+            type="button"
+            class="kb-card js-kb-card {% if item.atrasado_calculado %}is-late{% endif %} {% if item.etapa_calculada == 'CONCLUIDO' or item.etapa_atual == 'CONCLUIDO' %}is-done{% endif %}"
+            data-stage="{{ item.etapa_calculada|default:item.etapa_atual }}"
+            data-item="{{ item.item|escape }}"
+            data-obra="{{ item.cronograma_obra.nome_aba|escape }}"
+            data-local="{{ item.local|default:'Sem local definido'|escape }}"
+            data-categoria="{{ item.categoria|default:'Sem categoria'|escape }}"
+            data-percentual="{{ item.percentual_calculado|default:item.percentual_andamento }}"
+            data-etapa="{{ item.etapa_calculada_label|default:item.etapa_atual_label|escape }}"
+            data-atraso="{{ item.dias_atraso_calculado|default:item.dias_atraso_etapa_atual }}"
+            data-prazo="{{ item.prazo_etapa_atual|date:'d/m/Y'|default:'—' }}"
+            data-base-cotacao="{{ item.data_cotacao|date:'d/m/Y'|default:'—' }}"
+            data-real-cotacao="{{ item.data_real_cotacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-cotacao="{{ item.cotacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-cotacao="{{ item.cotacao_desvio_classe|default:'pending' }}"
+            data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+            data-real-compat="{{ item.data_real_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-compat="{{ item.compatibilizacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-compat="{{ item.compatibilizacao_desvio_classe|default:'pending' }}"
+            data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
+            data-real-negociacao="{{ item.data_real_negociacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-negociacao="{{ item.negociacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-negociacao="{{ item.negociacao_desvio_classe|default:'pending' }}"
+            data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
+            data-real-contratacao="{{ item.data_real_contratacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-contratacao="{{ item.contratacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-contratacao="{{ item.contratacao_desvio_classe|default:'pending' }}"
+          >
+            <div class="kb-card-top">
+              <span class="kb-work" title="{{ item.cronograma_obra.nome_aba }}">
+                {{ item.cronograma_obra.nome_aba }}
+              </span>
+              <span class="kb-percent">
+                {{ item.percentual_calculado|default:item.percentual_andamento }}%
+              </span>
+            </div>
+
+            <div class="kb-card-title">{{ item.item }}</div>
+
+            <div class="kb-card-meta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/>
+                <circle cx="12" cy="10" r="2.5"/>
+              </svg>
+              {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
+            </div>
+
+            <div class="kb-card-progress">
+              <span style="width:{{ item.percentual_calculado|default:item.percentual_andamento }}%"></span>
+            </div>
+
+            <div class="kb-card-foot">
+              <div>
+                <span class="kb-date-label">
+                  {% if item.etapa_calculada == 'CONCLUIDO' or item.etapa_atual == 'CONCLUIDO' %}
+                    Contratado em
+                  {% else %}
+                    Prazo da etapa
+                  {% endif %}
+                </span>
+                <span class="kb-date">
+                  {% if item.etapa_calculada == 'CONCLUIDO' or item.etapa_atual == 'CONCLUIDO' %}
+                    {{ item.data_real_contratacao|date:"d/m/Y"|default:"—" }}
+                  {% else %}
+                    {{ item.prazo_etapa_atual|date:"d/m/Y"|default:"—" }}
+                  {% endif %}
+                </span>
+              </div>
+
+              {% if item.atrasado_calculado %}
+                <span class="kb-alert">
+                  +{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }}
+                </span>
+              {% elif item.etapa_calculada == 'CONCLUIDO' or item.etapa_atual == 'CONCLUIDO' %}
+                <span class="kb-done-label">✓ Concluído</span>
+              {% endif %}
+            </div>
+          </button>
+        {% endfor %}
+      {% endfor %}
+
+    {% else %}
+      {% for grupo in categorias %}
+        {% for item in grupo.itens %}
+          <button
+            type="button"
+            class="kb-card js-kb-card {% if item.atrasado_calculado %}is-late{% endif %} {% if item.etapa_calculada == 'CONCLUIDO' or item.etapa_atual == 'CONCLUIDO' %}is-done{% endif %}"
+            data-stage="{{ item.etapa_calculada|default:item.etapa_atual }}"
+            data-item="{{ item.item|escape }}"
+            data-obra="{{ cronograma_obra.nome_aba|default:item.cronograma_obra.nome_aba|escape }}"
+            data-local="{{ item.local|default:'Sem local definido'|escape }}"
+            data-categoria="{{ item.categoria|default:grupo.nome|escape }}"
+            data-percentual="{{ item.percentual_calculado|default:item.percentual_andamento }}"
+            data-etapa="{{ item.etapa_calculada_label|default:item.etapa_atual_label|escape }}"
+            data-atraso="{{ item.dias_atraso_calculado|default:item.dias_atraso_etapa_atual }}"
+            data-prazo="{{ item.prazo_etapa_atual|date:'d/m/Y'|default:'—' }}"
+            data-base-cotacao="{{ item.data_cotacao|date:'d/m/Y'|default:'—' }}"
+            data-real-cotacao="{{ item.data_real_cotacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-cotacao="{{ item.cotacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-cotacao="{{ item.cotacao_desvio_classe|default:'pending' }}"
+            data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+            data-real-compat="{{ item.data_real_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-compat="{{ item.compatibilizacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-compat="{{ item.compatibilizacao_desvio_classe|default:'pending' }}"
+            data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
+            data-real-negociacao="{{ item.data_real_negociacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-negociacao="{{ item.negociacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-negociacao="{{ item.negociacao_desvio_classe|default:'pending' }}"
+            data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
+            data-real-contratacao="{{ item.data_real_contratacao|date:'d/m/Y'|default:'—' }}"
+            data-delta-contratacao="{{ item.contratacao_desvio_label|default:'Pendente'|escape }}"
+            data-classe-contratacao="{{ item.contratacao_desvio_classe|default:'pending' }}"
+          >
+            <div class="kb-card-top">
+              <span class="kb-work">
+                {{ cronograma_obra.nome_aba|default:item.cronograma_obra.nome_aba }}
+              </span>
+              <span class="kb-percent">
+                {{ item.percentual_calculado|default:item.percentual_andamento }}%
+              </span>
+            </div>
+
+            <div class="kb-card-title">{{ item.item }}</div>
+
+            <div class="kb-card-meta">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/>
+                <circle cx="12" cy="10" r="2.5"/>
+              </svg>
+              {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
+            </div>
+
+            <div class="kb-card-progress">
+              <span style="width:{{ item.percentual_calculado|default:item.percentual_andamento }}%"></span>
+            </div>
+
+            <div class="kb-card-foot">
+              <div>
+                <span class="kb-date-label">Prazo da etapa</span>
+                <span class="kb-date">{{ item.prazo_etapa_atual|date:"d/m/Y"|default:"—" }}</span>
+              </div>
+              {% if item.atrasado_calculado %}
+                <span class="kb-alert">
+                  +{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }}
+                </span>
+              {% endif %}
+            </div>
+          </button>
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="kb-empty">
+    Nenhuma base de cronograma de suprimentos foi importada ainda.
+  </div>
+  {% endif %}
+</div>
+
+<div id="kb-modal" class="kb-modal-backdrop" aria-hidden="true">
+  <div class="kb-modal" role="dialog" aria-modal="true" aria-labelledby="kb-modal-title">
+    <div class="kb-modal-head">
+      <div class="kb-modal-title-wrap">
+        <div class="kb-modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19h16M5 16V8m7 8V5m7 11v-5"/>
+          </svg>
+        </div>
+        <div>
+          <h2 id="kb-modal-title" class="kb-modal-title">Detalhes do suprimento</h2>
+          <p id="kb-modal-subtitle" class="kb-modal-subtitle"></p>
+        </div>
+      </div>
+      <button type="button" class="kb-close js-kb-close" aria-label="Fechar">×</button>
+    </div>
+
+    <div class="kb-modal-body">
+      <div class="kb-detail-top">
+        <div class="kb-detail-card is-highlight">
+          <div class="kb-detail-label">Etapa atual</div>
+          <div class="kb-detail-value" id="kb-detail-etapa">—</div>
+          <div class="kb-detail-progress">
+            <span id="kb-detail-progress" style="width:0%"></span>
+          </div>
+        </div>
+
+        <div class="kb-detail-card">
+          <div class="kb-detail-label">Avanço</div>
+          <div class="kb-detail-value" id="kb-detail-percentual">0%</div>
+        </div>
+
+        <div class="kb-detail-card">
+          <div class="kb-detail-label">Local</div>
+          <div class="kb-detail-value" id="kb-detail-local">—</div>
+        </div>
+
+        <div class="kb-detail-card">
+          <div class="kb-detail-label">Categoria</div>
+          <div class="kb-detail-value" id="kb-detail-categoria">—</div>
+        </div>
+      </div>
+
+      <div class="kb-timeline-title">Planejado × realizado</div>
+
+      <div class="kb-timeline">
+        <div class="kb-step" data-step="cotacao">
+          <div class="kb-step-name">
+            <span class="kb-step-dot"></span>
+            Cotação
+          </div>
+          <div>
+            <div class="kb-step-head">Planejado</div>
+            <div class="kb-step-value js-base">—</div>
+          </div>
+          <div>
+            <div class="kb-step-head">Realizado</div>
+            <div class="kb-step-value js-real">—</div>
+          </div>
+          <div>
+            <span class="kb-step-delta pending js-delta">Pendente</span>
+          </div>
+        </div>
+
+        <div class="kb-step" data-step="compat">
+          <div class="kb-step-name">
+            <span class="kb-step-dot"></span>
+            Compatibilização
+          </div>
+          <div>
+            <div class="kb-step-head">Planejado</div>
+            <div class="kb-step-value js-base">—</div>
+          </div>
+          <div>
+            <div class="kb-step-head">Realizado</div>
+            <div class="kb-step-value js-real">—</div>
+          </div>
+          <div>
+            <span class="kb-step-delta pending js-delta">Pendente</span>
+          </div>
+        </div>
+
+        <div class="kb-step" data-step="negociacao">
+          <div class="kb-step-name">
+            <span class="kb-step-dot"></span>
+            Negociação
+          </div>
+          <div>
+            <div class="kb-step-head">Planejado</div>
+            <div class="kb-step-value js-base">—</div>
+          </div>
+          <div>
+            <div class="kb-step-head">Realizado</div>
+            <div class="kb-step-value js-real">—</div>
+          </div>
+          <div>
+            <span class="kb-step-delta pending js-delta">Pendente</span>
+          </div>
+        </div>
+
+        <div class="kb-step" data-step="contratacao">
+          <div class="kb-step-name">
+            <span class="kb-step-dot"></span>
+            Contratação
+          </div>
+          <div>
+            <div class="kb-step-head">Planejado</div>
+            <div class="kb-step-value js-base">—</div>
+          </div>
+          <div>
+            <div class="kb-step-head">Realizado</div>
+            <div class="kb-step-value js-real">—</div>
+          </div>
+          <div>
+            <span class="kb-step-delta pending js-delta">Pendente</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kb-modal-foot">
+      <button type="button" class="kb-btn js-kb-close">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const board = document.getElementById('kb-board');
+  const source = document.getElementById('kb-source');
+  const modal = document.getElementById('kb-modal');
+  const stageSelect = document.getElementById('kb-etapa');
+  const activeStageLabel = document.getElementById('kb-active-stage-filter');
+
+  if (!board || !source) return;
+
+  const stageLabels = {
+    COTACAO: 'Cotação',
+    COMPATIBILIZACAO: 'Compatibilização',
+    NEGOCIACAO: 'Negociação',
+    CONTRATACAO: 'Contratação',
+    CONCLUIDO: 'Concluído'
+  };
+
+  const normalizeStage = (value) => {
+    const stage = (value || '').trim().toUpperCase();
+    return stageLabels[stage] ? stage : 'COTACAO';
+  };
+
+  /*
+    Distribui os cards no cliente.
+    Isso torna o template compatível com o contexto "colunas" e também
+    com o contexto "categorias", evitando Kanban vazio por diferença
+    entre versões da view/serviço.
+  */
+  const cards = Array.from(source.querySelectorAll('.js-kb-card'));
+
+  cards.forEach((card) => {
+    const stage = normalizeStage(card.dataset.stage);
+    card.dataset.stage = stage;
+
+    const columnBody = board.querySelector(
+      `.kb-column[data-stage="${stage}"] .kb-column-body`
+    );
+
+    if (columnBody) columnBody.appendChild(card);
+  });
+
+  function refreshCounts() {
+    board.querySelectorAll('.kb-column').forEach((column) => {
+      const visibleCards = Array.from(
+        column.querySelectorAll('.js-kb-card')
+      ).filter((card) => card.style.display !== 'none');
+
+      const count = column.querySelector('.kb-count');
+      const empty = column.querySelector('.kb-empty-col');
+
+      if (count) count.textContent = visibleCards.length;
+      if (empty) empty.classList.toggle('has-items', visibleCards.length > 0);
+    });
+
+    const totalVisible = Array.from(
+      board.querySelectorAll('.js-kb-card')
+    ).filter((card) => card.style.display !== 'none').length;
+
+    const totalKpi = document.getElementById('kb-kpi-total');
+    if (totalKpi) totalKpi.textContent = totalVisible;
+  }
+
+  function applyStageFilter() {
+    const selected = stageSelect ? stageSelect.value : '';
+
+    board.classList.toggle('stage-filtered', Boolean(selected));
+
+    board.querySelectorAll('.kb-column').forEach((column) => {
+      const shouldShow = !selected || column.dataset.stage === selected;
+      column.classList.toggle('is-hidden', !shouldShow);
+    });
+
+    if (activeStageLabel) {
+      if (selected) {
+        activeStageLabel.textContent = `Etapa: ${stageLabels[selected] || selected}`;
+        activeStageLabel.classList.add('show');
+      } else {
+        activeStageLabel.textContent = '';
+        activeStageLabel.classList.remove('show');
+      }
+    }
+
+    refreshCounts();
+  }
+
+  /*
+    O backend atual pode ignorar ?etapa=. Mesmo assim o filtro funciona:
+    após o GET, o JavaScript mantém somente a coluna escolhida.
+  */
+  applyStageFilter();
+
+  if (stageSelect) {
+    stageSelect.addEventListener('change', applyStageFilter);
+  }
+
+  refreshCounts();
+
+  if (!modal) return;
+
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  const subtitle = document.getElementById('kb-modal-subtitle');
+  const etapa = document.getElementById('kb-detail-etapa');
+  const percentual = document.getElementById('kb-detail-percentual');
+  const progress = document.getElementById('kb-detail-progress');
+  const local = document.getElementById('kb-detail-local');
+  const categoria = document.getElementById('kb-detail-categoria');
+
+  let opener = null;
+
+  const stepMap = {
+    cotacao: ['baseCotacao', 'realCotacao', 'deltaCotacao', 'classeCotacao'],
+    compat: ['baseCompat', 'realCompat', 'deltaCompat', 'classeCompat'],
+    negociacao: ['baseNegociacao', 'realNegociacao', 'deltaNegociacao', 'classeNegociacao'],
+    contratacao: ['baseContratacao', 'realContratacao', 'deltaContratacao', 'classeContratacao']
+  };
+
+  function setStep(card, stepName, fields) {
+    const row = modal.querySelector(`[data-step="${stepName}"]`);
+    if (!row) return;
+
+    const [baseKey, realKey, deltaKey, classKey] = fields;
+    const base = row.querySelector('.js-base');
+    const real = row.querySelector('.js-real');
+    const delta = row.querySelector('.js-delta');
+    const dot = row.querySelector('.kb-step-dot');
+
+    const realValue = card.dataset[realKey] || '—';
+    const deltaValue = card.dataset[deltaKey] || 'Pendente';
+    const deltaClass = card.dataset[classKey] || 'pending';
+
+    if (base) base.textContent = card.dataset[baseKey] || '—';
+    if (real) real.textContent = realValue;
+
+    if (delta) {
+      delta.textContent = deltaValue;
+      delta.className = `kb-step-delta js-delta ${deltaClass}`;
+    }
+
+    if (dot) {
+      dot.classList.toggle('done', realValue !== '—' && realValue !== '');
+    }
+  }
+
+  function openModal(card) {
+    opener = card;
+
+    if (subtitle) {
+      subtitle.textContent = `${card.dataset.item || 'Suprimento'} · ${card.dataset.obra || ''}`;
+    }
+
+    if (etapa) etapa.textContent = card.dataset.etapa || stageLabels[card.dataset.stage] || '—';
+    if (percentual) percentual.textContent = `${card.dataset.percentual || 0}%`;
+    if (progress) progress.style.width = `${card.dataset.percentual || 0}%`;
+    if (local) local.textContent = card.dataset.local || '—';
+    if (categoria) categoria.textContent = card.dataset.categoria || '—';
+
+    Object.entries(stepMap).forEach(([name, fields]) => {
+      setStep(card, name, fields);
+    });
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('kb-modal-open');
+
+    requestAnimationFrame(() => {
+      const closeButton = modal.querySelector('.kb-close');
+      if (closeButton) closeButton.focus({ preventScroll:true });
+    });
+  }
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('kb-modal-open');
+
+    if (opener) {
+      opener.focus({ preventScroll:true });
+    }
+  }
+
+  board.querySelectorAll('.js-kb-card').forEach((card) => {
+    card.addEventListener('click', () => openModal(card));
+  });
+
+  document.querySelectorAll('.js-kb-close').forEach((button) => {
+    button.addEventListener('click', closeModal);
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) {
+      closeModal();
+    }
+  });
+})();
+</script>
+{% endblock %}

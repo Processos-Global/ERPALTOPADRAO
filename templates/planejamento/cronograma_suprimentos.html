@@ -1,0 +1,724 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Cronograma de Suprimentos{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --cs-accent:#256c7d;
+    --cs-accent-dark:#1f5d6b;
+    --cs-text:#172033;
+    --cs-muted:#667085;
+    --cs-border:#e4e7ec;
+    --cs-soft:#f8fafc;
+    --cs-success:#067647;
+    --cs-success-bg:#ecfdf3;
+    --cs-warning:#b54708;
+    --cs-warning-bg:#fff4e8;
+    --cs-danger:#b42318;
+    --cs-danger-bg:#fef3f2;
+  }
+
+  .cs-page { display:flex; flex-direction:column; gap:16px; }
+  .cs-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .cs-title-wrap { display:flex; align-items:flex-start; gap:12px; }
+  .cs-title-icon { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#edf6f8; color:var(--cs-accent); flex:0 0 42px; }
+  .cs-title-icon svg { width:21px; height:21px; }
+  .cs-title { margin:0; font-size:1.55rem; font-weight:750; color:var(--cs-text); }
+  .cs-subtitle { margin:5px 0 0; color:var(--cs-muted); font-size:.9rem; max-width:720px; }
+  .cs-actions { display:flex; gap:8px; flex-wrap:wrap; }
+
+  .cs-btn { min-height:38px; border:1px solid #d0d5dd; background:#fff; color:#344054; border-radius:9px; padding:8px 12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:650; cursor:pointer; text-decoration:none; transition:.16s ease; }
+  .cs-btn:hover { background:#f8fafc; border-color:#b8c0cc; transform:translateY(-1px); }
+  .cs-btn-primary { background:var(--cs-accent); border-color:var(--cs-accent); color:#fff; }
+  .cs-btn-primary:hover { background:var(--cs-accent-dark); border-color:var(--cs-accent-dark); }
+  .cs-btn-sm { min-height:33px; padding:6px 10px; font-size:.8rem; }
+  .cs-btn svg { width:15px; height:15px; }
+
+  .cs-filters { background:#fff; border:1px solid var(--cs-border); border-radius:13px; padding:14px; display:grid; grid-template-columns:minmax(180px,1.1fr) minmax(150px,.8fr) minmax(150px,.8fr) minmax(220px,1.4fr) auto; gap:10px; align-items:end; box-shadow:0 1px 2px rgba(16,24,40,.03); }
+  .cs-field label { display:block; font-size:.73rem; font-weight:750; color:var(--cs-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.025em; }
+  .cs-field select,.cs-field input { width:100%; min-height:38px; border:1px solid #d0d5dd; border-radius:8px; padding:7px 10px; background:#fff; color:#344054; outline:none; transition:border-color .15s, box-shadow .15s; }
+  .cs-field select:focus,.cs-field input:focus { border-color:#76a7b3; box-shadow:0 0 0 3px rgba(37,108,125,.10); }
+
+  .cs-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+  .cs-kpi { background:#fff; border:1px solid var(--cs-border); border-radius:12px; padding:13px 14px; position:relative; overflow:hidden; box-shadow:0 1px 2px rgba(16,24,40,.025); }
+  .cs-kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:#d8e9ed; }
+  .cs-kpi.is-accent::before { background:var(--cs-accent); }
+  .cs-kpi.is-success::before { background:#12b76a; }
+  .cs-kpi.is-warning::before { background:#f79009; }
+  .cs-kpi-label { color:var(--cs-muted); font-size:.72rem; font-weight:750; text-transform:uppercase; letter-spacing:.025em; }
+  .cs-kpi-value { display:block; margin-top:4px; color:var(--cs-text); font-size:1.28rem; font-weight:780; }
+  .cs-kpi-help { color:#98a2b3; font-size:.7rem; margin-top:2px; }
+
+  .cs-legend { display:flex; align-items:center; gap:15px; flex-wrap:wrap; color:var(--cs-muted); font-size:.77rem; padding:0 2px; }
+  .cs-legend-item { display:inline-flex; align-items:center; gap:6px; }
+  .cs-dot { width:8px; height:8px; border-radius:50%; background:#98a2b3; }
+  .cs-dot.done { background:#12b76a; }
+  .cs-dot.late { background:#f79009; }
+  .cs-dot.pending { background:#98a2b3; }
+
+  .cs-table-wrap {
+    --cs-table-head-h:46px;
+    position:relative;
+    background:#fff;
+    border:1px solid var(--cs-border);
+    border-radius:14px;
+    overflow:auto;
+    max-height:calc(100vh - 285px);
+    min-height:260px;
+    box-shadow:0 1px 2px rgba(16,24,40,.025), 0 10px 28px rgba(16,24,40,.035);
+    scrollbar-width:thin;
+    scrollbar-color:#cbd5e1 transparent;
+    overscroll-behavior:contain;
+  }
+  .cs-table-wrap::-webkit-scrollbar { width:10px; height:10px; }
+  .cs-table-wrap::-webkit-scrollbar-track { background:transparent; }
+  .cs-table-wrap::-webkit-scrollbar-thumb { background:#cbd5e1; border:3px solid #fff; border-radius:999px; }
+  .cs-table-wrap::-webkit-scrollbar-thumb:hover { background:#aeb8c5; }
+
+  .cs-table { width:100%; min-width:1180px; border-collapse:separate; border-spacing:0; }
+
+  .cs-table thead { position:relative; z-index:30; }
+  .cs-table th {
+    position:sticky;
+    top:0;
+    z-index:30;
+    height:var(--cs-table-head-h);
+    background:rgba(248,250,252,.97);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid #dfe4ea;
+    padding:11px 12px;
+    text-align:left;
+    color:#526077;
+    font-size:.69rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.045em;
+    white-space:nowrap;
+    box-shadow:0 1px 0 rgba(16,24,40,.03);
+  }
+
+  .cs-table td {
+    padding:11px 12px;
+    border-bottom:1px solid #edf0f3;
+    vertical-align:middle;
+    color:#344054;
+    font-size:.86rem;
+    background:#fff;
+    transition:background .14s ease, box-shadow .14s ease;
+  }
+  .cs-table tbody tr:last-child td { border-bottom:0; }
+  .cs-item-row { scroll-margin-top:112px; }
+  .cs-item-row:hover td { background:#f9fbfc; }
+  .cs-item-row:hover .cs-item-name { color:var(--cs-accent-dark); }
+
+  /* Mantém o nome do suprimento visível em rolagens horizontais. */
+  .cs-table th:first-child,
+  .cs-table td:first-child {
+    position:sticky;
+    left:0;
+  }
+  .cs-table th:first-child {
+    z-index:34;
+    background:#f8fafc;
+    box-shadow:1px 0 0 #e6e9ee;
+  }
+  .cs-item-row td:first-child {
+    z-index:8;
+    background:#fff;
+    box-shadow:1px 0 0 #edf0f3;
+  }
+  .cs-item-row:hover td:first-child { background:#f9fbfc; }
+
+  /* A ação permanece acessível mesmo quando a tabela é rolada para a direita. */
+  .cs-table th:last-child,
+  .cs-table td:last-child {
+    position:sticky;
+    right:0;
+  }
+  .cs-table th:last-child {
+    z-index:34;
+    background:#f8fafc;
+    box-shadow:-1px 0 0 #e6e9ee;
+  }
+  .cs-item-row td:last-child {
+    z-index:8;
+    background:#fff;
+    box-shadow:-1px 0 0 #edf0f3;
+  }
+  .cs-item-row:hover td:last-child { background:#f9fbfc; }
+
+  /* A categoria acompanha a rolagem e fica logo abaixo do cabeçalho. */
+  .cs-category td {
+    position:sticky !important;
+    top:var(--cs-table-head-h);
+    left:0 !important;
+    right:auto !important;
+    z-index:24 !important;
+    background:#f3f6f8 !important;
+    color:#475467;
+    font-size:.71rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.055em;
+    padding:9px 12px;
+    border-top:0;
+    border-bottom:1px solid #e5e9ee;
+    box-shadow:0 2px 5px rgba(16,24,40,.035);
+  }
+  .cs-category td::before {
+    content:"";
+    display:inline-block;
+    width:3px;
+    height:13px;
+    border-radius:999px;
+    background:var(--cs-accent);
+    margin-right:8px;
+    vertical-align:-2px;
+    opacity:.72;
+  }
+
+  .cs-item-cell { min-width:270px; }
+  .cs-item-main { display:flex; align-items:flex-start; gap:9px; }
+  .cs-item-marker { width:8px; height:38px; border-radius:999px; background:#d8e9ed; flex:0 0 8px; margin-top:1px; }
+  .cs-item-marker.done { background:#12b76a; }
+  .cs-item-marker.late { background:#f79009; }
+  .cs-item-name { font-weight:730; color:var(--cs-text); max-width:280px; line-height:1.28; }
+  .cs-item-meta { color:var(--cs-muted); font-size:.74rem; margin-top:4px; max-width:280px; display:flex; align-items:center; gap:5px; }
+  .cs-item-meta svg { width:12px; height:12px; flex:0 0 12px; }
+
+  .cs-stage { min-width:126px; }
+  .cs-stage-card {
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-height:58px;
+    justify-content:center;
+    padding:6px 8px;
+    margin:-3px -5px;
+    border-radius:9px;
+    transition:background .14s ease;
+  }
+  .cs-item-row:hover .cs-stage-card { background:rgba(248,250,252,.8); }
+  .cs-stage-top { display:flex; align-items:center; gap:6px; }
+  .cs-stage-status { width:8px; height:8px; border-radius:50%; background:#c7cdd5; flex:0 0 8px; }
+  .cs-stage-status.done { background:#12b76a; box-shadow:0 0 0 3px #ecfdf3; }
+  .cs-stage-status.late { background:#f79009; box-shadow:0 0 0 3px #fff4e8; }
+  .cs-stage-base { color:#344054; font-weight:680; white-space:nowrap; font-size:.82rem; }
+  .cs-stage-caption { color:#98a2b3; font-size:.67rem; text-transform:uppercase; font-weight:720; letter-spacing:.02em; }
+  .cs-stage-real { color:var(--cs-muted); font-size:.73rem; white-space:nowrap; }
+  .cs-stage-real.done { color:var(--cs-success); font-weight:700; }
+  .cs-stage-real.late { color:var(--cs-warning); font-weight:700; }
+  .cs-stage-result { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .cs-stage-delta { display:inline-flex; align-items:center; border-radius:999px; padding:2px 6px; font-size:.66rem; line-height:1.25; font-weight:760; white-space:nowrap; }
+  .cs-stage-delta.late { color:var(--cs-danger); background:var(--cs-danger-bg); }
+  .cs-stage-delta.early { color:var(--cs-success); background:var(--cs-success-bg); }
+  .cs-stage-delta.ontime { color:var(--cs-accent-dark); background:#edf6f8; }
+
+  .cs-progress { min-width:130px; }
+  .cs-progress-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .cs-progress-value { color:var(--cs-text); font-weight:780; font-size:.88rem; }
+  .cs-progress-step { color:#98a2b3; font-size:.68rem; }
+  .cs-progress-line { height:8px; background:#e9eef2; border-radius:999px; overflow:hidden; margin:7px 0 2px; box-shadow:inset 0 1px 1px rgba(16,24,40,.04); }
+  .cs-progress-line > span { display:block; height:100%; background:var(--cs-accent); border-radius:inherit; transition:width .2s ease; }
+  .cs-progress-line.done > span { background:#12b76a; }
+
+  .cs-stage-badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:.73rem; font-weight:720; background:#eef6f8; color:var(--cs-accent-dark); white-space:nowrap; }
+  .cs-stage-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.75; }
+  .cs-stage-badge.late { background:var(--cs-warning-bg); color:var(--cs-warning); }
+  .cs-stage-badge.done { background:var(--cs-success-bg); color:var(--cs-success); }
+  .cs-delay { color:var(--cs-warning); font-size:.7rem; font-weight:700; margin-top:5px; }
+
+  .cs-table-toolbar {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:-7px;
+    padding:0 3px;
+  }
+  .cs-table-toolbar-info { display:flex; align-items:baseline; gap:9px; min-width:0; }
+  .cs-table-toolbar-title { color:var(--cs-text); font-size:.82rem; font-weight:760; white-space:nowrap; }
+  .cs-table-toolbar-help { color:#98a2b3; font-size:.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cs-table-toolbar-count {
+    display:inline-flex;
+    align-items:center;
+    min-height:26px;
+    padding:4px 9px;
+    border:1px solid #dbe4e8;
+    border-radius:999px;
+    background:#f8fbfc;
+    color:var(--cs-accent-dark);
+    font-size:.7rem;
+    font-weight:760;
+    white-space:nowrap;
+  }
+
+  .cs-empty { padding:42px 20px; text-align:center; color:var(--cs-muted); }
+
+  /* Modal anexado diretamente ao BODY pelo JS para não sofrer com transform/overflow do layout. */
+  .cs-modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.52); display:none; align-items:flex-start; justify-content:center; padding:clamp(28px,7vh,72px) 20px 24px; z-index:99999; overflow-y:auto; backdrop-filter:blur(2px); }
+  .cs-modal-backdrop.open { display:flex; }
+  .cs-modal { width:min(780px,100%); max-height:calc(100vh - clamp(56px,14vh,144px)); overflow:auto; background:#fff; border-radius:15px; box-shadow:0 24px 65px rgba(15,23,42,.30); border:1px solid rgba(255,255,255,.45); animation:csModalIn .16s ease-out; }
+  @keyframes csModalIn { from { opacity:0; transform:translateY(-8px) scale(.99); } to { opacity:1; transform:translateY(0) scale(1); } }
+  body.cs-modal-open { overflow:hidden; }
+
+  .cs-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px 16px; border-bottom:1px solid var(--cs-border); background:linear-gradient(180deg,#fff,#fcfdfe); position:sticky; top:0; z-index:2; }
+  .cs-modal-title-row { display:flex; gap:11px; align-items:flex-start; }
+  .cs-modal-icon { width:36px; height:36px; border-radius:10px; display:grid; place-items:center; background:#edf6f8; color:var(--cs-accent); flex:0 0 36px; }
+  .cs-modal-icon svg { width:18px; height:18px; }
+  .cs-modal-title { margin:0; font-size:1.06rem; color:var(--cs-text); font-weight:760; }
+  .cs-modal-subtitle { margin:4px 0 0; font-size:.8rem; color:var(--cs-muted); }
+  .cs-close { border:1px solid transparent; background:transparent; font-size:1.4rem; line-height:1; color:var(--cs-muted); cursor:pointer; padding:4px 7px; border-radius:8px; }
+  .cs-close:hover { background:#f2f4f7; color:#344054; }
+  .cs-modal-body { padding:18px 20px; }
+  .cs-modal-note { background:#f8fafc; border:1px solid var(--cs-border); border-radius:10px; padding:11px 12px; color:var(--cs-muted); font-size:.8rem; margin-bottom:15px; display:flex; gap:9px; align-items:flex-start; }
+  .cs-modal-note svg { width:16px; height:16px; flex:0 0 16px; color:var(--cs-accent); margin-top:1px; }
+
+  .cs-edit-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:0; border:1px solid var(--cs-border); border-radius:11px; overflow:hidden; }
+  .cs-edit-head { background:#f8fafc; color:var(--cs-muted); font-size:.7rem; font-weight:780; text-transform:uppercase; letter-spacing:.035em; min-height:42px !important; }
+  .cs-edit-cell { min-height:60px; padding:10px 12px; border-right:1px solid var(--cs-border); border-bottom:1px solid var(--cs-border); display:flex; align-items:center; }
+  .cs-edit-cell:nth-child(3n) { border-right:0; }
+  .cs-edit-grid > .cs-edit-cell:nth-last-child(-n+3) { border-bottom:0; }
+  .cs-edit-label { font-weight:720; color:#344054; gap:8px; }
+  .cs-edit-label .cs-mini-dot { width:8px; height:8px; border-radius:50%; background:#d0d5dd; }
+  .cs-base-date { color:#475467; font-weight:650; background:#fcfcfd; }
+  .cs-real-input { width:100%; min-width:0; border:1px solid #d0d5dd; border-radius:8px; padding:8px 9px; color:#344054; background:#fff; outline:none; }
+  .cs-real-input:focus { border-color:#76a7b3; box-shadow:0 0 0 3px rgba(37,108,125,.10); }
+  .cs-modal-foot { padding:13px 20px 16px; display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--cs-border); background:#fff; position:sticky; bottom:0; z-index:2; }
+
+  @media (max-width:900px) {
+    .cs-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .cs-filters { grid-template-columns:1fr 1fr; }
+    .cs-table-wrap { max-height:calc(100vh - 245px); }
+    .cs-table-toolbar-help { display:none; }
+  }
+  @media (max-width:620px) {
+    .cs-title-icon { display:none; }
+    .cs-kpis,.cs-filters { grid-template-columns:1fr; }
+    .cs-modal-backdrop { padding:18px 10px; }
+    .cs-table-wrap { max-height:68vh; border-radius:11px; }
+    .cs-table-toolbar { align-items:flex-start; }
+    .cs-table-toolbar-info { display:block; }
+    .cs-modal { max-height:calc(100vh - 36px); }
+    .cs-edit-grid { grid-template-columns:1fr; }
+    .cs-edit-head { display:none; }
+    .cs-edit-cell { border-right:0; }
+    .cs-edit-cell:nth-child(n) { border-bottom:1px solid var(--cs-border); }
+    .cs-edit-cell:nth-last-child(1) { border-bottom:0; }
+    .cs-edit-cell[data-label]::before { content:attr(data-label); display:block; width:102px; flex:0 0 102px; color:var(--cs-muted); font-size:.68rem; font-weight:780; text-transform:uppercase; }
+  }
+</style>
+
+<div class="cs-page">
+  <div class="cs-head">
+    <div class="cs-title-wrap">
+      <div class="cs-title-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M7 3v4m10-4v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/><path d="m8 13 2 2 5-5"/></svg>
+      </div>
+      <div>
+        <h1 class="cs-title">Cronograma de Suprimentos</h1>
+        <p class="cs-subtitle">Compare o planejamento importado com o realizado e acompanhe rapidamente em qual etapa cada suprimento se encontra.</p>
+      </div>
+    </div>
+    <div class="cs-actions">
+      <a class="cs-btn cs-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id }}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>
+        Kanban
+      </a>
+      {% if request.user.is_superuser %}
+      <form method="post" action="{% url 'planejamento:atualizar_cronograma_suprimentos' %}">
+        {% csrf_token %}
+        {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
+        <button class="cs-btn" type="submit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg>
+          Atualizar base planejada
+        </button>
+      </form>
+      {% endif %}
+      <a class="cs-btn" href="{% url 'planejamento:historico_importacoes_cronograma_suprimentos' %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+        Importações
+      </a>
+    </div>
+  </div>
+
+  {% if importacao_ativa %}
+  <form class="cs-filters" method="get">
+    <div class="cs-field">
+      <label for="f-obra">Obra</label>
+      <select id="f-obra" name="obra">
+        {% for registro in obras %}
+        <option value="{{ registro.obra_id }}" {% if cronograma_obra and registro.obra_id == cronograma_obra.obra_id %}selected{% endif %}>{{ registro.nome_aba }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="cs-field">
+      <label for="f-categoria">Categoria</label>
+      <select id="f-categoria" name="categoria">
+        <option value="">Todas</option>
+        {% for valor in categorias_filtro %}
+        <option value="{{ valor }}" {% if filtros.categoria == valor %}selected{% endif %}>{{ valor }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="cs-field">
+      <label for="f-etapa">Etapa atual</label>
+      <select id="f-etapa" name="etapa">
+        <option value="">Todas</option>
+        {% for valor, rotulo in etapas_filtro %}
+        <option value="{{ valor }}" {% if filtros.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="cs-field">
+      <label for="f-busca">Pesquisar</label>
+      <input id="f-busca" type="search" name="busca" value="{{ filtros.busca }}" placeholder="Item, local ou responsável">
+    </div>
+    <button class="cs-btn cs-btn-primary" type="submit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      Filtrar
+    </button>
+  </form>
+
+  <div class="cs-kpis">
+    <div class="cs-kpi"><span class="cs-kpi-label">Itens</span><span class="cs-kpi-value">{{ resumo.total }}</span><div class="cs-kpi-help">suprimentos no filtro atual</div></div>
+    <div class="cs-kpi is-accent"><span class="cs-kpi-label">Avanço médio</span><span class="cs-kpi-value">{{ resumo.percentual_medio }}%</span><div class="cs-kpi-help">média das etapas realizadas</div></div>
+    <div class="cs-kpi"><span class="cs-kpi-label">Em andamento</span><span class="cs-kpi-value">{{ resumo.em_andamento }}</span><div class="cs-kpi-help">ainda não concluídos</div></div>
+    <div class="cs-kpi is-success"><span class="cs-kpi-label">Concluídos</span><span class="cs-kpi-value">{{ resumo.concluidos }}</span><div class="cs-kpi-help">contratação realizada</div></div>
+    <div class="cs-kpi is-warning"><span class="cs-kpi-label">Etapa atrasada</span><span class="cs-kpi-value">{{ resumo.atrasados }}</span><div class="cs-kpi-help">próxima etapa fora do prazo</div></div>
+  </div>
+
+  <div class="cs-legend" aria-label="Legenda de status">
+    <span class="cs-legend-item"><span class="cs-dot done"></span> Realizado</span>
+    <span class="cs-legend-item"><span class="cs-dot pending"></span> Pendente</span>
+    <span class="cs-legend-item"><span class="cs-dot late"></span> Pendente e atrasado</span>
+    <span class="cs-legend-item">A primeira data é sempre a <strong>base planejada</strong>.</span>
+  </div>
+
+  <div class="cs-table-toolbar">
+    <div class="cs-table-toolbar-info">
+      <span class="cs-table-toolbar-title">Acompanhamento das etapas</span>
+      <span class="cs-table-toolbar-help">Role a lista sem perder o cabeçalho, o suprimento ou a ação de atualização.</span>
+    </div>
+    <div class="cs-table-toolbar-count">{{ resumo.total }} item{{ resumo.total|pluralize }}</div>
+  </div>
+
+  <div class="cs-table-wrap" id="cs-table-wrap">
+    <table class="cs-table">
+      <thead>
+        <tr>
+          <th>Suprimento</th>
+          <th>Cotação</th>
+          <th>Compatibilização</th>
+          <th>Negociação</th>
+          <th>Contratação</th>
+          <th>Avanço</th>
+          <th>Etapa atual</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grupo in categorias %}
+        <tr class="cs-category"><td colspan="8">{{ grupo.nome }}</td></tr>
+          {% for item in grupo.itens %}
+          <tr class="cs-item-row" id="suprimento-{{ item.id }}">
+            <td class="cs-item-cell">
+              <div class="cs-item-main">
+                <span class="cs-item-marker {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}"></span>
+                <div>
+                  <div class="cs-item-name">{{ item.item }}</div>
+                  <div class="cs-item-meta">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                    {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <td class="cs-stage">
+              <div class="cs-stage-card">
+                <div class="cs-stage-caption">Planejado</div>
+                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_cotacao %}done{% elif item.cotacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_cotacao|date:"d/m/Y"|default:"—" }}</span></div>
+                {% if item.data_real_cotacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_cotacao|date:"d/m/Y" }}</div>{% if item.cotacao_desvio_label %}<span class="cs-stage-delta {{ item.cotacao_desvio_classe }}">{{ item.cotacao_desvio_label }}</span>{% endif %}</div>{% elif item.cotacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
+              </div>
+            </td>
+
+            <td class="cs-stage">
+              <div class="cs-stage-card">
+                <div class="cs-stage-caption">Planejado</div>
+                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_compatibilizacao %}done{% elif item.compatibilizacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_compatibilizacao|date:"d/m/Y"|default:"—" }}</span></div>
+                {% if item.data_real_compatibilizacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_compatibilizacao|date:"d/m/Y" }}</div>{% if item.compatibilizacao_desvio_label %}<span class="cs-stage-delta {{ item.compatibilizacao_desvio_classe }}">{{ item.compatibilizacao_desvio_label }}</span>{% endif %}</div>{% elif item.compatibilizacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
+              </div>
+            </td>
+
+            <td class="cs-stage">
+              <div class="cs-stage-card">
+                <div class="cs-stage-caption">Planejado</div>
+                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_negociacao %}done{% elif item.negociacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_negociacao|date:"d/m/Y"|default:"—" }}</span></div>
+                {% if item.data_real_negociacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_negociacao|date:"d/m/Y" }}</div>{% if item.negociacao_desvio_label %}<span class="cs-stage-delta {{ item.negociacao_desvio_classe }}">{{ item.negociacao_desvio_label }}</span>{% endif %}</div>{% elif item.negociacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
+              </div>
+            </td>
+
+            <td class="cs-stage">
+              <div class="cs-stage-card">
+                <div class="cs-stage-caption">Planejado</div>
+                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_contratacao %}done{% elif item.contratacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</span></div>
+                {% if item.data_real_contratacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_contratacao|date:"d/m/Y" }}</div>{% if item.contratacao_desvio_label %}<span class="cs-stage-delta {{ item.contratacao_desvio_classe }}">{{ item.contratacao_desvio_label }}</span>{% endif %}</div>{% elif item.contratacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
+              </div>
+            </td>
+
+            <td class="cs-progress">
+              <div class="cs-progress-head">
+                <span class="cs-progress-value">{{ item.percentual_calculado }}%</span>
+                <span class="cs-progress-step">{{ item.etapas_concluidas|default:0 }}/4 etapas</span>
+              </div>
+              <div class="cs-progress-line {% if item.percentual_calculado == 100 %}done{% endif %}"><span style="width:{{ item.percentual_calculado }}%"></span></div>
+            </td>
+
+            <td>
+              <span class="cs-stage-badge {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}">{{ item.etapa_calculada_label }}</span>
+              {% if item.atrasado_calculado %}<div class="cs-delay">{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }} de atraso</div>{% endif %}
+            </td>
+
+            <td>
+              <button
+                type="button"
+                class="cs-btn cs-btn-sm js-open-progress"
+                data-item-id="{{ item.id }}"
+                data-url="{% url 'planejamento:salvar_datas_item_cronograma_suprimentos' item.id %}"
+                data-item="{{ item.item|escape }}"
+                data-local="{{ item.local|escape }}"
+                data-base-cotacao="{{ item.data_cotacao|date:'d/m/Y'|default:'—' }}"
+                data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+                data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
+                data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
+                data-real-cotacao="{{ item.data_real_cotacao|date:'Y-m-d' }}"
+                data-real-compat="{{ item.data_real_compatibilizacao|date:'Y-m-d' }}"
+                data-real-negociacao="{{ item.data_real_negociacao|date:'Y-m-d' }}"
+                data-real-contratacao="{{ item.data_real_contratacao|date:'Y-m-d' }}"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                Atualizar
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% empty %}
+        <tr><td colspan="8" class="cs-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="cs-empty">Nenhuma base de cronograma de suprimentos foi importada ainda.</div>
+  {% endif %}
+</div>
+
+<div id="cs-modal" class="cs-modal-backdrop" aria-hidden="true">
+  <div class="cs-modal" role="dialog" aria-modal="true" aria-labelledby="cs-modal-title">
+    <form id="cs-progress-form" method="post">
+      {% csrf_token %}
+      {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
+      <input type="hidden" name="categoria" value="{{ filtros.categoria }}">
+      <input type="hidden" name="etapa" value="{{ filtros.etapa }}">
+      <input type="hidden" name="busca" value="{{ filtros.busca }}">
+
+      <div class="cs-modal-head">
+        <div class="cs-modal-title-row">
+          <div class="cs-modal-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+          </div>
+          <div>
+            <h2 id="cs-modal-title" class="cs-modal-title">Atualizar andamento</h2>
+            <p id="cs-modal-subtitle" class="cs-modal-subtitle"></p>
+          </div>
+        </div>
+        <button type="button" class="cs-close js-close-progress" aria-label="Fechar">×</button>
+      </div>
+
+      <div class="cs-modal-body">
+        <div class="cs-modal-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+          <span>As datas base são importadas do planejamento e permanecem bloqueadas. Preencha somente a data em que cada etapa foi efetivamente concluída.</span>
+        </div>
+
+        <div class="cs-edit-grid">
+          <div class="cs-edit-cell cs-edit-head">Etapa</div><div class="cs-edit-cell cs-edit-head">Data base</div><div class="cs-edit-cell cs-edit-head">Data realizada</div>
+
+          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Cotação</div>
+          <div id="base-cotacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
+          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-cotacao" name="data_real_cotacao" type="date"></div>
+
+          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Compatibilização</div>
+          <div id="base-compat" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
+          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-compat" name="data_real_compatibilizacao" type="date"></div>
+
+          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Negociação</div>
+          <div id="base-negociacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
+          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-negociacao" name="data_real_negociacao" type="date"></div>
+
+          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Contratação</div>
+          <div id="base-contratacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
+          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-contratacao" name="data_real_contratacao" type="date"></div>
+        </div>
+      </div>
+
+      <div class="cs-modal-foot">
+        <button type="button" class="cs-btn js-close-progress">Cancelar</button>
+        <button type="submit" class="cs-btn cs-btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+          Salvar andamento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const modal = document.getElementById('cs-modal');
+  const form = document.getElementById('cs-progress-form');
+  if (!modal || !form) return;
+
+  /* O base.html pode ter containers com transform/overflow. Isso faz position:fixed
+     se comportar como se estivesse preso ao conteúdo. No body o modal fica sempre
+     relativo à janela visível do navegador. */
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  const STORAGE_SCROLL = 'cronogramaSuprimentosScrollY';
+  const STORAGE_TABLE_SCROLL = 'cronogramaSuprimentosTableScrollTop';
+  const STORAGE_TABLE_SCROLL_X = 'cronogramaSuprimentosTableScrollLeft';
+  const STORAGE_ITEM = 'cronogramaSuprimentosItemId';
+  const tableWrap = document.getElementById('cs-table-wrap');
+  const subtitle = document.getElementById('cs-modal-subtitle');
+  let opener = null;
+
+  const fields = {
+    baseCotacao: document.getElementById('base-cotacao'),
+    baseCompat: document.getElementById('base-compat'),
+    baseNegociacao: document.getElementById('base-negociacao'),
+    baseContratacao: document.getElementById('base-contratacao'),
+    realCotacao: document.getElementById('real-cotacao'),
+    realCompat: document.getElementById('real-compat'),
+    realNegociacao: document.getElementById('real-negociacao'),
+    realContratacao: document.getElementById('real-contratacao')
+  };
+
+  function closeModal() {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('cs-modal-open');
+    if (opener) opener.focus({ preventScroll: true });
+  }
+
+  function openModal(button) {
+    opener = button;
+    form.action = button.dataset.url;
+    form.dataset.itemId = button.dataset.itemId || '';
+    subtitle.textContent = button.dataset.local
+      ? `${button.dataset.item} · ${button.dataset.local}`
+      : button.dataset.item;
+
+    fields.baseCotacao.textContent = button.dataset.baseCotacao || '—';
+    fields.baseCompat.textContent = button.dataset.baseCompat || '—';
+    fields.baseNegociacao.textContent = button.dataset.baseNegociacao || '—';
+    fields.baseContratacao.textContent = button.dataset.baseContratacao || '—';
+    fields.realCotacao.value = button.dataset.realCotacao || '';
+    fields.realCompat.value = button.dataset.realCompat || '';
+    fields.realNegociacao.value = button.dataset.realNegociacao || '';
+    fields.realContratacao.value = button.dataset.realContratacao || '';
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('cs-modal-open');
+
+    requestAnimationFrame(() => {
+      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao]
+        .find((input) => !input.value);
+      (firstEmpty || fields.realContratacao).focus({ preventScroll: true });
+    });
+  }
+
+  document.querySelectorAll('.js-open-progress').forEach((button) => {
+    button.addEventListener('click', () => openModal(button));
+  });
+
+  document.querySelectorAll('.js-close-progress').forEach((button) => {
+    button.addEventListener('click', closeModal);
+  });
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  /* Antes do POST, salva a posição atual. O Django continua usando o redirect
+     normal e, após recarregar, devolvemos o usuário exatamente ao mesmo ponto. */
+  form.addEventListener('submit', () => {
+    try {
+      sessionStorage.setItem(STORAGE_SCROLL, String(window.scrollY));
+      if (tableWrap) {
+        sessionStorage.setItem(STORAGE_TABLE_SCROLL, String(tableWrap.scrollTop));
+        sessionStorage.setItem(STORAGE_TABLE_SCROLL_X, String(tableWrap.scrollLeft));
+      }
+      if (form.dataset.itemId) sessionStorage.setItem(STORAGE_ITEM, form.dataset.itemId);
+    } catch (error) {
+      /* sessionStorage indisponível: o salvamento continua normalmente. */
+    }
+  });
+
+  /* Restaura a posição depois do redirect do salvamento. */
+  try {
+    const savedScroll = sessionStorage.getItem(STORAGE_SCROLL);
+    const savedTableScroll = sessionStorage.getItem(STORAGE_TABLE_SCROLL);
+    const savedTableScrollX = sessionStorage.getItem(STORAGE_TABLE_SCROLL_X);
+    const savedItem = sessionStorage.getItem(STORAGE_ITEM);
+
+    if (savedScroll !== null) {
+      sessionStorage.removeItem(STORAGE_SCROLL);
+      sessionStorage.removeItem(STORAGE_TABLE_SCROLL);
+      sessionStorage.removeItem(STORAGE_TABLE_SCROLL_X);
+      sessionStorage.removeItem(STORAGE_ITEM);
+
+      const restore = () => {
+        const y = Number(savedScroll);
+        if (Number.isFinite(y)) window.scrollTo({ top: y, behavior: 'auto' });
+
+        if (tableWrap) {
+          const tableY = Number(savedTableScroll);
+          const tableX = Number(savedTableScrollX);
+          if (Number.isFinite(tableY)) tableWrap.scrollTop = tableY;
+          if (Number.isFinite(tableX)) tableWrap.scrollLeft = tableX;
+        }
+
+        if (savedItem) {
+          const row = document.getElementById(`suprimento-${savedItem}`);
+          if (row) {
+            /* Como a tabela agora possui rolagem própria, destacamos a linha
+               sem forçar scrollIntoView e sem tirar o usuário do ponto salvo. */
+            row.style.transition = 'background-color .4s ease, box-shadow .4s ease';
+            row.style.backgroundColor = 'rgba(37,108,125,.08)';
+            row.style.boxShadow = 'inset 3px 0 0 rgba(37,108,125,.55)';
+            setTimeout(() => {
+              row.style.backgroundColor = '';
+              row.style.boxShadow = '';
+            }, 1600);
+          }
+        }
+      };
+
+      requestAnimationFrame(() => requestAnimationFrame(restore));
+      window.addEventListener('load', restore, { once: true });
+    }
+  } catch (error) {
+    /* Sem restauração, a página continua funcional. */
+  }
+})();
+</script>
+{% endblock %}

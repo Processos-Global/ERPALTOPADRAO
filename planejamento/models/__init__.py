@@ -7,6 +7,11 @@ from .suprimentos import (
     InsumoPlanejamento,
     SuprimentoAtividade,
 )
+from .cronograma_suprimentos import (
+    CronogramaSuprimentosObra,
+    ImportacaoCronogramaSuprimentos,
+    ItemCronogramaSuprimento,
+)
 
 __all__ = [
     "AtividadePlanejamento",
@@ -14,4 +19,7 @@ __all__ = [
     "RegistroCronograma",
     "InsumoPlanejamento",
     "SuprimentoAtividade",
+    "ImportacaoCronogramaSuprimentos",
+    "CronogramaSuprimentosObra",
+    "ItemCronogramaSuprimento",
 ]

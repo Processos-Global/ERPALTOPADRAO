@@ -8,7 +8,7 @@ Projeto desenvolvido com Django.
 from pathlib import Path
 
 import environ
-
+import os
 
 # ============================================================
 # CAMINHOS
@@ -471,3 +471,12 @@ LOGGING = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+CRONOGRAMA_SUPRIMENTOS_FILE_ID = os.getenv(
+    "CRONOGRAMA_SUPRIMENTOS_FILE_ID",
+    ""
+)
+
+CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = os.getenv(
+    "CRONOGRAMA_SUPRIMENTOS_FOLDER_ID",
+    ""
+)

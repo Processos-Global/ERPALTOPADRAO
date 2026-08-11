@@ -14,129 +14,192 @@
         rel="stylesheet"
         href="{% static 'css/dashboard.css' %}"
     >
+
+    <style>
+        :root {
+            --opal-blue: #2F6F7E;
+            --opal-blue-dark: #1F4F5B;
+            --opal-blue-soft: #EAF4F6;
+            --opal-blue-border: #BFD6DB;
+        }
+
+        .dashboard-home,
+        .dashboard-home h1,
+        .dashboard-home h2,
+        .dashboard-home h3,
+        .dashboard-home p,
+        .dashboard-home span,
+        .dashboard-home strong,
+        .dashboard-home em {
+            font-family: "Segoe UI", "Inter", Arial, sans-serif;
+        }
+
+        .dashboard-home .dashboard-heading__content h1 {
+            font-size: clamp(2.8rem, 5vw, 4.6rem);
+            line-height: 1.02;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+            color: #1b2528;
+        }
+
+        .dashboard-home .dashboard-heading__content h1 em {
+            font-style: normal;
+            font-weight: 700;
+            color: var(--opal-blue);
+        }
+
+        .dashboard-home .modules__header h2,
+        .dashboard-home .module-card__content h3 {
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1b2528;
+        }
+
+        .dashboard-home .dashboard-heading__content p,
+        .dashboard-home .module-card__content p {
+            color: #6c7a80;
+        }
+
+        .dashboard-home .dashboard-heading__eyebrow,
+        .dashboard-home .modules__eyebrow,
+        .dashboard-home .module-card__number,
+        .dashboard-home .module-card__footer {
+            color: var(--opal-blue);
+        }
+
+        .dashboard-home .module-card__icon {
+            color: var(--opal-blue);
+            border-color: var(--opal-blue-border);
+        }
+
+        .dashboard-home .module-card__permission {
+            background: var(--opal-blue-soft);
+            color: var(--opal-blue-dark);
+        }
+
+        .dashboard-home .module-card__accent {
+            background: var(--opal-blue);
+        }
+
+        .dashboard-home .module-card:hover {
+            border-color: var(--opal-blue);
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-    <section class="dashboard-heading">
-        <div class="dashboard-heading__content">
-            <span class="dashboard-heading__eyebrow">
-                Visão geral
-            </span>
+    <div class="dashboard-home">
+        <section class="dashboard-heading">
+            <div class="dashboard-heading__content">
 
-            <h1>
-                Bem-vindo,
-                <em>
-                    {{ request.user.first_name|default:request.user.username }}
-                </em>
-            </h1>
+                <h1>
+                    Bem-vindo, <em>{{ request.user.first_name|default:request.user.username }}</em>
+                </h1>
 
-            <p>
-                Selecione um módulo para continuar.
-            </p>
-        </div>
+                <p>
+                    Escolha um módulo para acessar o planejamento.
+                </p>
+            </div>
 
-        <div class="dashboard-heading__summary">
-            <strong>
-                {{ total_modulos|stringformat:"02d" }}
-            </strong>
+        </section>
 
-            <span>
-                módulos disponíveis
-            </span>
-        </div>
-    </section>
-
-    {% if modulos %}
         <section class="modules">
             <header class="modules__header">
                 <div>
-                    <span class="modules__eyebrow">
-                        Ambiente de trabalho
-                    </span>
 
                     <h2>Módulos do sistema</h2>
                 </div>
-
-                <span class="modules__total">
-                    {{ total_modulos }} acessos
-                </span>
             </header>
 
             <div class="module-cards">
-                {% for modulo in modulos %}
-                    {% if modulo.url_name %}
-                        <a
-                            href="{% url modulo.url_name %}"
-                            class="module-card"
-                            data-transition-link
-                        >
-                    {% else %}
-                        <article class="module-card module-card--disabled">
-                    {% endif %}
+                <a
+                    href="{% url 'planejamento:painel_cronograma' %}"
+                    class="module-card"
+                    data-transition-link
+                >
+                    <header class="module-card__header">
+                        <span class="module-card__number">
+                            01
+                        </span>
 
-                        <header class="module-card__header">
-                            <span class="module-card__number">
-                                {{ forloop.counter|stringformat:"02d" }}
-                            </span>
+                        <span class="module-card__permission">
+                            Planejamento
+                        </span>
+                    </header>
 
-                            <span class="module-card__permission">
-                                {{ modulo.nivel_display }}
-                            </span>
-                        </header>
+                    <div class="module-card__body">
+                        <span class="module-card__icon">
+                            <svg class="icon">
+                                <use href="#icon-calendar"></use>
+                            </svg>
+                        </span>
 
-                        <div class="module-card__body">
-                            <span class="module-card__icon">
-                                <svg class="icon">
-                                    <use href="#icon-{{ modulo.icone }}"></use>
-                                </svg>
-                            </span>
+                        <div class="module-card__content">
+                            <h3>
+                                Cronograma de Obras
+                            </h3>
 
-                            <div class="module-card__content">
-                                <h3>
-                                    {{ modulo.titulo }}
-                                </h3>
-
-                                <p>
-                                    {{ modulo.descricao }}
-                                </p>
-                            </div>
+                            <p>
+                                Planejamento físico, programação de atividades e acompanhamento da execução das obras.
+                            </p>
                         </div>
+                    </div>
 
-                        <footer class="module-card__footer">
-                            {% if modulo.url_name %}
-                                <span>Acessar</span>
+                    <footer class="module-card__footer">
+                        <span>Acessar</span>
 
-                                <svg class="icon">
-                                    <use href="#icon-arrow"></use>
-                                </svg>
-                            {% else %}
-                                <span>Em estruturação</span>
-                            {% endif %}
-                        </footer>
+                        <svg class="icon">
+                            <use href="#icon-arrow"></use>
+                        </svg>
+                    </footer>
 
-                        <span class="module-card__accent"></span>
+                    <span class="module-card__accent"></span>
+                </a>
 
-                    {% if modulo.url_name %}
-                        </a>
-                    {% else %}
-                        </article>
-                    {% endif %}
-                {% endfor %}
+                <a
+                    href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
+                    class="module-card"
+                    data-transition-link
+                >
+                    <header class="module-card__header">
+                        <span class="module-card__number">
+                            02
+                        </span>
+
+                        <span class="module-card__permission">
+                            Planejamento
+                        </span>
+                    </header>
+
+                    <div class="module-card__body">
+                        <span class="module-card__icon">
+                            <svg class="icon">
+                                <use href="#icon-building"></use>
+                            </svg>
+                        </span>
+
+                        <div class="module-card__content">
+                            <h3>
+                                Cronograma de Suprimentos
+                            </h3>
+
+                            <p>
+                                Acompanhe compras, fornecedores, contratações e prazos de suprimentos por obra.
+                            </p>
+                        </div>
+                    </div>
+
+                    <footer class="module-card__footer">
+                        <span>Acessar</span>
+
+                        <svg class="icon">
+                            <use href="#icon-arrow"></use>
+                        </svg>
+                    </footer>
+
+                    <span class="module-card__accent"></span>
+                </a>
             </div>
         </section>
-    {% else %}
-        <section class="empty-access">
-            <span class="empty-access__icon">
-                <svg class="icon">
-                    <use href="#icon-lock"></use>
-                </svg>
-            </span>
-
-            <h2>Sem módulos liberados</h2>
-
-            <p>
-                Solicite acesso ao administrador.
-            </p>
-        </section>
-    {% endif %}
+    </div>
 {% endblock %}

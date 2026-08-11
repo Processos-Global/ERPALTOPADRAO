@@ -1,26 +1,27 @@
 :root {
-    --ink: #142426;
-    --ink-soft: #526467;
-    --ink-muted: #819092;
+    --ink: #10282d;
+    --ink-soft: #4f676c;
+    --ink-muted: #7d9297;
 
-    --petrol-950: #0d2d30;
-    --petrol-900: #123a3e;
-    --petrol-850: #17474b;
-    --petrol-800: #1e5559;
-    --petrol-700: #2d686c;
-    --petrol-500: #668f91;
-    --petrol-200: #cadbd9;
-    --petrol-100: #e5eeec;
-    --petrol-50: #f0f5f4;
+    /* Azul Opala Tropical */
+    --petrol-950: #0a4054;
+    --petrol-900: #0e5268;
+    --petrol-850: #11647c;
+    --petrol-800: #167990;
+    --petrol-700: #1d91a6;
+    --petrol-500: #5fc0cf;
+    --petrol-200: #bde6ec;
+    --petrol-100: #ddf3f6;
+    --petrol-50: #effafa;
 
-    --paper: #faf9f6;
+    --paper: #fafcfb;
     --surface: #ffffff;
-    --cream: #f5f3ed;
+    --cream: #f3f8f7;
 
-    --line: rgba(20, 36, 38, 0.13);
-    --line-light: rgba(255, 255, 255, 0.13);
+    --line: rgba(16, 40, 45, 0.13);
+    --line-light: rgba(255, 255, 255, 0.16);
 
-    --success: #2f725e;
+    --success: #2f806e;
     --danger: #9f4039;
 
     --sidebar-expanded: 286px;
@@ -33,7 +34,7 @@
     --ease-smooth: cubic-bezier(0.65, 0, 0.35, 1);
 
     --shadow-soft:
-        0 18px 55px rgba(16, 47, 50, 0.10);
+        0 18px 55px rgba(10, 64, 84, 0.12);
 
     --font-sans:
         "Helvetica Neue",
@@ -690,7 +691,7 @@ body.sidebar-collapsed .sidebar-logout {
     }
 
     .sidebar {
-        box-shadow: 26px 0 70px rgba(13, 45, 48, 0.24);
+        box-shadow: 26px 0 70px rgba(10, 64, 84, 0.24);
         transform: translateX(-105%);
         width: min(310px, 88vw);
     }
@@ -722,7 +723,7 @@ body.sidebar-collapsed .sidebar-logout {
     }
 
     .sidebar-backdrop {
-        background: rgba(8, 28, 30, 0.48);
+        background: rgba(6, 37, 48, 0.46);
         display: block;
         inset: 0;
         opacity: 0;

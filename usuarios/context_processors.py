@@ -14,13 +14,13 @@ SIDEBAR_MODULES = [
         "codigo": ModuloSistema.PLANEJAMENTO,
         "titulo": "Cronograma de Obra",
         "icone": "calendar",
-        "url_name": "",
+        "url_name": "planejamento:painel_cronograma",
     },
     {
         "codigo": ModuloSistema.SUPRIMENTOS,
         "titulo": "Cronograma de Suprimentos",
         "icone": "package",
-        "url_name": "",
+        "url_name": "planejamento:painel_cronograma_suprimentos",
     },
     {
         "codigo": ModuloSistema.COMPRAS,

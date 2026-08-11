@@ -1,143 +1,314 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <meta
-        name="theme-color"
-        content="#173f43"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1D91A6">
     <title>Entrar | ERP Alto Padrão</title>
 
-    <link
-        rel="stylesheet"
-        href="{% static 'css/base.css' %}"
-    >
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}?v=20260810-2">
 
-    <link
-        rel="stylesheet"
-        href="{% static 'css/login.css' %}"
-    >
+    <style>
+        html, body { min-height: 100%; }
+
+        body.login-body {
+            margin: 0 !important;
+            min-height: 100vh !important;
+            background: #f5f7f7 !important;
+            color: #17272b;
+            overflow-x: hidden;
+        }
+
+        .login-body * { box-sizing: border-box; }
+
+        .login-body .login-shell {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px 20px;
+        }
+
+        .login-body .login-card {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 34px 34px 28px;
+            background: #fff;
+            border: 1px solid #e1e8ea;
+            border-radius: 18px;
+            box-shadow: 0 20px 55px rgba(24, 49, 55, .07);
+        }
+
+        .login-body .login-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 34px;
+        }
+
+        .login-body .login-brand__mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: #e9f6f8;
+            color: #146f82;
+            flex: 0 0 38px;
+        }
+
+        .login-body .login-brand__mark .icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .login-body .login-brand__text {
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .login-body .login-brand__text strong {
+            font-size: 14px;
+            font-weight: 700;
+            color: #17272b;
+        }
+
+        .login-body .login-brand__text small {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            color: #8b9b9f;
+        }
+
+        .login-body .login-heading {
+            margin: 0 0 26px;
+        }
+
+        .login-body .login-heading h1 {
+            margin: 0;
+            font-size: 28px;
+            line-height: 1.15;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            color: #17272b;
+        }
+
+        .login-body .login-heading p {
+            margin: 7px 0 0;
+            font-size: 13px;
+            color: #7a8b8f;
+        }
+
+        .login-body .login-form {
+            display: grid;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .login-body .login-field {
+            display: grid;
+            gap: 7px;
+            width: 100%;
+        }
+
+        .login-body .login-field > label {
+            margin: 0;
+            font-size: 11px;
+            line-height: 1;
+            font-weight: 600;
+            color: #52666b;
+        }
+
+        .login-body .login-field__control {
+            position: relative;
+            width: 100%;
+        }
+
+        .login-body .login-field__control input {
+            appearance: none;
+            display: block;
+            width: 100% !important;
+            max-width: none !important;
+            height: 50px !important;
+            margin: 0 !important;
+            padding: 0 44px 0 42px !important;
+            border: 1px solid #dbe5e7 !important;
+            border-radius: 11px !important;
+            background: #fbfcfc !important;
+            color: #17272b !important;
+            font: inherit;
+            font-size: 14px !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .login-body .login-field__control input:focus {
+            border-color: #1d91a6 !important;
+            background: #fff !important;
+            box-shadow: 0 0 0 3px rgba(29,145,166,.08) !important;
+        }
+
+        .login-body .login-field__icon {
+            position: absolute;
+            z-index: 2;
+            left: 14px;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            transform: translateY(-50%);
+            color: #8ba0a5;
+            pointer-events: none;
+        }
+
+        .login-body .password-toggle {
+            position: absolute !important;
+            z-index: 3;
+            top: 6px !important;
+            right: 6px !important;
+            width: 38px !important;
+            height: 38px !important;
+            min-width: 38px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: grid !important;
+            place-items: center;
+            border: 0 !important;
+            border-radius: 9px !important;
+            background: transparent !important;
+            color: #7a8b8f !important;
+            box-shadow: none !important;
+            cursor: pointer;
+        }
+
+        .login-body .password-toggle:hover {
+            background: #edf7f8 !important;
+            color: #146f82 !important;
+        }
+
+        .login-body .password-toggle .icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .login-body .password-toggle__hide { display: none; }
+        .login-body .password-toggle.is-visible .password-toggle__show { display: none; }
+        .login-body .password-toggle.is-visible .password-toggle__hide { display: block; }
+
+        .login-body .login-submit {
+            width: 100% !important;
+            max-width: none !important;
+            height: 50px !important;
+            min-height: 50px !important;
+            margin: 4px 0 0 !important;
+            padding: 0 16px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px;
+            border: 0 !important;
+            border-radius: 11px !important;
+            background: #146f82 !important;
+            color: #fff !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+            text-align: center !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+        }
+
+        .login-body .login-submit:hover {
+            background: #1d91a6 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(20,111,130,.16) !important;
+        }
+
+        .login-body .login-submit .icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        .login-body .login-submit__loading { display: none; }
+        .login-body .login-submit.is-loading .login-submit__text { display: none; }
+        .login-body .login-submit.is-loading .login-submit__loading { display: inline; }
+
+        .login-body .login-footer {
+            margin-top: 26px;
+            padding-top: 18px;
+            border-top: 1px solid #edf1f2;
+            text-align: center;
+            color: #9aabad;
+            font-size: 9px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .login-body .field-error {
+            font-size: 11px;
+            color: #b42318;
+        }
+
+        @media (max-width: 520px) {
+            .login-body .login-shell { padding: 18px 14px; }
+            .login-body .login-card { padding: 28px 22px 24px; border-radius: 15px; }
+        }
+    </style>
 </head>
 
 <body class="login-body">
     {% include "components/icons.html" %}
 
-    <div
-        class="page-transition"
-        data-page-transition
-        aria-hidden="true"
-    >
+    <div class="page-transition" data-page-transition aria-hidden="true">
         <div class="page-transition__mark">
-            <span>AP</span>
+            <svg class="icon" aria-hidden="true"><use href="#icon-building"></use></svg>
         </div>
     </div>
 
-    <main class="login">
-        <section class="login-visual">
-            <div class="login-visual__background"></div>
-            <div class="login-visual__grain"></div>
-
-            <header class="login-visual__header">
-                <span class="login-brand">
-                    <span class="login-brand__mark">
-                        AP
-                    </span>
-
-                    <span class="login-brand__name">
-                        Alto Padrão
-                    </span>
+    <main class="login-shell">
+        <section class="login-card" aria-labelledby="login-title">
+            <div class="login-brand">
+                <span class="login-brand__mark" aria-hidden="true">
+                    <svg class="icon"><use href="#icon-building"></use></svg>
                 </span>
-
-                <span class="login-visual__edition">
-                    ERP
+                <span class="login-brand__text">
+                    <strong>ALTO PADRÃO</strong>
+                    <small>ERP</small>
                 </span>
+            </div>
+
+            <header class="login-heading">
+                <h1 id="login-title">Entrar</h1>
+                <p>Acesse sua conta.</p>
             </header>
 
-            <div class="login-visual__content">
-                <span class="login-visual__eyebrow">
-                    Gestão integrada
-                </span>
-
-                <h1>
-                    Precisão em<br>
-                    cada etapa.
-                </h1>
-
-                <div class="login-visual__footer">
-                    <span>Planejar</span>
-                    <span>Executar</span>
-                    <span>Controlar</span>
+            {% if messages %}
+                <div class="login-messages">
+                    {% for message in messages %}
+                        <div class="message message--{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
                 </div>
-            </div>
+            {% endif %}
 
-            <div class="login-visual__geometry">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </section>
-
-        <section class="login-access">
-            <div class="login-access__top">
-                <span class="login-access__index">
-                    01
-                </span>
-
-                <span class="login-access__caption">
-                    Acesso restrito
-                </span>
-            </div>
-
-            <div class="login-panel">
-                <div class="login-panel__heading">
-                    <span class="section-line"></span>
-
-                    <h2>Entrar</h2>
-
-                    <p>Use suas credenciais.</p>
+            {% if form.non_field_errors %}
+                <div class="form-errors">
+                    {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
                 </div>
+            {% endif %}
 
-                {% if messages %}
-                    <div class="login-messages">
-                        {% for message in messages %}
-                            <div class="message message--{{ message.tags }}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
+            <form method="post" class="login-form" data-login-form>
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
 
-                {% if form.non_field_errors %}
-                    <div class="form-errors">
-                        {% for error in form.non_field_errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                <form
-                    method="post"
-                    class="login-form"
-                    data-login-form
-                >
-                    {% csrf_token %}
-
-                    <input
-                        type="hidden"
-                        name="next"
-                        value="{{ next }}"
-                    >
-
-                    <div class="floating-field">
+                <div class="login-field">
+                    <label for="{{ form.username.id_for_label }}">Usuário</label>
+                    <div class="login-field__control">
+                        <svg class="login-field__icon icon" aria-hidden="true"><use href="#icon-user"></use></svg>
                         <input
                             type="text"
                             name="username"
@@ -146,89 +317,39 @@
                             autocomplete="username"
                             autofocus
                             required
-                            placeholder=" "
                         >
-
-                        <label for="{{ form.username.id_for_label }}">
-                            Usuário
-                        </label>
-
-                        <svg class="floating-field__icon icon">
-                            <use href="#icon-user"></use>
-                        </svg>
-
-                        {% for error in form.username.errors %}
-                            <small class="field-error">
-                                {{ error }}
-                            </small>
-                        {% endfor %}
                     </div>
+                    {% for error in form.username.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
 
-                    <div class="floating-field">
+                <div class="login-field">
+                    <label for="{{ form.password.id_for_label }}">Senha</label>
+                    <div class="login-field__control">
+                        <svg class="login-field__icon icon" aria-hidden="true"><use href="#icon-lock"></use></svg>
                         <input
                             type="password"
                             name="password"
                             id="{{ form.password.id_for_label }}"
                             autocomplete="current-password"
                             required
-                            placeholder=" "
                             data-password-input
                         >
-
-                        <label for="{{ form.password.id_for_label }}">
-                            Senha
-                        </label>
-
-                        <svg class="floating-field__icon icon">
-                            <use href="#icon-lock"></use>
-                        </svg>
-
-                        <button
-                            type="button"
-                            class="password-toggle"
-                            data-password-toggle
-                            aria-label="Exibir senha"
-                        >
-                            <svg class="icon password-toggle__show">
-                                <use href="#icon-eye"></use>
-                            </svg>
-
-                            <svg class="icon password-toggle__hide">
-                                <use href="#icon-eye-off"></use>
-                            </svg>
+                        <button type="button" class="password-toggle" data-password-toggle aria-label="Exibir senha">
+                            <svg class="icon password-toggle__show" aria-hidden="true"><use href="#icon-eye"></use></svg>
+                            <svg class="icon password-toggle__hide" aria-hidden="true"><use href="#icon-eye-off"></use></svg>
                         </button>
-
-                        {% for error in form.password.errors %}
-                            <small class="field-error">
-                                {{ error }}
-                            </small>
-                        {% endfor %}
                     </div>
+                    {% for error in form.password.errors %}<small class="field-error">{{ error }}</small>{% endfor %}
+                </div>
 
-                    <button
-                        type="submit"
-                        class="login-submit"
-                        data-login-submit
-                    >
-                        <span class="login-submit__text">
-                            Acessar
-                        </span>
+                <button type="submit" class="login-submit" data-login-submit>
+                    <span class="login-submit__text">Entrar</span>
+                    <span class="login-submit__loading">Validando...</span>
+                    <svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+                </button>
+            </form>
 
-                        <span class="login-submit__loading">
-                            Validando
-                        </span>
-
-                        <svg class="icon">
-                            <use href="#icon-arrow"></use>
-                        </svg>
-                    </button>
-                </form>
-            </div>
-
-            <footer class="login-access__footer">
-                <span>Global Engenharia</span>
-                <span>2026</span>
-            </footer>
+            <footer class="login-footer">GLOBAL ENGENHARIA</footer>
         </section>
     </main>
 
