@@ -229,6 +229,160 @@
             opacity: 1 !important;
             visibility: visible !important;
         }
+
+        /* Navegação hierárquica dos módulos. */
+        .sidebar-module-group {
+            width: 100%;
+        }
+
+        .sidebar__modules-list {
+            overflow: visible !important;
+        }
+
+        .sidebar-module-group,
+        .sidebar-module-parent,
+        .sidebar-submenu,
+        .sidebar-submenu__inner {
+            box-sizing: border-box;
+        }
+
+        .sidebar-module-parent {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 2rem;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+            position: relative;
+        }
+
+        .sidebar-module-parent > .sidebar-link {
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            margin-right: 0 !important;
+            padding-right: .35rem !important;
+        }
+
+        .sidebar-submenu-toggle {
+            width: 1.8rem;
+            height: 1.8rem;
+            min-width: 1.8rem;
+            border: 0;
+            border-radius: .45rem;
+            margin: 0 .35rem 0 0;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, .78);
+            background: transparent;
+            cursor: pointer;
+            transition:
+                background .16s ease,
+                color .16s ease,
+                transform .16s ease;
+            position: relative;
+            z-index: 4;
+        }
+
+        .sidebar-submenu-toggle:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, .08);
+        }
+
+        .sidebar-submenu-toggle .icon {
+            width: .9rem;
+            height: .9rem;
+            transition: transform .18s ease;
+        }
+
+        .sidebar-module-group.is-open .sidebar-submenu-toggle .icon {
+            transform: rotate(180deg);
+        }
+
+        .sidebar-submenu {
+            display: grid;
+            grid-template-rows: 0fr;
+            opacity: 0;
+            transition:
+                grid-template-rows .2s ease,
+                opacity .16s ease,
+                margin .2s ease;
+            margin: 0;
+        }
+
+        .sidebar-module-group.is-open .sidebar-submenu {
+            grid-template-rows: 1fr;
+            opacity: 1;
+            margin: .15rem 0 .35rem;
+        }
+
+        .sidebar-submenu__inner {
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .sidebar-sublink {
+            min-height: 2.15rem;
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+            margin: .08rem .5rem .08rem 2.45rem;
+            padding: .4rem .65rem;
+            border-radius: .55rem;
+            color: rgba(255, 255, 255, .72);
+            text-decoration: none;
+            font-size: .78rem;
+            font-weight: 600;
+            transition:
+                background .16s ease,
+                color .16s ease,
+                transform .16s ease;
+        }
+
+        .sidebar-sublink:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, .07);
+        }
+
+        .sidebar-sublink--active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, .055);
+        }
+
+        .sidebar-sublink__dot {
+            width: .42rem;
+            height: .42rem;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: .65;
+            flex: 0 0 .42rem;
+        }
+
+        .sidebar-sublink--active .sidebar-sublink__dot {
+            opacity: 1;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, .08);
+        }
+
+        /* Quando a sidebar inteira estiver recolhida, mantém apenas o item pai. */
+        body.sidebar-is-collapsed .sidebar-submenu,
+        body.sidebar-is-collapsed .sidebar-submenu-toggle {
+            display: none !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-module-parent {
+            display: flex !important;
+            width: 100% !important;
+            justify-content: center !important;
+        }
+
+        body.sidebar-is-collapsed .sidebar-module-parent > .sidebar-link {
+            width: 2.75rem !important;
+            min-width: 2.75rem !important;
+            max-width: 2.75rem !important;
+            padding-right: 0 !important;
+        }
+
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -352,7 +506,7 @@
                 <div class="sidebar__modules-list">
                     <a
                         href="{% url 'planejamento:painel_cronograma' %}"
-                        class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' and request.resolver_match.url_name != 'painel_cronograma_suprimentos' and request.resolver_match.url_name != 'historico_importacoes_cronograma_suprimentos' %}sidebar-link--active{% endif %}"
+                        class="sidebar-link"
                         data-transition-link
                         title="Cronograma de Obras"
                     >
@@ -367,22 +521,56 @@
                         </span>
                     </a>
 
-                    <a
-                        href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
-                        class="sidebar-link {% if request.resolver_match.url_name == 'painel_cronograma_suprimentos' or request.resolver_match.url_name == 'historico_importacoes_cronograma_suprimentos' %}sidebar-link--active{% endif %}"
-                        data-transition-link
-                        title="Cronograma de Suprimentos"
+                    <div
+                        class="sidebar-module-group {% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}is-open{% endif %}"
+                        data-sidebar-module-group="suprimentos"
                     >
-                        <span class="sidebar-link__icon">
-                            <svg class="icon">
-                                <use href="#icon-building"></use>
-                            </svg>
-                        </span>
+                        <div class="sidebar-module-parent">
+                            <a
+                                href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
+                                class="sidebar-link"
+                                data-transition-link
+                                title="Cronograma de Suprimentos"
+                            >
+                                <span class="sidebar-link__icon">
+                                    <svg class="icon">
+                                        <use href="#icon-building"></use>
+                                    </svg>
+                                </span>
 
-                        <span class="sidebar-link__text">
-                            Cronograma de Suprimentos
-                        </span>
-                    </a>
+                                <span class="sidebar-link__text">
+                                    Cronograma de Suprimentos
+                                </span>
+                            </a>
+
+                            <button
+                                type="button"
+                                class="sidebar-submenu-toggle"
+                                data-sidebar-submenu-toggle="suprimentos"
+                                aria-label="Expandir opções do Cronograma de Suprimentos"
+                                aria-expanded="{% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}true{% else %}false{% endif %}"
+                                title="Mostrar ou ocultar opções"
+                            >
+                                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="sidebar-submenu">
+                            <div class="sidebar-submenu__inner">
+                                <a
+                                    href="{% url 'planejamento:kanban_cronograma_suprimentos' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}sidebar-sublink--active{% endif %}"
+                                    data-transition-link
+                                    title="Kanban de Suprimentos"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Kanban</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -540,6 +728,62 @@
             new MutationObserver(updateSidebarState).observe(document.body, {
                 attributes: true,
                 attributeFilter: ['class']
+            });
+
+            /* Submenus dos módulos da sidebar. */
+            const submenuToggles = document.querySelectorAll('[data-sidebar-submenu-toggle]');
+
+            submenuToggles.forEach(function (submenuToggle) {
+                const groupName = submenuToggle.getAttribute('data-sidebar-submenu-toggle');
+                const group = document.querySelector(
+                    '[data-sidebar-module-group="' + groupName + '"]'
+                );
+
+                if (!group) {
+                    return;
+                }
+
+                const storageKey = 'erp-sidebar-submenu-' + groupName;
+                const activeChild = group.querySelector('.sidebar-sublink--active');
+
+                if (!activeChild) {
+                    try {
+                        const savedState = window.localStorage.getItem(storageKey);
+
+                        if (savedState === 'open') {
+                            group.classList.add('is-open');
+                            submenuToggle.setAttribute('aria-expanded', 'true');
+                        } else if (savedState === 'closed') {
+                            group.classList.remove('is-open');
+                            submenuToggle.setAttribute('aria-expanded', 'false');
+                        }
+                    } catch (error) {
+                        /* localStorage indisponível: mantém o estado padrão. */
+                    }
+                } else {
+                    group.classList.add('is-open');
+                    submenuToggle.setAttribute('aria-expanded', 'true');
+                }
+
+                submenuToggle.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const isOpen = group.classList.toggle('is-open');
+                    submenuToggle.setAttribute(
+                        'aria-expanded',
+                        isOpen ? 'true' : 'false'
+                    );
+
+                    try {
+                        window.localStorage.setItem(
+                            storageKey,
+                            isOpen ? 'open' : 'closed'
+                        );
+                    } catch (error) {
+                        /* localStorage indisponível: submenu continua funcional. */
+                    }
+                });
             });
         });
     </script>
