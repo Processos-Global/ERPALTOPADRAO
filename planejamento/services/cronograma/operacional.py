@@ -3,17 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from .agenda_semanal import obter_programacao_semana, obter_semana_anterior
-from .atividades import (
-    listar_atividades,
-    obter_atividades_prioritarias,
-    resumir_atividades,
-)
+from .atividades import listar_atividades, obter_atividades_prioritarias, resumir_atividades
 from .checklists import obter_checklists
 from .disciplinas import obter_disciplinas
-from .suprimentos import (
-    enriquecer_disciplinas_com_suprimentos,
-    obter_orcamento_suprimentos,
-)
 
 
 def obter_operacional(
@@ -25,27 +17,16 @@ def obter_operacional(
     semana_anterior: int | None = None,
 ) -> dict[str, Any]:
     atividades = atividades_atuais
-
     if atividades is None:
-        atividades = listar_atividades(
-            projeto=projeto,
-            semana=semana,
-        )
+        atividades = listar_atividades(projeto=projeto, semana=semana)
 
     if semana_anterior is None:
-        semana_anterior = obter_semana_anterior(
-            projeto=projeto,
-            semana=semana,
-        )
+        semana_anterior = obter_semana_anterior(projeto=projeto, semana=semana)
 
     anteriores = atividades_anteriores
-
     if anteriores is None:
         anteriores = (
-            listar_atividades(
-                projeto=projeto,
-                semana=semana_anterior,
-            )
+            listar_atividades(projeto=projeto, semana=semana_anterior)
             if semana_anterior is not None
             else []
         )
@@ -58,27 +39,11 @@ def obter_operacional(
         semana_anterior=semana_anterior,
     )
 
-    orcamento_suprimentos = obter_orcamento_suprimentos(
-        atividades=atividades,
-    )
-
-    disciplinas = obter_disciplinas(
-        atividades=atividades,
-    )
-
-    disciplinas = enriquecer_disciplinas_com_suprimentos(
-        disciplinas=disciplinas,
-        orcamento=orcamento_suprimentos,
-    )
-
     return {
         "contadores_atividades": resumir_atividades(atividades),
-        "atividades_prioritarias": obter_atividades_prioritarias(
-            atividades=atividades,
-        ),
+        "atividades_prioritarias": obter_atividades_prioritarias(atividades=atividades),
         "programacao_semana": programacao,
         "resumo_prioridades": programacao["resumo"],
-        "disciplinas": disciplinas,
+        "disciplinas": obter_disciplinas(atividades=atividades),
         "checklists": obter_checklists(atividades=atividades),
-        "orcamento_suprimentos": orcamento_suprimentos,
     }

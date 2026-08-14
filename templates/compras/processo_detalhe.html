@@ -1,0 +1,3179 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+
+<style>
+/* ============================================================
+   PROCESSO DE COMPRA
+============================================================ */
+
+.purchase-detail,
+.purchase-detail * {
+    box-sizing: border-box;
+}
+
+.purchase-detail {
+    width: 100%;
+    padding: 28px 32px 70px;
+    color: #183847;
+}
+
+.purchase-container {
+    width: 100%;
+    max-width: 1480px;
+    margin: 0 auto;
+}
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.purchase-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 18px;
+}
+
+.purchase-header__main {
+    min-width: 0;
+}
+
+.purchase-header__number {
+    margin-bottom: 5px;
+    color: #008fa6;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.purchase-header__title {
+    margin: 0;
+    color: #173847;
+    font-size: 24px;
+    line-height: 1.2;
+    font-weight: 800;
+}
+
+.purchase-header__sub {
+    margin-top: 5px;
+    color: #728792;
+    font-size: 11px;
+}
+
+.purchase-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ============================================================
+   SUMMARY
+============================================================ */
+
+.purchase-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    margin-bottom: 13px;
+    overflow: hidden;
+    border: 1px solid #dbe6ea;
+    border-radius: 11px;
+    background: #dbe6ea;
+}
+
+.purchase-summary__item {
+    min-width: 0;
+    padding: 12px 14px;
+    background: #fff;
+}
+
+.purchase-summary__item span {
+    display: block;
+    margin-bottom: 4px;
+    color: #7b8e97;
+    font-size: 9px;
+}
+
+.purchase-summary__item strong {
+    display: block;
+    overflow: hidden;
+    color: #274754;
+    font-size: 11.5px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============================================================
+   PROGRESS
+============================================================ */
+
+.purchase-progress {
+    margin-bottom: 13px;
+    padding: 5px;
+    border: 1px solid #dce6ea;
+    border-radius: 11px;
+    background: #fff;
+}
+
+.purchase-progress__track {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.purchase-progress__step {
+    position: relative;
+    min-width: 0;
+    padding: 10px 11px;
+    border-radius: 7px;
+    background: #f7fafb;
+}
+
+.purchase-progress__step strong {
+    display: block;
+    color: #607985;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.purchase-progress__step small {
+    display: block;
+    margin-top: 2px;
+    color: #91a2aa;
+    font-size: 8.5px;
+}
+
+.purchase-progress__step.is-current {
+    background: #edf8fa;
+}
+
+.purchase-progress__step.is-current strong {
+    color: #008fa6;
+}
+
+.purchase-progress__step.is-current::after {
+    content: "";
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    left: 10px;
+    height: 2px;
+    background: #008fa6;
+}
+
+.purchase-progress__step.is-done {
+    background: #f1f8f5;
+}
+
+.purchase-progress__step.is-done strong {
+    color: #37745e;
+}
+
+/* ============================================================
+   NEXT ACTION
+============================================================ */
+
+.purchase-next {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 12px;
+    padding: 11px 13px;
+    border: 1px solid #cee2e7;
+    border-left: 4px solid #00a0b7;
+    border-radius: 9px;
+    background: #f4fafb;
+}
+
+.purchase-next.is-complete {
+    border-color: #cfe4da;
+    border-left-color: #3d8668;
+    background: #f4faf7;
+}
+
+.purchase-next__icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: #e4f5f7;
+    color: #008fa6;
+    font-weight: 900;
+}
+
+.purchase-next.is-complete .purchase-next__icon {
+    background: #dff1e9;
+    color: #34745b;
+}
+
+.purchase-next__label {
+    margin-bottom: 2px;
+    color: #008fa6;
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.purchase-next.is-complete .purchase-next__label {
+    color: #34745b;
+}
+
+.purchase-next strong {
+    display: block;
+    color: #284956;
+    font-size: 11.5px;
+    font-weight: 800;
+}
+
+.purchase-next p {
+    margin: 2px 0 0;
+    color: #748995;
+    font-size: 9.5px;
+    line-height: 1.4;
+}
+
+/* ============================================================
+   TABS
+============================================================ */
+
+.purchase-tabs {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 11px;
+    border-bottom: 1px solid #dce6ea;
+}
+
+.purchase-tab {
+    position: relative;
+    padding: 9px 3px;
+    border: 0;
+    background: transparent;
+    color: #647b86;
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.purchase-tab.is-active {
+    color: #008fa6;
+}
+
+.purchase-tab.is-active::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: #008fa6;
+}
+
+.purchase-tab-panel {
+    display: none;
+}
+
+.purchase-tab-panel.is-active {
+    display: block;
+}
+
+/* ============================================================
+   GENERAL CARDS
+============================================================ */
+
+.purchase-card {
+    overflow: hidden;
+    border: 1px solid #d9e4e8;
+    border-radius: 11px;
+    background: #fff;
+}
+
+.purchase-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 14px;
+    border-bottom: 1px solid #e5ecef;
+}
+
+.purchase-card__head h2 {
+    margin: 0;
+    color: #294854;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.purchase-card__head p {
+    margin: 2px 0 0;
+    color: #7a8e98;
+    font-size: 9.5px;
+    line-height: 1.4;
+}
+
+.purchase-card__body {
+    padding: 14px;
+}
+
+.purchase-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.purchase-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    align-items: start;
+}
+
+.purchase-main {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.purchase-side {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+    position: sticky;
+    top: 78px;
+}
+
+/* ============================================================
+   FORMS
+============================================================ */
+
+.purchase-form .cp-form-grid,
+.purchase-form .form-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 11px 14px !important;
+}
+
+.purchase-form .cp-field,
+.purchase-form .form-group {
+    min-width: 0;
+    margin: 0 !important;
+}
+
+.purchase-form label {
+    display: block;
+    margin: 0 0 5px !important;
+    color: #294c5a;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+}
+
+.purchase-form input,
+.purchase-form select,
+.purchase-form textarea {
+    width: 100% !important;
+    max-width: none !important;
+    border: 1px solid #cddce2 !important;
+    border-radius: 7px !important;
+    background: #fff !important;
+    color: #294754 !important;
+    font-family: inherit !important;
+    font-size: 11px !important;
+    box-shadow: none !important;
+}
+
+.purchase-form input,
+.purchase-form select {
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+}
+
+.purchase-form textarea {
+    min-height: 72px !important;
+    padding: 9px 10px !important;
+    resize: vertical;
+}
+
+.purchase-form input:focus,
+.purchase-form select:focus,
+.purchase-form textarea:focus {
+    outline: none !important;
+    border-color: #008fa6 !important;
+    box-shadow: 0 0 0 3px rgba(0,143,166,.07) !important;
+}
+
+.purchase-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 13px;
+    padding-top: 12px;
+    border-top: 1px solid #edf2f4;
+}
+
+/* ============================================================
+   SCOPE
+============================================================ */
+
+.scope-card {
+    overflow: hidden;
+    border: 1px solid #d9e5e9;
+    border-radius: 11px;
+    background: #fff;
+}
+
+.scope-card__head {
+    padding: 11px 12px;
+    border-bottom: 1px solid #e6edef;
+}
+
+.scope-card__head span {
+    display: block;
+    margin-bottom: 3px;
+    color: #008fa6;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.scope-card__head h3 {
+    margin: 0;
+    color: #294854;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.scope-card__body {
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+}
+
+.scope-item {
+    padding: 8px;
+    border: 1px solid #e1e9ec;
+    border-radius: 7px;
+    background: #fafcfc;
+}
+
+.scope-item__top {
+    display: flex;
+    justify-content: space-between;
+    gap: 7px;
+}
+
+.scope-item__name {
+    color: #284855;
+    font-size: 9.5px;
+    font-weight: 800;
+}
+
+.scope-item__qty {
+    flex: 0 0 auto;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: #eaf6f8;
+    color: #008096;
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.scope-item__activity {
+    margin-top: 4px;
+    color: #758992;
+    font-size: 8.5px;
+}
+
+/* ============================================================
+   TECHNICAL
+============================================================ */
+
+.tech-review {
+    display: grid;
+    gap: 13px;
+}
+
+.tech-review__field {
+    display: grid;
+    gap: 5px;
+}
+
+.tech-review__field label {
+    color: #294c5a;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.tech-review__field input,
+.tech-review__field select,
+.tech-review__field textarea {
+    width: 100%;
+    border: 1px solid #cddce2;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 11px;
+}
+
+.tech-review__field input,
+.tech-review__field select {
+    height: 38px;
+    padding: 0 10px;
+}
+
+.tech-review__field textarea {
+    min-height: 85px;
+    padding: 9px 10px;
+}
+
+.tech-decision {
+    display: grid;
+    gap: 7px;
+}
+
+.tech-decision__label {
+    color: #294c5a;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.tech-decision__buttons {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.tech-decision-btn {
+    min-height: 45px;
+    padding: 7px 8px;
+    border: 1px solid #d2dfe4;
+    border-radius: 8px;
+    background: #fff;
+    color: #506a75;
+    font-family: inherit;
+    font-size: 9.5px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.tech-decision-btn.is-selected {
+    border-color: #008fa6;
+    background: #ecf8fa;
+    color: #007f94;
+}
+
+.tech-decision-btn[data-danger="true"].is-selected {
+    border-color: #d86b64;
+    background: #fff3f2;
+    color: #b63c36;
+}
+
+.tech-decision-btn[data-warning="true"].is-selected {
+    border-color: #d4a84c;
+    background: #fff9eb;
+    color: #936d1d;
+}
+
+/* ============================================================
+   KPI
+============================================================ */
+
+.purchase-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.purchase-kpi {
+    padding: 11px 12px;
+    border: 1px solid #dbe6ea;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.purchase-kpi span {
+    display: block;
+    margin-bottom: 4px;
+    color: #7e919a;
+    font-size: 9px;
+}
+
+.purchase-kpi strong {
+    color: #294955;
+    font-size: 15px;
+}
+
+/* ============================================================
+   NEGOTIATION
+============================================================ */
+
+.negotiation-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 335px;
+    gap: 14px;
+    align-items: start;
+}
+
+.negotiation-main {
+    min-width: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.negotiation-side {
+    position: sticky;
+    top: 78px;
+}
+
+.negotiation-flow {
+    overflow: hidden;
+    border: 1px solid #cfe1e6;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.negotiation-flow__head {
+    padding: 15px 16px;
+    border-bottom: 1px solid #e4ecef;
+    background: #fbfcfd;
+}
+
+.negotiation-flow__eyebrow {
+    margin-bottom: 4px;
+    color: #008fa6;
+    font-size: 8.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+}
+
+.negotiation-flow__head h2 {
+    margin: 0;
+    color: #294854;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.negotiation-flow__head p {
+    margin: 4px 0 0;
+    color: #748994;
+    font-size: 9.5px;
+}
+
+.negotiation-flow__body {
+    padding: 15px;
+}
+
+.negotiation-step {
+    position: relative;
+    padding-left: 39px;
+}
+
+.negotiation-step + .negotiation-step {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #e7edef;
+}
+
+.negotiation-step__number {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #e9f6f8;
+    color: #008fa6;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.negotiation-step + .negotiation-step .negotiation-step__number {
+    top: 18px;
+}
+
+.negotiation-step__title {
+    margin-bottom: 2px;
+    color: #2c4c59;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.negotiation-step__description {
+    margin-bottom: 11px;
+    color: #7a8e97;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.negotiation-step__action {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 11px;
+}
+
+.negotiation-complete {
+    padding: 18px;
+    border: 1px solid #cde3db;
+    border-radius: 11px;
+    background: #f4faf7;
+}
+
+.negotiation-complete__top {
+    display: flex;
+    gap: 11px;
+}
+
+.negotiation-complete__icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #dff1e9;
+    color: #30745b;
+    font-weight: 900;
+}
+
+.negotiation-complete h3 {
+    margin: 0;
+    color: #315e4c;
+    font-size: 12px;
+}
+
+.negotiation-complete p {
+    margin: 4px 0 0;
+    color: #678376;
+    font-size: 9.5px;
+}
+
+.negotiation-complete__action {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+    padding-top: 13px;
+    border-top: 1px solid #d7e9e1;
+}
+
+/* ============================================================
+   APPROVAL
+============================================================ */
+
+.approval-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 14px;
+    align-items: start;
+}
+
+.approval-total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 10px;
+    padding: 15px 17px;
+    border: 1px solid #d5e4e8;
+    border-radius: 11px;
+    background: #fff;
+}
+
+.approval-total__text span {
+    display: block;
+    color: #7b8f98;
+    font-size: 9px;
+}
+
+.approval-total__text strong {
+    display: block;
+    margin-top: 3px;
+    color: #294955;
+    font-size: 13px;
+}
+
+.approval-total__value {
+    color: #00849a;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+/* ============================================================
+   CONTRACTED
+============================================================ */
+
+.contracted-hero {
+    padding: 22px;
+    border: 1px solid #cce2d8;
+    border-radius: 12px;
+    background: #f4faf7;
+}
+
+.contracted-hero__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+}
+
+.contracted-hero__icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #dcefe6;
+    color: #33745a;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.contracted-hero h2 {
+    margin: 0;
+    color: #315e4c;
+    font-size: 15px;
+}
+
+.contracted-hero p {
+    margin: 4px 0 0;
+    color: #668175;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.contracted-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.contracted-summary__item {
+    padding: 10px;
+    border: 1px solid #d9e8e1;
+    border-radius: 8px;
+    background: rgba(255,255,255,.7);
+}
+
+.contracted-summary__item span {
+    display: block;
+    margin-bottom: 3px;
+    color: #769086;
+    font-size: 8.5px;
+}
+
+.contracted-summary__item strong {
+    color: #355d4d;
+    font-size: 10px;
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+
+@media (max-width: 1100px) {
+    .purchase-workspace,
+    .negotiation-layout,
+    .approval-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .purchase-side,
+    .negotiation-side {
+        position: static;
+    }
+}
+
+@media (max-width: 900px) {
+    .purchase-summary,
+    .purchase-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .purchase-progress__track {
+        grid-template-columns: 1fr;
+    }
+
+    .purchase-grid-2,
+    .contracted-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .purchase-form .cp-form-grid,
+    .purchase-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tech-decision__buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 650px) {
+    .purchase-detail {
+        padding: 20px 14px 50px;
+    }
+
+    .purchase-header {
+        flex-direction: column;
+    }
+
+    .purchase-summary,
+    .purchase-kpis {
+        grid-template-columns: 1fr;
+    }
+
+    .negotiation-step {
+        padding-left: 0;
+    }
+
+    .negotiation-step__number,
+    .negotiation-step + .negotiation-step .negotiation-step__number {
+        position: static;
+        margin-bottom: 7px;
+    }
+}
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="purchase-detail">
+<div class="purchase-container">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="purchase-header">
+
+        <div class="purchase-header__main">
+
+            <div class="purchase-header__number">
+                {{ processo.numero }}
+            </div>
+
+            <h1 class="purchase-header__title">
+                {{ processo.titulo }}
+            </h1>
+
+            <div class="purchase-header__sub">
+                {{ processo.obra.nome }}
+            </div>
+
+        </div>
+
+        <div class="purchase-header__actions">
+
+            <a
+                class="cp-btn"
+                href="{% url 'compras:lista_processos' %}"
+            >
+                Voltar
+            </a>
+
+            <span class="cp-badge is-active">
+                {{ processo.get_status_display }}
+            </span>
+
+        </div>
+
+    </header>
+
+
+    <!-- =====================================================
+         SUMMARY
+    ====================================================== -->
+
+    <div class="purchase-summary">
+
+        <div class="purchase-summary__item">
+            <span>Responsável</span>
+            <strong>
+                {{ processo.comprador|default:"Não definido" }}
+            </strong>
+        </div>
+
+        <div class="purchase-summary__item">
+            <span>Etapa</span>
+            <strong>
+                {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+                    Contratado
+                {% else %}
+                    {{ processo.get_etapa_atual_display }}
+                {% endif %}
+            </strong>
+        </div>
+
+        <div class="purchase-summary__item">
+            <span>Contratar até</span>
+            <strong>
+                {{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"Sem prazo" }}
+            </strong>
+        </div>
+
+        <div class="purchase-summary__item">
+            <span>Valor aprovado</span>
+            <strong>
+                R$ {{ valor_total_selecionado|floatformat:2 }}
+            </strong>
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PROGRESS - 4 ETAPAS
+    ====================================================== -->
+
+    <section class="purchase-progress">
+
+        <div class="purchase-progress__track">
+
+            <div class="purchase-progress__step
+                {% if processo.data_cotacao_concluida %}
+                    is-done
+                {% elif processo.etapa_atual == 'COTACAO' %}
+                    is-current
+                {% endif %}
+            ">
+                <strong>1. Cotação</strong>
+                <small>Fornecedores e propostas</small>
+            </div>
+
+
+            <div class="purchase-progress__step
+                {% if processo.data_compatibilizacao_concluida %}
+                    is-done
+                {% elif processo.etapa_atual == 'COMPATIBILIZACAO' %}
+                    is-current
+                {% endif %}
+            ">
+                <strong>2. Análise técnica</strong>
+                <small>Validação das propostas</small>
+            </div>
+
+
+            <div class="purchase-progress__step
+                {% if processo.data_negociacao_concluida %}
+                    is-done
+                {% elif processo.etapa_atual == 'NEGOCIACAO' %}
+                    is-current
+                {% endif %}
+            ">
+                <strong>3. Negociação</strong>
+                <small>Preço e fornecedor</small>
+            </div>
+
+
+            <div class="purchase-progress__step
+                {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+                    is-done
+                {% elif processo.etapa_atual == 'APROVACAO' %}
+                    is-current
+                {% endif %}
+            ">
+                <strong>4. Aprovação</strong>
+                <small>Decisão final da gestão</small>
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         NEXT ACTION
+    ====================================================== -->
+
+    <section class="purchase-next
+        {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+            is-complete
+        {% endif %}
+    ">
+
+        <div class="purchase-next__icon">
+
+            {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+                ✓
+            {% else %}
+                →
+            {% endif %}
+
+        </div>
+
+        <div>
+
+            <div class="purchase-next__label">
+
+                {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+                    Processo concluído
+                {% else %}
+                    O que fazer agora
+                {% endif %}
+
+            </div>
+
+
+            {% if processo.etapa_atual == 'COTACAO' %}
+
+                {% if not cotacoes %}
+
+                    <strong>
+                        Adicione o primeiro fornecedor
+                    </strong>
+
+                    <p>
+                        O escopo da compra já está definido.
+                        Inclua agora os participantes da cotação.
+                    </p>
+
+                {% else %}
+
+                    <strong>
+                        Complete as propostas
+                    </strong>
+
+                    <p>
+                        Lance os valores ofertados pelos fornecedores.
+                    </p>
+
+                {% endif %}
+
+
+            {% elif processo.etapa_atual == 'COMPATIBILIZACAO' %}
+
+                <strong>
+                    Avalie tecnicamente as propostas
+                </strong>
+
+                <p>
+                    Aprove, aprove com ressalva ou reprove cada proposta.
+                </p>
+
+
+            {% elif processo.etapa_atual == 'NEGOCIACAO' %}
+
+                {% if possui_saldo_pendente %}
+
+                    <strong>
+                        Negocie e defina os fornecedores
+                    </strong>
+
+                    <p>
+                        Registre as condições finais e selecione as quantidades.
+                    </p>
+
+                {% else %}
+
+                    <strong>
+                        Negociação concluída
+                    </strong>
+
+                    <p>
+                        Todo o escopo possui fornecedor definido.
+                        Envie o mapa para aprovação.
+                    </p>
+
+                {% endif %}
+
+
+            {% elif processo.etapa_atual == 'APROVACAO' %}
+
+                <strong>
+                    Decisão final da gestão
+                </strong>
+
+                <p>
+                    Confira o mapa final. A aprovação encerra o processo de compra.
+                </p>
+
+
+            {% else %}
+
+                <strong>
+                    Compra aprovada e contratada
+                </strong>
+
+                <p>
+                    A gestão aprovou o mapa final.
+                    Não há mais informações comerciais a preencher.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         TABS
+    ====================================================== -->
+
+    <nav class="purchase-tabs">
+
+        <button
+            class="purchase-tab is-active"
+            type="button"
+            data-tab="etapa"
+        >
+            Etapa atual
+        </button>
+
+        <button
+            class="purchase-tab"
+            type="button"
+            data-tab="resumo"
+        >
+            Resumo
+        </button>
+
+        <button
+            class="purchase-tab"
+            type="button"
+            data-tab="historico"
+        >
+            Histórico
+        </button>
+
+    </nav>
+
+
+    <!-- =====================================================
+         TAB ETAPA
+    ====================================================== -->
+
+    <div
+        class="purchase-tab-panel is-active"
+        data-panel="etapa"
+    >
+
+        <!-- =================================================
+             COTAÇÃO
+        ================================================== -->
+
+        {% if processo.etapa_atual == 'COTACAO' %}
+
+        <div class="purchase-workspace">
+
+            <main class="purchase-main">
+
+                {% if pode_editar %}
+
+                <section class="purchase-card purchase-form">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>1. Adicionar fornecedor</h2>
+                            <p>
+                                Informe o participante e as condições gerais da proposta.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div class="purchase-card__body">
+
+                        <form
+                            method="post"
+                            enctype="multipart/form-data"
+                            action="{% url 'compras:incluir_cotacao' processo.pk %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% include 'compras/_form_fields.html' with form=form_cotacao %}
+
+                            <div class="purchase-form-actions">
+
+                                <button
+                                    class="cp-btn cp-btn-primary"
+                                    type="submit"
+                                >
+                                    Adicionar fornecedor
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </section>
+
+
+                <section class="purchase-card purchase-form">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>2. Lançar proposta</h2>
+                            <p>
+                                Selecione fornecedor e item e informe os valores.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div class="purchase-card__body">
+
+                        {% if cotacoes %}
+
+                        <form
+                            method="post"
+                            action="{% url 'compras:incluir_item_cotacao' processo.pk %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% include 'compras/_form_fields.html' with form=form_item_cotacao %}
+
+                            <div class="purchase-form-actions">
+
+                                <button
+                                    class="cp-btn cp-btn-primary"
+                                    type="submit"
+                                >
+                                    Salvar proposta
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                        {% else %}
+
+                        <div class="cp-empty">
+                            Adicione primeiro um fornecedor.
+                        </div>
+
+                        {% endif %}
+
+                    </div>
+
+                </section>
+
+
+                <details class="purchase-card purchase-form">
+
+                    <summary style="
+                        padding:12px 14px;
+                        cursor:pointer;
+                        font-size:10px;
+                        font-weight:800;
+                        color:#506d79;
+                    ">
+                        + Cadastrar fornecedor novo
+                    </summary>
+
+                    <div class="purchase-card__body">
+
+                        <form
+                            method="post"
+                            action="{% url 'compras:criar_fornecedor' processo.pk %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% include 'compras/_form_fields.html' with form=form_fornecedor %}
+
+                            <div class="purchase-form-actions">
+
+                                <button
+                                    class="cp-btn"
+                                    type="submit"
+                                >
+                                    Cadastrar fornecedor
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </details>
+
+                {% endif %}
+
+
+                {% if pode_editar and cotacoes %}
+
+                <div class="purchase-card">
+
+                    <div class="purchase-card__body" style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:14px;
+                    ">
+
+                        <div>
+
+                            <strong style="
+                                display:block;
+                                color:#31515e;
+                                font-size:10.5px;
+                            ">
+                                Finalizar cotação
+                            </strong>
+
+                            <span style="
+                                color:#748993;
+                                font-size:9.5px;
+                            ">
+                                Revise as propostas antes de avançar.
+                            </span>
+
+                        </div>
+
+                        <form
+                            method="post"
+                            action="{% url 'compras:concluir_cotacao' processo.pk %}"
+                        >
+
+                            {% csrf_token %}
+
+                            <button
+                                class="cp-btn cp-btn-primary"
+                                type="submit"
+                            >
+                                Concluir cotação
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+                {% endif %}
+
+            </main>
+
+
+            <aside class="purchase-side">
+
+                <section class="scope-card">
+
+                    <header class="scope-card__head">
+                        <span>Escopo da compra</span>
+                        <h3>{{ necessidades|length }} item(ns)</h3>
+                    </header>
+
+                    <div class="scope-card__body">
+
+                        {% for necessidade in necessidades %}
+
+                        <article class="scope-item">
+
+                            <div class="scope-item__top">
+
+                                <div class="scope-item__name">
+                                    {{ necessidade.descricao }}
+                                </div>
+
+                                <div class="scope-item__qty">
+                                    {{ necessidade.quantidade_incluida|floatformat:2 }}
+                                    {{ necessidade.unidade }}
+                                </div>
+
+                            </div>
+
+                            <div class="scope-item__activity">
+                                {{ necessidade.atividade_origem.nome_tarefa }}
+                            </div>
+
+                        </article>
+
+                        {% empty %}
+
+                        <div class="cp-empty">
+                            Nenhum item.
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </section>
+
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Mapa de cotação</h2>
+                            <p>{{ cotacoes|length }} fornecedor(es)</p>
+                        </div>
+
+                    </header>
+
+                    <div style="padding:0">
+
+                        <div class="cp-table-wrap">
+
+                            <table class="cp-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Propostas</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for linha in matriz_cotacao %}
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                {{ linha.necessidade.descricao }}
+                                            </strong>
+                                        </td>
+
+                                        <td>
+
+                                            {% for oferta in linha.ofertas %}
+
+                                                {% if oferta.item %}
+
+                                                <div style="margin-bottom:3px">
+
+                                                    {{ oferta.cotacao.fornecedor.nome }}
+
+                                                    ·
+
+                                                    <strong>
+                                                        R$ {{ oferta.item.valor_unitario_cotado|floatformat:2 }}
+                                                    </strong>
+
+                                                </div>
+
+                                                {% endif %}
+
+                                            {% empty %}
+
+                                            <span class="cp-muted">
+                                                —
+                                            </span>
+
+                                            {% endfor %}
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% empty %}
+
+                                    <tr>
+                                        <td colspan="2" class="cp-empty">
+                                            Sem itens.
+                                        </td>
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+        </div>
+
+
+        <!-- =================================================
+             ANÁLISE TÉCNICA
+        ================================================== -->
+
+        {% elif processo.etapa_atual == 'COMPATIBILIZACAO' %}
+
+        <div class="purchase-workspace">
+
+            <main class="purchase-main">
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Propostas para análise</h2>
+                            <p>
+                                Confira fornecedor, solução e preço.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div style="padding:0">
+
+                        <div class="cp-table-wrap">
+
+                            <table class="cp-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Fornecedor</th>
+                                        <th>Marca / modelo</th>
+                                        <th>Preço</th>
+                                        <th>Situação</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for linha in mapa_itens %}
+
+                                    <tr>
+
+                                        <td>
+
+                                            <strong>
+                                                {{ linha.item.necessidade.descricao }}
+                                            </strong>
+
+                                            <div class="cp-muted">
+                                                {{ linha.item.especificacao_ofertada|default:linha.item.descricao_comercial|default:"Sem especificação" }}
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            {{ linha.item.cotacao.fornecedor.nome }}
+                                        </td>
+
+                                        <td>
+
+                                            {{ linha.item.marca|default:"—" }}
+
+                                            {% if linha.item.modelo %}
+                                                · {{ linha.item.modelo }}
+                                            {% endif %}
+
+                                        </td>
+
+                                        <td class="cp-money">
+                                            R$ {{ linha.item.valor_unitario_cotado|floatformat:2 }}
+                                        </td>
+
+                                        <td>
+
+                                            {% if linha.compat %}
+
+                                            <span class="cp-badge {% if linha.compat.resultado == 'REPROVADO' %}is-danger{% else %}is-ok{% endif %}">
+                                                {{ linha.compat.get_resultado_display }}
+                                            </span>
+
+                                            {% else %}
+
+                                            <span class="cp-badge is-warn">
+                                                Pendente
+                                            </span>
+
+                                            {% endif %}
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% empty %}
+
+                                    <tr>
+                                        <td colspan="5" class="cp-empty">
+                                            Nenhuma proposta.
+                                        </td>
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </main>
+
+
+            {% if pode_editar %}
+
+            <aside class="purchase-side">
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Decisão técnica</h2>
+                            <p>
+                                Selecione a proposta e escolha a decisão.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div class="purchase-card__body">
+
+                        <form
+                            method="post"
+                            action="{% url 'compras:compatibilizar' processo.pk %}"
+                            id="techDecisionForm"
+                        >
+
+                            {% csrf_token %}
+
+                            <div class="tech-review">
+
+                                {% for field in form_compat %}
+
+                                    {% if field.name == "resultado" %}
+
+                                        {{ field.as_hidden }}
+
+                                        <div class="tech-decision">
+
+                                            <div class="tech-decision__label">
+                                                Decisão
+                                            </div>
+
+                                            <div class="tech-decision__buttons">
+
+                                                {% for value, label in field.field.choices %}
+
+                                                    {% if value %}
+
+                                                    <button
+                                                        type="button"
+                                                        class="tech-decision-btn"
+                                                        data-tech-decision
+                                                        data-value="{{ value }}"
+                                                        data-label="{{ label }}"
+                                                    >
+                                                        {{ label }}
+                                                    </button>
+
+                                                    {% endif %}
+
+                                                {% endfor %}
+
+                                            </div>
+
+                                            {{ field.errors }}
+
+                                        </div>
+
+                                    {% else %}
+
+                                        <div class="tech-review__field">
+
+                                            <label for="{{ field.id_for_label }}">
+                                                {{ field.label }}
+                                            </label>
+
+                                            {{ field }}
+
+                                            {{ field.errors }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                {% endfor %}
+
+
+                                <div class="purchase-form-actions">
+
+                                    <button
+                                        class="cp-btn cp-btn-primary"
+                                        type="submit"
+                                    >
+                                        Registrar análise
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+            {% endif %}
+
+        </div>
+
+
+        {% if pode_editar %}
+
+        <div class="purchase-card" style="margin-top:10px">
+
+            <div class="purchase-card__body" style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:14px;
+            ">
+
+                <div>
+
+                    <strong style="
+                        display:block;
+                        color:#31515e;
+                        font-size:10.5px;
+                    ">
+                        Finalizar análise técnica
+                    </strong>
+
+                    <span style="
+                        color:#748993;
+                        font-size:9.5px;
+                    ">
+                        Avance somente depois de analisar as propostas.
+                    </span>
+
+                </div>
+
+                <form
+                    method="post"
+                    action="{% url 'compras:concluir_compatibilizacao' processo.pk %}"
+                >
+
+                    {% csrf_token %}
+
+                    <button
+                        class="cp-btn cp-btn-primary"
+                        type="submit"
+                    >
+                        Concluir análise
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+
+        <!-- =================================================
+             NEGOCIAÇÃO
+        ================================================== -->
+
+        {% elif processo.etapa_atual == 'NEGOCIACAO' %}
+
+        <div class="purchase-kpis">
+
+            <div class="purchase-kpi">
+                <span>Quantidade necessária</span>
+                <strong>
+                    {{ quantidade_total|floatformat:2 }}
+                </strong>
+            </div>
+
+            <div class="purchase-kpi">
+                <span>Selecionada</span>
+                <strong>
+                    {{ quantidade_adjudicada|floatformat:2 }}
+                </strong>
+            </div>
+
+            <div class="purchase-kpi">
+                <span>Atendimento</span>
+                <strong>
+                    {{ percentual_atendido|floatformat:0 }}%
+                </strong>
+            </div>
+
+            <div class="purchase-kpi">
+                <span>Valor final</span>
+                <strong>
+                    R$ {{ valor_total_selecionado|floatformat:2 }}
+                </strong>
+            </div>
+
+        </div>
+
+
+        <div class="negotiation-layout">
+
+            <main class="negotiation-main">
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Comparativo comercial</h2>
+                            <p>
+                                Propostas aprovadas tecnicamente.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div style="padding:0">
+
+                        <div class="cp-table-wrap">
+
+                            <table class="cp-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Fornecedor</th>
+                                        <th>Cotado</th>
+                                        <th>Final</th>
+                                        <th>Entrega</th>
+                                        <th>Comprado</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for linha in mapa_itens %}
+
+                                        {% if linha.compat and linha.compat.resultado != 'REPROVADO' %}
+
+                                        <tr>
+
+                                            <td>
+                                                <strong>
+                                                    {{ linha.item.necessidade.descricao }}
+                                                </strong>
+                                            </td>
+
+                                            <td>
+                                                {{ linha.item.cotacao.fornecedor.nome }}
+                                            </td>
+
+                                            <td class="cp-money">
+                                                R$ {{ linha.item.valor_unitario_cotado|floatformat:2 }}
+                                            </td>
+
+                                            <td class="cp-money">
+
+                                                <strong>
+                                                    R$ {{ linha.valor_final|floatformat:2 }}
+                                                </strong>
+
+                                            </td>
+
+                                            <td>
+
+                                                {% if linha.negociacao and linha.negociacao.prazo_entrega_dias_negociado != None %}
+
+                                                    {{ linha.negociacao.prazo_entrega_dias_negociado }} dias
+
+                                                {% elif linha.item.cotacao.prazo_entrega_dias != None %}
+
+                                                    {{ linha.item.cotacao.prazo_entrega_dias }} dias
+
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+
+                                            </td>
+
+                                            <td>
+                                                {{ linha.quantidade_selecionada|floatformat:2 }}
+                                            </td>
+
+                                        </tr>
+
+                                        {% endif %}
+
+                                    {% empty %}
+
+                                    <tr>
+
+                                        <td colspan="6" class="cp-empty">
+                                            Nenhuma proposta disponível.
+                                        </td>
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                {% if pode_editar %}
+
+                    {% if possui_saldo_pendente %}
+
+                    <section class="negotiation-flow">
+
+                        <header class="negotiation-flow__head">
+
+                            <div class="negotiation-flow__eyebrow">
+                                Fechar compra
+                            </div>
+
+                            <h2>
+                                Negociar e selecionar fornecedor
+                            </h2>
+
+                            <p>
+                                Registre a condição negociada e depois confirme
+                                a quantidade que será comprada.
+                            </p>
+
+                        </header>
+
+
+                        <div class="negotiation-flow__body">
+
+                            <div class="negotiation-step">
+
+                                <div class="negotiation-step__number">
+                                    1
+                                </div>
+
+                                <div class="negotiation-step__title">
+                                    Condição negociada
+                                </div>
+
+                                <div class="negotiation-step__description">
+                                    Informe somente o que mudou em relação à proposta.
+                                </div>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'compras:negociar' processo.pk %}"
+                                    class="purchase-form"
+                                >
+
+                                    {% csrf_token %}
+
+                                    {% include 'compras/_form_fields.html' with form=form_negociacao %}
+
+                                    <div class="negotiation-step__action">
+
+                                        <button
+                                            class="cp-btn"
+                                            type="submit"
+                                        >
+                                            Salvar e continuar
+                                        </button>
+
+                                    </div>
+
+                                </form>
+
+                            </div>
+
+
+                            <div class="negotiation-step">
+
+                                <div class="negotiation-step__number">
+                                    2
+                                </div>
+
+                                <div class="negotiation-step__title">
+                                    Confirmar compra
+                                </div>
+
+                                <div class="negotiation-step__description">
+                                    Informe quanto será efetivamente comprado
+                                    desta proposta.
+                                </div>
+
+                                <form
+                                    method="post"
+                                    action="{% url 'compras:adjudicar' processo.pk %}"
+                                    class="purchase-form"
+                                >
+
+                                    {% csrf_token %}
+
+                                    {% include 'compras/_form_fields.html' with form=form_adjudicacao %}
+
+                                    <div class="negotiation-step__action">
+
+                                        <button
+                                            class="cp-btn cp-btn-primary"
+                                            type="submit"
+                                        >
+                                            Confirmar compra
+                                        </button>
+
+                                    </div>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    {% else %}
+
+                    <section class="negotiation-complete">
+
+                        <div class="negotiation-complete__top">
+
+                            <div class="negotiation-complete__icon">
+                                ✓
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Negociação concluída
+                                </h3>
+
+                                <p>
+                                    Todo o escopo já possui fornecedor definido.
+                                    O mapa está pronto para decisão da gestão.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="negotiation-complete__action">
+
+                            <form
+                                method="post"
+                                action="{% url 'compras:concluir_negociacao' processo.pk %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    class="cp-btn cp-btn-primary"
+                                    type="submit"
+                                >
+                                    Enviar para aprovação →
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </section>
+
+                    {% endif %}
+
+                {% endif %}
+
+            </main>
+
+
+            <aside class="negotiation-side">
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Compra definida</h2>
+                            <p>
+                                Fornecedores selecionados.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div class="purchase-card__body">
+
+                        {% for a in adjudicacoes %}
+
+                        <article class="scope-item" style="margin-bottom:7px">
+
+                            <div class="scope-item__top">
+
+                                <div class="scope-item__name">
+                                    {{ a.necessidade.descricao }}
+                                </div>
+
+                                <div class="scope-item__qty">
+                                    {{ a.quantidade|floatformat:2 }}
+                                </div>
+
+                            </div>
+
+                            <div class="scope-item__activity">
+
+                                {{ a.cotacao.fornecedor.nome }}
+
+                                ·
+
+                                R$ {{ a.valor_unitario_final|floatformat:2 }}
+
+                            </div>
+
+
+                            {% if pode_editar %}
+
+                            <form
+                                method="post"
+                                action="{% url 'compras:cancelar_adjudicacao' processo.pk a.pk %}"
+                                style="margin-top:7px"
+                            >
+
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="motivo"
+                                    value="Correção da seleção durante a negociação"
+                                >
+
+                                <button
+                                    class="cp-btn cp-btn-danger cp-btn-sm"
+                                    type="submit"
+                                >
+                                    Remover
+                                </button>
+
+                            </form>
+
+                            {% endif %}
+
+                        </article>
+
+                        {% empty %}
+
+                        <div class="cp-empty">
+                            Nenhuma compra definida.
+                        </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+        </div>
+
+
+        <!-- =================================================
+             APROVAÇÃO FINAL
+        ================================================== -->
+
+        {% elif processo.etapa_atual == 'APROVACAO' %}
+
+        <div class="approval-total">
+
+            <div class="approval-total__text">
+
+                <span>
+                    Mapa final para decisão
+                </span>
+
+                <strong>
+                    {{ processo.titulo }}
+                </strong>
+
+            </div>
+
+            <div class="approval-total__value">
+                R$ {{ valor_total_selecionado|floatformat:2 }}
+            </div>
+
+        </div>
+
+
+        <div class="approval-layout">
+
+            <main>
+
+                <section class="purchase-card">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+                            <h2>Compra que será aprovada</h2>
+                            <p>
+                                Fornecedores, valores e condições finais.
+                            </p>
+                        </div>
+
+                    </header>
+
+                    <div style="padding:0">
+
+                        <div class="cp-table-wrap">
+
+                            <table class="cp-table">
+
+                                <thead>
+                                    <tr>
+                                        <th>Fornecedor</th>
+                                        <th>Itens</th>
+                                        <th>Valor</th>
+                                        <th>Pagamento</th>
+                                        <th>Entrega</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for f in resumo_fornecedores %}
+
+                                    <tr>
+
+                                        <td>
+                                            <strong>
+                                                {{ f.fornecedor.nome }}
+                                            </strong>
+                                        </td>
+
+                                        <td>
+                                            {{ f.itens }}
+                                        </td>
+
+                                        <td class="cp-money">
+                                            R$ {{ f.valor|floatformat:2 }}
+                                        </td>
+
+                                        <td>
+                                            {{ f.condicao_pagamento|default:"—" }}
+                                        </td>
+
+                                        <td>
+
+                                            {% if f.prazo_entrega_dias != None %}
+                                                {{ f.prazo_entrega_dias }} dias
+                                            {% else %}
+                                                —
+                                            {% endif %}
+
+                                        </td>
+
+                                    </tr>
+
+                                    {% empty %}
+
+                                    <tr>
+
+                                        <td colspan="5" class="cp-empty">
+                                            Nenhum fornecedor selecionado.
+                                        </td>
+
+                                    </tr>
+
+                                    {% endfor %}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </main>
+
+
+            {% if pode_aprovar %}
+
+            <aside>
+
+                <section class="purchase-card purchase-form">
+
+                    <header class="purchase-card__head">
+
+                        <div>
+
+                            <h2>
+                                Decisão da gestão
+                            </h2>
+
+                            <p>
+                                Esta é a última decisão do processo.
+                                Ao aprovar, a compra será considerada contratada.
+                            </p>
+
+                        </div>
+
+                    </header>
+
+                    <div class="purchase-card__body">
+
+                        <form
+                            method="post"
+                            action="{% url 'compras:aprovar' processo.pk %}"
+                        >
+
+                            {% csrf_token %}
+
+                            {% include 'compras/_form_fields.html' with form=form_aprovacao %}
+
+                            <div class="purchase-form-actions">
+
+                                <button
+                                    class="cp-btn cp-btn-primary"
+                                    type="submit"
+                                >
+                                    Registrar decisão
+                                </button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- =================================================
+             APROVADO / CONTRATADO
+             CONTRATACAO E CONTRATADO SÃO TRATADOS COMO FINAL
+        ================================================== -->
+
+        {% else %}
+
+        <section class="contracted-hero">
+
+            <div class="contracted-hero__top">
+
+                <div class="contracted-hero__icon">
+                    ✓
+                </div>
+
+                <div>
+
+                    <h2>
+                        Compra aprovada pela gestão
+                    </h2>
+
+                    <p>
+                        O processo comercial foi encerrado.
+                        As condições já foram definidas na negociação e
+                        aprovadas pela gestão, portanto não existe uma nova
+                        etapa de preenchimento ou formalização.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="contracted-summary">
+
+                <div class="contracted-summary__item">
+
+                    <span>
+                        Situação
+                    </span>
+
+                    <strong>
+                        Contratado
+                    </strong>
+
+                </div>
+
+                <div class="contracted-summary__item">
+
+                    <span>
+                        Valor aprovado
+                    </span>
+
+                    <strong>
+                        R$ {{ valor_total_selecionado|floatformat:2 }}
+                    </strong>
+
+                </div>
+
+                <div class="contracted-summary__item">
+
+                    <span>
+                        Fornecedores
+                    </span>
+
+                    <strong>
+                        {{ resumo_fornecedores|length }}
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section
+            class="purchase-card"
+            style="margin-top:10px"
+        >
+
+            <header class="purchase-card__head">
+
+                <div>
+
+                    <h2>
+                        Resultado da compra
+                    </h2>
+
+                    <p>
+                        Condições aprovadas pela gestão.
+                    </p>
+
+                </div>
+
+                {% if pedidos %}
+
+                <a
+                    class="cp-btn"
+                    href="{% url 'compras:lista_pedidos' %}"
+                >
+                    Ver pedidos
+                </a>
+
+                {% endif %}
+
+            </header>
+
+
+            <div style="padding:0">
+
+                <div class="cp-table-wrap">
+
+                    <table class="cp-table">
+
+                        <thead>
+
+                            <tr>
+                                <th>Fornecedor</th>
+                                <th>Itens</th>
+                                <th>Valor</th>
+                                <th>Pagamento</th>
+                                <th>Entrega</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for f in resumo_fornecedores %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        {{ f.fornecedor.nome }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    {{ f.itens }}
+                                </td>
+
+                                <td class="cp-money">
+                                    R$ {{ f.valor|floatformat:2 }}
+                                </td>
+
+                                <td>
+                                    {{ f.condicao_pagamento|default:"—" }}
+                                </td>
+
+                                <td>
+
+                                    {% if f.prazo_entrega_dias != None %}
+                                        {{ f.prazo_entrega_dias }} dias
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                            {% empty %}
+
+                            <tr>
+                                <td colspan="5" class="cp-empty">
+                                    Nenhum fornecedor.
+                                </td>
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        {% if pedidos %}
+
+        <section
+            class="purchase-card"
+            style="margin-top:10px"
+        >
+
+            <header class="purchase-card__head">
+
+                <div>
+                    <h2>Pedidos</h2>
+                    <p>Pedidos vinculados ao processo.</p>
+                </div>
+
+            </header>
+
+            <div style="padding:0">
+
+                <div class="cp-table-wrap">
+
+                    <table class="cp-table">
+
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Fornecedor</th>
+                                <th>Status</th>
+                                <th>Valor</th>
+                                <th>Entrega</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for pedido in pedidos %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        {{ pedido.numero }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    {{ pedido.fornecedor.nome }}
+                                </td>
+
+                                <td>
+                                    {{ pedido.get_status_display }}
+                                </td>
+
+                                <td class="cp-money">
+                                    R$ {{ pedido.valor_total|floatformat:2 }}
+                                </td>
+
+                                <td>
+                                    {{ pedido.previsao_entrega_atual|date:"d/m/Y"|default:"—" }}
+                                </td>
+
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        {% endif %}
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- =====================================================
+         RESUMO
+    ====================================================== -->
+
+    <div
+        class="purchase-tab-panel"
+        data-panel="resumo"
+    >
+
+        <div class="purchase-grid-2">
+
+            <section class="purchase-card">
+
+                <header class="purchase-card__head">
+
+                    <div>
+                        <h2>Origem da compra</h2>
+                        <p>Dados vindos do Planejamento.</p>
+                    </div>
+
+                </header>
+
+                <div class="purchase-card__body">
+
+                    <div class="cp-list">
+
+                        <div class="cp-list-row">
+                            <span>Obra</span>
+                            <strong>{{ processo.obra.nome }}</strong>
+                        </div>
+
+                        <div class="cp-list-row">
+                            <span>Suprimento</span>
+                            <strong>{{ processo.item_cronograma.item }}</strong>
+                        </div>
+
+                        <div class="cp-list-row">
+                            <span>Comprador</span>
+                            <strong>{{ processo.comprador|default:"Não definido" }}</strong>
+                        </div>
+
+                        <div class="cp-list-row">
+                            <span>Aberto em</span>
+                            <strong>{{ processo.criado_em|date:"d/m/Y H:i" }}</strong>
+                        </div>
+
+                    </div>
+
+
+                    {% if processo.descricao %}
+
+                    <div class="cp-side-note" style="margin-top:10px">
+
+                        <strong>Descrição</strong>
+
+                        {{ processo.descricao }}
+
+                    </div>
+
+                    {% endif %}
+
+
+                    {% if processo.observacao %}
+
+                    <div class="cp-side-note" style="margin-top:8px">
+
+                        <strong>Observação</strong>
+
+                        {{ processo.observacao }}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+            </section>
+
+
+            <section class="purchase-card">
+
+                <header class="purchase-card__head">
+
+                    <div>
+                        <h2>Marcos do processo</h2>
+                        <p>Datas registradas pelo fluxo.</p>
+                    </div>
+
+                </header>
+
+                <div class="purchase-card__body">
+
+                    <div class="cp-list">
+
+                        <div class="cp-list-row">
+                            <span>Cotação</span>
+                            <strong>
+                                {{ processo.data_cotacao_concluida|date:"d/m/Y H:i"|default:"Pendente" }}
+                            </strong>
+                        </div>
+
+                        <div class="cp-list-row">
+                            <span>Análise técnica</span>
+                            <strong>
+                                {{ processo.data_compatibilizacao_concluida|date:"d/m/Y H:i"|default:"Pendente" }}
+                            </strong>
+                        </div>
+
+                        <div class="cp-list-row">
+                            <span>Negociação</span>
+                            <strong>
+                                {{ processo.data_negociacao_concluida|date:"d/m/Y H:i"|default:"Pendente" }}
+                            </strong>
+                        </div>
+
+                        <div class="cp-list-row">
+
+                            <span>
+                                Situação final
+                            </span>
+
+                            <strong>
+
+                                {% if processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}
+                                    Aprovado / Contratado
+                                {% elif processo.etapa_atual == 'APROVACAO' %}
+                                    Aguardando aprovação
+                                {% else %}
+                                    Pendente
+                                {% endif %}
+
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+
+        <section
+            class="purchase-card"
+            style="margin-top:10px"
+        >
+
+            <header class="purchase-card__head">
+
+                <div>
+                    <h2>Itens da compra</h2>
+                    <p>Escopo definido na abertura.</p>
+                </div>
+
+            </header>
+
+            <div style="padding:0">
+
+                <div class="cp-table-wrap">
+
+                    <table class="cp-table">
+
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Atividade</th>
+                                <th>Necessário</th>
+                                <th>Selecionado</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for n in necessidades %}
+
+                            <tr>
+
+                                <td>
+                                    {{ n.descricao }}
+                                </td>
+
+                                <td>
+                                    {{ n.atividade_origem.nome_tarefa }}
+                                </td>
+
+                                <td>
+                                    {{ n.quantidade_incluida|floatformat:2 }}
+                                    {{ n.unidade }}
+                                </td>
+
+                                <td>
+                                    {{ n.quantidade_adjudicada|floatformat:2 }}
+                                    {{ n.unidade }}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        {{ n.saldo|floatformat:2 }}
+                                        {{ n.unidade }}
+                                    </strong>
+                                </td>
+
+                            </tr>
+
+                            {% empty %}
+
+                            <tr>
+
+                                <td
+                                    colspan="5"
+                                    class="cp-empty"
+                                >
+                                    Nenhum item.
+                                </td>
+
+                            </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <!-- =====================================================
+         HISTÓRICO
+    ====================================================== -->
+
+    <div
+        class="purchase-tab-panel"
+        data-panel="historico"
+    >
+
+        <section class="purchase-card">
+
+            <header class="purchase-card__head">
+
+                <div>
+                    <h2>Histórico do processo</h2>
+                    <p>Principais ações registradas.</p>
+                </div>
+
+            </header>
+
+            <div class="purchase-card__body">
+
+                <div class="cp-timeline">
+
+                    {% for evento in historico %}
+
+                    <div class="cp-event">
+
+                        <strong>
+                            {{ evento.get_tipo_display|default:evento.tipo }}
+                        </strong>
+
+                        <time>
+
+                            · {{ evento.criado_em|date:"d/m/Y H:i" }}
+
+                            {% if evento.usuario %}
+                                · {{ evento.usuario }}
+                            {% endif %}
+
+                        </time>
+
+                        {% if evento.descricao %}
+
+                        <p>
+                            {{ evento.descricao }}
+                        </p>
+
+                        {% endif %}
+
+                    </div>
+
+                    {% empty %}
+
+                    <div class="cp-empty">
+                        Nenhum evento registrado.
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ========================================================
+       TABS
+    ======================================================== */
+
+    const tabs = Array.from(
+        document.querySelectorAll('.purchase-tab')
+    );
+
+    const panels = Array.from(
+        document.querySelectorAll('.purchase-tab-panel')
+    );
+
+    tabs.forEach(function (tab) {
+
+        tab.addEventListener('click', function () {
+
+            tabs.forEach(function (item) {
+                item.classList.remove('is-active');
+            });
+
+            panels.forEach(function (panel) {
+                panel.classList.remove('is-active');
+            });
+
+            tab.classList.add('is-active');
+
+            const panel = document.querySelector(
+                '[data-panel="' + tab.dataset.tab + '"]'
+            );
+
+            if (panel) {
+                panel.classList.add('is-active');
+            }
+
+        });
+
+    });
+
+
+    /* ========================================================
+       TECHNICAL DECISION
+    ======================================================== */
+
+    const techButtons = Array.from(
+        document.querySelectorAll('[data-tech-decision]')
+    );
+
+    if (techButtons.length) {
+
+        const hiddenResult =
+            document.querySelector(
+                '#techDecisionForm input[name="resultado"]'
+            );
+
+        techButtons.forEach(function (button) {
+
+            const value = (
+                button.dataset.value || ''
+            ).toUpperCase();
+
+            const label = (
+                button.dataset.label || ''
+            ).toUpperCase();
+
+
+            if (
+                value.includes('REPROV') ||
+                label.includes('REPROV')
+            ) {
+                button.dataset.danger = 'true';
+            }
+
+
+            if (
+                value.includes('RESSAL') ||
+                label.includes('RESSAL') ||
+                value.includes('CONDIC') ||
+                label.includes('CONDIC')
+            ) {
+                button.dataset.warning = 'true';
+            }
+
+
+            if (
+                hiddenResult &&
+                String(hiddenResult.value) ===
+                String(button.dataset.value)
+            ) {
+                button.classList.add('is-selected');
+            }
+
+
+            button.addEventListener(
+                'click',
+                function () {
+
+                    techButtons.forEach(
+                        function (item) {
+                            item.classList.remove(
+                                'is-selected'
+                            );
+                        }
+                    );
+
+                    button.classList.add(
+                        'is-selected'
+                    );
+
+                    if (hiddenResult) {
+                        hiddenResult.value =
+                            button.dataset.value;
+                    }
+
+                }
+            );
+
+        });
+
+    }
+
+});
+</script>
+
+{% endblock %}

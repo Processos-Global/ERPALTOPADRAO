@@ -364,6 +364,16 @@
             box-shadow: 0 0 0 3px rgba(255, 255, 255, .08);
         }
 
+        .sidebar-sublink--disabled {
+            cursor: default;
+            opacity: .46;
+            pointer-events: none;
+        }
+
+        .sidebar-sublink--disabled .sidebar-sublink__dot {
+            opacity: .4;
+        }
+
         /* Quando a sidebar inteira estiver recolhida, mantém apenas o item pai. */
         body.sidebar-is-collapsed .sidebar-submenu,
         body.sidebar-is-collapsed .sidebar-submenu-toggle {
@@ -504,51 +514,34 @@
                 </header>
 
                 <div class="sidebar__modules-list">
-                    <a
-                        href="{% url 'planejamento:painel_cronograma' %}"
-                        class="sidebar-link"
-                        data-transition-link
-                        title="Cronograma de Obras"
-                    >
-                        <span class="sidebar-link__icon">
-                            <svg class="icon">
-                                <use href="#icon-calendar"></use>
-                            </svg>
-                        </span>
-
-                        <span class="sidebar-link__text">
-                            Cronograma de Obras
-                        </span>
-                    </a>
-
                     <div
-                        class="sidebar-module-group {% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}is-open{% endif %}"
-                        data-sidebar-module-group="suprimentos"
+                        class="sidebar-module-group {% if request.resolver_match.namespace == 'planejamento' %}is-open{% endif %}"
+                        data-sidebar-module-group="planejamento"
                     >
                         <div class="sidebar-module-parent">
                             <a
-                                href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
-                                class="sidebar-link"
+                                href="{% url 'planejamento:painel_cronograma' %}"
+                                class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' %}sidebar-link--active{% endif %}"
                                 data-transition-link
-                                title="Cronograma de Suprimentos"
+                                title="Planejamento"
                             >
                                 <span class="sidebar-link__icon">
                                     <svg class="icon">
-                                        <use href="#icon-building"></use>
+                                        <use href="#icon-calendar"></use>
                                     </svg>
                                 </span>
 
                                 <span class="sidebar-link__text">
-                                    Cronograma de Suprimentos
+                                    Planejamento
                                 </span>
                             </a>
 
                             <button
                                 type="button"
                                 class="sidebar-submenu-toggle"
-                                data-sidebar-submenu-toggle="suprimentos"
-                                aria-label="Expandir opções do Cronograma de Suprimentos"
-                                aria-expanded="{% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}true{% else %}false{% endif %}"
+                                data-sidebar-submenu-toggle="planejamento"
+                                aria-label="Expandir opções de Planejamento"
+                                aria-expanded="{% if request.resolver_match.namespace == 'planejamento' %}true{% else %}false{% endif %}"
                                 title="Mostrar ou ocultar opções"
                             >
                                 <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -560,14 +553,113 @@
                         <div class="sidebar-submenu">
                             <div class="sidebar-submenu__inner">
                                 <a
-                                    href="{% url 'planejamento:kanban_cronograma_suprimentos' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'kanban_cronograma_suprimentos' %}sidebar-sublink--active{% endif %}"
+                                    href="{% url 'planejamento:painel_cronograma' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'painel_cronograma' %}sidebar-sublink--active{% endif %}"
                                     data-transition-link
-                                    title="Kanban de Suprimentos"
+                                    title="Cronograma de Obra"
                                 >
                                     <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Kanban</span>
+                                    <span>Cronograma de Obra</span>
                                 </a>
+
+                                <a
+                                    href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'painel_cronograma_suprimentos' %}sidebar-sublink--active{% endif %}"
+                                    data-transition-link
+                                    title="Cronograma de Suprimentos"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Cronograma de Suprimentos</span>
+                                </a>
+
+                                <span
+                                    class="sidebar-sublink sidebar-sublink--disabled"
+                                    title="Cronograma Físico x Financeiro — tela ainda sem rota cadastrada"
+                                    aria-disabled="true"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Físico x Financeiro</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="sidebar-module-group {% if request.resolver_match.namespace == 'compras' %}is-open{% endif %}"
+                        data-sidebar-module-group="suprimentos"
+                    >
+                        <div class="sidebar-module-parent">
+                            <a
+                                href="{% url 'compras:dashboard' %}"
+                                class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
+                                data-transition-link
+                                title="Suprimentos"
+                            >
+                                <span class="sidebar-link__icon">
+                                    <svg class="icon">
+                                        <use href="#icon-cart"></use>
+                                    </svg>
+                                </span>
+
+                                <span class="sidebar-link__text">
+                                    Suprimentos
+                                </span>
+                            </a>
+
+                            <button
+                                type="button"
+                                class="sidebar-submenu-toggle"
+                                data-sidebar-submenu-toggle="suprimentos"
+                                aria-label="Expandir opções de Suprimentos"
+                                aria-expanded="{% if request.resolver_match.namespace == 'compras' %}true{% else %}false{% endif %}"
+                                title="Mostrar ou ocultar opções"
+                            >
+                                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="sidebar-submenu">
+                            <div class="sidebar-submenu__inner">
+                                <a
+                                    href="{% url 'compras:dashboard' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'compras' %}sidebar-sublink--active{% endif %}"
+                                    data-transition-link
+                                    title="Visão Geral de Suprimentos"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Visão Geral</span>
+                                </a>
+
+                                <a
+                                    href="{% url 'compras:lista_processos' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'lista_processos' or request.resolver_match.url_name == 'novo_processo' or request.resolver_match.url_name == 'detalhe_processo' %}sidebar-sublink--active{% endif %}"
+                                    data-transition-link
+                                    title="Processos de Compra"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Processos de Compra</span>
+                                </a>
+
+                                <a
+                                    href="{% url 'compras:lista_pedidos' %}"
+                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'lista_pedidos' %}sidebar-sublink--active{% endif %}"
+                                    data-transition-link
+                                    title="Pedidos"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Pedidos</span>
+                                </a>
+
+                                <span
+                                    class="sidebar-sublink sidebar-sublink--disabled"
+                                    title="Contratos — tela consolidada ainda sem rota cadastrada"
+                                    aria-disabled="true"
+                                >
+                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
+                                    <span>Contratos</span>
+                                </span>
                             </div>
                         </div>
                     </div>

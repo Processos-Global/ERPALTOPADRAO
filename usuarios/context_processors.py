@@ -26,7 +26,7 @@ SIDEBAR_MODULES = [
         "codigo": ModuloSistema.COMPRAS,
         "titulo": "Compras",
         "icone": "cart",
-        "url_name": "",
+        "url_name": "compras:dashboard",
     },
     {
         "codigo": ModuloSistema.CONTRATOS,

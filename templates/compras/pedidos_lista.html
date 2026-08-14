@@ -1,0 +1,14 @@
+{% extends "layouts/base.html" %}
+{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block content %}
+<div class="cp-page">
+  <div class="cp-head"><div><div class="cp-eyebrow">Compras</div><h1 class="cp-title">Pedidos</h1><div class="cp-sub">Pedidos já emitidos a partir dos processos comerciais concluídos.</div></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Voltar ao painel</a></div></div>
+  <form class="cp-filter" method="get" style="grid-template-columns:minmax(220px,2fr) 1fr 1fr auto">
+    <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar pedido, processo ou fornecedor">
+    <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
+    <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+    <button class="cp-btn" type="submit">Filtrar</button>
+  </form>
+  <section class="cp-section"><div class="cp-section-body" style="padding:0"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Pedido</th><th>Processo</th><th>Fornecedor</th><th>Obra</th><th>Status</th><th>Valor</th><th>Entrega</th><th>Responsável</th></tr></thead><tbody>{% for pedido in pedidos %}<tr><td><strong>{{ pedido.numero }}</strong><div class="cp-muted">{{ pedido.data|date:"d/m/Y" }}</div></td><td><a href="{% url 'compras:detalhe_processo' pedido.processo.pk %}" class="cp-btn cp-btn-sm">{{ pedido.processo.numero }}</a></td><td>{{ pedido.fornecedor.nome }}</td><td>{{ pedido.obra.nome }}</td><td><span class="cp-badge is-active">{{ pedido.get_status_display }}</span></td><td class="cp-money"><strong>R$ {{ pedido.valor_total|floatformat:2 }}</strong></td><td>{{ pedido.previsao_entrega_atual|date:"d/m/Y"|default:"—" }}</td><td>{{ pedido.responsavel|default:"—" }}</td></tr>{% empty %}<tr><td colspan="8" class="cp-empty">Nenhum pedido encontrado.</td></tr>{% endfor %}</tbody></table></div></div></section>
+</div>
+{% endblock %}
