@@ -4,7 +4,8 @@ from compras import views
 app_name = "compras"
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", views.menu_suprimentos, name="menu"),
+    path("painel/", views.dashboard, name="dashboard"),
     path("processos/", views.lista_processos, name="lista_processos"),
     path("processos/novo/", views.novo_processo, name="novo_processo"),
     path("processos/<int:pk>/", views.detalhe_processo, name="detalhe_processo"),

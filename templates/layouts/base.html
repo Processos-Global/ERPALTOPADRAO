@@ -83,6 +83,57 @@
             color: #ffffff;
         }
 
+        /*
+         * TRANSIÇÃO DE PÁGINA CONTROLADA PELO BASE
+         * ------------------------------------------
+         * Esta regra é intencionalmente !important para impedir que
+         * base.css, prefers-reduced-motion ou CSS específico de uma tela
+         * encurte/interrompa o percurso da camada.
+         *
+         * O movimento principal é feito via Web Animations API no script
+         * do próprio base.html. Aqui definimos somente o estado físico
+         * inicial e garantimos que não exista transição CSS concorrente.
+         */
+        .page-transition {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 2147483000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            pointer-events: none !important;
+            transform: translate3d(0, 105%, 0) !important;
+            transition: none !important;
+            animation: none !important;
+            will-change: transform;
+            visibility: visible !important;
+        }
+
+        .page-transition.is-running {
+            pointer-events: all !important;
+        }
+
+        .page-transition__mark {
+            opacity: 0;
+            transform: translate3d(0, 18px, 0) scale(.94);
+            transition: none !important;
+            animation: none !important;
+            will-change: opacity, transform;
+        }
+
+        body.page-navigation-locked {
+            overflow: hidden !important;
+            cursor: progress;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .page-transition,
+            .page-transition__mark {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+
         /* Estado recolhido: deixa a sidebar realmente icon-only. */
         body.sidebar-is-collapsed .sidebar {
             overflow-x: hidden !important;
@@ -514,155 +565,39 @@
                 </header>
 
                 <div class="sidebar__modules-list">
-                    <div
-                        class="sidebar-module-group {% if request.resolver_match.namespace == 'planejamento' %}is-open{% endif %}"
-                        data-sidebar-module-group="planejamento"
+                    <a
+                        href="{% url 'planejamento:menu' %}"
+                        class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Planejamento"
                     >
-                        <div class="sidebar-module-parent">
-                            <a
-                                href="{% url 'planejamento:painel_cronograma' %}"
-                                class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' %}sidebar-link--active{% endif %}"
-                                data-transition-link
-                                title="Planejamento"
-                            >
-                                <span class="sidebar-link__icon">
-                                    <svg class="icon">
-                                        <use href="#icon-calendar"></use>
-                                    </svg>
-                                </span>
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-calendar"></use>
+                            </svg>
+                        </span>
 
-                                <span class="sidebar-link__text">
-                                    Planejamento
-                                </span>
-                            </a>
+                        <span class="sidebar-link__text">
+                            Planejamento
+                        </span>
+                    </a>
 
-                            <button
-                                type="button"
-                                class="sidebar-submenu-toggle"
-                                data-sidebar-submenu-toggle="planejamento"
-                                aria-label="Expandir opções de Planejamento"
-                                aria-expanded="{% if request.resolver_match.namespace == 'planejamento' %}true{% else %}false{% endif %}"
-                                title="Mostrar ou ocultar opções"
-                            >
-                                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="m6 9 6 6 6-6"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="sidebar-submenu">
-                            <div class="sidebar-submenu__inner">
-                                <a
-                                    href="{% url 'planejamento:painel_cronograma' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'painel_cronograma' %}sidebar-sublink--active{% endif %}"
-                                    data-transition-link
-                                    title="Cronograma de Obra"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Cronograma de Obra</span>
-                                </a>
-
-                                <a
-                                    href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'painel_cronograma_suprimentos' %}sidebar-sublink--active{% endif %}"
-                                    data-transition-link
-                                    title="Cronograma de Suprimentos"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Cronograma de Suprimentos</span>
-                                </a>
-
-                                <span
-                                    class="sidebar-sublink sidebar-sublink--disabled"
-                                    title="Cronograma Físico x Financeiro — tela ainda sem rota cadastrada"
-                                    aria-disabled="true"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Físico x Financeiro</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        class="sidebar-module-group {% if request.resolver_match.namespace == 'compras' %}is-open{% endif %}"
-                        data-sidebar-module-group="suprimentos"
+                    <a
+                        href="{% url 'compras:menu' %}"
+                        class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Suprimentos"
                     >
-                        <div class="sidebar-module-parent">
-                            <a
-                                href="{% url 'compras:dashboard' %}"
-                                class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
-                                data-transition-link
-                                title="Suprimentos"
-                            >
-                                <span class="sidebar-link__icon">
-                                    <svg class="icon">
-                                        <use href="#icon-cart"></use>
-                                    </svg>
-                                </span>
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-cart"></use>
+                            </svg>
+                        </span>
 
-                                <span class="sidebar-link__text">
-                                    Suprimentos
-                                </span>
-                            </a>
-
-                            <button
-                                type="button"
-                                class="sidebar-submenu-toggle"
-                                data-sidebar-submenu-toggle="suprimentos"
-                                aria-label="Expandir opções de Suprimentos"
-                                aria-expanded="{% if request.resolver_match.namespace == 'compras' %}true{% else %}false{% endif %}"
-                                title="Mostrar ou ocultar opções"
-                            >
-                                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="m6 9 6 6 6-6"></path>
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div class="sidebar-submenu">
-                            <div class="sidebar-submenu__inner">
-                                <a
-                                    href="{% url 'compras:dashboard' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'dashboard' and request.resolver_match.namespace == 'compras' %}sidebar-sublink--active{% endif %}"
-                                    data-transition-link
-                                    title="Visão Geral de Suprimentos"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Visão Geral</span>
-                                </a>
-
-                                <a
-                                    href="{% url 'compras:lista_processos' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'lista_processos' or request.resolver_match.url_name == 'novo_processo' or request.resolver_match.url_name == 'detalhe_processo' %}sidebar-sublink--active{% endif %}"
-                                    data-transition-link
-                                    title="Processos de Compra"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Processos de Compra</span>
-                                </a>
-
-                                <a
-                                    href="{% url 'compras:lista_pedidos' %}"
-                                    class="sidebar-sublink {% if request.resolver_match.url_name == 'lista_pedidos' %}sidebar-sublink--active{% endif %}"
-                                    data-transition-link
-                                    title="Pedidos"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Pedidos</span>
-                                </a>
-
-                                <span
-                                    class="sidebar-sublink sidebar-sublink--disabled"
-                                    title="Contratos — tela consolidada ainda sem rota cadastrada"
-                                    aria-disabled="true"
-                                >
-                                    <span class="sidebar-sublink__dot" aria-hidden="true"></span>
-                                    <span>Contratos</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+                        <span class="sidebar-link__text">
+                            Suprimentos
+                        </span>
+                    </a>
                 </div>
             </section>
 
@@ -775,7 +710,257 @@
         </section>
     </div>
 
-    <script src="{% static 'js/app.js' %}"></script>
+    <script>
+        /*
+         * TRANSIÇÃO DE PÁGINA — CONTROLADA QUADRO A QUADRO
+         * ------------------------------------------------
+         * Não usa transition/animation CSS para o movimento principal.
+         * Assim nenhum !important, CSS de outra tela ou estado anterior
+         * consegue cortar a animação no meio.
+         */
+        (function () {
+            "use strict";
+
+            const COVER_DURATION = 650;
+            const HOLD_DURATION = 35;
+
+            let navigationLocked = false;
+            let animationFrameId = null;
+
+            function getLayer() {
+                return document.querySelector("[data-page-transition]");
+            }
+
+            function getMark() {
+                return document.querySelector(".page-transition__mark");
+            }
+
+            function easeOutQuint(t) {
+                return 1 - Math.pow(1 - t, 5);
+            }
+
+            function clamp(value, min, max) {
+                return Math.min(Math.max(value, min), max);
+            }
+
+            function resetTransition() {
+                navigationLocked = false;
+
+                if (animationFrameId !== null) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+
+                document.body.classList.remove("page-navigation-locked");
+                document.body.classList.remove("is-transitioning");
+
+                const layer = getLayer();
+                const mark = getMark();
+
+                if (layer) {
+                    layer.classList.remove("is-running");
+                    layer.style.setProperty("transition", "none", "important");
+                    layer.style.setProperty("animation", "none", "important");
+                    layer.style.setProperty(
+                        "transform",
+                        "translate3d(0, 105%, 0)",
+                        "important"
+                    );
+                    layer.style.setProperty("pointer-events", "none", "important");
+                }
+
+                if (mark) {
+                    mark.style.setProperty("transition", "none", "important");
+                    mark.style.setProperty("animation", "none", "important");
+                    mark.style.setProperty("opacity", "0", "important");
+                    mark.style.setProperty(
+                        "transform",
+                        "translate3d(0, 16px, 0) scale(.96)",
+                        "important"
+                    );
+                }
+            }
+
+            function isValidNavigation(event, link) {
+                if (!link) return false;
+                if (event.defaultPrevented) return false;
+                if (event.button !== 0) return false;
+                if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
+                if (link.target && link.target !== "_self") return false;
+                if (link.hasAttribute("download")) return false;
+                if (!link.href || link.href.startsWith("javascript:")) return false;
+
+                let current;
+                let destination;
+
+                try {
+                    current = new URL(window.location.href);
+                    destination = new URL(link.href, window.location.href);
+                } catch (error) {
+                    return false;
+                }
+
+                if (!["http:", "https:"].includes(destination.protocol)) return false;
+                if (destination.origin !== current.origin) return false;
+
+                if (
+                    destination.pathname === current.pathname &&
+                    destination.search === current.search &&
+                    destination.hash &&
+                    destination.hash !== current.hash
+                ) {
+                    return false;
+                }
+
+                if (destination.href === current.href) return false;
+
+                return true;
+            }
+
+            function navigateWithTransition(destination) {
+                if (navigationLocked) return;
+
+                const layer = getLayer();
+                const mark = getMark();
+
+                if (!layer) {
+                    window.location.assign(destination);
+                    return;
+                }
+
+                navigationLocked = true;
+                document.body.classList.add("page-navigation-locked");
+                document.body.classList.add("is-transitioning");
+
+                if (animationFrameId !== null) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+
+                layer.classList.add("is-running");
+                layer.style.setProperty("transition", "none", "important");
+                layer.style.setProperty("animation", "none", "important");
+                layer.style.setProperty("pointer-events", "all", "important");
+                layer.style.setProperty(
+                    "transform",
+                    "translate3d(0, 105%, 0)",
+                    "important"
+                );
+
+                if (mark) {
+                    mark.style.setProperty("transition", "none", "important");
+                    mark.style.setProperty("animation", "none", "important");
+                    mark.style.setProperty("opacity", "0", "important");
+                    mark.style.setProperty(
+                        "transform",
+                        "translate3d(0, 16px, 0) scale(.96)",
+                        "important"
+                    );
+                }
+
+                /*
+                 * Espera dois frames para garantir que 105% seja realmente
+                 * desenhado antes de começar a subida.
+                 */
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        const start = performance.now();
+
+                        function draw(now) {
+                            const rawProgress = clamp(
+                                (now - start) / COVER_DURATION,
+                                0,
+                                1
+                            );
+
+                            const eased = easeOutQuint(rawProgress);
+
+                            /*
+                             * 105 -> 0.
+                             * Como escrevemos o transform em cada frame com
+                             * prioridade !important, nenhum CSS externo pode
+                             * interromper ou substituir o percurso.
+                             */
+                            const y = 105 * (1 - eased);
+
+                            layer.style.setProperty(
+                                "transform",
+                                "translate3d(0, " + y.toFixed(4) + "%, 0)",
+                                "important"
+                            );
+
+                            if (mark) {
+                                const markProgress = clamp(
+                                    (rawProgress - 0.32) / 0.48,
+                                    0,
+                                    1
+                                );
+
+                                const markEase = easeOutQuint(markProgress);
+                                const markY = 16 * (1 - markEase);
+                                const markScale = 0.96 + (0.04 * markEase);
+
+                                mark.style.setProperty(
+                                    "opacity",
+                                    markEase.toFixed(4),
+                                    "important"
+                                );
+
+                                mark.style.setProperty(
+                                    "transform",
+                                    "translate3d(0, " +
+                                        markY.toFixed(3) +
+                                        "px, 0) scale(" +
+                                        markScale.toFixed(4) +
+                                        ")",
+                                    "important"
+                                );
+                            }
+
+                            if (rawProgress < 1) {
+                                animationFrameId = requestAnimationFrame(draw);
+                                return;
+                            }
+
+                            animationFrameId = null;
+
+                            /* Garante cobertura total antes de navegar. */
+                            layer.style.setProperty(
+                                "transform",
+                                "translate3d(0, 0, 0)",
+                                "important"
+                            );
+
+                            window.setTimeout(function () {
+                                window.location.assign(destination);
+                            }, HOLD_DURATION);
+                        }
+
+                        animationFrameId = requestAnimationFrame(draw);
+                    });
+                });
+            }
+
+            document.addEventListener(
+                "click",
+                function (event) {
+                    const link = event.target.closest("a[href]");
+
+                    if (!isValidNavigation(event, link)) return;
+
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+
+                    navigateWithTransition(link.href);
+                },
+                true
+            );
+
+            window.addEventListener("pageshow", resetTransition);
+            document.addEventListener("DOMContentLoaded", resetTransition);
+        })();
+    </script>
+
+    <script src="{% static 'js/app.js' %}?v=20260814-1753"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const sidebar = document.getElementById('appSidebar');

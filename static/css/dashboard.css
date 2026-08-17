@@ -371,3 +371,54 @@
         min-height: 225px;
     }
 }
+/* =========================================================
+   MICROINTERAÇÕES DO DASHBOARD
+   ========================================================= */
+.module-card {
+    border-radius: 14px;
+    isolation: isolate;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+.module-card::before {
+    transition: transform 300ms var(--ease-out-soft, cubic-bezier(.16,1,.3,1));
+}
+.module-card__icon,
+.module-card__content,
+.module-card__footer {
+    transition:
+        transform 300ms var(--ease-out-soft, cubic-bezier(.16,1,.3,1)),
+        color 220ms ease,
+        border-color 2700ms ease;
+}
+.module-card:not(.module-card--disabled):hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 48px rgba(10,64,84,.14);
+}
+.module-card:not(.module-card--disabled):active {
+    transform: translateY(-1px) scale(.995);
+}
+.module-card:not(.module-card--disabled):hover .module-card__icon {
+    transform: translate3d(0,-2px,0) rotate(-2deg) scale(1.035);
+}
+.module-card:not(.module-card--disabled):hover .module-card__content {
+    transform: translate3d(0,-1px,0);
+}
+
+/* Spotlight extremamente leve, dirigido pelo JS via CSS vars. */
+.module-card:not(.module-card--disabled)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(260px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.14), transparent 64%);
+    transition: opacity 220ms ease;
+}
+.module-card:not(.module-card--disabled):hover::after { opacity: 1; }
+
+.dashboard-heading,
+.modules__header {
+    transition: opacity 420ms ease, transform 420ms var(--ease-out-soft, cubic-bezier(.16,1,.3,1));
+}

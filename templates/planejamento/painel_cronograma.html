@@ -667,6 +667,739 @@ body.pc-modal-open { overflow:hidden; }
     .pc-supply-summary { grid-template-columns:1fr; }
     .pc-discipline-budget-head { align-items:flex-start; flex-direction:column; }
 }
+
+/* =========================================================
+   REDESIGN 2026 — PAINEL DE CRONOGRAMA
+   Mantém a lógica e os dados originais; altera apenas UI/UX.
+   ========================================================= */
+
+:root {
+    --pc-bg: #f3f7f8;
+    --pc-card: rgba(255,255,255,.96);
+    --pc-border: #dce6e9;
+    --pc-border-soft: #edf2f3;
+    --pc-text: #102a33;
+    --pc-muted: #6b7f87;
+    --pc-primary: #1D91A6;
+    --pc-primary-dark: #0E5268;
+    --pc-primary-deep: #0A4054;
+    --pc-primary-soft: #e8f6f8;
+    --pc-danger: #b42318;
+    --pc-danger-soft: #fff1f0;
+    --pc-warning: #b54708;
+    --pc-warning-soft: #fff7e8;
+    --pc-success: #087443;
+    --pc-success-soft: #ecfdf3;
+    --pc-info: #176b87;
+    --pc-info-soft: #edf8fb;
+    --pc-shadow: 0 10px 32px rgba(10, 64, 84, .07);
+    --pc-shadow-hover: 0 18px 42px rgba(10, 64, 84, .11);
+    --pc-radius: 16px;
+}
+
+.pc-page {
+    max-width: 1800px;
+    padding: 24px 26px 34px;
+}
+
+/* Cabeçalho */
+.pc-topbar {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    padding: 22px 24px;
+    border: 1px solid rgba(29,145,166,.20);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(29,145,166,.16), transparent 34%),
+        linear-gradient(135deg, #ffffff 0%, #f7fcfd 65%, #edf8fa 100%);
+    box-shadow: var(--pc-shadow);
+}
+
+.pc-topbar::after {
+    content: "";
+    position: absolute;
+    right: -45px;
+    bottom: -70px;
+    width: 190px;
+    height: 190px;
+    border: 28px solid rgba(29,145,166,.055);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.pc-title-wrap,
+.pc-actions { position: relative; z-index: 1; }
+
+.pc-title-wrap::before {
+    content: "PLANEJAMENTO • CONTROLE FÍSICO";
+    display: inline-flex;
+    margin-bottom: 7px;
+    color: var(--pc-primary);
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.pc-title-wrap h1 {
+    font-size: clamp(24px, 2vw, 31px);
+    font-weight: 800;
+    color: var(--pc-primary-deep);
+}
+
+.pc-title-meta {
+    margin-top: 8px;
+    color: #71848b;
+    font-size: 12px;
+}
+
+.pc-title-meta strong {
+    color: #344f58;
+    font-weight: 750;
+}
+
+/* Botões */
+.pc-btn {
+    min-height: 40px;
+    padding: 9px 14px;
+    border-color: #d5e2e6;
+    border-radius: 10px;
+    background: rgba(255,255,255,.88);
+    color: #35505a;
+    font-weight: 700;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.pc-btn:hover {
+    transform: translateY(-1px);
+    background: #fff;
+    border-color: #b8d3da;
+    box-shadow: 0 7px 18px rgba(10,64,84,.08);
+}
+
+.pc-btn-primary {
+    border-color: var(--pc-primary);
+    background: linear-gradient(135deg, var(--pc-primary) 0%, #16778a 100%);
+    box-shadow: 0 6px 16px rgba(29,145,166,.22);
+}
+
+.pc-btn-primary:hover {
+    border-color: #147587;
+    background: linear-gradient(135deg, #228fa2 0%, #0e6577 100%);
+    box-shadow: 0 9px 22px rgba(29,145,166,.28);
+}
+
+/* Filtros */
+.pc-filterbar {
+    grid-template-columns: minmax(280px,1.7fr) minmax(150px,.55fr) auto minmax(180px,.7fr);
+    gap: 12px;
+    padding: 15px 16px;
+    margin-bottom: 16px;
+    border-color: #dce7ea;
+    border-radius: 15px;
+    box-shadow: 0 8px 24px rgba(10,64,84,.055);
+}
+
+.pc-field label {
+    margin-bottom: 6px;
+    color: #617982;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.pc-control {
+    height: 42px;
+    padding: 8px 12px;
+    border-color: #cfdee2;
+    border-radius: 10px;
+    background: #fbfdfd;
+    color: #203941;
+    font-weight: 600;
+    transition: box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.pc-control:hover { background: #fff; border-color: #b7d1d7; }
+
+.pc-control:focus {
+    border-color: var(--pc-primary);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(29,145,166,.12);
+}
+
+.pc-import-pill {
+    padding: 7px 11px;
+    border-left: 1px solid #e1eaed;
+}
+
+/* Cards */
+.pc-card {
+    border-color: var(--pc-border);
+    border-radius: var(--pc-radius);
+    box-shadow: var(--pc-shadow);
+    transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+}
+
+.pc-card:hover {
+    border-color: #d4e3e6;
+    box-shadow: var(--pc-shadow-hover);
+}
+
+.pc-overview,
+.pc-main-grid {
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.pc-overview {
+    grid-template-columns: minmax(0,1.62fr) minmax(350px,.72fr);
+}
+
+.pc-main-grid {
+    grid-template-columns: minmax(0,1.64fr) minmax(350px,.72fr);
+}
+
+/* Avanço principal */
+.pc-progress-card {
+    position: relative;
+    overflow: hidden;
+    padding: 20px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.98), rgba(251,254,254,.98));
+}
+
+.pc-progress-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pc-primary), #66c2cf 58%, rgba(102,194,207,0));
+}
+
+.pc-progress-title {
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .09em;
+    color: #71868d;
+}
+
+.pc-progress-value {
+    margin-top: 7px;
+    font-size: clamp(38px, 4vw, 52px);
+    font-weight: 830;
+    color: var(--pc-primary-deep);
+    letter-spacing: -.055em;
+}
+
+.pc-status-badge,
+.pc-badge {
+    min-height: 24px;
+    padding: 5px 9px;
+    border: 1px solid transparent;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+
+.pc-badge-danger, .pc-badge.atrasada, .pc-badge.atencao {
+    border-color: #ffd0cc;
+    background: #fff0ef;
+}
+.pc-badge-warning, .pc-badge.para-iniciar, .pc-badge.para-concluir {
+    border-color: #f8dfaa;
+    background: #fff7e6;
+}
+.pc-badge-success, .pc-badge.concluida, .pc-badge.concluido {
+    border-color: #bdebd0;
+    background: #edfbf3;
+}
+.pc-badge-info, .pc-badge.andamento {
+    border-color: #bce4eb;
+    background: #edf8fa;
+    color: var(--pc-primary-dark);
+}
+.pc-badge-neutral, .pc-badge.planejada, .pc-badge.nao-iniciado {
+    border-color: #e4e9eb;
+    background: #f5f7f8;
+}
+
+/* Barra de progresso em duas camadas */
+.pc-progress-track {
+    height: 15px;
+    margin: 16px 0 9px;
+    background: #edf3f4;
+    border: 1px solid #e4edef;
+    box-shadow: inset 0 1px 2px rgba(16,42,51,.04);
+}
+
+.pc-progress-plan {
+    background: linear-gradient(90deg, #bddde4, #95ccd6);
+    opacity: .72;
+}
+
+.pc-progress-real {
+    top: 3px;
+    height: 7px;
+    background: linear-gradient(90deg, var(--pc-primary-dark), #24a6b9);
+    box-shadow: 0 1px 5px rgba(29,145,166,.26);
+}
+
+.pc-progress-legend {
+    color: #788b92;
+    font-size: 11px;
+}
+.pc-progress-legend strong { color: #314c55; }
+
+/* KPIs */
+.pc-kpi-strip {
+    grid-template-columns: repeat(5,minmax(105px,1fr));
+    gap: 10px;
+    margin-top: 17px;
+}
+
+.pc-mini-kpi {
+    position: relative;
+    overflow: hidden;
+    min-height: 79px;
+    padding: 13px 14px;
+    border: 1px solid #e4ecee;
+    border-radius: 12px;
+    background: linear-gradient(180deg,#fbfdfd,#f7fafb);
+}
+
+.pc-mini-kpi::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 0 0 0 42px;
+    background: rgba(29,145,166,.045);
+}
+
+.pc-mini-kpi span {
+    position: relative;
+    z-index: 1;
+    color: #75888f;
+    font-size: 9px;
+    letter-spacing: .055em;
+}
+
+.pc-mini-kpi strong {
+    position: relative;
+    z-index: 1;
+    margin-top: 7px;
+    font-size: 19px;
+    color: #233f48;
+}
+
+.pc-mini-kpi.danger {
+    border-color: #f7d5d1;
+    background: linear-gradient(180deg,#fffafa,#fff5f4);
+}
+.pc-mini-kpi.success {
+    border-color: #cfeadb;
+    background: linear-gradient(180deg,#fbfffc,#f3fcf7);
+}
+
+/* Saúde */
+.pc-health-card {
+    padding: 18px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(29,145,166,.08), transparent 32%),
+        #fff;
+}
+
+.pc-health-card h3 {
+    margin: 0 0 14px;
+    color: #26424b;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.pc-health-grid {
+    grid-template-columns: repeat(2,1fr);
+    gap: 10px;
+}
+
+.pc-health-item {
+    position: relative;
+    min-height: 76px;
+    padding: 12px 13px;
+    border: 1px solid #e5edef;
+    border-radius: 12px;
+    background: #fafcfc;
+}
+
+.pc-health-item span {
+    color: #778a91;
+    font-size: 9px;
+    letter-spacing: .055em;
+}
+
+.pc-health-item strong {
+    margin-top: 7px;
+    font-size: 21px;
+    color: #28444d;
+}
+
+.pc-health-meta {
+    margin-top: 13px;
+    padding-top: 13px;
+    border-color: #e7eef0;
+    color: #72868d;
+}
+
+/* Cabeçalhos dos cards */
+.pc-card-head {
+    min-height: 68px;
+    padding: 15px 17px;
+    border-color: #e5edef;
+}
+
+.pc-card-head h2,
+.pc-card-head h3 {
+    color: #233f48;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.pc-card-head p {
+    margin-top: 4px;
+    color: #7a8c92;
+    font-size: 10px;
+}
+
+.pc-card-body { padding: 16px 17px 18px; }
+
+/* Gráficos */
+.pc-chart-switch {
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #e3eaec;
+    background: #f5f8f9;
+    border-radius: 10px;
+}
+
+.pc-chart-switch button {
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 10px;
+    transition: all .16s ease;
+}
+
+.pc-chart-switch button.is-active {
+    color: var(--pc-primary-dark);
+    box-shadow: 0 2px 8px rgba(10,64,84,.08);
+}
+
+.pc-chart-box {
+    height: 335px;
+    padding: 4px 3px 0;
+}
+
+/* Prioridades */
+.pc-risk-list {
+    gap: 9px;
+    max-height: 335px;
+}
+
+.pc-risk-item {
+    position: relative;
+    overflow: hidden;
+    padding: 11px 12px 11px 14px;
+    border: 1px solid #f3d7d4;
+    border-left: 0;
+    border-radius: 11px;
+    background: linear-gradient(90deg,#fff8f7,#fff);
+}
+
+.pc-risk-item::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(#e94e42,#b42318);
+}
+
+.pc-risk-item strong {
+    color: #344b53;
+    font-size: 11.5px;
+}
+
+.pc-risk-item small {
+    color: #84949a;
+    font-size: 9.5px;
+}
+
+/* Programação semanal */
+.pc-week-card {
+    margin-bottom: 16px;
+    border-radius: var(--pc-radius);
+}
+
+.pc-week-summary { gap: 6px; }
+
+.pc-summary-chip {
+    padding: 5px 9px;
+    border: 1px solid #e4eaec;
+    background: #f6f8f9;
+    font-size: 9.5px;
+}
+
+.pc-summary-chip.danger { border-color:#f5d2ce; }
+.pc-summary-chip.warning { border-color:#f3dfb5; }
+.pc-summary-chip.success { border-color:#cce8d7; }
+
+.pc-table-tools { gap: 9px; }
+
+.pc-search {
+    width: 300px;
+    height: 36px;
+    padding: 7px 11px;
+    border-color: #d4e0e3;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.pc-search:focus {
+    border-color: var(--pc-primary);
+    box-shadow: 0 0 0 4px rgba(29,145,166,.10);
+}
+
+/* Tabelas */
+.pc-table-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd9dd transparent;
+}
+
+.pc-table {
+    font-size: 11.5px;
+}
+
+.pc-table th {
+    padding: 10px 11px;
+    background: #f5f9fa;
+    border-color: #dfe9eb;
+    color: #71848b;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .055em;
+}
+
+.pc-table td {
+    padding: 11px;
+    border-color: #edf2f3;
+    color: #405860;
+}
+
+.pc-table tbody tr {
+    transition: background .14s ease, box-shadow .14s ease;
+}
+
+.pc-table tbody tr:hover {
+    background: #f5fbfc;
+    box-shadow: inset 3px 0 0 rgba(29,145,166,.55);
+}
+
+.pc-main-cell {
+    color: #263f48;
+    font-weight: 750;
+}
+
+.pc-sub-cell {
+    margin-top: 3px;
+    color: #86969b;
+    font-size: 9.5px;
+}
+
+.pc-bar {
+    height: 6px;
+    background: #eaf0f2;
+}
+
+.pc-bar span {
+    background: linear-gradient(90deg,#69b8c6,var(--pc-primary));
+}
+
+.pc-bar.success span {
+    background: linear-gradient(90deg,#69c995,#0d8b55);
+}
+
+/* Tabs inferiores */
+.pc-detail-card { border-radius: var(--pc-radius); }
+
+.pc-tabs {
+    gap: 5px;
+    padding: 9px;
+    background: #f5f9fa;
+}
+
+.pc-tab-btn {
+    min-height: 36px;
+    padding: 8px 13px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    font-size: 10px;
+    transition: all .16s ease;
+}
+
+.pc-tab-btn:hover {
+    color: var(--pc-primary-dark);
+    background: rgba(255,255,255,.65);
+}
+
+.pc-tab-btn.is-active {
+    border-color: #dce8eb;
+    color: var(--pc-primary-dark);
+    box-shadow: 0 3px 10px rgba(10,64,84,.075);
+}
+
+/* Accordions */
+.pc-accordion-list { gap: 8px; }
+
+.pc-accordion {
+    border-color: #dfe8ea;
+    border-radius: 11px;
+    box-shadow: 0 2px 8px rgba(10,64,84,.025);
+}
+
+.pc-accordion summary {
+    padding: 12px 40px 12px 13px;
+    transition: background .15s ease;
+}
+
+.pc-accordion summary:hover { background: #f8fbfc; }
+
+.pc-accordion[open] summary {
+    background: #f1f9fa;
+    border-color: #dbe8eb;
+}
+
+.pc-accordion[open] summary::after { color: var(--pc-primary); }
+
+.pc-acc-title strong {
+    color: #2e4850;
+    font-size: 11.5px;
+}
+
+.pc-acc-title small { color: #84959a; }
+
+.pc-local-block {
+    border-color: #e5edef;
+    border-radius: 10px;
+}
+
+.pc-local-head {
+    padding: 9px 11px;
+    background: #f7fafb;
+}
+
+/* Checklists e informações */
+.pc-check-card {
+    border-color: #dfe8ea;
+    border-radius: 12px;
+}
+
+.pc-check-head { background: #f5f9fa; }
+
+.pc-info-item {
+    min-height: 74px;
+    padding: 12px;
+    border-color: #e3ebed;
+    border-radius: 10px;
+    background: linear-gradient(180deg,#fafcfc,#f7fafb);
+}
+
+.pc-info-item span {
+    color: #7e8f95;
+    font-size: 9px;
+    letter-spacing: .045em;
+}
+
+.pc-info-item strong {
+    margin-top: 6px;
+    color: #2d4952;
+    font-size: 12px;
+}
+
+/* Modais */
+.pc-modal-backdrop {
+    backdrop-filter: blur(5px);
+    background: rgba(7,38,49,.52);
+}
+
+.pc-modal {
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(6,43,55,.28);
+}
+
+.pc-modal-head {
+    padding: 17px 19px;
+    background: linear-gradient(180deg,#fff,#fbfdfd);
+}
+
+.pc-modal-head h3 {
+    color: #233f48;
+    font-weight: 800;
+}
+
+.pc-modal-close {
+    border-radius: 9px;
+    background: #f1f5f6;
+}
+
+/* Estado vazio */
+.pc-empty {
+    color: #7b8e94;
+}
+
+/* Scrollbar WebKit */
+.pc-table-wrap::-webkit-scrollbar,
+.pc-risk-list::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.pc-table-wrap::-webkit-scrollbar-thumb,
+.pc-risk-list::-webkit-scrollbar-thumb {
+    background: #cbd9dd;
+    border-radius: 999px;
+}
+.pc-table-wrap::-webkit-scrollbar-track,
+.pc-risk-list::-webkit-scrollbar-track { background: transparent; }
+
+/* Responsividade */
+@media (max-width: 1180px) {
+    .pc-overview,
+    .pc-main-grid { grid-template-columns: 1fr; }
+    .pc-health-grid { grid-template-columns: repeat(3,1fr); }
+}
+
+@media (max-width: 850px) {
+    .pc-page { padding: 14px; }
+    .pc-topbar { padding: 18px; }
+    .pc-filterbar { grid-template-columns: 1fr 1fr; }
+    .pc-kpi-strip { grid-template-columns: repeat(2,1fr); }
+    .pc-health-grid { grid-template-columns: repeat(2,1fr); }
+}
+
+@media (max-width: 560px) {
+    .pc-topbar { border-radius: 14px; }
+    .pc-title-wrap::before { font-size: 8px; }
+    .pc-filterbar { grid-template-columns: 1fr; }
+    .pc-kpi-strip,
+    .pc-health-grid,
+    .pc-check-grid,
+    .pc-info-grid { grid-template-columns: 1fr; }
+    .pc-card-head { align-items: flex-start; flex-direction: column; }
+    .pc-chart-switch { width: 100%; }
+    .pc-chart-switch button { flex: 1; }
+    .pc-chart-box { height: 285px; }
+}
+
 </style>
 {% endblock %}
 
@@ -900,7 +1633,7 @@ body.pc-modal-open { overflow:hidden; }
                 <div class="pc-panel-tools">
                     <div>
                         <h3>Disciplinas e atividades</h3>
-                        <p>O cronograma físico mostra somente a execução da obra. Itens de compra agora são definidos no módulo de Compras a partir do Cronograma de Suprimentos.</p>
+                        <p>O cronograma físico mostra somente a execução da obra. Itens de compra agora são definidos no módulo de Suprimentos a partir do Cronograma de Suprimentos.</p>
                     </div>
                     <div class="pc-table-tools">
                         <input class="pc-search" type="search" placeholder="Buscar disciplina" data-details-search="disciplinas-lista" aria-label="Buscar disciplina">
@@ -1135,20 +1868,90 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const curva = document.getElementById("graficoCurvaS");
     if (curva && serie.length) {
+        const ctxCurva = curva.getContext("2d");
+        const gradExecutado = ctxCurva.createLinearGradient(0, 0, 0, 320);
+        gradExecutado.addColorStop(0, "rgba(29,145,166,.22)");
+        gradExecutado.addColorStop(1, "rgba(29,145,166,.015)");
+
         new Chart(curva, {
             type: "line",
             data: {
                 labels: serie.map(i => "S" + i.semana),
                 datasets: [
-                    { label: "Previsto", data: serie.map(i => Number(i.previsto || 0) * 100), borderWidth: 2, tension: .28, fill: false },
-                    { label: "Executado", data: serie.map(i => Number(i.executado || 0) * 100), borderWidth: 2, tension: .28, fill: false }
+                    {
+                        label: "Previsto",
+                        data: serie.map(i => Number(i.previsto || 0) * 100),
+                        borderColor: "#9bb8c0",
+                        backgroundColor: "transparent",
+                        borderWidth: 2,
+                        borderDash: [6, 5],
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        pointHoverBackgroundColor: "#9bb8c0",
+                        tension: .34,
+                        fill: false
+                    },
+                    {
+                        label: "Executado",
+                        data: serie.map(i => Number(i.executado || 0) * 100),
+                        borderColor: "#1D91A6",
+                        backgroundColor: gradExecutado,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: "#1D91A6",
+                        pointHoverBorderColor: "#ffffff",
+                        pointHoverBorderWidth: 2,
+                        tension: .34,
+                        fill: true
+                    }
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false,
+                responsive: true,
+                maintainAspectRatio: false,
                 interaction: { mode: "index", intersect: false },
-                plugins: { legend: { position: "bottom" } },
-                scales: { y: { beginAtZero: true, suggestedMax: 100, ticks: { callback: v => v + "%" } } }
+                layout: { padding: { top: 6, right: 8, bottom: 0, left: 0 } },
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: "circle",
+                            boxWidth: 7,
+                            boxHeight: 7,
+                            padding: 18,
+                            color: "#647b83",
+                            font: { size: 11, weight: "600" }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: "rgba(10,64,84,.94)",
+                        titleColor: "#ffffff",
+                        bodyColor: "#eaf7f9",
+                        borderColor: "rgba(255,255,255,.12)",
+                        borderWidth: 1,
+                        padding: 11,
+                        cornerRadius: 9,
+                        callbacks: {
+                            label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%"
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: { color: "#82949a", font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 100,
+                        border: { display: false },
+                        grid: { color: "rgba(72,101,110,.09)", drawTicks: false },
+                        ticks: { color: "#82949a", padding: 8, font: { size: 10 }, callback: v => v + "%" }
+                    }
+                }
             }
         });
     }
@@ -1160,15 +1963,69 @@ document.addEventListener("DOMContentLoaded", function () {
             data: {
                 labels: avancos.map(i => "S" + i.semana),
                 datasets: [
-                    { label: "Previsto", data: avancos.map(i => Number(i.avanco_previsto || 0) * 100), borderWidth: 1 },
-                    { label: "Realizado", data: avancos.map(i => Number(i.avanco_real || 0) * 100), borderWidth: 1 }
+                    {
+                        label: "Previsto",
+                        data: avancos.map(i => Number(i.avanco_previsto || 0) * 100),
+                        backgroundColor: "rgba(153,184,192,.50)",
+                        borderColor: "rgba(153,184,192,.85)",
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        maxBarThickness: 22
+                    },
+                    {
+                        label: "Realizado",
+                        data: avancos.map(i => Number(i.avanco_real || 0) * 100),
+                        backgroundColor: "rgba(29,145,166,.84)",
+                        borderColor: "#1D91A6",
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        borderSkipped: false,
+                        maxBarThickness: 22
+                    }
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false,
+                responsive: true,
+                maintainAspectRatio: false,
                 interaction: { mode: "index", intersect: false },
-                plugins: { legend: { position: "bottom" } },
-                scales: { y: { ticks: { callback: v => v + "%" } } }
+                layout: { padding: { top: 6, right: 8, bottom: 0, left: 0 } },
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: "circle",
+                            boxWidth: 7,
+                            boxHeight: 7,
+                            padding: 18,
+                            color: "#647b83",
+                            font: { size: 11, weight: "600" }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: "rgba(10,64,84,.94)",
+                        titleColor: "#ffffff",
+                        bodyColor: "#eaf7f9",
+                        padding: 11,
+                        cornerRadius: 9,
+                        callbacks: {
+                            label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%"
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: { color: "#82949a", font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 }
+                    },
+                    y: {
+                        border: { display: false },
+                        grid: { color: "rgba(72,101,110,.09)", drawTicks: false },
+                        ticks: { color: "#82949a", padding: 8, font: { size: 10 }, callback: v => v + "%" }
+                    }
+                }
             }
         });
     }

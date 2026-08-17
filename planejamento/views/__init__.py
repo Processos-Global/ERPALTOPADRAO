@@ -1,3 +1,4 @@
+from .menu import menu_planejamento
 from .cronograma import atualizar_cronograma, historico_importacoes_cronograma, painel_cronograma
 from .cronograma_suprimentos import (
     atualizar_cronograma_suprimentos,
@@ -8,6 +9,7 @@ from .cronograma_suprimentos import (
 )
 
 __all__ = [
+    "menu_planejamento",
     "atualizar_cronograma",
     "historico_importacoes_cronograma",
     "painel_cronograma",

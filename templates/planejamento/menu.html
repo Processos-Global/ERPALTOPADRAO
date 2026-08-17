@@ -1,0 +1,115 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Planejamento | ERP Alto Padrão{% endblock %}
+{% block page_name %}Planejamento{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<style>
+  :root {
+    --opal-blue:#2F6F7E;
+    --opal-blue-dark:#1F4F5B;
+    --opal-blue-soft:#EAF4F6;
+    --opal-blue-border:#BFD6DB;
+  }
+  .module-menu { font-family:"Segoe UI","Inter",Arial,sans-serif; }
+  .module-menu .dashboard-heading { margin-bottom:28px; }
+  .module-menu .dashboard-heading__content { max-width:780px; }
+  .module-menu .dashboard-heading__eyebrow,
+  .module-menu .modules__eyebrow,
+  .module-menu .module-card__number,
+  .module-menu .module-card__footer { color:var(--opal-blue); }
+  .module-menu .dashboard-heading__content h1 {
+    margin:0;
+    font-size:clamp(2.25rem,4vw,3.7rem);
+    line-height:1.04;
+    letter-spacing:-.04em;
+    font-weight:700;
+    color:#1b2528;
+  }
+  .module-menu .dashboard-heading__content h1 em { color:var(--opal-blue); font-style:normal; }
+  .module-menu .dashboard-heading__content p { margin:12px 0 0; color:#6c7a80; font-size:1rem; line-height:1.65; }
+  .module-menu .modules__header h2,
+  .module-menu .module-card__content h3 { color:#1b2528; font-weight:700; letter-spacing:-.02em; }
+  .module-menu .module-card__content p { color:#6c7a80; }
+  .module-menu .module-card__icon { color:var(--opal-blue); border-color:var(--opal-blue-border); }
+  .module-menu .module-card__permission { background:var(--opal-blue-soft); color:var(--opal-blue-dark); }
+  .module-menu .module-card__accent { background:var(--opal-blue); }
+  .module-menu .module-card:hover { border-color:var(--opal-blue); }
+  .module-menu .module-card--disabled { cursor:default; opacity:.62; }
+  .module-menu .module-card--disabled:hover { transform:none; border-color:inherit; box-shadow:inherit; }
+  .module-menu .module-card--disabled .module-card__footer { color:#98a2b3; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-home module-menu">
+  <section class="dashboard-heading">
+    <div class="dashboard-heading__content">
+      <span class="dashboard-heading__eyebrow">Módulo</span>
+      <h1>Planejamento <em>da obra</em></h1>
+      <p>Escolha a área que deseja acessar para acompanhar prazos, suprimentos e evolução físico-financeira das obras.</p>
+    </div>
+  </section>
+
+  <section class="modules">
+    <div class="modules__header">
+      <div>
+        <span class="modules__eyebrow">Funcionalidades</span>
+        <h2>O que você deseja acessar?</h2>
+      </div>
+    </div>
+
+    <div class="module-cards">
+      <a href="{% url 'planejamento:painel_cronograma' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">01</span>
+          <span class="module-card__permission">Planejamento</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Cronograma de Obra</h3>
+            <p>Acompanhe avanço físico, atividades, prioridades, marcos e programação das obras.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <a href="{% url 'planejamento:painel_cronograma_suprimentos' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">02</span>
+          <span class="module-card__permission">Planejamento</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-package"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Cronograma de Suprimentos</h3>
+            <p>Planeje datas de contratação, compra, entrega e acompanhe os prazos de cada suprimento.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <div class="module-card module-card--disabled" aria-disabled="true">
+        <header class="module-card__header">
+          <span class="module-card__number">03</span>
+          <span class="module-card__permission">Em desenvolvimento</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Físico x Financeiro</h3>
+            <p>Visão integrada entre avanço físico da obra, orçamento, realizado e projeções financeiras.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Em breve</span></footer>
+        <span class="module-card__accent"></span>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

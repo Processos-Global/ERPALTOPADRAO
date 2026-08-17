@@ -1,3 +1,4 @@
+from .menu import menu_suprimentos
 from .processos import dashboard, detalhe_processo, lista_pedidos, lista_processos, novo_processo
 from .acoes import (
     acao_adjudicar,
