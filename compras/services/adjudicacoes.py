@@ -5,12 +5,10 @@ from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
-from compras.models import (
-    AdjudicacaoCompra,
-    CompatibilizacaoItem,
-)
+from compras.models import AdjudicacaoCompra
 
 from .auditoria import registrar_evento
+from .comercial import calcular_desconto_adjudicacao, item_tecnicamente_aprovado
 
 
 # ============================================================
@@ -239,30 +237,11 @@ def adjudicar(
     # VALIDAÇÃO TÉCNICA
     # --------------------------------------------------------
 
-    tecnicamente_aprovado = (
-        item_cotado
-        .compatibilizacoes
-        .filter(
-            resultado__in=[
-                CompatibilizacaoItem
-                .Resultado
-                .APROVADO,
-
-                CompatibilizacaoItem
-                .Resultado
-                .APROVADO_COM_RESSALVA,
-            ]
-        )
-        .exists()
-    )
+    tecnicamente_aprovado = item_tecnicamente_aprovado(item_cotado)
 
     if not tecnicamente_aprovado:
         raise ValidationError(
-            (
-                "Somente itens tecnicamente aprovados "
-                "ou aprovados com ressalva podem ser "
-                "selecionados para compra."
-            )
+            "Somente itens cuja ÚLTIMA análise técnica esteja aprovada ou aprovada com ressalva podem ser selecionados para compra."
         )
 
     # --------------------------------------------------------
@@ -350,6 +329,12 @@ def adjudicar(
         else item_cotado.cotacao.condicao_pagamento
     )
 
+    desconto_final = calcular_desconto_adjudicacao(
+        item_cotado,
+        quantidade,
+        valor,
+    )
+
     # --------------------------------------------------------
     # CRIAÇÃO
     # --------------------------------------------------------
@@ -364,6 +349,7 @@ def adjudicar(
             item_cotado=item_cotado,
             quantidade=quantidade,
             valor_unitario_final=valor,
+            desconto_final=desconto_final,
             prazo_entrega_dias_final=(
                 prazo_entrega
             ),

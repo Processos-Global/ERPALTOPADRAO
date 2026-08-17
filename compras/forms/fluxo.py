@@ -11,22 +11,36 @@ from compras.models import (
     NecessidadeCompra,
 )
 from planejamento.models import AtividadePlanejamento
+from compras.services.comercial import queryset_itens_tecnicamente_aprovados
 
 
 class NecessidadeCompraForm(forms.Form):
-    atividade = forms.ModelChoiceField(queryset=AtividadePlanejamento.objects.none())
+    """
+    Inclusão de item durante a etapa de cotação.
+
+    As atividades já estão vinculadas ao processo; por isso não são
+    solicitadas novamente em cada necessidade.
+    """
+
     descricao = forms.CharField(max_length=500, label="Item")
-    especificacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+    especificacao = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
     unidade = forms.ChoiceField(choices=NecessidadeCompra.UnidadeMedida.choices)
-    quantidade = forms.DecimalField(min_value=0.0001, decimal_places=4, max_digits=18)
-    observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
+    quantidade = forms.DecimalField(
+        min_value=0.0001,
+        decimal_places=4,
+        max_digits=18,
+    )
+    observacao = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2}),
+    )
 
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
-        qs = AtividadePlanejamento.objects.filter(ativa=True)
-        if processo:
-            qs = qs.filter(obra_id=processo.obra_id)
-        self.fields["atividade"].queryset = qs.order_by("disciplina", "nome_tarefa", "id")
+        self.processo = processo
         for field in self.fields.values():
             field.widget.attrs["class"] = "cp-input"
 
@@ -101,10 +115,9 @@ class NegociacaoForm(forms.Form):
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
         if processo:
-            self.fields["item_cotado"].queryset = CotacaoFornecedorItem.objects.filter(
-                cotacao__processo=processo,
-                compatibilizacoes__resultado__in=["APROVADO", "APROVADO_COM_RESSALVA"],
-            ).distinct().select_related("cotacao__fornecedor", "necessidade")
+            self.fields["item_cotado"].queryset = queryset_itens_tecnicamente_aprovados(
+                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            ).select_related("cotacao__fornecedor", "necessidade")
         for f in self.fields.values():
             f.widget.attrs["class"] = "cp-input"
 
@@ -116,10 +129,9 @@ class AdjudicacaoForm(forms.Form):
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
         if processo:
-            self.fields["item_cotado"].queryset = CotacaoFornecedorItem.objects.filter(
-                cotacao__processo=processo,
-                compatibilizacoes__resultado__in=["APROVADO", "APROVADO_COM_RESSALVA"],
-            ).distinct().select_related("cotacao__fornecedor", "necessidade")
+            self.fields["item_cotado"].queryset = queryset_itens_tecnicamente_aprovados(
+                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            ).select_related("cotacao__fornecedor", "necessidade")
         for f in self.fields.values():
             f.widget.attrs["class"] = "cp-input"
 

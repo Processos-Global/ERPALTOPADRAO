@@ -3,39 +3,35 @@
 {% block content %}
 <div class="cp-page">
   <div class="cp-head">
-    <div><div class="cp-eyebrow">Compras</div><h1 class="cp-title">Painel de processos</h1><div class="cp-sub">Acompanhe cada compra pela etapa comercial em que ela realmente está.</div></div>
-    <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a><a class="cp-btn cp-btn-primary" href="{% url 'compras:novo_processo' %}">Novo processo</a></div>
+    <div class="cp-head__copy"><div class="cp-eyebrow">Suprimentos</div><h1 class="cp-title">Painel de compras</h1><div class="cp-sub">Use o Kanban para enxergar onde cada processo está e atacar primeiro aprovações e prazos críticos.</div></div>
+    <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a><a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a></div>
   </div>
-
   <div class="cp-kpis">
-    <div class="cp-kpi"><span>Processos ativos</span><strong>{{ ativos }}</strong></div>
-    <div class="cp-kpi"><span>Atrasados</span><strong>{{ atrasados }}</strong></div>
-    <div class="cp-kpi"><span>Aguardando aprovação</span><strong>{{ aguardando }}</strong></div>
-    <div class="cp-kpi"><span>Contratados 30 dias</span><strong>{{ contratados }}</strong></div>
+    <div class="cp-kpi"><span>Processos ativos</span><strong>{{ ativos }}</strong><small>Em andamento no fluxo comercial</small></div>
+    <div class="cp-kpi"><span>Atrasados</span><strong>{{ atrasados }}</strong><small>Prazo de contratação vencido</small></div>
+    <div class="cp-kpi"><span>Aguardando aprovação</span><strong>{{ aguardando }}</strong><small>Dependem de decisão</small></div>
+    <div class="cp-kpi"><span>Concluídos em 30 dias</span><strong>{{ contratados }}</strong><small>Compras finalizadas recentemente</small></div>
   </div>
-
   <form class="cp-filter" method="get">
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar processo, suprimento ou obra">
     <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
     <select class="cp-input" name="etapa"><option value="">Todas as etapas</option>{% for valor,rotulo in etapa_choices %}<option value="{{ valor }}" {% if request.GET.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
     <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
-    <button class="cp-btn" type="submit">Filtrar</button>
+    <button class="cp-btn" type="submit">Aplicar filtros</button>
   </form>
-
   <div class="cp-board">
     {% for coluna in colunas %}
-    <section class="cp-column">
-      <div class="cp-column-head"><span>{{ coluna.titulo }}</span><span class="cp-count">{{ coluna.processos|length }}</span></div>
-      {% for processo in coluna.processos %}
-      <a class="cp-card" href="{% url 'compras:detalhe_processo' processo.pk %}">
-        <div class="cp-card-top"><span class="cp-number">{{ processo.numero }}</span><span class="cp-status">{{ processo.get_status_display }}</span></div>
-        <div class="cp-card-name">{{ processo.titulo }}</div>
-        <div class="cp-meta">{{ processo.obra.nome }}<br>{{ processo.item_cronograma.item }}</div>
-        <div class="cp-meta">{{ processo.qtd_fornecedores }} fornecedor(es) · {{ processo.qtd_itens }} item(ns)</div>
-        <div class="cp-meta">Contratar até: <strong>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"sem prazo" }}</strong></div>
-      </a>
-      {% empty %}<div class="cp-empty">Nenhum processo.</div>{% endfor %}
-    </section>
+      <section class="cp-column">
+        <div class="cp-column__head"><span>{{ coluna.titulo }}</span><span class="cp-count">{{ coluna.processos|length }}</span></div>
+        {% for processo in coluna.processos %}
+          <a class="cp-process-card" href="{% url 'compras:detalhe_processo' processo.pk %}">
+            <div class="cp-process-card__top"><span class="cp-process-card__number">{{ processo.numero }}</span>{% if processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}<span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>{% elif processo.status == 'CONTRATADO' %}<span class="cp-badge cp-badge--ok">Concluído</span>{% elif processo.status == 'AGUARDANDO_APROVACAO' or processo.status == 'AJUSTE_SOLICITADO' %}<span class="cp-badge cp-badge--warn">{{ processo.get_status_display }}</span>{% else %}<span class="cp-badge cp-badge--active">{{ processo.get_status_display }}</span>{% endif %}</div>
+            <div class="cp-process-card__title">{{ processo.titulo }}</div>
+            <div class="cp-process-card__meta">{{ processo.obra.nome }}{% if processo.comprador %} · {{ processo.comprador }}{% endif %}</div>
+            <div class="cp-process-card__foot"><span>{{ processo.qtd_itens }} item(ns) · {{ processo.qtd_fornecedores }} fornecedor(es)</span><span>{% if processo.item_cronograma.prazo_limite_contratacao %}{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m" }}{% else %}Sem prazo{% endif %}</span></div>
+          </a>
+        {% empty %}<div class="cp-empty" style="padding:18px 8px!important">Nenhum processo nesta etapa.</div>{% endfor %}
+      </section>
     {% endfor %}
   </div>
 </div>

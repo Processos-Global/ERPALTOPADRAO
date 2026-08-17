@@ -2,7 +2,7 @@
 {% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
 {% block content %}
 <div class="cp-page">
-  <div class="cp-head"><div><div class="cp-eyebrow">Compras</div><h1 class="cp-title">Processos de compra</h1><div class="cp-sub">Consulta geral dos processos, responsáveis e andamento.</div></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Kanban</a><a class="cp-btn cp-btn-primary" href="{% url 'compras:novo_processo' %}">Novo processo</a></div></div>
+  <div class="cp-head"><div class="cp-head__copy"><div class="cp-eyebrow">Suprimentos</div><h1 class="cp-title">Processos de compra</h1><div class="cp-sub">Consulta geral com obra, responsável, etapa, status e volume do processo.</div></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Kanban</a><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a><a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a></div></div>
   <form class="cp-filter" method="get">
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar processo, suprimento ou obra">
     <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
@@ -10,6 +10,14 @@
     <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
     <button class="cp-btn" type="submit">Filtrar</button>
   </form>
-  <section class="cp-section"><div class="cp-section-body" style="padding:0"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Processo</th><th>Obra / suprimento</th><th>Responsável</th><th>Etapa</th><th>Status</th><th>Itens</th><th>Fornecedores</th><th>Prazo</th></tr></thead><tbody>{% for processo in processos %}<tr><td><a class="cp-btn cp-btn-sm" href="{% url 'compras:detalhe_processo' processo.pk %}">{{ processo.numero }}</a><div style="margin-top:5px"><strong>{{ processo.titulo }}</strong></div></td><td>{{ processo.obra.nome }}<div class="cp-muted">{{ processo.item_cronograma.item }}</div></td><td>{{ processo.comprador|default:"—" }}</td><td>{{ processo.get_etapa_atual_display }}</td><td><span class="cp-badge is-active">{{ processo.get_status_display }}</span></td><td>{{ processo.qtd_itens }}</td><td>{{ processo.qtd_fornecedores }}</td><td>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</td></tr>{% empty %}<tr><td colspan="8" class="cp-empty">Nenhum processo encontrado.</td></tr>{% endfor %}</tbody></table></div></div></section>
+  <section class="cp-section"><div class="cp-section__body" style="padding:0"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Processo</th><th>Obra / suprimento</th><th>Responsável</th><th>Etapa</th><th>Status</th><th>Itens</th><th>Fornecedores</th><th>Prazo contratação</th></tr></thead><tbody>
+    {% for processo in processos %}<tr>
+      <td><a class="cp-btn cp-btn--sm" href="{% url 'compras:detalhe_processo' processo.pk %}">{{ processo.numero }}</a><div style="margin-top:6px"><strong>{{ processo.titulo }}</strong></div></td>
+      <td><strong>{{ processo.obra.nome }}</strong><div class="cp-muted">{{ processo.item_cronograma.item }}</div></td>
+      <td>{{ processo.comprador|default:"—" }}</td><td>{{ processo.get_etapa_atual_display }}</td>
+      <td>{% if processo.status == 'CONTRATADO' %}<span class="cp-badge cp-badge--ok">{{ processo.get_status_display }}</span>{% elif processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}<span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>{% elif processo.status == 'AGUARDANDO_APROVACAO' or processo.status == 'AJUSTE_SOLICITADO' %}<span class="cp-badge cp-badge--warn">{{ processo.get_status_display }}</span>{% else %}<span class="cp-badge cp-badge--active">{{ processo.get_status_display }}</span>{% endif %}</td>
+      <td>{{ processo.qtd_itens }}</td><td>{{ processo.qtd_fornecedores }}</td><td>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</td>
+    </tr>{% empty %}<tr><td colspan="8" class="cp-empty">Nenhum processo encontrado com os filtros atuais.</td></tr>{% endfor %}
+  </tbody></table></div></div></section>
 </div>
 {% endblock %}

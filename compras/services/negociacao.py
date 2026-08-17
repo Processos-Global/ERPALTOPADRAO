@@ -2,6 +2,7 @@ from django.db import transaction
 
 from compras.models import HistoricoNegociacaoItem, NegociacaoItem
 from .auditoria import registrar_evento
+from .comercial import item_tecnicamente_aprovado
 
 
 @transaction.atomic
@@ -9,6 +10,14 @@ def registrar_negociacao(
     *, item_cotado, usuario, valor_unitario_negociado=None, frete_negociado=None,
     prazo_entrega_dias_negociado=None, condicao_pagamento_negociada="", observacoes=""
 ):
+    processo = item_cotado.cotacao.processo
+    if processo.etapa_atual != processo.Etapa.NEGOCIACAO:
+        from django.core.exceptions import ValidationError
+        raise ValidationError("A negociação só pode ser alterada durante a etapa de negociação.")
+    if not item_tecnicamente_aprovado(item_cotado):
+        from django.core.exceptions import ValidationError
+        raise ValidationError("A última análise técnica deste item não está aprovada.")
+
     negociacao, _ = NegociacaoItem.objects.update_or_create(
         item_cotado=item_cotado,
         defaults={

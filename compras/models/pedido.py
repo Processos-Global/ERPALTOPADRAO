@@ -41,6 +41,14 @@ class PedidoCompra(models.Model):
     )
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
+    recebido_em = models.DateTimeField(null=True, blank=True)
+    recebido_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pedidos_compra_recebidos",
+    )
     cancelado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -51,6 +59,27 @@ class PedidoCompra(models.Model):
     cancelado_em = models.DateTimeField(null=True, blank=True)
     motivo_cancelamento = models.TextField(blank=True)
 
+    class Meta:
+        ordering = ("-criado_em",)
+        indexes = [
+            models.Index(fields=["obra", "status"], name="comp_ped_obra_st_idx"),
+            models.Index(fields=["processo", "fornecedor"], name="comp_ped_proc_forn_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.numero} - {self.fornecedor.nome}"
+
+    @property
+    def percentual_recebido(self):
+        itens = list(self.itens.all())
+        if not itens:
+            return Decimal("0")
+        total = sum((item.quantidade for item in itens), Decimal("0"))
+        recebido = sum((item.quantidade_recebida for item in itens), Decimal("0"))
+        if total <= 0:
+            return Decimal("0")
+        return min((recebido / total) * Decimal("100"), Decimal("100"))
+
 
 class PedidoCompraItem(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="itens")
@@ -58,9 +87,37 @@ class PedidoCompraItem(models.Model):
     descricao = models.CharField(max_length=500)
     especificacao = models.TextField(blank=True)
     unidade = models.CharField(max_length=10)
-    quantidade = models.DecimalField(max_digits=18, decimal_places=4, validators=[MinValueValidator(Decimal("0.0001"))])
-    valor_unitario = models.DecimalField(max_digits=18, decimal_places=4, validators=[MinValueValidator(Decimal("0"))])
-    valor_total = models.DecimalField(max_digits=18, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
+    quantidade = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0.0001"))],
+    )
+    quantidade_recebida = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    valor_unitario = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    desconto = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    valor_total = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+
+    @property
+    def saldo_receber(self):
+        return max(self.quantidade - self.quantidade_recebida, Decimal("0"))
 
 
 class ParcelaPrevistaPedido(models.Model):
@@ -74,8 +131,20 @@ class ParcelaPrevistaPedido(models.Model):
 
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.CASCADE, related_name="parcelas_previstas")
     ordem = models.PositiveIntegerField(default=1)
-    percentual = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True, validators=[MinValueValidator(Decimal("0"))])
-    valor = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(Decimal("0"))])
+    percentual = models.DecimalField(
+        max_digits=7,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    valor = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
     data_prevista = models.DateField(null=True, blank=True)
     dias = models.IntegerField(null=True, blank=True)
     evento_gatilho = models.CharField(max_length=20, choices=Gatilho.choices, default=Gatilho.DATA)
@@ -94,3 +163,39 @@ class HistoricoPrevisaoPedido(models.Model):
         related_name="alteracoes_previsao_pedido",
     )
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-criado_em", "-id")
+
+
+class RecebimentoPedido(models.Model):
+    pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="recebimentos")
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="recebimentos_pedidos_compra",
+    )
+    observacao = models.TextField(blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-criado_em", "-id")
+
+
+class RecebimentoPedidoItem(models.Model):
+    recebimento = models.ForeignKey(RecebimentoPedido, on_delete=models.CASCADE, related_name="itens")
+    item_pedido = models.ForeignKey(PedidoCompraItem, on_delete=models.PROTECT, related_name="recebimentos")
+    quantidade = models.DecimalField(
+        max_digits=18,
+        decimal_places=4,
+        validators=[MinValueValidator(Decimal("0.0001"))],
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recebimento", "item_pedido"],
+                name="comp_rec_item_uniq",
+            )
+        ]

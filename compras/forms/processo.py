@@ -730,134 +730,70 @@ class ProcessoCompraForm(
 # ============================================================
 
 
-class ItemCompraAberturaForm(
-    forms.Form
-):
+class ItemCompraAberturaForm(forms.Form):
+    """
+    Item material/serviço informado na abertura da compra.
 
-    atividade = (
-        AtividadePlanejamentoChoiceField(
-            queryset=(
-                AtividadePlanejamento.objects.none()
-            ),
-            required=True,
-            label="Atividade",
-        )
+    A atividade NÃO é escolhida novamente aqui. As atividades
+    relacionadas pertencem ao processo e são selecionadas uma
+    única vez no campo ``ProcessoCompraForm.atividades``.
+    """
+
+    descricao = forms.CharField(
+        max_length=500,
+        label="Item",
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": "Ex.: Interruptor simples 10A",
+            }
+        ),
     )
 
-    descricao = (
-        forms.CharField(
-            max_length=500,
-            label="Item",
-            widget=forms.TextInput(
-                attrs={
-                    "placeholder": (
-                        "Ex.: Interruptor simples 10A"
-                    ),
-                }
-            ),
-        )
-    )
-
-    especificacao = (
-        forms.CharField(
-            required=False,
-            label="Especificação",
-            widget=forms.Textarea(
-                attrs={
-                    "rows": 2,
-                    "placeholder": (
-                        "Marca, modelo, dimensão, "
-                        "cor ou requisito técnico"
-                    ),
-                }
-            ),
-        )
-    )
-
-    unidade = (
-        forms.ChoiceField(
-            choices=[
-                (
-                    "",
-                    "Selecione",
+    especificacao = forms.CharField(
+        required=False,
+        label="Especificação",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "placeholder": (
+                    "Marca, modelo, dimensão, cor ou requisito técnico"
                 ),
-                *NecessidadeCompra
-                .UnidadeMedida
-                .choices,
-            ],
-            label="Unidade",
-        )
+            }
+        ),
     )
 
-    quantidade = (
-        forms.DecimalField(
-            min_value=0.0001,
-            max_digits=18,
-            decimal_places=4,
-            label="Quantidade",
-        )
+    unidade = forms.ChoiceField(
+        choices=[
+            ("", "Selecione"),
+            *NecessidadeCompra.UnidadeMedida.choices,
+        ],
+        label="Unidade",
     )
 
-    observacao = (
-        forms.CharField(
-            required=False,
-            label="Observação",
-            widget=forms.Textarea(
-                attrs={
-                    "rows": 2,
-                    "placeholder": (
-                        "Informações adicionais"
-                    ),
-                }
-            ),
-        )
+    quantidade = forms.DecimalField(
+        min_value=0.0001,
+        max_digits=18,
+        decimal_places=4,
+        label="Quantidade",
     )
 
-    def __init__(
-        self,
-        *args,
-        atividades_queryset=None,
-        dados_por_atividade=None,
-        **kwargs,
-    ):
+    observacao = forms.CharField(
+        required=False,
+        label="Observação",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "placeholder": "Informações adicionais",
+            }
+        ),
+    )
 
-        super().__init__(
-            *args,
-            **kwargs,
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        if atividades_queryset is not None:
-
-            self.fields[
-                "atividade"
-            ].queryset = (
-                atividades_queryset
-            )
-
-        self.fields[
-            "atividade"
-        ].dados_por_atividade = (
-            dados_por_atividade
-            or {}
-        )
-
-        for field in (
-            self.fields.values()
-        ):
-
-            classe_atual = (
-                field
-                .widget
-                .attrs
-                .get(
-                    "class",
-                    "",
-                )
-            )
-
-            field.widget.attrs[
-                "class"
-            ] = (
+        for field in self.fields.values():
+            classe_atual = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = (
                 f"{classe_atual} cp-input"
             ).strip()
 
@@ -867,17 +803,10 @@ class ItemCompraAberturaForm(
 # ============================================================
 
 
-ItemCompraAberturaFormSet = (
-    formset_factory(
-        ItemCompraAberturaForm,
-
-        # min_num já cria o primeiro item.
-        # Não adicionamos outro automaticamente.
-        extra=0,
-
-        can_delete=True,
-
-        min_num=1,
-        validate_min=True,
-    )
+ItemCompraAberturaFormSet = formset_factory(
+    ItemCompraAberturaForm,
+    extra=0,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
 )

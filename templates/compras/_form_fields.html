@@ -1,9 +1,30 @@
-{% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="cp-error">{{ error }}</div>{% endfor %}{% endif %}
+{% if form.non_field_errors %}
+  {% for error in form.non_field_errors %}<div class="cp-note cp-note--danger" style="margin-bottom:10px">{{ error }}</div>{% endfor %}
+{% endif %}
 {% for field in form %}
-<div class="cp-field">
-  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-  {{ field }}
-  {% if field.help_text %}<div class="cp-muted" style="font-size:.66rem;margin-top:3px">{{ field.help_text }}</div>{% endif %}
-  {% for error in field.errors %}<div class="cp-error">{{ error }}</div>{% endfor %}
-</div>
+  <div class="cp-field" data-field-name="{{ field.name }}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+    {{ field }}
+
+    {# Mantém o widget original do Django e expõe apenas metadados para o JS enriquecer as <option>. #}
+    {% if field.name == 'necessidade' %}
+      <span hidden data-saldo-map data-target-select="{{ field.id_for_label }}">
+        {% for option_obj in field.field.queryset %}
+          <i data-value="{{ option_obj.pk }}" data-saldo="{{ option_obj.saldo|default_if_none:0 }}" data-unidade="{{ option_obj.unidade|default:'' }}"></i>
+        {% endfor %}
+      </span>
+    {% elif field.name == 'item_cotado' %}
+      <span hidden data-saldo-map data-target-select="{{ field.id_for_label }}">
+        {% for option_obj in field.field.queryset %}
+          <i data-value="{{ option_obj.pk }}" data-saldo="{{ option_obj.necessidade.saldo|default_if_none:0 }}" data-unidade="{{ option_obj.necessidade.unidade|default:'' }}"></i>
+        {% endfor %}
+      </span>
+    {% endif %}
+
+    {% if field.name == 'quantidade' %}
+      <div class="cp-help" data-quantity-saldo hidden></div>
+    {% endif %}
+    {% if field.help_text %}<div class="cp-help">{{ field.help_text }}</div>{% endif %}
+    {% for error in field.errors %}<div class="cp-error">{{ error }}</div>{% endfor %}
+  </div>
 {% endfor %}

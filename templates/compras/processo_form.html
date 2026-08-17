@@ -1,2737 +1,446 @@
 {% extends "layouts/base.html" %}
-
 {% block extra_css %}
+{% include "compras/_styles.html" %}
 <style>
-.purchase-start,
-.purchase-start * {
-    box-sizing: border-box;
-}
-
-.purchase-start {
-    width: 100%;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 38px 42px 80px;
-    color: #183847;
-}
-
-.purchase-start__container {
-    width: 100%;
-    max-width: 1480px;
-    margin: 0 auto;
-}
-
-/* ============================================================
-   CABEÇALHO
-============================================================ */
-
-.purchase-start__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-.purchase-start__heading {
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
-}
-
-.purchase-start__icon {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 52px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #d8e4e9;
-    border-radius: 13px;
-
-    background: #f3f7f8;
-    color: #214b5d;
-}
-
-.purchase-start__icon svg {
-    width: 23px;
-    height: 23px;
-}
-
-.purchase-start__eyebrow {
-    margin: 1px 0 4px;
-
-    font-size: 11px;
-    font-weight: 800;
-
-    letter-spacing: .08em;
-    text-transform: uppercase;
-
-    color: #008fa6;
-}
-
-.purchase-start__title {
-    margin: 0;
-
-    font-size: 25px;
-    line-height: 1.15;
-    font-weight: 800;
-
-    color: #183847;
-}
-
-.purchase-start__subtitle {
-    margin-top: 5px;
-
-    font-size: 13px;
-    line-height: 1.45;
-
-    color: #718692;
-}
-
-/* ============================================================
-   BOTÕES
-============================================================ */
-
-.purchase-btn {
-    min-height: 40px;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-
-    padding: 0 15px;
-
-    border: 1px solid #cbdbe2;
-    border-radius: 9px;
-
-    background: #fff;
-    color: #294b5b;
-
-    text-decoration: none;
-
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-
-    cursor: pointer;
-}
-
-.purchase-btn:hover {
-    background: #f7fafb;
-}
-
-.purchase-btn--primary {
-    color: #fff;
-
-    background: #008fa6;
-    border-color: #008fa6;
-}
-
-.purchase-btn--primary:hover {
-    background: #007e93;
-}
-
-.purchase-btn--small {
-    min-height: 36px;
-    padding: 0 13px;
-    font-size: 11px;
-}
-
-/* ============================================================
-   LAYOUT
-============================================================ */
-
-.purchase-start__grid {
-    width: 100%;
-
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 350px;
-
-    gap: 20px;
-
-    align-items: start;
-}
-
-.purchase-flow {
-    width: 100%;
-    min-width: 0;
-
-    background: #fff;
-
-    border: 1px solid #d8e4e9;
-    border-radius: 14px;
-}
-
-.purchase-flow__step {
-    border-bottom: 1px solid #e3ebef;
-}
-
-.purchase-flow__step:last-child {
-    border-bottom: 0;
-}
-
-.purchase-flow__header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    gap: 14px;
-
-    padding: 17px 18px 13px;
-}
-
-.purchase-flow__heading {
-    display: flex;
-    align-items: flex-start;
-    gap: 11px;
-}
-
-.purchase-flow__number {
-    width: 28px;
-    height: 28px;
-
-    flex: 0 0 28px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 50%;
-
-    background: #008fa6;
-    color: #fff;
-
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.purchase-flow__copy h2 {
-    margin: 0;
-
-    color: #173847;
-
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.purchase-flow__copy p {
-    margin: 3px 0 0;
-
-    color: #718692;
-
-    font-size: 12px;
-}
-
-.purchase-flow__body {
-    padding: 0 18px 19px 57px;
-}
-
-/* ============================================================
-   ERROS
-============================================================ */
-
-.purchase-errors {
-    margin-bottom: 15px;
-    padding: 11px 13px;
-
-    border: 1px solid #ffd3ce;
-    border-radius: 9px;
-
-    background: #fff3f2;
-    color: #9c211c;
-
-    font-size: 12px;
-}
-
-.purchase-start .errorlist {
-    list-style: none;
-
-    margin: 5px 0 0;
-    padding: 0;
-
-    color: #b42318;
-
-    font-size: 11px;
-}
-
-/* ============================================================
-   INPUTS
-============================================================ */
-
-.purchase-field {
-    min-width: 0;
-}
-
-.purchase-field label {
-    display: block;
-
-    margin-bottom: 5px;
-
-    color: #244958;
-
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.purchase-start input[type="text"],
-.purchase-start input[type="number"],
-.purchase-start input[type="search"],
-.purchase-start select,
-.purchase-start textarea {
-    width: 100% !important;
-    max-width: none !important;
-
-    border: 1px solid #cedce2 !important;
-    border-radius: 8px !important;
-
-    outline: none !important;
-
-    background: #fff !important;
-    color: #243f4d !important;
-
-    font-family: inherit !important;
-    font-size: 12px !important;
-
-    box-shadow: none !important;
-}
-
-.purchase-start input[type="text"],
-.purchase-start input[type="number"],
-.purchase-start input[type="search"],
-.purchase-start select {
-    height: 40px !important;
-    min-height: 40px !important;
-
-    padding: 0 11px !important;
-}
-
-.purchase-start textarea {
-    min-height: 76px !important;
-
-    padding: 9px 11px !important;
-
-    resize: vertical;
-}
-
-.purchase-start input:focus,
-.purchase-start select:focus,
-.purchase-start textarea:focus {
-    border-color: #008fa6 !important;
-
-    box-shadow:
-        0 0 0 3px rgba(0, 143, 166, .08) !important;
-}
-
-/* ============================================================
-   BUSCA DE ATIVIDADES
-============================================================ */
-
-.activity-picker {
-    width: 100%;
-    max-width: 780px;
-
-    position: relative;
-}
-
-.activity-picker__search {
-    position: relative;
-}
-
-.activity-picker__search input {
-    padding-right: 42px !important;
-}
-
-.activity-picker__search-icon {
-    width: 17px;
-    height: 17px;
-
-    position: absolute;
-
-    top: 50%;
-    right: 13px;
-
-    transform: translateY(-50%);
-
-    color: #6f8692;
-
-    pointer-events: none;
-}
-
-.activity-picker__dropdown {
-    width: 100%;
-
-    display: none;
-
-    position: absolute;
-    top: 46px;
-    left: 0;
-
-    z-index: 100;
-
-    max-height: 430px;
-
-    overflow-y: auto;
-
-    border: 1px solid #d2e0e6;
-    border-radius: 10px;
-
-    background: #fff;
-
-    box-shadow:
-        0 14px 34px rgba(22, 54, 69, .14);
-}
-
-.activity-picker__dropdown.is-open {
-    display: block;
-}
-
-.activity-picker__native {
-    position: absolute !important;
-
-    width: 1px !important;
-    height: 1px !important;
-
-    overflow: hidden !important;
-
-    clip: rect(0, 0, 0, 0) !important;
-    clip-path: inset(50%) !important;
-
-    opacity: 0 !important;
-
-    pointer-events: none !important;
-}
-
-/* ============================================================
-   OPÇÃO DA ATIVIDADE
-============================================================ */
-
-.activity-option {
-    width: 100%;
-
-    display: flex;
-    align-items: flex-start;
-
-    gap: 11px;
-
-    padding: 12px 13px;
-
-    border-bottom: 1px solid #edf2f4;
-
-    cursor: pointer;
-}
-
-.activity-option:hover {
-    background: #f7fafb;
-}
-
-.activity-option.is-selected {
-    background: #eef8fa;
-}
-
-.activity-option__check {
-    padding-top: 2px;
-}
-
-.activity-option__check input {
-    width: 15px !important;
-    height: 15px !important;
-
-    min-height: auto !important;
-
-    margin: 0 !important;
-
-    accent-color: #008fa6;
-}
-
-.activity-option__content {
-    min-width: 0;
-
-    flex: 1;
-}
-
-.activity-option__title {
-    color: #193f50;
-
-    font-size: 12px;
-    font-weight: 800;
-}
-
-.activity-option__context {
-    margin-top: 3px;
-
-    color: #718692;
-
-    font-size: 10.5px;
-}
-
-.activity-option__dates {
-    display: flex;
-    flex-wrap: wrap;
-
-    gap: 6px;
-
-    margin-top: 7px;
-}
-
-.activity-date {
-    display: inline-flex;
-    align-items: center;
-
-    gap: 5px;
-
-    padding: 4px 7px;
-
-    border: 1px solid #dce7eb;
-    border-radius: 6px;
-
-    background: #f7fafb;
-
-    color: #55717d;
-
-    font-size: 10px;
-}
-
-.activity-date strong {
-    color: #375765;
-}
-
-.activity-date--current {
-    background: #edf8fa;
-    border-color: #cbe8ec;
-}
-
-.activity-date--current strong {
-    color: #007f94;
-}
-
-.activity-picker__empty {
-    padding: 15px;
-
-    color: #718692;
-
-    text-align: center;
-
-    font-size: 12px;
-}
-
-/* ============================================================
-   SELECIONADAS
-============================================================ */
-
-.selected-activities {
-    margin-top: 15px;
-}
-
-.selected-activities__header {
-    display: flex;
-    justify-content: space-between;
-
-    gap: 12px;
-
-    margin-bottom: 8px;
-}
-
-.selected-activities__header strong {
-    color: #284958;
-
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.selected-activities__clear {
-    padding: 0;
-
-    border: 0;
-
-    background: transparent;
-
-    color: #008fa6;
-
-    font-family: inherit;
-    font-size: 11px;
-    font-weight: 800;
-
-    cursor: pointer;
-}
-
-.selected-activities__list {
-    display: grid;
-    grid-template-columns: repeat(
-        2,
-        minmax(0, 1fr)
-    );
-
-    gap: 8px;
-}
-
-.selected-activity {
-    min-width: 0;
-
-    display: flex;
-    justify-content: space-between;
-
-    gap: 10px;
-
-    padding: 10px 11px;
-
-    border: 1px solid #d5e2e7;
-    border-radius: 9px;
-
-    background: #f7fafb;
-}
-
-.selected-activity__title {
-    color: #294957;
-
-    font-size: 11px;
-    font-weight: 800;
-}
-
-.selected-activity__context {
-    margin-top: 2px;
-
-    color: #788d97;
-
-    font-size: 9.5px;
-}
-
-.selected-activity__period {
-    margin-top: 5px;
-
-    color: #55717d;
-
-    font-size: 9.5px;
-    line-height: 1.45;
-}
-
-.selected-activity__period strong {
-    color: #008fa6;
-}
-
-.selected-activity__remove {
-    width: 20px;
-    height: 20px;
-
-    flex: 0 0 20px;
-
-    padding: 0;
-
-    border: 0;
-    border-radius: 5px;
-
-    background: transparent;
-
-    color: #708792;
-
-    cursor: pointer;
-}
-
-.selected-activity__remove:hover {
-    background: #fff1f0;
-
-    color: #ba3631;
-}
-
-.selected-activities__none {
-    grid-column: 1 / -1;
-
-    color: #718692;
-
-    font-size: 11px;
-}
-
-/* ============================================================
-   ITENS
-============================================================ */
-
-.purchase-items {
-    width: 100%;
-
-    display: grid;
-
-    gap: 10px;
-}
-
-.purchase-item {
-    width: 100%;
-
-    display: grid;
-
-    grid-template-columns:
-        minmax(250px, 2fr)
-        minmax(170px, 1.35fr)
-        90px
-        105px
-        40px;
-
-    gap: 9px;
-
-    padding: 12px;
-
-    border: 1px solid #d7e3e8;
-    border-radius: 10px;
-
-    background: #fff;
-}
-
-.purchase-item__activity {
-    grid-column: 1;
-}
-
-.purchase-item__description {
-    grid-column: 2;
-}
-
-.purchase-item__unit {
-    grid-column: 3;
-}
-
-.purchase-item__quantity {
-    grid-column: 4;
-}
-
-.purchase-item__delete {
-    grid-column: 5;
-    grid-row: 1;
-
-    padding-top: 18px;
-}
-
-.purchase-item__spec {
-    grid-column: 1 / 3;
-}
-
-.purchase-item__note {
-    grid-column: 3 / 5;
-}
-
-.purchase-item .purchase-field label {
-    font-size: 10px;
-}
-
-.purchase-item input[type="text"],
-.purchase-item input[type="number"],
-.purchase-item select {
-    height: 36px !important;
-    min-height: 36px !important;
-
-    font-size: 11px !important;
-}
-
-.purchase-item textarea {
-    height: 54px !important;
-    min-height: 54px !important;
-
-    font-size: 11px !important;
-}
-
-.purchase-item__delete button {
-    width: 34px;
-    height: 34px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    padding: 0;
-
-    border: 0;
-    border-radius: 7px;
-
-    background: transparent;
-
-    color: #d85b55;
-
-    cursor: pointer;
-}
-
-.purchase-item__delete button:hover {
-    background: #fff1f0;
-}
-
-.purchase-item__delete svg {
-    width: 16px;
-    height: 16px;
-}
-
-.purchase-items__help {
-    display: flex;
-    align-items: center;
-
-    gap: 6px;
-
-    margin-top: 9px;
-
-    color: #718692;
-
-    font-size: 11px;
-}
-
-/* ============================================================
-   RESUMO
-============================================================ */
-
-.purchase-summary {
-    width: 100%;
-
-    position: sticky;
-    top: 84px;
-
-    border: 1px solid #d8e4e9;
-    border-radius: 14px;
-
-    background: #fff;
-
-    overflow: hidden;
-}
-
-.purchase-summary__header {
-    display: flex;
-    align-items: center;
-
-    gap: 9px;
-
-    padding: 16px 17px;
-
-    border-bottom: 1px solid #e5ecef;
-}
-
-.purchase-summary__header svg {
-    width: 17px;
-    height: 17px;
-
-    color: #355868;
-}
-
-.purchase-summary__header h3 {
-    margin: 0;
-
-    color: #1d3e4d;
-
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.purchase-summary__body {
-    padding: 17px;
-}
-
-.purchase-summary__info {
-    display: grid;
-
-    gap: 17px;
-}
-
-.purchase-summary__row span {
-    display: block;
-
-    margin-bottom: 4px;
-
-    color: #728792;
-
-    font-size: 11px;
-}
-
-.purchase-summary__row strong {
-    display: block;
-
-    color: #264756;
-
-    font-size: 13px;
-    line-height: 1.4;
-    font-weight: 800;
-
-    word-break: break-word;
-}
-
-.purchase-summary__separator {
-    width: 100%;
-    height: 1px;
-
-    margin: 18px 0;
-
-    background: #e5ecef;
-}
-
-.purchase-summary__form {
-    display: grid;
-
-    gap: 12px;
-}
-
-/* ============================================================
-   AÇÕES
-============================================================ */
-
-.purchase-actions {
-    width: 100%;
-
-    display: flex;
-    justify-content: flex-end;
-
-    gap: 9px;
-
-    margin-top: 14px;
-}
-
-/* ============================================================
-   RESPONSIVO
-============================================================ */
-
-@media (max-width: 1180px) {
-
-    .purchase-start__grid {
-        grid-template-columns: 1fr;
-    }
-
-    .purchase-summary {
-        position: static;
-    }
-}
-
-@media (max-width: 900px) {
-
-    .selected-activities__list {
-        grid-template-columns: 1fr;
-    }
-
-    .purchase-item {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .purchase-item > * {
-        grid-column: auto;
-        grid-row: auto;
-    }
-
-    .purchase-item__activity,
-    .purchase-item__description,
-    .purchase-item__spec,
-    .purchase-item__note {
-        grid-column: 1 / -1;
-    }
-}
-
-@media (max-width: 720px) {
-
-    .purchase-start {
-        padding: 22px 15px 50px;
-    }
-
-    .purchase-start__header {
-        flex-direction: column;
-    }
-
-    .purchase-flow__body {
-        padding-left: 18px;
-    }
-
-    .purchase-item {
-        grid-template-columns: 1fr;
-    }
-
-    .purchase-item > * {
-        grid-column: 1 !important;
-    }
-
-    .purchase-actions {
-        display: grid;
-    }
-
-    .purchase-actions .purchase-btn {
-        width: 100%;
-    }
-}
+  .pc-page{max-width:1500px;margin:0 auto;padding:4px 0 86px;color:#173847}
+  .pc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:8px 2px 16px;border-bottom:1px solid #dfeaed}
+  .pc-header h1{margin:0;font-size:24px;line-height:1.15;font-weight:800;letter-spacing:-.025em;color:#173847}
+  .pc-header p{margin:5px 0 0;font-size:12px;color:#748c97}
+
+  .pc-stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:16px 2px 14px}
+  .pc-step{display:flex;gap:10px;align-items:flex-start;min-width:0;position:relative}
+  .pc-step:not(:last-child)::after{content:"";position:absolute;left:36px;right:-11px;top:14px;height:1px;background:#dbe7ea;z-index:0}
+  .pc-step__num{position:relative;z-index:1;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:1px solid #cedde1;background:#fff;color:#78909a;font-size:12px;font-weight:800;flex:0 0 28px}
+  .pc-step--active .pc-step__num{background:#0794ac;border-color:#0794ac;color:#fff;box-shadow:0 4px 12px rgba(7,148,172,.20)}
+  .pc-step__copy{min-width:0;padding-top:1px;position:relative;z-index:1;background:#fff;padding-right:8px}
+  .pc-step__copy strong{display:block;font-size:11px;color:#5b707b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-step--active .pc-step__copy strong{color:#146177}
+  .pc-step__copy span{display:block;margin-top:2px;font-size:9px;color:#92a4ab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .pc-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+  .pc-main{display:grid;gap:12px;min-width:0}
+  .pc-card{border:1px solid #dbe7ea;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(22,64,78,.025);overflow:hidden}
+  .pc-card__head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px 9px}
+  .pc-card__title-wrap{display:flex;gap:9px;align-items:flex-start;min-width:0}
+  .pc-card__icon{width:23px;height:23px;border-radius:7px;background:#eef9fb;color:#0794ac;display:grid;place-items:center;font-size:13px;flex:0 0 23px}
+  .pc-card__title{margin:0;font-size:13px;line-height:1.25;font-weight:800;color:#183b4b}
+  .pc-card__desc{margin:2px 0 0;font-size:9.5px;color:#81959e}
+  .pc-card__body{padding:0 14px 14px}
+
+  .pc-origin{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #bfe0e6;border-radius:10px;background:linear-gradient(90deg,#f3fbfc,#fbfeff);margin-bottom:12px}
+  .pc-origin__main{display:flex;align-items:center;gap:10px;min-width:0}
+  .pc-origin__icon{width:42px;height:42px;border:1px solid #cfe6eb;border-radius:9px;background:#fff;display:grid;place-items:center;color:#0a7890;font-size:20px;flex:0 0 42px}
+  .pc-origin strong{display:block;font-size:12px;color:#214757;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-origin span{display:block;margin-top:3px;font-size:9.5px;color:#718b96}
+
+  .pc-grid-2{display:grid;grid-template-columns:1fr 1.75fr;gap:12px}
+  .pc-field{min-width:0;margin-bottom:10px}
+  .pc-field:last-child{margin-bottom:0}
+  .pc-field label{display:block;margin:0 0 5px;font-size:9.5px;font-weight:700;color:#5f7782}
+  .pc-field label .req{color:#eb5d67}
+  .pc-field input:not([type="checkbox"]):not([type="radio"]),
+  .pc-field select,.pc-field textarea{width:100%;box-sizing:border-box;border:1px solid #ccdce1;border-radius:7px;background:#fff;color:#294b58;font-size:10.5px;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}
+  .pc-field input:not([type="checkbox"]):not([type="radio"]),.pc-field select{height:36px;padding:0 10px}
+  .pc-field textarea{min-height:66px;padding:9px 10px;resize:vertical}
+  .pc-field input:focus,.pc-field select:focus,.pc-field textarea:focus{border-color:#77c7d4;box-shadow:0 0 0 3px rgba(7,148,172,.08);background:#fff}
+  .pc-field-counter{display:flex;justify-content:flex-end;margin-top:3px;font-size:8.5px;color:#9aabb1}
+  .pc-help,.pc-error{font-size:9px;margin-top:4px}.pc-help{color:#82959d}.pc-error{color:#c94450;font-weight:700}
+
+  .pc-btn{height:32px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid #cadce1;border-radius:7px;background:#fff;color:#325665;text-decoration:none;font-size:9.5px;font-weight:750;cursor:pointer;transition:.18s ease;white-space:nowrap}
+  .pc-btn:hover{border-color:#9ecbd4;background:#f7fbfc;transform:translateY(-1px)}
+  .pc-btn--soft{background:#f7fbfc;color:#38616f}
+  .pc-btn--primary{border-color:#0794ac;background:#0794ac;color:#fff;box-shadow:0 5px 14px rgba(7,148,172,.18)}
+  .pc-btn--primary:hover{background:#07869b;border-color:#07869b;color:#fff}
+  .pc-btn--danger{color:#c64750;border-color:#efcbd0;background:#fff}
+  .pc-btn--sm{height:29px;padding:0 10px;font-size:9px}
+
+  .pc-activity-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+  .pc-search{position:relative;max-width:430px;width:100%}
+  .pc-search input{width:100%;height:34px;padding:0 35px 0 31px;border:1px solid #d0dfe3;border-radius:7px;font-size:10px;color:#34545f;outline:none;background:#fff;box-sizing:border-box}
+  .pc-search svg{position:absolute;left:10px;top:9px;width:14px;height:14px;color:#8aa0a8}
+  .pc-search__clear{position:absolute;right:7px;top:6px;width:22px;height:22px;border:0;border-radius:5px;background:transparent;color:#9baab0;cursor:pointer;display:none}
+  .pc-selection-info{display:flex;align-items:center;gap:10px;font-size:9px;color:#71868f}
+  .pc-selection-info strong{color:#1c586a}
+
+  .pc-selected{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:10px}
+  .pc-selected:empty{display:none}
+  .pc-chip{position:relative;padding:9px 27px 8px 35px;border:1px solid #d5e4e8;border-radius:8px;background:#fff;min-width:0;min-height:51px}
+  .pc-chip__ico{position:absolute;left:9px;top:9px;width:19px;height:19px;border-radius:5px;background:#e8f8fb;color:#0b91aa;display:grid;place-items:center;font-size:10px}
+  .pc-chip strong{display:block;font-size:8.8px;line-height:1.3;color:#375965;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-chip span{display:block;margin-top:4px;font-size:8px;color:#8598a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-chip button{position:absolute;right:6px;top:6px;border:0;background:transparent;color:#647f88;font-size:14px;cursor:pointer;line-height:1}
+
+  .pc-activity-table-wrap{border:1px solid #dce7ea;border-radius:8px;overflow:hidden}
+  .pc-activity-table-scroll{max-height:216px;overflow:auto}
+  .pc-activity-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.9px}
+  .pc-activity-table th{position:sticky;top:0;z-index:2;background:#f8fafb;text-align:left;padding:7px 8px;color:#56707a;font-size:8px;text-transform:uppercase;letter-spacing:.025em;border-bottom:1px solid #dce7ea}
+  .pc-activity-table td{padding:7px 8px;border-bottom:1px solid #edf2f4;color:#536d76;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-activity-table tr:last-child td{border-bottom:0}
+  .pc-activity-table tr:hover td{background:#fbfdfe}
+  .pc-check{width:14px;height:14px;accent-color:#0794ac;cursor:pointer}
+  .pc-act-btn{border:0;background:transparent;font-size:8.5px;font-weight:750;color:#15657a;cursor:pointer;padding:3px 0}
+  .pc-act-btn--remove{color:#cf4a52}
+  .pc-native-activities{position:absolute!important;left:-99999px!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
+  .pc-empty{padding:20px;text-align:center;font-size:9.5px;color:#8ca0a8}
+
+  .pc-items-table-wrap{border:1px solid #dce7ea;border-radius:8px;overflow:hidden}
+  .pc-items-head{display:grid;grid-template-columns:30px minmax(210px,1.25fr) minmax(100px,.62fr) 85px minmax(190px,1fr) 60px;background:#f8fafb;border-bottom:1px solid #dce7ea}
+  .pc-items-head div{padding:7px 8px;font-size:8px;text-transform:uppercase;letter-spacing:.025em;color:#59717a;font-weight:800}.pc-items-head .req{color:#eb5d67}
+  .pc-item{display:grid;grid-template-columns:30px minmax(210px,1.25fr) minmax(100px,.62fr) 85px minmax(190px,1fr) 60px;align-items:start;border-bottom:1px solid #edf2f4;background:#fff;position:relative}
+  .pc-item:last-child{border-bottom:0}
+  .pc-item__num{padding:12px 8px;font-size:9px;color:#80949c;text-align:center}
+  .pc-item__cell{padding:6px 6px;min-width:0}
+  .pc-item__cell .pc-field{margin:0}
+  .pc-item__cell .pc-field label{display:none}
+  .pc-item__cell input:not([type="checkbox"]),.pc-item__cell select,.pc-item__cell textarea{height:32px!important;min-height:32px!important;border-color:transparent!important;background:transparent!important;border-radius:5px!important;padding:0 7px!important;font-size:9.5px!important}
+  .pc-item__cell textarea{padding-top:7px!important;resize:none!important;overflow:hidden!important}
+  .pc-item:hover .pc-item__cell input:not([type="checkbox"]),.pc-item:hover .pc-item__cell select,.pc-item:hover .pc-item__cell textarea{background:#fafcfd!important;border-color:#dbe7ea!important}
+  .pc-item__extra{grid-column:2/6;display:grid;grid-template-columns:1.1fr 1fr;gap:8px;padding:0 6px 8px}
+  .pc-item__extra .pc-field{margin:0}
+  .pc-item__extra .pc-field label{font-size:8px;margin-bottom:3px}
+  .pc-item__extra textarea,.pc-item__extra select{min-height:34px!important;height:34px!important;font-size:9px!important;padding:6px 8px!important}
+  .pc-item__actions{padding:7px 5px;display:flex;align-items:center;justify-content:center;gap:4px}
+  .pc-icon-btn{width:26px;height:26px;border:0;border-radius:6px;background:transparent;display:grid;place-items:center;color:#55737d;cursor:pointer;font-size:13px}
+  .pc-icon-btn:hover{background:#eef7f9;color:#0a8299}.pc-icon-btn--danger{color:#d34d55}.pc-icon-btn--danger:hover{background:#fff2f3;color:#bf3942}
+  .pc-row-deleted{display:none!important}
+
+  .pc-aside{position:sticky;top:82px}
+  .pc-summary{border:1px solid #dbe7ea;border-radius:12px;background:#fff;padding:14px;box-shadow:0 4px 14px rgba(28,62,74,.03)}
+  .pc-summary__head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:11px;border-bottom:1px solid #e2ebee}
+  .pc-summary__head h3{margin:0;font-size:12px;color:#234959}
+  .pc-status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:#fff6e9;color:#9a7041;padding:4px 7px;font-size:8px}
+  .pc-status::before{content:"";width:5px;height:5px;border-radius:50%;background:#f4a846}
+  .pc-summary__section{padding:12px 0;border-bottom:1px solid #e5edef}.pc-summary__section:last-of-type{border-bottom:0}
+  .pc-summary__section h4{margin:0 0 9px;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#4c6b77}
+  .pc-summary-item{display:flex;gap:9px;margin-bottom:10px}.pc-summary-item:last-child{margin-bottom:0}
+  .pc-summary-item__icon{width:20px;height:20px;border-radius:6px;background:#f1f6f8;display:grid;place-items:center;color:#66818c;font-size:10px;flex:0 0 20px}
+  .pc-summary-item strong{display:block;font-size:8.5px;color:#536c76}.pc-summary-item span{display:block;margin-top:2px;font-size:8.5px;line-height:1.35;color:#879aa2;word-break:break-word}
+  .pc-tip{margin-top:11px;border:1px solid #cfe4ef;border-radius:9px;background:#f5fbff;padding:10px;font-size:8.5px;line-height:1.45;color:#63808c}.pc-tip strong{display:block;margin-bottom:3px;color:#3d6576;font-size:9px}
+
+  .pc-alert{margin-bottom:12px;padding:10px 12px;border:1px solid #f1d7aa;background:#fff9ed;border-radius:9px;color:#7d673f;font-size:10px;line-height:1.45}.pc-alert--danger{border-color:#efc5ca;background:#fff4f5;color:#a9424b}
+  .pc-sticky{position:fixed;left:var(--sidebar-width,260px);right:0;bottom:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px max(18px,calc((100vw - var(--sidebar-width,260px) - 1500px)/2 + 18px));border-top:1px solid #dce7ea;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);box-shadow:0 -8px 22px rgba(27,62,74,.055)}
+  .pc-sticky__summary{display:flex;align-items:center;gap:6px;margin:0 10px;color:#69818b;font-size:9.5px;white-space:nowrap}.pc-sticky__summary strong{color:#254f5e;font-size:10px}.pc-sticky__dot{color:#b1c0c5}.pc-sticky__right{display:flex;align-items:center;gap:8px;margin-left:auto}
+
+  @media(max-width:1250px){.pc-layout{grid-template-columns:1fr 270px}.pc-selected{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-grid-2{grid-template-columns:1fr}.pc-items-head,.pc-item{grid-template-columns:28px minmax(190px,1.2fr) 90px 80px minmax(160px,1fr) 56px}}
+  @media(max-width:1000px){.pc-layout{grid-template-columns:1fr}.pc-aside{position:static}.pc-stepper{grid-template-columns:repeat(2,1fr)}.pc-step:nth-child(2)::after{display:none}.pc-summary{display:none}.pc-sticky{left:0}.pc-selected{grid-template-columns:1fr 1fr}}
+  @media(max-width:760px){.pc-sticky__summary{order:-1;width:100%;justify-content:center;margin:0 0 2px}.pc-sticky{flex-wrap:wrap}.pc-stepper{grid-template-columns:1fr}.pc-step::after{display:none!important}.pc-step__copy span{white-space:normal}.pc-selected{grid-template-columns:1fr}.pc-activity-table th:nth-child(3),.pc-activity-table td:nth-child(3),.pc-activity-table th:nth-child(4),.pc-activity-table td:nth-child(4){display:none}.pc-items-table-wrap{overflow-x:auto}.pc-items-head,.pc-item{min-width:760px}.pc-sticky{padding:9px 10px}.pc-sticky .pc-btn{padding:0 9px}.pc-header{padding-top:2px}}
+.pc-item__extra--single{grid-template-columns:1fr}
 </style>
 {% endblock %}
 
-
 {% block content %}
+<div class="pc-page">
+  <div class="pc-header">
+    <div>
+      <h1>Abrir processo de compra</h1>
+      <p>Vincule a compra às atividades da obra e registre os itens necessários antes de iniciar a cotação.</p>
+    </div>
+  </div>
 
-<div class="purchase-start">
+  <div class="pc-stepper" aria-label="Etapas da abertura da compra">
+    <div class="pc-step pc-step--active"><div class="pc-step__num">1</div><div class="pc-step__copy"><strong>Origem e responsável</strong><span>Defina a origem da compra e o responsável.</span></div></div>
+    <div class="pc-step"><div class="pc-step__num">2</div><div class="pc-step__copy"><strong>Atividades relacionadas</strong><span>Selecione as atividades do cronograma.</span></div></div>
+    <div class="pc-step"><div class="pc-step__num">3</div><div class="pc-step__copy"><strong>Itens da compra</strong><span>Adicione os materiais e quantidades.</span></div></div>
+    <div class="pc-step"><div class="pc-step__num">4</div><div class="pc-step__copy"><strong>Revisão</strong><span>Revise e confirme as informações.</span></div></div>
+  </div>
 
-    <div class="purchase-start__container">
+  {% if not item_inicial %}
+  <div class="pc-alert"><strong>Suprimento de origem não identificado.</strong><br>O fluxo ideal é iniciar esta compra pelo cronograma de suprimentos, usando a ação “Comprar”.</div>
+  {% endif %}
 
-        <header class="purchase-start__header">
+  <form method="post" id="purchase-form" novalidate>
+    {% csrf_token %}
+    {{ form.item_cronograma }}
+    {{ form.titulo }}
+    {{ formset.management_form }}
 
-            <div class="purchase-start__heading">
+    {% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="pc-alert pc-alert--danger">{{ error }}</div>{% endfor %}{% endif %}
+    {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="pc-alert pc-alert--danger">{{ error }}</div>{% endfor %}{% endif %}
 
-                <div class="purchase-start__icon">
-
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M2.25 3h1.386c.51 0 .955.343 1.087.835L5.1 5.25m0 0h14.625l-1.5 6.75H6.525M5.1 5.25l1.425 6.75"
-                        />
-                    </svg>
-
-                </div>
-
-                <div>
-
-                    <div class="purchase-start__eyebrow">
-                        Compras
-                    </div>
-
-                    <h1 class="purchase-start__title">
-                        Iniciar compra
-                    </h1>
-
-                    <div class="purchase-start__subtitle">
-                        Vincule as atividades do cronograma e informe os itens necessários para iniciar a cotação.
-                    </div>
-
-                </div>
-
+    <div class="pc-layout">
+      <main class="pc-main">
+        <section class="pc-card">
+          <div class="pc-card__head">
+            <div class="pc-card__title-wrap"><div class="pc-card__icon">⌂</div><div><h2 class="pc-card__title">1. Origem e responsável</h2></div></div>
+          </div>
+          <div class="pc-card__body">
+            {% if item_inicial %}
+            <div class="pc-origin">
+              <div class="pc-origin__main"><div class="pc-origin__icon">▥</div><div><strong>{{ item_inicial.item }}</strong><span>{{ item_inicial.cronograma_obra.obra.nome }}{% if item_inicial.prazo_limite_contratacao %} · Contratar até {{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% endif %}</span></div></div>
+              <span class="pc-btn pc-btn--soft" aria-disabled="true">Suprimento de origem</span>
             </div>
-
-            <a
-                href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
-                class="purchase-btn"
-            >
-                Cancelar
-            </a>
-
-        </header>
-
-
-        <form
-            method="post"
-            id="purchaseForm"
-            novalidate
-        >
-
-            {% csrf_token %}
-
-            <input
-                type="hidden"
-                name="item_origem"
-                value="{% if item_inicial %}{{ item_inicial.id }}{% endif %}"
-            >
-
-            <!--
-                Suprimento e título continuam sendo enviados,
-                mas não são editáveis pelo usuário.
-            -->
-            {{ form.item_cronograma }}
-            {{ form.titulo }}
-
-
-            {% if form.non_field_errors %}
-                <div class="purchase-errors">
-                    {{ form.non_field_errors }}
-                </div>
             {% endif %}
 
-
-            <div class="purchase-start__grid">
-
-                <main class="purchase-flow">
-
-                    <!-- =========================================
-                         1 - ATIVIDADES
-                    ========================================== -->
-
-                    <section class="purchase-flow__step">
-
-                        <div class="purchase-flow__header">
-
-                            <div class="purchase-flow__heading">
-
-                                <div class="purchase-flow__number">
-                                    1
-                                </div>
-
-                                <div class="purchase-flow__copy">
-
-                                    <h2>
-                                        Selecionar atividades
-                                    </h2>
-
-                                    <p>
-                                        Se houver atividades com o mesmo nome,
-                                        utilize as datas Base e Planejada para
-                                        identificar a ocorrência correta.
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="purchase-flow__body">
-
-                            <div
-                                class="activity-picker"
-                                id="activityPicker"
-                            >
-
-                                <div class="activity-picker__search">
-
-                                    <input
-                                        type="search"
-                                        id="activitySearch"
-                                        placeholder="Pesquisar atividade, disciplina, local ou data"
-                                        autocomplete="off"
-                                    >
-
-                                    <svg
-                                        class="activity-picker__search-icon"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="m21 21-4.35-4.35m1.35-5.4a6.75 6.75 0 11-13.5 0 6.75 6.75 0 0113.5 0z"
-                                        />
-                                    </svg>
-
-                                </div>
-
-
-                                <div
-                                    class="activity-picker__dropdown"
-                                    id="activityDropdown"
-                                >
-
-                                    <div
-                                        class="activity-picker__empty"
-                                        id="activityNoResult"
-                                        style="display:none;"
-                                    >
-                                        Nenhuma atividade encontrada.
-                                    </div>
-
-                                </div>
-
-
-                                <div class="activity-picker__native">
-                                    {{ form.atividades }}
-                                </div>
-
-                                {{ form.atividades.errors }}
-
-                            </div>
-
-
-                            <div class="selected-activities">
-
-                                <div class="selected-activities__header">
-
-                                    <strong>
-                                        Atividades selecionadas
-                                        (<span id="selectedActivityCount">0</span>)
-                                    </strong>
-
-                                    <button
-                                        type="button"
-                                        class="selected-activities__clear"
-                                        id="clearActivities"
-                                    >
-                                        Limpar todas
-                                    </button>
-
-                                </div>
-
-                                <div
-                                    class="selected-activities__list"
-                                    id="selectedActivities"
-                                >
-                                    <span class="selected-activities__none">
-                                        Nenhuma atividade selecionada.
-                                    </span>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
-                    <!-- =========================================
-                         2 - ITENS
-                    ========================================== -->
-
-                    <section class="purchase-flow__step">
-
-                        <div class="purchase-flow__header">
-
-                            <div class="purchase-flow__heading">
-
-                                <div class="purchase-flow__number">
-                                    2
-                                </div>
-
-                                <div class="purchase-flow__copy">
-
-                                    <h2>
-                                        Adicionar itens
-                                    </h2>
-
-                                    <p>
-                                        Vincule cada item a uma das atividades selecionadas acima.
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-                            <button
-                                type="button"
-                                class="purchase-btn purchase-btn--small"
-                                id="addItem"
-                            >
-                                + Adicionar item
-                            </button>
-
-                        </div>
-
-
-                        <div class="purchase-flow__body">
-
-                            {{ formset.management_form }}
-
-                            {% if formset.non_form_errors %}
-                                <div class="purchase-errors">
-                                    {{ formset.non_form_errors }}
-                                </div>
-                            {% endif %}
-
-
-                            <div
-                                class="purchase-items"
-                                id="itemsContainer"
-                            >
-
-                                {% for item_form in formset %}
-
-                                    <div
-                                        class="purchase-item"
-                                        data-item-form
-                                    >
-
-                                        <div class="purchase-field purchase-item__activity">
-
-                                            <label>
-                                                Atividade vinculada *
-                                            </label>
-
-                                            {{ item_form.atividade }}
-                                            {{ item_form.atividade.errors }}
-
-                                        </div>
-
-
-                                        <div class="purchase-field purchase-item__description">
-
-                                            <label>
-                                                Item *
-                                            </label>
-
-                                            {{ item_form.descricao }}
-                                            {{ item_form.descricao.errors }}
-
-                                        </div>
-
-
-                                        <div class="purchase-field purchase-item__unit">
-
-                                            <label>
-                                                Unidade *
-                                            </label>
-
-                                            {{ item_form.unidade }}
-                                            {{ item_form.unidade.errors }}
-
-                                        </div>
-
-
-                                        <div class="purchase-field purchase-item__quantity">
-
-                                            <label>
-                                                Quantidade *
-                                            </label>
-
-                                            {{ item_form.quantidade }}
-                                            {{ item_form.quantidade.errors }}
-
-                                        </div>
-
-
-                                        <div class="purchase-item__delete">
-
-                                            <button
-                                                type="button"
-                                                data-remove-item
-                                                title="Remover item"
-                                            >
-                                                🗑
-                                            </button>
-
-                                            <div style="display:none;">
-                                                {{ item_form.DELETE }}
-                                            </div>
-
-                                        </div>
-
-
-                                        <div class="purchase-field purchase-item__spec">
-
-                                            <label>
-                                                Especificação
-                                            </label>
-
-                                            {{ item_form.especificacao }}
-                                            {{ item_form.especificacao.errors }}
-
-                                        </div>
-
-
-                                        <div class="purchase-field purchase-item__note">
-
-                                            <label>
-                                                Observação
-                                            </label>
-
-                                            {{ item_form.observacao }}
-                                            {{ item_form.observacao.errors }}
-
-                                        </div>
-
-                                    </div>
-
-                                {% endfor %}
-
-                            </div>
-
-
-                            <div class="purchase-items__help">
-
-                                <span>ⓘ</span>
-
-                                <span>
-                                    Cada item deve estar vinculado a uma atividade selecionada na etapa 1.
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
-                    <!-- =========================================
-                         3 - REVISÃO
-                    ========================================== -->
-
-                    <section class="purchase-flow__step">
-
-                        <div class="purchase-flow__header">
-
-                            <div class="purchase-flow__heading">
-
-                                <div class="purchase-flow__number">
-                                    3
-                                </div>
-
-                                <div class="purchase-flow__copy">
-
-                                    <h2>
-                                        Revisar e iniciar cotação
-                                    </h2>
-
-                                    <p>
-                                        Revise as atividades, os itens e os dados da compra antes de prosseguir.
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-                </main>
-
-
-                <!-- =============================================
-                     RESUMO
-                ============================================== -->
-
-                <aside class="purchase-summary">
-
-                    <div class="purchase-summary__header">
-
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5"
-                            />
-                        </svg>
-
-                        <h3>
-                            Resumo da compra
-                        </h3>
-
-                    </div>
-
-
-                    <div class="purchase-summary__body">
-
-                        <!-- DADOS DE ORIGEM -->
-
-                        <div class="purchase-summary__info">
-
-                            <div class="purchase-summary__row">
-
-                                <span>
-                                    Obra
-                                </span>
-
-                                <strong>
-                                    {% if item_inicial %}
-                                        {{ item_inicial.cronograma_obra.obra.nome }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </strong>
-
-                            </div>
-
-
-                            <div class="purchase-summary__row">
-
-                                <span>
-                                    Suprimento
-                                </span>
-
-                                <strong>
-                                    {% if item_inicial %}
-                                        {{ item_inicial.item }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </strong>
-
-                            </div>
-
-
-                            <div class="purchase-summary__row">
-
-                                <span>
-                                    Título
-                                </span>
-
-                                <strong>
-                                    {% if item_inicial %}
-                                        {{ item_inicial.item }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </strong>
-
-                            </div>
-
-
-                            <div class="purchase-summary__row">
-
-                                <span>
-                                    Contratar até
-                                </span>
-
-                                <strong>
-                                    {% if item_inicial %}
-                                        {{ item_inicial.prazo_limite_contratacao|date:"d/m/Y"|default:"Sem prazo" }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </strong>
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="purchase-summary__separator"></div>
-
-
-                        <!-- SOMENTE CAMPOS REALMENTE EDITÁVEIS -->
-
-                        <div class="purchase-summary__form">
-
-                            <div class="purchase-field">
-
-                                <label>
-                                    Comprador
-                                </label>
-
-                                {{ form.comprador }}
-                                {{ form.comprador.errors }}
-
-                            </div>
-
-
-                            <div class="purchase-field">
-
-                                <label>
-                                    Descrição
-                                </label>
-
-                                {{ form.descricao }}
-                                {{ form.descricao.errors }}
-
-                            </div>
-
-
-                            <div class="purchase-field">
-
-                                <label>
-                                    Observação
-                                </label>
-
-                                {{ form.observacao }}
-                                {{ form.observacao.errors }}
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </aside>
-
+            <div class="pc-grid-2">
+              <div class="pc-field"><label for="{{ form.comprador.id_for_label }}">{{ form.comprador.label }}{% if form.comprador.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+              <div class="pc-field"><label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}{% if form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.descricao }}<div class="pc-field-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+            </div>
+            <div class="pc-field"><label for="{{ form.observacao.id_for_label }}">{{ form.observacao.label }}{% if form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.observacao }}<div class="pc-field-counter"><span id="observation-count">0</span>/500</div>{% for error in form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+          </div>
+        </section>
+
+        <section class="pc-card">
+          <div class="pc-card__head">
+            <div class="pc-card__title-wrap"><div class="pc-card__icon">▣</div><div><h2 class="pc-card__title">2. Atividades relacionadas</h2><p class="pc-card__desc">Selecione as atividades do cronograma que serão atendidas por esta compra.</p></div></div>
+          </div>
+          <div class="pc-card__body">
+            <div class="pc-native-activities" id="native-activities-wrap">{{ form.atividades }}</div>
+            {% if form.atividades.help_text %}<div class="pc-help" style="margin-bottom:7px">{{ form.atividades.help_text }}</div>{% endif %}
+            {% for error in form.atividades.errors %}<div class="pc-error" style="margin-bottom:7px">{{ error }}</div>{% endfor %}
+
+            <div class="pc-activity-top">
+              <div class="pc-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                <input type="text" id="activity-search" placeholder="Buscar atividade por descrição ou código..." autocomplete="off">
+                <button type="button" class="pc-search__clear" id="activity-search-clear">×</button>
+              </div>
+              <div class="pc-selection-info"><span>Selecionadas: <strong id="selected-count">0</strong></span><button type="button" class="pc-btn pc-btn--sm" id="clear-activities">⌫&nbsp; Limpar seleção</button></div>
             </div>
 
+            <div class="pc-selected" id="selected-activities"></div>
 
-            <div class="purchase-actions">
-
-                <a
-                    href="{% url 'planejamento:painel_cronograma_suprimentos' %}"
-                    class="purchase-btn"
-                >
-                    Cancelar
-                </a>
-
-                <button
-                    type="submit"
-                    name="acao"
-                    value="rascunho"
-                    class="purchase-btn"
-                >
-                    Salvar rascunho
-                </button>
-
-                <button
-                    type="submit"
-                    name="acao"
-                    value="cotacao"
-                    class="purchase-btn purchase-btn--primary"
-                >
-                    Iniciar cotação
-                    <span>→</span>
-                </button>
-
+            <div class="pc-activity-table-wrap">
+              <div class="pc-activity-table-scroll">
+                <table class="pc-activity-table">
+                  <colgroup><col style="width:34px"><col style="width:37%"><col style="width:26%"><col style="width:23%"><col style="width:90px"></colgroup>
+                  <thead><tr><th></th><th>Atividade</th><th>Informações</th><th>Referência</th><th>Ações</th></tr></thead>
+                  <tbody id="activity-table-body"></tbody>
+                </table>
+                <div class="pc-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div>
+              </div>
             </div>
+          </div>
+        </section>
 
-        </form>
+        <section class="pc-card">
+          <div class="pc-card__head">
+            <div class="pc-card__title-wrap"><div class="pc-card__icon">▢</div><div><h2 class="pc-card__title">3. Itens da compra</h2><p class="pc-card__desc">Adicione os materiais/serviços necessários e suas respectivas quantidades.</p></div></div>
+            <button class="pc-btn pc-btn--sm" type="button" id="add-item">＋ Adicionar item</button>
+          </div>
+          <div class="pc-card__body">
+            <div class="pc-items-table-wrap">
+              <div class="pc-items-head"><div>#</div><div>Material / Serviço{% if formset.empty_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Unidade{% if formset.empty_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Quantidade{% if formset.empty_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Especificação{% if formset.empty_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Ações</div></div>
+              <div id="items-container">
+                {% for item_form in formset %}
+                <div class="pc-item" data-form-row>
+                  {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                  <div class="pc-item__num" data-row-number>{{ forloop.counter }}</div>
+                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.descricao.label }}{% if item_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.descricao }}{% for error in item_form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.unidade.label }}{% if item_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.unidade }}{% for error in item_form.unidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.quantidade.label }}{% if item_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.especificacao.label }}{% if item_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.especificacao }}{% for error in item_form.especificacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+                  <div class="pc-item__actions">{% if item_form.DELETE %}<div style="display:none">{{ item_form.DELETE }}</div>{% endif %}<button class="pc-icon-btn pc-icon-btn--danger" type="button" data-remove title="Remover item">⌫</button></div>
+                  <div class="pc-item__extra pc-item__extra--single"><div class="pc-field"><label>{{ item_form.observacao.label }}{% if item_form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.observacao }}{% for error in item_form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
+      <aside class="pc-aside">
+        <section class="pc-summary">
+          <div class="pc-summary__head"><h3>Resumo da compra</h3><span class="pc-status">Rascunho</span></div>
+          <div class="pc-summary__section">
+            <h4>Visão geral</h4>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">▤</div><div><strong>Suprimento</strong><span id="summary-supply">{% if item_inicial %}{{ item_inicial.item }}<br>{{ item_inicial.cronograma_obra.obra.nome }}{% else %}Não identificado{% endif %}</span></div></div>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">◯</div><div><strong>Comprador responsável</strong><span id="summary-buyer">—</span></div></div>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">▧</div><div><strong>Descrição</strong><span id="summary-description">—</span></div></div>
+          </div>
+          <div class="pc-summary__section">
+            <h4>Resumo</h4>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">▦</div><div><strong>Atividades selecionadas</strong><span><b id="summary-activities">0</b> atividade(s)</span></div></div>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">▣</div><div><strong>Itens da compra</strong><span><b id="summary-items">0</b> item(ns)</span></div></div>
+            <div class="pc-summary-item"><div class="pc-summary-item__icon">↻</div><div><strong>Última atualização</strong><span>Enquanto você preenche</span></div></div>
+          </div>
+          <div class="pc-tip"><strong>✧ Dicas</strong>Revise as informações e prossiga para iniciar a cotação com os fornecedores.</div>
+        </section>
+      </aside>
     </div>
 
+    <div class="pc-sticky">
+      <a class="pc-btn" href="{% url 'compras:dashboard' %}">Cancelar</a>
+      <div class="pc-sticky__summary" aria-live="polite"><strong id="sticky-items">0 itens</strong><span class="pc-sticky__dot">·</span><strong id="sticky-activities">0 atividades selecionadas</strong></div>
+      <div class="pc-sticky__right"><button class="pc-btn" name="acao" value="rascunho" type="submit">▣&nbsp; Salvar rascunho</button><button class="pc-btn pc-btn--primary" name="acao" value="iniciar" type="submit">➤&nbsp; Criar e iniciar cotação</button></div>
+    </div>
+  </form>
+
+  <template id="empty-form-template">
+    <div class="pc-item" data-form-row>
+      {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+      <div class="pc-item__num" data-row-number></div>
+      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.descricao.label }}{% if formset.empty_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.descricao }}</div></div>
+      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.unidade.label }}{% if formset.empty_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.unidade }}</div></div>
+      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.quantidade.label }}{% if formset.empty_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.quantidade }}</div></div>
+      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.especificacao.label }}{% if formset.empty_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.especificacao }}</div></div>
+      <div class="pc-item__actions"><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="pc-icon-btn pc-icon-btn--danger" type="button" data-remove title="Remover item">⌫</button></div>
+      <div class="pc-item__extra pc-item__extra--single"><div class="pc-field"><label>{{ formset.empty_form.observacao.label }}{% if formset.empty_form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.observacao }}</div></div>
+    </div>
+  </template>
 </div>
 
-
-<!-- =========================================================
-     EMPTY FORM
-========================================================= -->
-
-<template id="emptyItemTemplate">
-
-    <div
-        class="purchase-item"
-        data-item-form
-    >
-
-        <div class="purchase-field purchase-item__activity">
-
-            <label>
-                Atividade vinculada *
-            </label>
-
-            {{ formset.empty_form.atividade }}
-
-        </div>
-
-
-        <div class="purchase-field purchase-item__description">
-
-            <label>
-                Item *
-            </label>
-
-            {{ formset.empty_form.descricao }}
-
-        </div>
-
-
-        <div class="purchase-field purchase-item__unit">
-
-            <label>
-                Unidade *
-            </label>
-
-            {{ formset.empty_form.unidade }}
-
-        </div>
-
-
-        <div class="purchase-field purchase-item__quantity">
-
-            <label>
-                Quantidade *
-            </label>
-
-            {{ formset.empty_form.quantidade }}
-
-        </div>
-
-
-        <div class="purchase-item__delete">
-
-            <button
-                type="button"
-                data-remove-item
-                title="Remover item"
-            >
-                🗑
-            </button>
-
-            <div style="display:none;">
-                {{ formset.empty_form.DELETE }}
-            </div>
-
-        </div>
-
-
-        <div class="purchase-field purchase-item__spec">
-
-            <label>
-                Especificação
-            </label>
-
-            {{ formset.empty_form.especificacao }}
-
-        </div>
-
-
-        <div class="purchase-field purchase-item__note">
-
-            <label>
-                Observação
-            </label>
-
-            {{ formset.empty_form.observacao }}
-
-        </div>
-
-    </div>
-
-</template>
-
-
 <script>
-document.addEventListener(
-    'DOMContentLoaded',
-    function () {
-
-        const nativeSelect =
-            document.getElementById(
-                '{{ form.atividades.id_for_label }}'
-            );
-
-        const activityPicker =
-            document.getElementById(
-                'activityPicker'
-            );
-
-        const activitySearch =
-            document.getElementById(
-                'activitySearch'
-            );
-
-        const activityDropdown =
-            document.getElementById(
-                'activityDropdown'
-            );
-
-        const noResult =
-            document.getElementById(
-                'activityNoResult'
-            );
-
-        const selectedArea =
-            document.getElementById(
-                'selectedActivities'
-            );
-
-        const selectedCount =
-            document.getElementById(
-                'selectedActivityCount'
-            );
-
-        const clearActivities =
-            document.getElementById(
-                'clearActivities'
-            );
-
-        const itemContainer =
-            document.getElementById(
-                'itemsContainer'
-            );
-
-        const totalForms =
-            document.getElementById(
-                'id_itens-TOTAL_FORMS'
-            );
-
-        const itemTemplate =
-            document.getElementById(
-                'emptyItemTemplate'
-            );
-
-        const addItem =
-            document.getElementById(
-                'addItem'
-            );
-
-
-        function normalize(value) {
-
-            return (
-                value || ''
-            )
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(
-                /[\u0300-\u036f]/g,
-                ''
-            );
-
-        }
-
-
-        function parseActivityLabel(label) {
-
-            const parts = String(
-                label || ''
-            )
-            .split('|')
-            .map(function (part) {
-
-                return part.trim();
-
-            })
-            .filter(Boolean);
-
-
-            const result = {
-                full: String(
-                    label || ''
-                ).trim(),
-                title: '',
-                context: '',
-                base: '',
-                planned: '',
-            };
-
-
-            if (parts.length) {
-                result.title =
-                    parts[0];
-            }
-
-
-            parts.slice(1).forEach(
-                function (part) {
-
-                    const lower =
-                        normalize(part);
-
-                    if (
-                        lower.startsWith(
-                            'base:'
-                        )
-                    ) {
-
-                        result.base =
-                            part.replace(
-                                /^base:\s*/i,
-                                ''
-                            );
-
-                    } else if (
-                        lower.startsWith(
-                            'planejada:'
-                        )
-                    ) {
-
-                        result.planned =
-                            part.replace(
-                                /^planejada:\s*/i,
-                                ''
-                            );
-
-                    } else {
-
-                        if (
-                            result.context
-                        ) {
-                            result.context +=
-                                ' • ';
-                        }
-
-                        result.context +=
-                            part;
-
-                    }
-
-                }
-            );
-
-            return result;
-
-        }
-
-
-        function nativeOptions() {
-
-            if (!nativeSelect) {
-                return [];
-            }
-
-            return Array.from(
-                nativeSelect.options
-            ).filter(
-                function (option) {
-                    return Boolean(
-                        option.value
-                    );
-                }
-            );
-
-        }
-
-
-        function selectedOptions() {
-
-            return nativeOptions()
-                .filter(
-                    function (option) {
-                        return option.selected;
-                    }
-                );
-
-        }
-
-
-        function findNativeOption(value) {
-
-            return nativeOptions()
-                .find(
-                    function (option) {
-
-                        return (
-                            String(
-                                option.value
-                            )
-                            === String(value)
-                        );
-
-                    }
-                );
-
-        }
-
-
-        function buildActivityPicker() {
-
-            nativeOptions().forEach(
-                function (option) {
-
-                    const info =
-                        parseActivityLabel(
-                            option.textContent
-                        );
-
-                    const row =
-                        document.createElement(
-                            'label'
-                        );
-
-                    row.className =
-                        'activity-option';
-
-                    row.dataset.activityId =
-                        option.value;
-
-                    row.dataset.search =
-                        normalize(
-                            info.full
-                        );
-
-
-                    const checkWrap =
-                        document.createElement(
-                            'div'
-                        );
-
-                    checkWrap.className =
-                        'activity-option__check';
-
-
-                    const checkbox =
-                        document.createElement(
-                            'input'
-                        );
-
-                    checkbox.type =
-                        'checkbox';
-
-                    checkbox.checked =
-                        option.selected;
-
-
-                    checkWrap.appendChild(
-                        checkbox
-                    );
-
-
-                    const content =
-                        document.createElement(
-                            'div'
-                        );
-
-                    content.className =
-                        'activity-option__content';
-
-
-                    const title =
-                        document.createElement(
-                            'div'
-                        );
-
-                    title.className =
-                        'activity-option__title';
-
-                    title.textContent =
-                        info.title;
-
-                    content.appendChild(
-                        title
-                    );
-
-
-                    if (info.context) {
-
-                        const context =
-                            document.createElement(
-                                'div'
-                            );
-
-                        context.className =
-                            'activity-option__context';
-
-                        context.textContent =
-                            info.context;
-
-                        content.appendChild(
-                            context
-                        );
-
-                    }
-
-
-                    if (
-                        info.base
-                        || info.planned
-                    ) {
-
-                        const dates =
-                            document.createElement(
-                                'div'
-                            );
-
-                        dates.className =
-                            'activity-option__dates';
-
-
-                        if (info.base) {
-
-                            const base =
-                                document.createElement(
-                                    'div'
-                                );
-
-                            base.className =
-                                'activity-date';
-
-                            const strong =
-                                document.createElement(
-                                    'strong'
-                                );
-
-                            strong.textContent =
-                                'Base';
-
-                            base.appendChild(
-                                strong
-                            );
-
-                            base.appendChild(
-                                document.createTextNode(
-                                    info.base
-                                )
-                            );
-
-                            dates.appendChild(
-                                base
-                            );
-
-                        }
-
-
-                        if (info.planned) {
-
-                            const planned =
-                                document.createElement(
-                                    'div'
-                                );
-
-                            planned.className =
-                                'activity-date activity-date--current';
-
-                            const strong =
-                                document.createElement(
-                                    'strong'
-                                );
-
-                            strong.textContent =
-                                'Planejada';
-
-                            planned.appendChild(
-                                strong
-                            );
-
-                            planned.appendChild(
-                                document.createTextNode(
-                                    info.planned
-                                )
-                            );
-
-                            dates.appendChild(
-                                planned
-                            );
-
-                        }
-
-                        content.appendChild(
-                            dates
-                        );
-
-                    }
-
-
-                    row.appendChild(
-                        checkWrap
-                    );
-
-                    row.appendChild(
-                        content
-                    );
-
-
-                    checkbox.addEventListener(
-                        'change',
-                        function () {
-
-                            option.selected =
-                                checkbox.checked;
-
-                            renderState();
-
-                        }
-                    );
-
-
-                    activityDropdown
-                        .insertBefore(
-                            row,
-                            noResult
-                        );
-
-                }
-            );
-
-        }
-
-
-        function renderSelected() {
-
-            const selected =
-                selectedOptions();
-
-            selectedArea.innerHTML =
-                '';
-
-            selectedCount.textContent =
-                selected.length;
-
-
-            if (!selected.length) {
-
-                const empty =
-                    document.createElement(
-                        'span'
-                    );
-
-                empty.className =
-                    'selected-activities__none';
-
-                empty.textContent =
-                    'Nenhuma atividade selecionada.';
-
-                selectedArea.appendChild(
-                    empty
-                );
-
-                return;
-
-            }
-
-
-            selected.forEach(
-                function (option) {
-
-                    const info =
-                        parseActivityLabel(
-                            option.textContent
-                        );
-
-
-                    const card =
-                        document.createElement(
-                            'div'
-                        );
-
-                    card.className =
-                        'selected-activity';
-
-
-                    const content =
-                        document.createElement(
-                            'div'
-                        );
-
-
-                    const title =
-                        document.createElement(
-                            'div'
-                        );
-
-                    title.className =
-                        'selected-activity__title';
-
-                    title.textContent =
-                        info.title;
-
-                    content.appendChild(
-                        title
-                    );
-
-
-                    if (info.context) {
-
-                        const context =
-                            document.createElement(
-                                'div'
-                            );
-
-                        context.className =
-                            'selected-activity__context';
-
-                        context.textContent =
-                            info.context;
-
-                        content.appendChild(
-                            context
-                        );
-
-                    }
-
-
-                    const period =
-                        document.createElement(
-                            'div'
-                        );
-
-                    period.className =
-                        'selected-activity__period';
-
-
-                    if (info.base) {
-
-                        const base =
-                            document.createElement(
-                                'div'
-                            );
-
-                        base.innerHTML =
-                            '<strong>Base:</strong> ';
-
-                        base.appendChild(
-                            document.createTextNode(
-                                info.base
-                            )
-                        );
-
-                        period.appendChild(
-                            base
-                        );
-
-                    }
-
-
-                    if (info.planned) {
-
-                        const planned =
-                            document.createElement(
-                                'div'
-                            );
-
-                        planned.innerHTML =
-                            '<strong>Planejada:</strong> ';
-
-                        planned.appendChild(
-                            document.createTextNode(
-                                info.planned
-                            )
-                        );
-
-                        period.appendChild(
-                            planned
-                        );
-
-                    }
-
-
-                    content.appendChild(
-                        period
-                    );
-
-
-                    const remove =
-                        document.createElement(
-                            'button'
-                        );
-
-                    remove.type =
-                        'button';
-
-                    remove.className =
-                        'selected-activity__remove';
-
-                    remove.innerHTML =
-                        '&times;';
-
-                    remove.addEventListener(
-                        'click',
-                        function () {
-
-                            option.selected =
-                                false;
-
-                            renderState();
-
-                        }
-                    );
-
-
-                    card.appendChild(
-                        content
-                    );
-
-                    card.appendChild(
-                        remove
-                    );
-
-                    selectedArea.appendChild(
-                        card
-                    );
-
-                }
-            );
-
-        }
-
-
-        function saveItemOptions(select) {
-
-            if (
-                select.dataset.savedOptions
-                === '1'
-            ) {
-                return;
-            }
-
-            select._allOptions =
-                Array.from(
-                    select.options
-                ).map(
-                    function (option) {
-
-                        return {
-                            value: String(
-                                option.value
-                            ),
-                            text: (
-                                option.textContent
-                                || ''
-                            ).trim(),
-                        };
-
-                    }
-                );
-
-            select.dataset.savedOptions =
-                '1';
-
-        }
-
-
-        function syncItemSelect(select) {
-
-            saveItemOptions(
-                select
-            );
-
-            const oldValue =
-                String(
-                    select.value
-                    || ''
-                );
-
-            const allowed =
-                selectedOptions();
-
-
-            select.innerHTML =
-                '';
-
-
-            const empty =
-                document.createElement(
-                    'option'
-                );
-
-            empty.value =
-                '';
-
-            empty.textContent =
-                'Selecione uma atividade';
-
-            select.appendChild(
-                empty
-            );
-
-
-            allowed.forEach(
-                function (activity) {
-
-                    const saved =
-                        select._allOptions
-                            .find(
-                                function (item) {
-
-                                    return (
-                                        item.value
-                                        === String(
-                                            activity.value
-                                        )
-                                    );
-
-                                }
-                            );
-
-
-                    const option =
-                        document.createElement(
-                            'option'
-                        );
-
-                    option.value =
-                        activity.value;
-
-                    option.textContent =
-                        saved
-                            ? saved.text
-                            : activity.textContent;
-
-                    select.appendChild(
-                        option
-                    );
-
-                }
-            );
-
-
-            const valid =
-                allowed.some(
-                    function (activity) {
-
-                        return (
-                            String(
-                                activity.value
-                            )
-                            === oldValue
-                        );
-
-                    }
-                );
-
-
-            select.value =
-                valid
-                    ? oldValue
-                    : '';
-
-        }
-
-
-        function syncItemSelects() {
-
-            document
-                .querySelectorAll(
-                    '[data-item-form] select[name$="-atividade"]'
-                )
-                .forEach(
-                    syncItemSelect
-                );
-
-        }
-
-
-        function renderState() {
-
-            document
-                .querySelectorAll(
-                    '.activity-option'
-                )
-                .forEach(
-                    function (row) {
-
-                        const option =
-                            findNativeOption(
-                                row.dataset.activityId
-                            );
-
-                        const checkbox =
-                            row.querySelector(
-                                'input[type="checkbox"]'
-                            );
-
-                        checkbox.checked =
-                            option.selected;
-
-                        row.classList.toggle(
-                            'is-selected',
-                            option.selected
-                        );
-
-                    }
-                );
-
-            renderSelected();
-
-            syncItemSelects();
-
-        }
-
-
-        activitySearch.addEventListener(
-            'focus',
-            function () {
-
-                activityDropdown
-                    .classList
-                    .add(
-                        'is-open'
-                    );
-
-            }
-        );
-
-
-        activitySearch.addEventListener(
-            'input',
-            function () {
-
-                const query =
-                    normalize(
-                        activitySearch.value
-                    );
-
-                let visible = 0;
-
-
-                document
-                    .querySelectorAll(
-                        '.activity-option'
-                    )
-                    .forEach(
-                        function (row) {
-
-                            const show =
-                                !query
-                                || row
-                                    .dataset
-                                    .search
-                                    .includes(
-                                        query
-                                    );
-
-                            row.style.display =
-                                show
-                                    ? ''
-                                    : 'none';
-
-                            if (show) {
-                                visible++;
-                            }
-
-                        }
-                    );
-
-
-                noResult.style.display =
-                    visible
-                        ? 'none'
-                        : 'block';
-
-
-                activityDropdown
-                    .classList
-                    .add(
-                        'is-open'
-                    );
-
-            }
-        );
-
-
-        document.addEventListener(
-            'click',
-            function (event) {
-
-                if (
-                    activityPicker
-                    && !activityPicker.contains(
-                        event.target
-                    )
-                ) {
-
-                    activityDropdown
-                        .classList
-                        .remove(
-                            'is-open'
-                        );
-
-                }
-
-            }
-        );
-
-
-        clearActivities.addEventListener(
-            'click',
-            function () {
-
-                nativeOptions()
-                    .forEach(
-                        function (option) {
-
-                            option.selected =
-                                false;
-
-                        }
-                    );
-
-                renderState();
-
-            }
-        );
-
-
-        function bindDelete(card) {
-
-            const button =
-                card.querySelector(
-                    '[data-remove-item]'
-                );
-
-            if (!button) {
-                return;
-            }
-
-            button.addEventListener(
-                'click',
-                function () {
-
-                    const input =
-                        card.querySelector(
-                            'input[name$="-DELETE"]'
-                        );
-
-                    if (input) {
-                        input.checked = true;
-                    }
-
-                    card.style.display =
-                        'none';
-
-                }
-            );
-
-        }
-
-
-        itemContainer
-            .querySelectorAll(
-                '[data-item-form]'
-            )
-            .forEach(
-                function (card) {
-
-                    const select =
-                        card.querySelector(
-                            'select[name$="-atividade"]'
-                        );
-
-                    if (select) {
-                        saveItemOptions(
-                            select
-                        );
-                    }
-
-                    bindDelete(
-                        card
-                    );
-
-                }
-            );
-
-
-        addItem.addEventListener(
-            'click',
-            function () {
-
-                const index =
-                    parseInt(
-                        totalForms.value,
-                        10
-                    );
-
-                const html =
-                    itemTemplate
-                        .innerHTML
-                        .replaceAll(
-                            '__prefix__',
-                            index
-                        );
-
-
-                itemContainer
-                    .insertAdjacentHTML(
-                        'beforeend',
-                        html
-                    );
-
-
-                totalForms.value =
-                    index + 1;
-
-
-                const cards =
-                    itemContainer
-                        .querySelectorAll(
-                            '[data-item-form]'
-                        );
-
-
-                const newCard =
-                    cards[
-                        cards.length - 1
-                    ];
-
-
-                const select =
-                    newCard.querySelector(
-                        'select[name$="-atividade"]'
-                    );
-
-
-                if (select) {
-
-                    saveItemOptions(
-                        select
-                    );
-
-                    syncItemSelect(
-                        select
-                    );
-
-                }
-
-
-                bindDelete(
-                    newCard
-                );
-
-            }
-        );
-
-
-        buildActivityPicker();
-
-        renderState();
-
+(function(){
+  const form = document.getElementById('purchase-form');
+  if(!form) return;
+
+  const qs = (s,r=document)=>r.querySelector(s);
+  const qsa = (s,r=document)=>Array.from(r.querySelectorAll(s));
+  const escapeHtml = (value)=>String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+  /* Contadores e resumo */
+  const desc = document.getElementById('{{ form.descricao.id_for_label }}');
+  const obs = document.getElementById('{{ form.observacao.id_for_label }}');
+  const buyer = document.getElementById('{{ form.comprador.id_for_label }}');
+  const descCount = qs('#description-count');
+  const obsCount = qs('#observation-count');
+  const summaryDesc = qs('#summary-description');
+  const summaryBuyer = qs('#summary-buyer');
+  const summaryItems = qs('#summary-items');
+  const summaryActivities = qs('#summary-activities');
+  const stickyItems = qs('#sticky-items');
+  const stickyActivities = qs('#sticky-activities');
+
+  function updateTextSummary(){
+    if(descCount && desc) descCount.textContent = (desc.value || '').length;
+    if(obsCount && obs) obsCount.textContent = (obs.value || '').length;
+    if(summaryDesc && desc) summaryDesc.textContent = (desc.value || '').trim() || '—';
+    if(summaryBuyer && buyer){
+      const option = buyer.options && buyer.selectedIndex >= 0 ? buyer.options[buyer.selectedIndex] : null;
+      summaryBuyer.textContent = option && option.value ? option.text.trim() : '—';
     }
-);
-</script>
+  }
+  if(desc){desc.setAttribute('maxlength','200');desc.addEventListener('input',updateTextSummary)}
+  if(obs){obs.setAttribute('maxlength','500');obs.addEventListener('input',updateTextSummary)}
+  if(buyer) buyer.addEventListener('change',updateTextSummary);
 
+  /* Atividades: transforma o select múltiplo nativo em UI pesquisável */
+  const activitiesSelect = document.getElementById('{{ form.atividades.id_for_label }}');
+  const activitiesBody = qs('#activity-table-body');
+  const selectedBox = qs('#selected-activities');
+  const selectedCount = qs('#selected-count');
+  const search = qs('#activity-search');
+  const clearSearch = qs('#activity-search-clear');
+  const clearActivities = qs('#clear-activities');
+  const emptyActivities = qs('#activity-empty');
+
+  function parseActivityLabel(text){
+    const clean = String(text || '').replace(/\s+/g,' ').trim();
+    const parts = clean.split('|').map(v=>v.trim()).filter(Boolean);
+    const title = parts[0] || clean || 'Atividade';
+    const info = parts[1] || '';
+    const reference = parts.slice(2).join(' | ') || '';
+    return {title,info,reference,raw:clean};
+  }
+  function activityOptions(){
+    if(!activitiesSelect) return [];
+    return Array.from(activitiesSelect.options).filter(o=>o.value && !o.disabled);
+  }
+  function renderActivities(){
+    if(!activitiesSelect || !activitiesBody || !selectedBox) return;
+    const term = (search?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const options = activityOptions();
+    const selected = options.filter(o=>o.selected);
+
+    selectedCount.textContent = selected.length;
+    if(summaryActivities) summaryActivities.textContent = selected.length;
+    if(stickyActivities) stickyActivities.textContent = `${selected.length} atividade${selected.length===1?'':'s'} selecionada${selected.length===1?'':'s'}`;
+    selectedBox.innerHTML = selected.map(o=>{
+      const p=parseActivityLabel(o.text);
+      return `<div class="pc-chip" data-chip-value="${escapeHtml(o.value)}"><div class="pc-chip__ico">▣</div><strong title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</strong><span title="${escapeHtml(p.reference || p.info)}">${escapeHtml(p.reference || p.info || 'Atividade selecionada')}</span><button type="button" data-chip-remove="${escapeHtml(o.value)}" aria-label="Remover">×</button></div>`;
+    }).join('');
+
+    const visible = options.filter(o=>!term || o.text.toLocaleLowerCase('pt-BR').includes(term));
+    activitiesBody.innerHTML = visible.map(o=>{
+      const p=parseActivityLabel(o.text);
+      const action = o.selected ? `<button type="button" class="pc-act-btn pc-act-btn--remove" data-toggle-activity="${escapeHtml(o.value)}">⌫ Remover</button>` : `<button type="button" class="pc-act-btn" data-toggle-activity="${escapeHtml(o.value)}">＋ Selecionar</button>`;
+      return `<tr data-activity-row="${escapeHtml(o.value)}"><td><input class="pc-check" type="checkbox" data-activity-check="${escapeHtml(o.value)}" ${o.selected?'checked':''}></td><td title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</td><td title="${escapeHtml(p.info)}">${escapeHtml(p.info || '—')}</td><td title="${escapeHtml(p.reference)}">${escapeHtml(p.reference || '—')}</td><td>${action}</td></tr>`;
+    }).join('');
+    if(emptyActivities) emptyActivities.hidden = visible.length > 0;
+    if(clearSearch) clearSearch.style.display = term ? 'block' : 'none';
+
+    qsa('[data-toggle-activity]',activitiesBody).forEach(btn=>btn.addEventListener('click',()=>toggleActivity(btn.dataset.toggleActivity)));
+    qsa('[data-activity-check]',activitiesBody).forEach(ch=>ch.addEventListener('change',()=>setActivity(ch.dataset.activityCheck,ch.checked)));
+    qsa('[data-chip-remove]',selectedBox).forEach(btn=>btn.addEventListener('click',()=>setActivity(btn.dataset.chipRemove,false)));
+  }
+  function setActivity(value,state){
+    if(!activitiesSelect) return;
+    const option = Array.from(activitiesSelect.options).find(o=>String(o.value)===String(value));
+    if(!option) return;
+    option.selected = !!state;
+    activitiesSelect.dispatchEvent(new Event('change',{bubbles:true}));
+    renderActivities();
+  }
+  function toggleActivity(value){
+    if(!activitiesSelect) return;
+    const option = Array.from(activitiesSelect.options).find(o=>String(o.value)===String(value));
+    if(option) setActivity(value,!option.selected);
+  }
+  if(search) search.addEventListener('input',renderActivities);
+  if(clearSearch) clearSearch.addEventListener('click',()=>{search.value='';search.focus();renderActivities()});
+  if(clearActivities) clearActivities.addEventListener('click',()=>{activityOptions().forEach(o=>o.selected=false);activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));renderActivities()});
+  if(activitiesSelect) activitiesSelect.addEventListener('change',()=>{ if(summaryActivities) summaryActivities.textContent = activityOptions().filter(o=>o.selected).length; });
+
+  /* Formset de itens */
+  const itemsContainer = qs('#items-container');
+  const addItem = qs('#add-item');
+  const totalForms = qs('input[name$="-TOTAL_FORMS"]');
+  const emptyTemplate = qs('#empty-form-template');
+
+  function isRowDeleted(row){
+    const del = qs('input[type="checkbox"][name$="-DELETE"]',row);
+    return row.classList.contains('pc-row-deleted') || (del && del.checked);
+  }
+  function updateRows(){
+    const activeRows = qsa('[data-form-row]',itemsContainer).filter(r=>!isRowDeleted(r));
+    activeRows.forEach((row,index)=>{const num=qs('[data-row-number]',row); if(num) num.textContent=index+1});
+    if(summaryItems) summaryItems.textContent = activeRows.length;
+    if(stickyItems) stickyItems.textContent = `${activeRows.length} ${activeRows.length===1?'item':'itens'}`;
+  }
+  function bindRow(row){
+    const remove = qs('[data-remove]',row);
+    if(remove && !remove.dataset.bound){
+      remove.dataset.bound='1';
+      remove.addEventListener('click',()=>{
+        const del=qs('input[type="checkbox"][name$="-DELETE"]',row);
+        if(del){del.checked=true;row.classList.add('pc-row-deleted')}else{row.remove()}
+        updateRows();
+      });
+    }
+    qsa('textarea',row).forEach(t=>{
+      const resize=()=>{t.style.height='32px';t.style.height=Math.min(Math.max(t.scrollHeight,32),80)+'px'};
+      t.addEventListener('input',resize);resize();
+    });
+  }
+  qsa('[data-form-row]',itemsContainer).forEach(bindRow);
+  if(addItem && totalForms && emptyTemplate && itemsContainer){
+    addItem.addEventListener('click',()=>{
+      const index=parseInt(totalForms.value||'0',10);
+      const html=emptyTemplate.innerHTML.replaceAll('__prefix__',String(index));
+      itemsContainer.insertAdjacentHTML('beforeend',html);
+      totalForms.value=index+1;
+      const row=itemsContainer.lastElementChild;
+      bindRow(row);updateRows();
+      const first=qs('input,select,textarea',row);if(first)first.focus();
+    });
+  }
+
+  /* Pré-preenchimento UX: mantém os campos editáveis e não altera validações do backend. */
+  const currentUserId = '{{ request.user.pk|default:""|escapejs }}';
+  if(buyer && !buyer.value && currentUserId){
+    const ownOption = Array.from(buyer.options || []).find(o=>String(o.value)===String(currentUserId));
+    if(ownOption){ buyer.value = ownOption.value; buyer.dispatchEvent(new Event('change',{bubbles:true})); }
+  }
+  qsa('select:not([multiple])', form).forEach(select=>{
+    if(select.value) return;
+    const useful = Array.from(select.options).filter(o=>o.value && !o.disabled);
+    if(useful.length===1){ select.value=useful[0].value; select.dispatchEvent(new Event('change',{bubbles:true})); }
+  });
+
+  updateTextSummary();
+  renderActivities();
+  updateRows();
+})();
+</script>
 {% endblock %}

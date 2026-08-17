@@ -23,6 +23,16 @@ def criar_processo(
     iniciar_cotacao=True,
 ):
     obra_id = item_cronograma.cronograma_obra.obra_id
+
+    ativos = ProcessoCompra.objects.filter(item_cronograma=item_cronograma).exclude(
+        status__in=[ProcessoCompra.Status.CANCELADO, ProcessoCompra.Status.REPROVADO, ProcessoCompra.Status.CONTRATADO]
+    )
+    if ativos.exists():
+        existente = ativos.order_by("-criado_em").first()
+        raise ValidationError(
+            f"Já existe um processo ativo para este suprimento ({existente.numero}). Conclua/cancele-o antes de abrir outro."
+        )
+
     atividades = list(atividades)
     itens = list(itens)
 
@@ -31,17 +41,11 @@ def criar_processo(
     if not itens:
         raise ValidationError("Inclua pelo menos um item para iniciar a compra.")
 
-    atividade_ids = set()
     for atividade in atividades:
         if atividade.obra_id != obra_id:
-            raise ValidationError("Todas as atividades devem pertencer à mesma obra do suprimento.")
-        atividade_ids.add(atividade.pk)
-
-    for item in itens:
-        atividade = item["atividade"]
-        if atividade.obra_id != obra_id:
-            raise ValidationError("O item possui uma atividade de outra obra.")
-        atividade_ids.add(atividade.pk)
+            raise ValidationError(
+                "Todas as atividades devem pertencer à mesma obra do suprimento."
+            )
 
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
@@ -55,9 +59,9 @@ def criar_processo(
         criado_por=usuario,
     )
 
+    # As atividades são vínculo do PROCESSO, não de cada linha de item.
+    # O usuário seleciona esse conjunto uma única vez na abertura.
     atividades_por_id = {atividade.pk: atividade for atividade in atividades}
-    for item in itens:
-        atividades_por_id[item["atividade"].pk] = item["atividade"]
 
     ProcessoCompraAtividade.objects.bulk_create(
         [
@@ -78,7 +82,7 @@ def criar_processo(
         necessidades.append(
             NecessidadeCompra(
                 processo=processo,
-                atividade_origem=item["atividade"],
+                atividade_origem=None,
                 descricao=item["descricao"].strip(),
                 especificacao=(item.get("especificacao") or "").strip(),
                 unidade=item["unidade"],
@@ -104,7 +108,6 @@ def criar_processo(
 def incluir_necessidade(
     *,
     processo,
-    atividade,
     descricao,
     unidade,
     quantidade,
@@ -112,21 +115,20 @@ def incluir_necessidade(
     especificacao="",
     observacao="",
 ):
+    if processo.etapa_atual != processo.Etapa.COTACAO or processo.status in {processo.Status.CANCELADO, processo.Status.REPROVADO, processo.Status.CONTRATADO}:
+        raise ValidationError("Itens só podem ser incluídos enquanto o processo estiver na etapa de cotação.")
+
     quantidade = Decimal(str(quantidade))
     if quantidade <= 0:
         raise ValidationError("A quantidade deve ser maior que zero.")
-    if atividade.obra_id != processo.obra_id:
-        raise ValidationError("A atividade deve pertencer à mesma obra do processo.")
-
-    ProcessoCompraAtividade.objects.get_or_create(
-        processo=processo,
-        atividade=atividade,
-        defaults={"criado_por": usuario},
-    )
+    if not processo.vinculos_atividades.exists():
+        raise ValidationError(
+            "O processo precisa possuir ao menos uma atividade relacionada antes de receber itens."
+        )
 
     necessidade = NecessidadeCompra.objects.create(
         processo=processo,
-        atividade_origem=atividade,
+        atividade_origem=None,
         descricao=descricao.strip(),
         especificacao=(especificacao or "").strip(),
         unidade=unidade,

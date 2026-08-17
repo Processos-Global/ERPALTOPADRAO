@@ -1,128 +1,18 @@
 {% extends "layouts/base.html" %}
-{% load static %}
-
-{% block title %}Suprimentos | ERP Alto Padrão{% endblock %}
-{% block page_name %}Suprimentos{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% block extra_css %}{% include "compras/_styles.html" %}
 <style>
-  :root {
-    --opal-blue:#2F6F7E;
-    --opal-blue-dark:#1F4F5B;
-    --opal-blue-soft:#EAF4F6;
-    --opal-blue-border:#BFD6DB;
-  }
-  .module-menu { font-family:"Segoe UI","Inter",Arial,sans-serif; }
-  .module-menu .dashboard-heading { margin-bottom:28px; }
-  .module-menu .dashboard-heading__content { max-width:780px; }
-  .module-menu .dashboard-heading__eyebrow,
-  .module-menu .modules__eyebrow,
-  .module-menu .module-card__number,
-  .module-menu .module-card__footer { color:var(--opal-blue); }
-  .module-menu .dashboard-heading__content h1 {
-    margin:0;
-    font-size:clamp(2.25rem,4vw,3.7rem);
-    line-height:1.04;
-    letter-spacing:-.04em;
-    font-weight:700;
-    color:#1b2528;
-  }
-  .module-menu .dashboard-heading__content h1 em { color:var(--opal-blue); font-style:normal; }
-  .module-menu .dashboard-heading__content p { margin:12px 0 0; color:#6c7a80; font-size:1rem; line-height:1.65; }
-  .module-menu .modules__header h2,
-  .module-menu .module-card__content h3 { color:#1b2528; font-weight:700; letter-spacing:-.02em; }
-  .module-menu .module-card__content p { color:#6c7a80; }
-  .module-menu .module-card__icon { color:var(--opal-blue); border-color:var(--opal-blue-border); }
-  .module-menu .module-card__permission { background:var(--opal-blue-soft); color:var(--opal-blue-dark); }
-  .module-menu .module-card__accent { background:var(--opal-blue); }
-  .module-menu .module-card:hover { border-color:var(--opal-blue); }
-</style>
-{% endblock %}
-
+.cp-menu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.cp-menu-card{display:flex;flex-direction:column;min-height:210px;padding:18px;border:1px solid var(--cp-line);border-radius:13px;background:#fff;color:inherit;text-decoration:none;transition:.18s ease}.cp-menu-card:hover{transform:translateY(-2px);border-color:#acd3da;box-shadow:var(--cp-shadow)}.cp-menu-card__icon{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:var(--cp-primary-soft);color:var(--cp-primary);font-weight:900}.cp-menu-card h2{margin:18px 0 5px;color:var(--cp-ink);font-size:15px}.cp-menu-card p{margin:0;color:var(--cp-muted);font-size:10.5px;line-height:1.55}.cp-menu-card__foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:18px;color:#4c6873;font-size:10px;font-weight:800}.cp-menu-help{margin-top:14px;padding:13px 15px;border:1px solid var(--cp-line);border-radius:11px;background:#f8fbfc;color:#617982;font-size:10.5px;line-height:1.55}@media(max-width:900px){.cp-menu-grid{grid-template-columns:1fr}}
+</style>{% endblock %}
 {% block content %}
-<div class="dashboard-home module-menu">
-  <section class="dashboard-heading">
-    <div class="dashboard-heading__content">
-      <span class="dashboard-heading__eyebrow">Módulo</span>
-      <h1>Suprimentos <em>e compras</em></h1>
-      <p>Escolha a operação que deseja realizar para acompanhar processos de compra, cotações, contratações e pedidos.</p>
-    </div>
-  </section>
-
-  <section class="modules">
-    <div class="modules__header">
-      <div>
-        <span class="modules__eyebrow">Funcionalidades</span>
-        <h2>O que você deseja acessar?</h2>
-      </div>
-    </div>
-
-    <div class="module-cards">
-      <a href="{% url 'compras:dashboard' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">01</span>
-          <span class="module-card__permission">Acompanhamento</span>
-        </header>
-        <div class="module-card__body">
-          <span class="module-card__icon"><svg class="icon"><use href="#icon-grid"></use></svg></span>
-          <div class="module-card__content">
-            <h3>Painel de Processos</h3>
-            <p>Visualize os processos em formato Kanban e acompanhe cada compra pela etapa comercial atual.</p>
-          </div>
-        </div>
-        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
-        <span class="module-card__accent"></span>
-      </a>
-
-      <a href="{% url 'compras:lista_processos' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">02</span>
-          <span class="module-card__permission">Compras</span>
-        </header>
-        <div class="module-card__body">
-          <span class="module-card__icon"><svg class="icon"><use href="#icon-cart"></use></svg></span>
-          <div class="module-card__content">
-            <h3>Processos de Compra</h3>
-            <p>Consulte todos os processos, responsáveis, etapas, fornecedores e andamento das aquisições.</p>
-          </div>
-        </div>
-        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
-        <span class="module-card__accent"></span>
-      </a>
-
-      <a href="{% url 'compras:novo_processo' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">03</span>
-          <span class="module-card__permission">Nova compra</span>
-        </header>
-        <div class="module-card__body">
-          <span class="module-card__icon"><svg class="icon"><use href="#icon-file"></use></svg></span>
-          <div class="module-card__content">
-            <h3>Novo Processo</h3>
-            <p>Inicie uma nova compra vinculada à obra, ao suprimento e às atividades do cronograma.</p>
-          </div>
-        </div>
-        <footer class="module-card__footer"><span>Criar processo</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
-        <span class="module-card__accent"></span>
-      </a>
-
-      <a href="{% url 'compras:lista_pedidos' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">04</span>
-          <span class="module-card__permission">Pedidos</span>
-        </header>
-        <div class="module-card__body">
-          <span class="module-card__icon"><svg class="icon"><use href="#icon-package"></use></svg></span>
-          <div class="module-card__content">
-            <h3>Pedidos Emitidos</h3>
-            <p>Consulte os pedidos gerados a partir dos processos comerciais concluídos e suas informações.</p>
-          </div>
-        </div>
-        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
-        <span class="module-card__accent"></span>
-      </a>
-    </div>
-  </section>
+<div class="cp-page">
+  <div class="cp-head">
+    <div class="cp-head__copy"><div class="cp-eyebrow">Módulo</div><h1 class="cp-title">Suprimentos</h1><div class="cp-sub">Organize processos de compra, decisões comerciais e acompanhamento de pedidos em um único fluxo.</div></div>
+  </div>
+  <div class="cp-menu-grid">
+    <a class="cp-menu-card" href="{% url 'compras:dashboard' %}"><div class="cp-menu-card__icon">◫</div><h2>Painel de compras</h2><p>Acompanhe os processos por etapa e identifique rapidamente o que precisa de ação, aprovação ou atenção ao prazo.</p><div class="cp-menu-card__foot"><span>Visão operacional</span><span>→</span></div></a>
+    <a class="cp-menu-card" href="{% url 'compras:lista_processos' %}"><div class="cp-menu-card__icon">≡</div><h2>Processos</h2><p>Consulte todas as compras, filtre por obra, etapa ou status e acesse o histórico completo de cada processo.</p><div class="cp-menu-card__foot"><span>Consulta e gestão</span><span>→</span></div></a>
+    <a class="cp-menu-card" href="{% url 'compras:lista_pedidos' %}"><div class="cp-menu-card__icon">▣</div><h2>Pedidos e entregas</h2><p>Faça o follow-up após a aprovação: confirmação, produção, transporte, previsão e recebimentos parciais ou totais.</p><div class="cp-menu-card__foot"><span>Acompanhamento</span><span>→</span></div></a>
+  </div>
+  <div class="cp-menu-help"><strong>Fluxo recomendado:</strong> a compra nasce a partir de um suprimento do planejamento. Depois segue por cotação → análise técnica → negociação → aprovação → pedido → recebimento.</div>
 </div>
 {% endblock %}

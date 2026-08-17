@@ -15,6 +15,10 @@ from .acoes import (
     acao_incluir_item_cotacao,
     acao_incluir_necessidade,
     acao_negociar,
+    acao_atualizar_status_pedido,
+    acao_atualizar_previsao_pedido,
+    acao_receber_pedido,
+    acao_cancelar_pedido,
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]

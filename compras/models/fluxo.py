@@ -114,6 +114,13 @@ class AdjudicacaoCompra(models.Model):
         decimal_places=4,
         validators=[MinValueValidator(Decimal("0"))],
     )
+    desconto_final = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Desconto congelado para a quantidade adjudicada.",
+    )
     prazo_entrega_dias_final = models.PositiveIntegerField(null=True, blank=True)
     condicao_pagamento_final = models.CharField(max_length=255, blank=True)
     selecionado_por = models.ForeignKey(
@@ -135,8 +142,12 @@ class AdjudicacaoCompra(models.Model):
     motivo_cancelamento = models.TextField(blank=True)
 
     @property
-    def valor_total(self):
+    def valor_bruto(self):
         return self.quantidade * self.valor_unitario_final
+
+    @property
+    def valor_total(self):
+        return max(self.valor_bruto - (self.desconto_final or Decimal("0")), Decimal("0"))
 
 
 class AlcadaAprovacaoCompra(models.Model):

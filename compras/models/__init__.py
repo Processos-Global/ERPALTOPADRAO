@@ -15,7 +15,14 @@ from .fluxo import (
     HistoricoNegociacaoItem,
     NegociacaoItem,
 )
-from .pedido import HistoricoPrevisaoPedido, ParcelaPrevistaPedido, PedidoCompra, PedidoCompraItem
+from .pedido import (
+    HistoricoPrevisaoPedido,
+    ParcelaPrevistaPedido,
+    PedidoCompra,
+    PedidoCompraItem,
+    RecebimentoPedido,
+    RecebimentoPedidoItem,
+)
 from .historico import HistoricoProcessoCompra
 
 __all__ = [name for name in globals() if not name.startswith("_")]

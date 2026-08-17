@@ -49,6 +49,7 @@ class ProcessoCompra(models.Model):
         APROVADO = "APROVADO", "Aprovado"
         EM_CONTRATACAO = "EM_CONTRATACAO", "Em contratação"
         CONTRATADO = "CONTRATADO", "Contratado"
+        REPROVADO = "REPROVADO", "Reprovado"
         CANCELADO = "CANCELADO", "Cancelado"
 
     numero = models.CharField(max_length=20, unique=True, db_index=True)
@@ -150,8 +151,14 @@ class NecessidadeCompra(models.Model):
     processo = models.ForeignKey(ProcessoCompra, on_delete=models.CASCADE, related_name="necessidades")
     atividade_origem = models.ForeignKey(
         "planejamento.AtividadePlanejamento",
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="necessidades_compra",
+        help_text=(
+            "Opcional. Quando vazio, o item atende ao conjunto de atividades "
+            "vinculadas ao processo de compra."
+        ),
     )
     descricao = models.CharField(max_length=500)
     especificacao = models.TextField(blank=True)
@@ -171,7 +178,7 @@ class NecessidadeCompra(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ("atividade_origem__disciplina", "atividade_origem__nome_tarefa", "descricao", "id")
+        ordering = ("descricao", "id")
 
     def __str__(self):
         return f"{self.descricao} - {self.quantidade_incluida} {self.unidade}"

@@ -1,8 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
 
-from compras.models import ContratacaoCompra
+from compras.models import ContratacaoCompra, PedidoCompra
 from .auditoria import registrar_evento
 
 
@@ -12,41 +11,66 @@ def formalizar_fornecedor(
     prazo_entrega_dias=None, previsao_entrega=None, local_entrega="",
     referencia_contrato="", documento=None, observacoes=""
 ):
-    if processo.status not in [processo.Status.APROVADO, processo.Status.EM_CONTRATACAO]:
+    """Registra/atualiza a formalização sem alterar a etapa comercial do processo."""
+    if processo.status not in {
+        processo.Status.APROVADO,
+        processo.Status.EM_CONTRATACAO,
+        processo.Status.CONTRATADO,
+    }:
         raise ValidationError("O processo precisa estar aprovado antes da formalização.")
-    adjudicacoes = processo.adjudicacoes.filter(
-        cancelada=False,
-        cotacao__fornecedor=fornecedor,
-    )
-    if not adjudicacoes.exists():
-        raise ValidationError("Este fornecedor não possui itens adjudicados no processo.")
-    processo.status = processo.Status.EM_CONTRATACAO
-    processo.etapa_atual = processo.Etapa.CONTRATACAO
-    processo.save(update_fields=["status", "etapa_atual", "atualizado_em"])
 
-    contratacao, criada = ContratacaoCompra.objects.get_or_create(
-        processo=processo,
-        fornecedor=fornecedor,
-        cancelada=False,
-        defaults={
-            "tipo_formalizacao": tipo_formalizacao,
-            "condicao_pagamento": condicao_pagamento,
-            "prazo_entrega_dias": prazo_entrega_dias,
-            "previsao_entrega": previsao_entrega,
-            "local_entrega": local_entrega,
-            "referencia_contrato": referencia_contrato,
-            "documento": documento,
-            "observacoes": observacoes,
-            "formalizado_por": usuario,
-        },
-    )
-    if not criada:
-        raise ValidationError("Já existe formalização ativa para este fornecedor.")
+    if not processo.adjudicacoes.filter(cancelada=False, cotacao__fornecedor=fornecedor).exists():
+        raise ValidationError("Este fornecedor não possui itens adjudicados no processo.")
+
+    contratacao = processo.contratacoes.filter(fornecedor=fornecedor, cancelada=False).first()
+    dados = {
+        "tipo_formalizacao": tipo_formalizacao,
+        "condicao_pagamento": condicao_pagamento,
+        "prazo_entrega_dias": prazo_entrega_dias,
+        "previsao_entrega": previsao_entrega,
+        "local_entrega": local_entrega,
+        "referencia_contrato": referencia_contrato,
+        "observacoes": observacoes,
+        "formalizado_por": usuario,
+    }
+    if documento is not None:
+        dados["documento"] = documento
+
+    if contratacao:
+        for campo, valor in dados.items():
+            setattr(contratacao, campo, valor)
+        contratacao.save()
+    else:
+        contratacao = ContratacaoCompra.objects.create(
+            processo=processo,
+            fornecedor=fornecedor,
+            **dados,
+        )
+
+    # Se o pedido já foi gerado, sincroniza os metadados operacionais.
+    pedido = processo.pedidos.filter(fornecedor=fornecedor).exclude(status=PedidoCompra.Status.CANCELADO).first()
+    if pedido:
+        campos = []
+        if condicao_pagamento:
+            pedido.condicao_pagamento = condicao_pagamento
+            campos.append("condicao_pagamento")
+        if previsao_entrega:
+            if pedido.previsao_entrega_original is None:
+                pedido.previsao_entrega_original = previsao_entrega
+                campos.append("previsao_entrega_original")
+            pedido.previsao_entrega_atual = previsao_entrega
+            campos.append("previsao_entrega_atual")
+        if local_entrega:
+            pedido.local_entrega = local_entrega
+            campos.append("local_entrega")
+        if campos:
+            pedido.save(update_fields=[*set(campos), "atualizado_em"])
+
     registrar_evento(
         processo,
         "CONTRATACAO_FORMALIZADA",
         usuario,
-        f"Formalização registrada para {fornecedor.nome}.",
+        f"Formalização registrada/atualizada para {fornecedor.nome}.",
         {"contratacao_id": contratacao.pk},
     )
     return contratacao

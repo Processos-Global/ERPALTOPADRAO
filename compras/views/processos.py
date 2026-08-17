@@ -932,27 +932,9 @@ def novo_processo(request):
         },
     )
 
-    atividades_queryset = (
-        form.atividades_queryset
-    )
-
-    dados_por_atividade = (
-        form.dados_por_atividade
-    )
-
-    formset = (
-        ItemCompraAberturaFormSet(
-            request.POST or None,
-            prefix="itens",
-            form_kwargs={
-                "atividades_queryset": (
-                    atividades_queryset
-                ),
-                "dados_por_atividade": (
-                    dados_por_atividade
-                ),
-            },
-        )
+    formset = ItemCompraAberturaFormSet(
+        request.POST or None,
+        prefix="itens",
     )
 
     if (
@@ -972,110 +954,79 @@ def novo_processo(request):
             )
         ]
 
-        atividades_selecionadas = set(
-            form
-            .cleaned_data[
-                "atividades"
-            ]
-            .values_list(
-                "pk",
-                flat=True,
-            )
-        )
+        try:
 
-        item_atividade_ids = {
-            linha["atividade"].pk
-            for linha in itens
-        }
+            processo = criar_processo(
+                item_cronograma=(
+                    form.cleaned_data[
+                        "item_cronograma"
+                    ]
+                ),
 
-        if not item_atividade_ids.issubset(
-            atividades_selecionadas
-        ):
+                titulo=(
+                    form.cleaned_data[
+                        "titulo"
+                    ]
+                ),
 
-            form.add_error(
-                "atividades",
-                (
-                    "Toda atividade usada nos itens "
-                    "também precisa estar selecionada "
-                    "acima."
+                descricao=(
+                    form.cleaned_data[
+                        "descricao"
+                    ]
+                ),
+
+                comprador=(
+                    form.cleaned_data[
+                        "comprador"
+                    ]
+                ),
+
+                atividades=(
+                    form.cleaned_data[
+                        "atividades"
+                    ]
+                ),
+
+                itens=itens,
+
+                observacao=(
+                    form.cleaned_data[
+                        "observacao"
+                    ]
+                ),
+
+                usuario=(
+                    request.user
+                ),
+
+                iniciar_cotacao=(
+                    request.POST.get(
+                        "acao"
+                    )
+                    != "rascunho"
                 ),
             )
 
-        else:
+            messages.success(
+                request,
+                (
+                    f"Compra {processo.numero} "
+                    f"criada com "
+                    f"{len(itens)} item(ns)."
+                ),
+            )
 
-            try:
+            return redirect(
+                "compras:detalhe_processo",
+                pk=processo.pk,
+            )
 
-                processo = criar_processo(
-                    item_cronograma=(
-                        form.cleaned_data[
-                            "item_cronograma"
-                        ]
-                    ),
+        except ValidationError as exc:
 
-                    titulo=(
-                        form.cleaned_data[
-                            "titulo"
-                        ]
-                    ),
-
-                    descricao=(
-                        form.cleaned_data[
-                            "descricao"
-                        ]
-                    ),
-
-                    comprador=(
-                        form.cleaned_data[
-                            "comprador"
-                        ]
-                    ),
-
-                    atividades=(
-                        form.cleaned_data[
-                            "atividades"
-                        ]
-                    ),
-
-                    itens=itens,
-
-                    observacao=(
-                        form.cleaned_data[
-                            "observacao"
-                        ]
-                    ),
-
-                    usuario=(
-                        request.user
-                    ),
-
-                    iniciar_cotacao=(
-                        request.POST.get(
-                            "acao"
-                        )
-                        != "rascunho"
-                    ),
-                )
-
-                messages.success(
-                    request,
-                    (
-                        f"Compra {processo.numero} "
-                        f"criada com "
-                        f"{len(itens)} item(ns)."
-                    ),
-                )
-
-                return redirect(
-                    "compras:detalhe_processo",
-                    pk=processo.pk,
-                )
-
-            except ValidationError as exc:
-
-                form.add_error(
-                    None,
-                    exc,
-                )
+            form.add_error(
+                None,
+                exc,
+            )
 
     return render(
         request,

@@ -7,6 +7,9 @@ from .auditoria import registrar_evento
 
 @transaction.atomic
 def registrar_compatibilizacao(*, item_cotado, resultado, usuario, observacao="", ressalva_motivo=""):
+    processo = item_cotado.cotacao.processo
+    if processo.etapa_atual != processo.Etapa.COMPATIBILIZACAO:
+        raise ValidationError("A análise técnica só pode ser registrada na etapa de análise técnica.")
     if resultado not in CompatibilizacaoItem.Resultado.values:
         raise ValidationError("Resultado de compatibilização inválido.")
     if resultado == CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA and not ressalva_motivo.strip():

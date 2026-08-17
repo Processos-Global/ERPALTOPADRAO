@@ -24,6 +24,8 @@ def criar_fornecedor(*, nome, documento="", email="", telefone=""):
 
 @transaction.atomic
 def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
+    if processo.etapa_atual != processo.Etapa.COTACAO:
+        raise ValidationError("Propostas só podem ser alteradas durante a etapa de cotação.")
     if dados.get("frete") is None:
         dados["frete"] = Decimal("0")
     if processo.status == processo.Status.CANCELADO:
@@ -49,6 +51,8 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
 
 @transaction.atomic
 def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, usuario, **dados):
+    if cotacao.processo.etapa_atual != cotacao.processo.Etapa.COTACAO:
+        raise ValidationError("Itens da proposta só podem ser alterados durante a etapa de cotação.")
     if necessidade.processo_id != cotacao.processo_id:
         raise ValidationError("A necessidade não pertence ao processo desta cotação.")
     quantidade = Decimal(str(quantidade))

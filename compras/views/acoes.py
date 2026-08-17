@@ -15,7 +15,7 @@ from compras.forms import (
     NecessidadeCompraForm,
     NegociacaoForm,
 )
-from compras.models import AdjudicacaoCompra, ProcessoCompra
+from compras.models import AdjudicacaoCompra, PedidoCompra, ProcessoCompra
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
 from compras.services.compatibilizacao import registrar_compatibilizacao
 from compras.services.contratacao import formalizar_fornecedor
@@ -27,7 +27,10 @@ from compras.services.etapas import (
     decidir_aprovacao,
 )
 from compras.services.negociacao import registrar_negociacao
-from compras.services.pedidos import gerar_pedidos
+from compras.services.pedidos import (
+    atualizar_previsao_entrega, atualizar_status_pedido, cancelar_pedido,
+    gerar_pedidos, registrar_recebimento,
+)
 from compras.services.permissoes import compras_permission_required
 from compras.services.processos import incluir_necessidade
 
@@ -57,7 +60,6 @@ def acao_incluir_necessidade(request, pk):
             try:
                 incluir_necessidade(
                     processo=processo,
-                    atividade=form.cleaned_data["atividade"],
                     descricao=form.cleaned_data["descricao"],
                     especificacao=form.cleaned_data["especificacao"],
                     unidade=form.cleaned_data["unidade"],
@@ -302,3 +304,68 @@ def acao_gerar_pedidos(request, pk):
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)
+
+
+@compras_permission_required(NivelPermissao.EDICAO)
+def acao_atualizar_status_pedido(request, pedido_id):
+    pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
+    if request.method == "POST":
+        try:
+            atualizar_status_pedido(
+                pedido=pedido, novo_status=request.POST.get("status"),
+                usuario=request.user, observacao=request.POST.get("observacao", ""),
+            )
+            messages.success(request, "Status do pedido atualizado.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    return redirect("compras:lista_pedidos")
+
+
+@compras_permission_required(NivelPermissao.EDICAO)
+def acao_atualizar_previsao_pedido(request, pedido_id):
+    from datetime import date
+    pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
+    if request.method == "POST":
+        try:
+            valor = request.POST.get("previsao_entrega")
+            previsao = date.fromisoformat(valor) if valor else None
+            atualizar_previsao_entrega(
+                pedido=pedido, previsao_nova=previsao, usuario=request.user,
+                motivo=request.POST.get("motivo", ""),
+            )
+            messages.success(request, "Previsão de entrega atualizada.")
+        except (ValidationError, ValueError) as exc:
+            _erro(request, exc)
+    return redirect("compras:lista_pedidos")
+
+
+@compras_permission_required(NivelPermissao.EDICAO)
+def acao_receber_pedido(request, pedido_id):
+    pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
+    if request.method == "POST":
+        quantidades = {}
+        for item in pedido.itens.all():
+            valor = request.POST.get(f"item_{item.pk}")
+            if valor not in (None, ""):
+                quantidades[item.pk] = valor
+        try:
+            registrar_recebimento(
+                pedido=pedido, quantidades=quantidades, usuario=request.user,
+                observacao=request.POST.get("observacao", ""),
+            )
+            messages.success(request, "Recebimento registrado.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    return redirect("compras:lista_pedidos")
+
+
+@compras_permission_required(NivelPermissao.EDICAO)
+def acao_cancelar_pedido(request, pedido_id):
+    pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
+    if request.method == "POST":
+        try:
+            cancelar_pedido(pedido=pedido, usuario=request.user, motivo=request.POST.get("motivo", ""))
+            messages.success(request, "Pedido cancelado.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    return redirect("compras:lista_pedidos")
