@@ -78,3 +78,42 @@ def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, us
         {"item_cotado_id": item.pk},
     )
     return item
+
+
+@transaction.atomic
+def excluir_cotacao(*, cotacao, usuario):
+    """Exclui uma proposta completa enquanto o processo ainda está em cotação.
+
+    Os itens da proposta são removidos em cascata pelo relacionamento
+    CotacaoFornecedor -> CotacaoFornecedorItem. A exclusão é deliberadamente
+    bloqueada após a etapa de cotação para preservar decisões posteriores.
+    """
+    processo = cotacao.processo
+
+    if processo.etapa_atual != processo.Etapa.COTACAO:
+        raise ValidationError(
+            "A proposta só pode ser excluída enquanto o processo estiver na etapa de cotação."
+        )
+
+    if processo.status == processo.Status.CANCELADO:
+        raise ValidationError("Processo cancelado não pode ter propostas alteradas.")
+
+    fornecedor_nome = cotacao.fornecedor.nome
+    cotacao_id = cotacao.pk
+    fornecedor_id = cotacao.fornecedor_id
+    quantidade_itens = cotacao.itens.count()
+
+    registrar_evento(
+        processo,
+        "PROPOSTA_EXCLUIDA",
+        usuario,
+        f"Proposta de {fornecedor_nome} excluída da cotação.",
+        {
+            "cotacao_id": cotacao_id,
+            "fornecedor_id": fornecedor_id,
+            "quantidade_itens": quantidade_itens,
+        },
+    )
+
+    cotacao.delete()
+    return fornecedor_nome

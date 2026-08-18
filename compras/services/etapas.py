@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from compras.models import AprovacaoCompra, ProcessoCompra
+from compras.models import AprovacaoCompra, AdjudicacaoCompra, NegociacaoItem, ProcessoCompra
 
 from .adjudicacoes import validar_adjudicacao_completa
 from .alcadas import resolver_alcada_aprovacao
@@ -45,28 +45,128 @@ def concluir_compatibilizacao(processo, usuario):
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if p.etapa_atual != p.Etapa.COMPATIBILIZACAO:
         raise ValidationError("O processo não está na etapa de análise técnica.")
+    if p.status in {p.Status.CANCELADO, p.Status.REPROVADO, p.Status.CONTRATADO}:
+        raise ValidationError("Este processo não pode mais ser alterado.")
 
-    necessidades = list(p.necessidades.filter(situacao="ATIVA"))
+    necessidades = list(p.necessidades.filter(situacao="ATIVA").order_by("descricao", "id"))
     if not necessidades:
         raise ValidationError("O processo não possui itens ativos para análise técnica.")
 
-    # Filtra os itens cotados pela ÚLTIMA decisão técnica.
-    from compras.models import CotacaoFornecedorItem
-    itens_validos = queryset_itens_tecnicamente_aprovados(
-        CotacaoFornecedorItem.objects.filter(cotacao__processo=p)
-    )
-    necessidades_validas = set(itens_validos.values_list("necessidade_id", flat=True))
-    pendentes = [n for n in necessidades if n.pk not in necessidades_validas]
-    if pendentes:
-        nomes = ", ".join(n.descricao for n in pendentes[:5])
-        raise ValidationError(f"Existe item obrigatório sem solução técnica válida: {nomes}.")
+    from compras.models import CompatibilizacaoItem, CotacaoFornecedorItem
 
+    itens = list(
+        CotacaoFornecedorItem.objects
+        .filter(cotacao__processo=p, necessidade__situacao="ATIVA")
+        .select_related("cotacao__fornecedor", "necessidade")
+        .prefetch_related("compatibilizacoes")
+        .order_by("necessidade__descricao", "cotacao__fornecedor__nome", "id")
+    )
+
+    # Toda oferta precisa possuir uma decisão técnica atual. Enquanto existir
+    # qualquer oferta pendente, a análise permanece aberta e nenhuma transição
+    # de etapa é realizada.
+    ofertas_pendentes = []
+    aprovadas_por_necessidade = set()
+
+    inicio_ciclo_tecnico = p.data_cotacao_concluida
+
+    for item in itens:
+        atual = item.compatibilizacoes.first()
+
+        # Em um novo ciclo iniciado após retorno do gestor para Cotação,
+        # uma decisão técnica antiga continua no histórico, mas não vale como
+        # decisão do ciclo atual. Cada oferta precisa ser analisada novamente.
+        if (
+            atual is None
+            or inicio_ciclo_tecnico is None
+            or atual.data < inicio_ciclo_tecnico
+        ):
+            ofertas_pendentes.append(item)
+            continue
+
+        if atual.resultado in {
+            CompatibilizacaoItem.Resultado.APROVADO,
+            CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA,
+        }:
+            aprovadas_por_necessidade.add(item.necessidade_id)
+
+    if ofertas_pendentes:
+        exemplos = ", ".join(
+            f"{item.necessidade.descricao} / {item.cotacao.fornecedor.nome}"
+            for item in ofertas_pendentes[:5]
+        )
+        complemento = (
+            ""
+            if len(ofertas_pendentes) <= 5
+            else f" e mais {len(ofertas_pendentes) - 5} oferta(s)"
+        )
+        raise ValidationError(
+            "Existem ofertas sem decisão técnica: " + exemplos + complemento + "."
+        )
+
+    # Todas as ofertas já foram analisadas. Se alguma necessidade ficou sem
+    # nenhuma alternativa aprovada, a análise técnica terminou com necessidade
+    # de nova cotação. O processo retorna para COTAÇÃO, preservando todas as
+    # decisões técnicas já registradas para manter o histórico.
+    sem_solucao = [n for n in necessidades if n.pk not in aprovadas_por_necessidade]
+    if sem_solucao:
+        nomes = ", ".join(n.descricao for n in sem_solucao[:5])
+        complemento = (
+            ""
+            if len(sem_solucao) <= 5
+            else f" e mais {len(sem_solucao) - 5} item(ns)"
+        )
+
+        p.etapa_atual = p.Etapa.COTACAO
+        p.status = p.Status.AJUSTE_SOLICITADO
+        p.data_cotacao_concluida = None
+        p.data_compatibilizacao_concluida = None
+        p.save(
+            update_fields=[
+                "etapa_atual",
+                "status",
+                "data_cotacao_concluida",
+                "data_compatibilizacao_concluida",
+                "atualizado_em",
+            ]
+        )
+
+        registrar_evento(
+            p,
+            "COMPATIBILIZACAO_RETORNOU_COTACAO",
+            usuario,
+            (
+                "Análise técnica concluída sem alternativa aprovada para: "
+                + nomes
+                + complemento
+                + ". Processo retornado para cotação para inclusão ou correção de proposta."
+            ),
+            {
+                "necessidades_sem_solucao": [n.pk for n in sem_solucao],
+            },
+        )
+        return p
+
+    # Todas as necessidades possuem ao menos uma alternativa tecnicamente válida.
+    # O fluxo normal segue para negociação.
     p.data_compatibilizacao_concluida = timezone.now()
     p.etapa_atual = p.Etapa.NEGOCIACAO
     p.status = p.Status.EM_NEGOCIACAO
-    p.save(update_fields=["data_compatibilizacao_concluida", "etapa_atual", "status", "atualizado_em"])
+    p.save(
+        update_fields=[
+            "data_compatibilizacao_concluida",
+            "etapa_atual",
+            "status",
+            "atualizado_em",
+        ]
+    )
     sincronizar_data_real(p, "COMPATIBILIZACAO", usuario)
-    registrar_evento(p, "COMPATIBILIZACAO_CONCLUIDA", usuario, "Análise técnica concluída. Processo enviado para negociação.")
+    registrar_evento(
+        p,
+        "COMPATIBILIZACAO_CONCLUIDA",
+        usuario,
+        "Análise técnica concluída. Processo enviado para negociação.",
+    )
     return p
 
 
@@ -90,7 +190,13 @@ def concluir_negociacao(processo, usuario):
 
 @transaction.atomic
 def decidir_aprovacao(processo, usuario, decisao, observacao=""):
-    """Aprova, reprova ou devolve para negociação. Aprovação gera pedidos automaticamente."""
+    """
+    Registra a decisão final do gestor.
+
+    - APROVADO: gera pedidos automaticamente.
+    - AJUSTE_SOLICITADO: reinicia o ciclo a partir da Cotação.
+    - REPROVADO: encerra definitivamente o processo.
+    """
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if p.etapa_atual != p.Etapa.APROVACAO:
         raise ValidationError("O processo não está aguardando aprovação.")
@@ -116,11 +222,55 @@ def decidir_aprovacao(processo, usuario, decisao, observacao=""):
     )
 
     if decisao == AprovacaoCompra.Decisao.AJUSTE_SOLICITADO:
+        # A solicitação de ajuste do gestor reinicia o ciclo comercial inteiro.
+        # As propostas permanecem cadastradas para que possam ser corrigidas ou
+        # complementadas, mas as escolhas comerciais ativas deixam de valer.
+        agora = timezone.now()
+        AdjudicacaoCompra.objects.filter(
+            processo=p,
+            cancelada=False,
+        ).update(
+            cancelada=True,
+            cancelada_por=usuario,
+            cancelada_em=agora,
+            motivo_cancelamento=(
+                f"Seleção cancelada automaticamente no ciclo {ciclo}: "
+                "gestor solicitou ajuste e o processo retornou para cotação."
+            ),
+        )
+
+        # A condição negociada atual também não deve ser reaproveitada
+        # automaticamente no novo ciclo. O histórico de negociação permanece
+        # preservado em HistoricoNegociacaoItem.
+        NegociacaoItem.objects.filter(
+            item_cotado__cotacao__processo=p
+        ).delete()
+
         p.status = p.Status.AJUSTE_SOLICITADO
-        p.etapa_atual = p.Etapa.NEGOCIACAO
+        p.etapa_atual = p.Etapa.COTACAO
+        p.data_cotacao_concluida = None
+        p.data_compatibilizacao_concluida = None
         p.data_negociacao_concluida = None
-        p.save(update_fields=["status", "etapa_atual", "data_negociacao_concluida", "atualizado_em"])
-        registrar_evento(p, "APROVACAO", usuario, "Ajuste solicitado. Processo retornou para negociação.", {"ciclo": ciclo})
+        p.save(
+            update_fields=[
+                "status",
+                "etapa_atual",
+                "data_cotacao_concluida",
+                "data_compatibilizacao_concluida",
+                "data_negociacao_concluida",
+                "atualizado_em",
+            ]
+        )
+        registrar_evento(
+            p,
+            "AJUSTE_SOLICITADO_GESTOR",
+            usuario,
+            (
+                "Gestor solicitou ajuste. Processo retornou para Cotação e deverá "
+                "passar novamente por Cotação, Análise Técnica, Negociação e Aprovação."
+            ),
+            {"ciclo": ciclo, "observacao": observacao},
+        )
         return aprovacao
 
     if decisao == AprovacaoCompra.Decisao.REPROVADO:

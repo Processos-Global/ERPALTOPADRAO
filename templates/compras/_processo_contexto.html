@@ -1,0 +1,56 @@
+<aside class="pc-aside">
+  <details class="pc-context-panel" open>
+    <summary>
+      <div>
+        <strong>Informações da compra</strong>
+        <span>Contexto rápido durante o preenchimento</span>
+      </div>
+      <span class="pc-context-toggle">⌄</span>
+    </summary>
+    <div class="pc-context-body">
+      <div class="pc-context-row"><span>Obra</span><strong>{{ processo.obra.nome }}</strong></div>
+      <div class="pc-context-row"><span>Suprimento</span><strong>{% if processo.item_cronograma %}{{ processo.item_cronograma.item }}{% else %}—{% endif %}</strong></div>
+      <div class="pc-context-row"><span>Comprador</span><strong>{{ processo.comprador|default:"Não definido" }}</strong></div>
+      <div class="pc-context-row"><span>Etapa atual</span><strong>{{ processo.get_etapa_atual_display }}</strong></div>
+      <div class="pc-context-row"><span>Abertura</span><strong>{{ processo.data_abertura|date:"d/m/Y" }}</strong></div>
+      {% if processo.item_cronograma.prazo_limite_contratacao %}
+        <div class="pc-context-row"><span>Contratar até</span><strong>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y" }}</strong></div>
+      {% endif %}
+      <div class="pc-context-row pc-context-row--stack">
+        <span>Atividade(s) relacionada(s)</span>
+        <div class="pc-context-activities">
+          {% for vinculo in vinculos %}
+            <div class="pc-context-activity">
+              <strong>{{ vinculo.atividade.nome_tarefa }}</strong>
+              <small>{{ vinculo.atividade.disciplina|default:"Sem disciplina" }}</small>
+            </div>
+          {% empty %}
+            <strong>Não vinculada</strong>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="pc-context-panel">
+    <summary>
+      <div>
+        <strong>Itens solicitados</strong>
+        <span>{{ necessidades|length }} item(ns)</span>
+      </div>
+      <span class="pc-context-toggle">⌄</span>
+    </summary>
+    <div class="pc-context-body">
+      <div class="pc-context-list">
+        {% for n in necessidades %}
+          <div class="pc-context-item">
+            <strong>{{ n.descricao }}</strong>
+            <small>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}{% if n.especificacao %} · {{ n.especificacao|truncatechars:75 }}{% endif %}</small>
+          </div>
+        {% empty %}
+          <div class="pc-empty">Nenhum item informado.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </details>
+</aside>

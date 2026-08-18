@@ -1,36 +1,168 @@
 {% extends "layouts/base.html" %}
-{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+<style>
+  .cp-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .cp-board{
+    display:grid;
+    grid-auto-flow:column;
+    grid-auto-columns:minmax(245px,280px);
+    grid-template-columns:none;
+    align-items:start;
+    gap:10px;
+    overflow-x:auto;
+    overscroll-behavior-inline:contain;
+    padding:2px 2px 12px;
+    scrollbar-width:thin;
+  }
+  .cp-column{min-width:0;height:auto}
+  .cp-column__head{align-items:flex-start;padding:8px 7px 9px}
+  .cp-column__title{min-width:0}
+  .cp-column__title strong{display:block;color:#31515f;font-size:11px;font-weight:900}
+  .cp-column__title small{display:block;margin-top:3px;color:#82959d;font-size:9px;font-weight:600;line-height:1.35}
+  .cp-column[data-column="AJUSTE"]{background:#fff9ee;border-color:#ead9b9}
+  .cp-column[data-column="AJUSTE"] .cp-count{background:#f6e8c8;color:#7f5d29}
+  .cp-column[data-column="APROVACAO"]{background:#f8f7fd;border-color:#ded9ec}
+  .cp-column[data-column="CONCLUIDO"]{background:#f3f9f5;border-color:#d6e8de}
+  .cp-column[data-column="CONCLUIDO"] .cp-count{background:#dfeee5;color:#416d56}
+  .cp-column[data-column="ENCERRADOS"]{background:#fff6f6;border-color:#efd2d2}
+  .cp-column[data-column="ENCERRADOS"] .cp-count{background:#f3dddd;color:#8b4646}
+  .cp-process-card__stage{display:block;margin-top:5px;color:#81949c;font-size:9px}
+  .cp-process-card--overdue{border-color:#e7c7a3}
+  .cp-process-card--overdue .cp-process-card__foot span:last-child{color:#986327;font-weight:850}
+  .cp-board-hint{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-4px 0 8px;color:#85979f;font-size:10px}
+  @media(max-width:1100px){.cp-kpis{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:680px){
+    .cp-kpis{grid-template-columns:1fr}
+    .cp-board{grid-auto-columns:minmax(260px,84vw)}
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="cp-page">
   <div class="cp-head">
-    <div class="cp-head__copy"><div class="cp-eyebrow">Suprimentos</div><h1 class="cp-title">Painel de compras</h1><div class="cp-sub">Use o Kanban para enxergar onde cada processo está e atacar primeiro aprovações e prazos críticos.</div></div>
-    <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a><a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a></div>
+    <div class="cp-head__copy">
+      <div class="cp-eyebrow">Suprimentos</div>
+      <h1 class="cp-title">Painel de compras</h1>
+      <div class="cp-sub">Acompanhe cada processo pelo status real do fluxo, da abertura até a contratação ou encerramento.</div>
+    </div>
+    <div class="cp-actions">
+      <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a>
+      <a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a>
+      <a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a>
+    </div>
   </div>
+
   <div class="cp-kpis">
-    <div class="cp-kpi"><span>Processos ativos</span><strong>{{ ativos }}</strong><small>Em andamento no fluxo comercial</small></div>
-    <div class="cp-kpi"><span>Atrasados</span><strong>{{ atrasados }}</strong><small>Prazo de contratação vencido</small></div>
-    <div class="cp-kpi"><span>Aguardando aprovação</span><strong>{{ aguardando }}</strong><small>Dependem de decisão</small></div>
-    <div class="cp-kpi"><span>Concluídos em 30 dias</span><strong>{{ contratados }}</strong><small>Compras finalizadas recentemente</small></div>
+    <div class="cp-kpi">
+      <span>Processos ativos</span>
+      <strong>{{ ativos }}</strong>
+      <small>Em andamento no fluxo comercial</small>
+    </div>
+    <div class="cp-kpi">
+      <span>Atrasados</span>
+      <strong>{{ atrasados }}</strong>
+      <small>Prazo de contratação vencido</small>
+    </div>
+    <div class="cp-kpi">
+      <span>Aguardando aprovação</span>
+      <strong>{{ aguardando }}</strong>
+      <small>Dependem de decisão do gestor</small>
+    </div>
+    <div class="cp-kpi">
+      <span>Ajustes solicitados</span>
+      <strong>{{ ajustes }}</strong>
+      <small>Voltaram para novo ciclo de cotação</small>
+    </div>
+    <div class="cp-kpi">
+      <span>Concluídos em 30 dias</span>
+      <strong>{{ contratados }}</strong>
+      <small>Compras finalizadas recentemente</small>
+    </div>
   </div>
+
   <form class="cp-filter" method="get">
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar processo, suprimento ou obra">
-    <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
-    <select class="cp-input" name="etapa"><option value="">Todas as etapas</option>{% for valor,rotulo in etapa_choices %}<option value="{{ valor }}" {% if request.GET.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
-    <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+    <select class="cp-input" name="obra">
+      <option value="">Todas as obras</option>
+      {% for obra in obras %}
+        <option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>
+      {% endfor %}
+    </select>
+    <select class="cp-input" name="etapa">
+      <option value="">Todas as etapas</option>
+      {% for valor,rotulo in etapa_choices %}
+        <option value="{{ valor }}" {% if request.GET.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
+    <select class="cp-input" name="status">
+      <option value="">Todos os status</option>
+      {% for valor,rotulo in status_choices %}
+        <option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>
+      {% endfor %}
+    </select>
     <button class="cp-btn" type="submit">Aplicar filtros</button>
   </form>
+
+  <div class="cp-board-hint">
+    <span>Fluxo organizado pelos status atuais do módulo.</span>
+    <span>Role horizontalmente para ver todas as colunas →</span>
+  </div>
+
   <div class="cp-board">
     {% for coluna in colunas %}
-      <section class="cp-column">
-        <div class="cp-column__head"><span>{{ coluna.titulo }}</span><span class="cp-count">{{ coluna.processos|length }}</span></div>
+      <section class="cp-column" data-column="{{ coluna.chave }}">
+        <div class="cp-column__head">
+          <div class="cp-column__title">
+            <strong>{{ coluna.titulo }}</strong>
+            <small>{{ coluna.descricao }}</small>
+          </div>
+          <span class="cp-count">{{ coluna.processos|length }}</span>
+        </div>
+
         {% for processo in coluna.processos %}
-          <a class="cp-process-card" href="{% url 'compras:detalhe_processo' processo.pk %}">
-            <div class="cp-process-card__top"><span class="cp-process-card__number">{{ processo.numero }}</span>{% if processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}<span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>{% elif processo.status == 'CONTRATADO' %}<span class="cp-badge cp-badge--ok">Concluído</span>{% elif processo.status == 'AGUARDANDO_APROVACAO' or processo.status == 'AJUSTE_SOLICITADO' %}<span class="cp-badge cp-badge--warn">{{ processo.get_status_display }}</span>{% else %}<span class="cp-badge cp-badge--active">{{ processo.get_status_display }}</span>{% endif %}</div>
+          <a
+            class="cp-process-card{% if processo.item_cronograma.prazo_limite_contratacao and processo.item_cronograma.prazo_limite_contratacao < hoje and processo.status != 'CONTRATADO' and processo.status != 'REPROVADO' and processo.status != 'CANCELADO' %} cp-process-card--overdue{% endif %}"
+            href="{% url 'compras:detalhe_processo' processo.pk %}"
+          >
+            <div class="cp-process-card__top">
+              <span class="cp-process-card__number">{{ processo.numero }}</span>
+
+              {% if processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}
+                <span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>
+              {% elif processo.status == 'CONTRATADO' %}
+                <span class="cp-badge cp-badge--ok">{{ processo.get_status_display }}</span>
+              {% elif processo.status == 'AGUARDANDO_APROVACAO' or processo.status == 'AJUSTE_SOLICITADO' %}
+                <span class="cp-badge cp-badge--warn">{{ processo.get_status_display }}</span>
+              {% elif processo.status == 'APROVADO' %}
+                <span class="cp-badge cp-badge--ok">{{ processo.get_status_display }}</span>
+              {% else %}
+                <span class="cp-badge cp-badge--active">{{ processo.get_status_display }}</span>
+              {% endif %}
+            </div>
+
             <div class="cp-process-card__title">{{ processo.titulo }}</div>
-            <div class="cp-process-card__meta">{{ processo.obra.nome }}{% if processo.comprador %} · {{ processo.comprador }}{% endif %}</div>
-            <div class="cp-process-card__foot"><span>{{ processo.qtd_itens }} item(ns) · {{ processo.qtd_fornecedores }} fornecedor(es)</span><span>{% if processo.item_cronograma.prazo_limite_contratacao %}{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m" }}{% else %}Sem prazo{% endif %}</span></div>
+            <div class="cp-process-card__meta">
+              {{ processo.obra.nome }}
+              {% if processo.comprador %} · {{ processo.comprador }}{% endif %}
+            </div>
+            <span class="cp-process-card__stage">Etapa: {{ processo.get_etapa_atual_display }}</span>
+
+            <div class="cp-process-card__foot">
+              <span>{{ processo.qtd_itens }} item(ns) · {{ processo.qtd_fornecedores }} fornecedor(es)</span>
+              <span>
+                {% if processo.item_cronograma.prazo_limite_contratacao %}
+                  {{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m" }}
+                {% else %}
+                  Sem prazo
+                {% endif %}
+              </span>
+            </div>
           </a>
-        {% empty %}<div class="cp-empty" style="padding:18px 8px!important">Nenhum processo nesta etapa.</div>{% endfor %}
+        {% empty %}
+          <div class="cp-empty" style="padding:18px 8px!important">Nenhum processo neste status.</div>
+        {% endfor %}
       </section>
     {% endfor %}
   </div>

@@ -2,150 +2,143 @@
 {% block extra_css %}
 {% include "compras/_styles.html" %}
 <style>
-  .pc-page{max-width:1500px;margin:0 auto;padding:4px 0 86px;color:#173847}
-  .pc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:8px 2px 16px;border-bottom:1px solid #dfeaed}
-  .pc-header h1{margin:0;font-size:24px;line-height:1.15;font-weight:800;letter-spacing:-.025em;color:#173847}
-  .pc-header p{margin:5px 0 0;font-size:12px;color:#748c97}
+  .pc-open{max-width:1440px;margin:0 auto;padding:14px 22px 118px;color:#183746}
+  .pc-open::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 15% 0%,rgba(7,143,165,.035),transparent 28%),linear-gradient(180deg,#f8fbfc 0,#fff 260px);z-index:-1}
+  .pc-open *{box-sizing:border-box}
 
-  .pc-stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:16px 2px 14px}
-  .pc-step{display:flex;gap:10px;align-items:flex-start;min-width:0;position:relative}
-  .pc-step:not(:last-child)::after{content:"";position:absolute;left:36px;right:-11px;top:14px;height:1px;background:#dbe7ea;z-index:0}
-  .pc-step__num{position:relative;z-index:1;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;border:1px solid #cedde1;background:#fff;color:#78909a;font-size:12px;font-weight:800;flex:0 0 28px}
-  .pc-step--active .pc-step__num{background:#0794ac;border-color:#0794ac;color:#fff;box-shadow:0 4px 12px rgba(7,148,172,.20)}
-  .pc-step__copy{min-width:0;padding-top:1px;position:relative;z-index:1;background:#fff;padding-right:8px}
-  .pc-step__copy strong{display:block;font-size:11px;color:#5b707b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pc-step--active .pc-step__copy strong{color:#146177}
-  .pc-step__copy span{display:block;margin-top:2px;font-size:9px;color:#92a4ab;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-open-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin-bottom:20px;padding:4px 2px 0}
+  .pc-open-head h1{margin:4px 0 7px;font-size:30px;letter-spacing:-.025em;color:#183746}
+  .pc-open-head p{margin:0;max-width:760px;color:#738892;font-size:13px;line-height:1.6}
+  .pc-required-note{font-size:11px;color:#85969d;white-space:nowrap}
+  .req{color:#b84e55}
 
-  .pc-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
-  .pc-main{display:grid;gap:12px;min-width:0}
-  .pc-card{border:1px solid #dbe7ea;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(22,64,78,.025);overflow:hidden}
-  .pc-card__head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px 9px}
-  .pc-card__title-wrap{display:flex;gap:9px;align-items:flex-start;min-width:0}
-  .pc-card__icon{width:23px;height:23px;border-radius:7px;background:#eef9fb;color:#0794ac;display:grid;place-items:center;font-size:13px;flex:0 0 23px}
-  .pc-card__title{margin:0;font-size:13px;line-height:1.25;font-weight:800;color:#183b4b}
-  .pc-card__desc{margin:2px 0 0;font-size:9.5px;color:#81959e}
-  .pc-card__body{padding:0 14px 14px}
+  .pc-open-main{display:grid;gap:18px}
+  .pc-card{border:1px solid #dbe5e9;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 30px rgba(31,64,78,.055);transition:box-shadow .18s ease,border-color .18s ease}
+  .pc-card:hover{border-color:#cfdfe4;box-shadow:0 14px 34px rgba(31,64,78,.07)}
+  .pc-card__head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid #edf2f4;background:linear-gradient(180deg,#fcfefe 0,#fafcfd 100%)}
+  .pc-card__head h2{margin:0;color:#183746;font-size:16px}
+  .pc-card__head p{margin:4px 0 0;color:#788d96;font-size:12px;line-height:1.5}
+  .pc-step{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:9px;border-radius:9px;background:#e9f7f9;color:#087d90;font-size:11px;font-weight:900;vertical-align:middle;box-shadow:inset 0 0 0 1px #d7edf1}
+  .pc-card__body{padding:22px}
 
-  .pc-origin{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid #bfe0e6;border-radius:10px;background:linear-gradient(90deg,#f3fbfc,#fbfeff);margin-bottom:12px}
-  .pc-origin__main{display:flex;align-items:center;gap:10px;min-width:0}
-  .pc-origin__icon{width:42px;height:42px;border:1px solid #cfe6eb;border-radius:9px;background:#fff;display:grid;place-items:center;color:#0a7890;font-size:20px;flex:0 0 42px}
-  .pc-origin strong{display:block;font-size:12px;color:#214757;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pc-origin span{display:block;margin-top:3px;font-size:9.5px;color:#718b96}
+  .pc-origin{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 17px;border:1px solid #c8e3e8;border-radius:12px;background:#f3fbfc}
+  .pc-origin strong{display:block;font-size:15px;color:#224958}
+  .pc-origin span{display:block;margin-top:4px;color:#6f8791;font-size:12px;line-height:1.45}
+  .pc-origin-badge{padding:6px 9px;border-radius:999px;background:#fff;color:#087d90!important;border:1px solid #cfe7eb;font-size:10px!important;font-weight:850}
 
-  .pc-grid-2{display:grid;grid-template-columns:1fr 1.75fr;gap:12px}
-  .pc-field{min-width:0;margin-bottom:10px}
-  .pc-field:last-child{margin-bottom:0}
-  .pc-field label{display:block;margin:0 0 5px;font-size:9.5px;font-weight:700;color:#5f7782}
-  .pc-field label .req{color:#eb5d67}
-  .pc-field input:not([type="checkbox"]):not([type="radio"]),
-  .pc-field select,.pc-field textarea{width:100%;box-sizing:border-box;border:1px solid #ccdce1;border-radius:7px;background:#fff;color:#294b58;font-size:10.5px;outline:none;transition:border-color .18s,box-shadow .18s,background .18s}
-  .pc-field input:not([type="checkbox"]):not([type="radio"]),.pc-field select{height:36px;padding:0 10px}
-  .pc-field textarea{min-height:66px;padding:9px 10px;resize:vertical}
-  .pc-field input:focus,.pc-field select:focus,.pc-field textarea:focus{border-color:#77c7d4;box-shadow:0 0 0 3px rgba(7,148,172,.08);background:#fff}
-  .pc-field-counter{display:flex;justify-content:flex-end;margin-top:3px;font-size:8.5px;color:#9aabb1}
-  .pc-help,.pc-error{font-size:9px;margin-top:4px}.pc-help{color:#82959d}.pc-error{color:#c94450;font-weight:700}
+  .pc-grid-2{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);gap:16px}
+  .pc-field{min-width:0}
+  .pc-field label{display:block;margin:0 0 7px;font-size:12px;font-weight:800;color:#496572}
+  .pc-field input:not([type=checkbox]):not([type=radio]),.pc-field select,.pc-field textarea{width:100%;min-height:45px;padding:10px 12px;border:1px solid #cad9de;border-radius:10px;background:#fff;color:#294b58;font:inherit;font-size:13px;outline:none;transition:.15s}
+  .pc-field textarea{min-height:96px;resize:vertical}
+  .pc-field input:focus,.pc-field select:focus,.pc-field textarea:focus{border-color:#62b5c3;box-shadow:0 0 0 3px rgba(7,143,165,.09)}
+  .pc-field-counter{display:flex;justify-content:flex-end;margin-top:5px;color:#91a1a8;font-size:10px}
+  .pc-help{margin-top:6px;color:#7d9199;font-size:11px;line-height:1.5}
+  .pc-error{margin-top:5px;color:#a44747;font-size:11px;font-weight:700}
 
-  .pc-btn{height:32px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 12px;border:1px solid #cadce1;border-radius:7px;background:#fff;color:#325665;text-decoration:none;font-size:9.5px;font-weight:750;cursor:pointer;transition:.18s ease;white-space:nowrap}
-  .pc-btn:hover{border-color:#9ecbd4;background:#f7fbfc;transform:translateY(-1px)}
-  .pc-btn--soft{background:#f7fbfc;color:#38616f}
-  .pc-btn--primary{border-color:#0794ac;background:#0794ac;color:#fff;box-shadow:0 5px 14px rgba(7,148,172,.18)}
-  .pc-btn--primary:hover{background:#07869b;border-color:#07869b;color:#fff}
-  .pc-btn--danger{color:#c64750;border-color:#efcbd0;background:#fff}
-  .pc-btn--sm{height:29px;padding:0 10px;font-size:9px}
+  .pc-btn{min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border:1px solid #cad9de;border-radius:9px;background:#fff;color:#31515f;text-decoration:none;font:inherit;font-size:12px;font-weight:800;cursor:pointer}
+  .pc-btn:hover{border-color:#9dcbd3;background:#f8fbfc}
+  .pc-btn--primary{background:#078fa5;border-color:#078fa5;color:#fff}
+  .pc-btn--primary:hover{background:#067b90;color:#fff}
+  .pc-btn--sm{min-height:36px;padding:7px 11px;font-size:11px}
 
-  .pc-activity-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
-  .pc-search{position:relative;max-width:430px;width:100%}
-  .pc-search input{width:100%;height:34px;padding:0 35px 0 31px;border:1px solid #d0dfe3;border-radius:7px;font-size:10px;color:#34545f;outline:none;background:#fff;box-sizing:border-box}
-  .pc-search svg{position:absolute;left:10px;top:9px;width:14px;height:14px;color:#8aa0a8}
-  .pc-search__clear{position:absolute;right:7px;top:6px;width:22px;height:22px;border:0;border-radius:5px;background:transparent;color:#9baab0;cursor:pointer;display:none}
-  .pc-selection-info{display:flex;align-items:center;gap:10px;font-size:9px;color:#71868f}
-  .pc-selection-info strong{color:#1c586a}
-
-  .pc-selected{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-bottom:10px}
-  .pc-selected:empty{display:none}
-  .pc-chip{position:relative;padding:9px 27px 8px 35px;border:1px solid #d5e4e8;border-radius:8px;background:#fff;min-width:0;min-height:51px}
-  .pc-chip__ico{position:absolute;left:9px;top:9px;width:19px;height:19px;border-radius:5px;background:#e8f8fb;color:#0b91aa;display:grid;place-items:center;font-size:10px}
-  .pc-chip strong{display:block;font-size:8.8px;line-height:1.3;color:#375965;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pc-chip span{display:block;margin-top:4px;font-size:8px;color:#8598a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pc-chip button{position:absolute;right:6px;top:6px;border:0;background:transparent;color:#647f88;font-size:14px;cursor:pointer;line-height:1}
-
-  .pc-activity-table-wrap{border:1px solid #dce7ea;border-radius:8px;overflow:hidden}
-  .pc-activity-table-scroll{max-height:216px;overflow:auto}
-  .pc-activity-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.9px}
-  .pc-activity-table th{position:sticky;top:0;z-index:2;background:#f8fafb;text-align:left;padding:7px 8px;color:#56707a;font-size:8px;text-transform:uppercase;letter-spacing:.025em;border-bottom:1px solid #dce7ea}
-  .pc-activity-table td{padding:7px 8px;border-bottom:1px solid #edf2f4;color:#536d76;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pc-activity-table tr:last-child td{border-bottom:0}
-  .pc-activity-table tr:hover td{background:#fbfdfe}
-  .pc-check{width:14px;height:14px;accent-color:#0794ac;cursor:pointer}
-  .pc-act-btn{border:0;background:transparent;font-size:8.5px;font-weight:750;color:#15657a;cursor:pointer;padding:3px 0}
-  .pc-act-btn--remove{color:#cf4a52}
-  .pc-native-activities{position:absolute!important;left:-99999px!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}
-  .pc-empty{padding:20px;text-align:center;font-size:9.5px;color:#8ca0a8}
-
-  .pc-items-table-wrap{border:1px solid #dce7ea;border-radius:8px;overflow:hidden}
-  .pc-items-head{display:grid;grid-template-columns:30px minmax(210px,1.25fr) minmax(100px,.62fr) 85px minmax(190px,1fr) 60px;background:#f8fafb;border-bottom:1px solid #dce7ea}
-  .pc-items-head div{padding:7px 8px;font-size:8px;text-transform:uppercase;letter-spacing:.025em;color:#59717a;font-weight:800}.pc-items-head .req{color:#eb5d67}
-  .pc-item{display:grid;grid-template-columns:30px minmax(210px,1.25fr) minmax(100px,.62fr) 85px minmax(190px,1fr) 60px;align-items:start;border-bottom:1px solid #edf2f4;background:#fff;position:relative}
-  .pc-item:last-child{border-bottom:0}
-  .pc-item__num{padding:12px 8px;font-size:9px;color:#80949c;text-align:center}
-  .pc-item__cell{padding:6px 6px;min-width:0}
-  .pc-item__cell .pc-field{margin:0}
-  .pc-item__cell .pc-field label{display:none}
-  .pc-item__cell input:not([type="checkbox"]),.pc-item__cell select,.pc-item__cell textarea{height:32px!important;min-height:32px!important;border-color:transparent!important;background:transparent!important;border-radius:5px!important;padding:0 7px!important;font-size:9.5px!important}
-  .pc-item__cell textarea{padding-top:7px!important;resize:none!important;overflow:hidden!important}
-  .pc-item:hover .pc-item__cell input:not([type="checkbox"]),.pc-item:hover .pc-item__cell select,.pc-item:hover .pc-item__cell textarea{background:#fafcfd!important;border-color:#dbe7ea!important}
-  .pc-item__extra{grid-column:2/6;display:grid;grid-template-columns:1.1fr 1fr;gap:8px;padding:0 6px 8px}
-  .pc-item__extra .pc-field{margin:0}
-  .pc-item__extra .pc-field label{font-size:8px;margin-bottom:3px}
-  .pc-item__extra textarea,.pc-item__extra select{min-height:34px!important;height:34px!important;font-size:9px!important;padding:6px 8px!important}
-  .pc-item__actions{padding:7px 5px;display:flex;align-items:center;justify-content:center;gap:4px}
-  .pc-icon-btn{width:26px;height:26px;border:0;border-radius:6px;background:transparent;display:grid;place-items:center;color:#55737d;cursor:pointer;font-size:13px}
-  .pc-icon-btn:hover{background:#eef7f9;color:#0a8299}.pc-icon-btn--danger{color:#d34d55}.pc-icon-btn--danger:hover{background:#fff2f3;color:#bf3942}
+  .pc-items{display:grid;gap:12px}
+  .pc-item{padding:17px;border:1px solid #dfe8eb;border-radius:13px;background:linear-gradient(180deg,#fff 0,#fcfefe 100%);box-shadow:0 3px 12px rgba(31,64,78,.025)}
+  .pc-item__top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+  .pc-item__title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:850;color:#45606c;letter-spacing:.01em}
+  .pc-item__num{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:#eef7f9;color:#087d90;font-size:11px;font-weight:900}
+  .pc-item__grid{display:grid;grid-template-columns:minmax(260px,2fr) 120px 140px minmax(240px,1.6fr);gap:12px;align-items:start}
+  .pc-item__extra{margin-top:12px}
+  .pc-icon-btn{width:34px;height:34px;border:1px solid #ebc9cb;border-radius:8px;background:#fff;color:#a44747;cursor:pointer;font-size:18px}
   .pc-row-deleted{display:none!important}
 
-  .pc-aside{position:sticky;top:82px}
-  .pc-summary{border:1px solid #dbe7ea;border-radius:12px;background:#fff;padding:14px;box-shadow:0 4px 14px rgba(28,62,74,.03)}
-  .pc-summary__head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-bottom:11px;border-bottom:1px solid #e2ebee}
-  .pc-summary__head h3{margin:0;font-size:12px;color:#234959}
-  .pc-status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;background:#fff6e9;color:#9a7041;padding:4px 7px;font-size:8px}
-  .pc-status::before{content:"";width:5px;height:5px;border-radius:50%;background:#f4a846}
-  .pc-summary__section{padding:12px 0;border-bottom:1px solid #e5edef}.pc-summary__section:last-of-type{border-bottom:0}
-  .pc-summary__section h4{margin:0 0 9px;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#4c6b77}
-  .pc-summary-item{display:flex;gap:9px;margin-bottom:10px}.pc-summary-item:last-child{margin-bottom:0}
-  .pc-summary-item__icon{width:20px;height:20px;border-radius:6px;background:#f1f6f8;display:grid;place-items:center;color:#66818c;font-size:10px;flex:0 0 20px}
-  .pc-summary-item strong{display:block;font-size:8.5px;color:#536c76}.pc-summary-item span{display:block;margin-top:2px;font-size:8.5px;line-height:1.35;color:#879aa2;word-break:break-word}
-  .pc-tip{margin-top:11px;border:1px solid #cfe4ef;border-radius:9px;background:#f5fbff;padding:10px;font-size:8.5px;line-height:1.45;color:#63808c}.pc-tip strong{display:block;margin-bottom:3px;color:#3d6576;font-size:9px}
+  .pc-native-activities{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+  .pc-activity-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin-bottom:12px}
+  .pc-search{position:relative}
+  .pc-search input{width:100%;height:44px;padding:0 40px 0 13px;border:1px solid #cad9de;border-radius:10px;font-size:13px;outline:none}
+  .pc-search input:focus{border-color:#62b5c3;box-shadow:0 0 0 3px rgba(7,143,165,.09)}
+  .pc-search__clear{position:absolute;right:8px;top:8px;width:28px;height:28px;border:0;background:transparent;color:#82959d;font-size:18px;cursor:pointer;display:none}
+  .pc-selection-info{white-space:nowrap;color:#71868f;font-size:11px}
+  .pc-selection-info strong{color:#1c586a}
+  .pc-selected{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  .pc-selected:empty{display:none}
+  .pc-chip{display:flex;align-items:center;gap:7px;max-width:100%;padding:7px 9px;border:1px solid #d5e4e8;border-radius:9px;background:#f9fcfd}
+  .pc-chip strong{font-size:11px;color:#375965;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-chip span{font-size:10px;color:#82969f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pc-chip button{border:0;background:transparent;color:#7e929a;cursor:pointer;font-size:16px}
+  .pc-activity-table-wrap{border:1px solid #dfe8eb;border-radius:11px;overflow:hidden}
+  .pc-activity-table-scroll{max-height:330px;overflow:auto}
+  .pc-activity-table{width:100%;border-collapse:collapse;font-size:12px}
+  .pc-activity-table th{position:sticky;top:0;z-index:1;padding:11px;background:#f5f8f9;border-bottom:1px solid #dfe8eb;text-align:left;color:#687f88;font-size:10px;text-transform:uppercase}
+  .pc-activity-table td{padding:11px;border-bottom:1px solid #edf2f4;vertical-align:middle}
+  .pc-activity-table tr:last-child td{border-bottom:0}
+  .pc-check{width:16px;height:16px}
+  .pc-act-btn{min-height:30px;padding:5px 9px;border:1px solid #c7dce1;border-radius:7px;background:#fff;color:#257185;font-size:10px;font-weight:800;cursor:pointer}
+  .pc-act-btn--remove{color:#a44747;border-color:#ebc9cb}
+  .pc-empty{padding:28px;text-align:center;color:#87999f;font-size:12px}
 
-  .pc-alert{margin-bottom:12px;padding:10px 12px;border:1px solid #f1d7aa;background:#fff9ed;border-radius:9px;color:#7d673f;font-size:10px;line-height:1.45}.pc-alert--danger{border-color:#efc5ca;background:#fff4f5;color:#a9424b}
-  .pc-sticky{position:fixed;left:var(--sidebar-width,260px);right:0;bottom:0;z-index:60;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px max(18px,calc((100vw - var(--sidebar-width,260px) - 1500px)/2 + 18px));border-top:1px solid #dce7ea;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);box-shadow:0 -8px 22px rgba(27,62,74,.055)}
-  .pc-sticky__summary{display:flex;align-items:center;gap:6px;margin:0 10px;color:#69818b;font-size:9.5px;white-space:nowrap}.pc-sticky__summary strong{color:#254f5e;font-size:10px}.pc-sticky__dot{color:#b1c0c5}.pc-sticky__right{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .pc-section-note{display:flex;gap:10px;align-items:flex-start;padding:13px 14px;border:1px solid #d9e8ec;border-radius:11px;background:#f6fbfc;color:#627b85;font-size:11px;line-height:1.55;margin-bottom:15px}
+  .pc-section-note strong{color:#365965}
 
-  @media(max-width:1250px){.pc-layout{grid-template-columns:1fr 270px}.pc-selected{grid-template-columns:repeat(2,minmax(0,1fr))}.pc-grid-2{grid-template-columns:1fr}.pc-items-head,.pc-item{grid-template-columns:28px minmax(190px,1.2fr) 90px 80px minmax(160px,1fr) 56px}}
-  @media(max-width:1000px){.pc-layout{grid-template-columns:1fr}.pc-aside{position:static}.pc-stepper{grid-template-columns:repeat(2,1fr)}.pc-step:nth-child(2)::after{display:none}.pc-summary{display:none}.pc-sticky{left:0}.pc-selected{grid-template-columns:1fr 1fr}}
-  @media(max-width:760px){.pc-sticky__summary{order:-1;width:100%;justify-content:center;margin:0 0 2px}.pc-sticky{flex-wrap:wrap}.pc-stepper{grid-template-columns:1fr}.pc-step::after{display:none!important}.pc-step__copy span{white-space:normal}.pc-selected{grid-template-columns:1fr}.pc-activity-table th:nth-child(3),.pc-activity-table td:nth-child(3),.pc-activity-table th:nth-child(4),.pc-activity-table td:nth-child(4){display:none}.pc-items-table-wrap{overflow-x:auto}.pc-items-head,.pc-item{min-width:760px}.pc-sticky{padding:9px 10px}.pc-sticky .pc-btn{padding:0 9px}.pc-header{padding-top:2px}}
-.pc-item__extra--single{grid-template-columns:1fr}
+  .pc-alert{margin-bottom:14px;padding:12px 14px;border:1px solid #e6d4aa;border-radius:10px;background:#fff8e9;color:#7e5d23;font-size:12px;line-height:1.5}
+  .pc-alert--danger{border-color:#edd0d0;background:#fff1f1;color:#8d4646}
+
+  .pc-review{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .pc-review__item{padding:13px 14px;border:1px solid #e0e9ec;border-radius:11px;background:#fbfdfd}
+  .pc-review__item span{display:block;color:#7b9099;font-size:10px;text-transform:uppercase;letter-spacing:.035em}
+  .pc-review__item strong{display:block;margin-top:4px;color:#31515f;font-size:12px;line-height:1.35}
+
+  .pc-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 18px}
+  .pc-progress__item{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #e2eaed;border-radius:10px;background:rgba(255,255,255,.78);color:#6f858e;font-size:10px;font-weight:800}
+  .pc-progress__dot{width:20px;height:20px;display:grid;place-items:center;border-radius:7px;background:#f0f6f8;color:#55727e;font-size:9px;font-weight:900}
+  .pc-progress__item.is-active{border-color:#b9dce3;background:#f3fbfc;color:#24586a}
+  .pc-progress__item.is-active .pc-progress__dot{background:#078fa5;color:#fff}
+  .pc-progress__line{height:4px;border-radius:999px;background:#edf3f5;overflow:hidden;margin-top:8px}
+  .pc-progress__fill{height:100%;width:25%;background:#078fa5;transition:width .2s ease}
+
+.pc-sticky{position:fixed;z-index:50;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(18px,calc((100vw - 1380px)/2 + 18px));border-top:1px solid #d8e5e8;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 -10px 28px rgba(28,64,78,.08)}
+  .pc-sticky__summary{font-size:11px;color:#6e848d}
+  .pc-sticky__right{display:flex;gap:8px}
+
+  details.pc-details{border-top:1px solid #edf2f4;margin-top:14px;padding-top:12px}
+  details.pc-details summary{cursor:pointer;color:#55727e;font-size:11px;font-weight:800}
+
+  @media(max-width:1050px){
+    .pc-item__grid{grid-template-columns:minmax(220px,2fr) 110px 130px}
+    .pc-item__grid>div:nth-child(4){grid-column:1/-1}
+    .pc-review{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media(max-width:760px){
+    .pc-open{padding:0 12px 120px}
+    .pc-open-head,.pc-sticky{flex-direction:column;align-items:stretch}
+    .pc-grid-2,.pc-item__grid,.pc-activity-tools,.pc-review{grid-template-columns:1fr}
+    .pc-sticky__right{display:grid;grid-template-columns:1fr 1fr}
+    .pc-activity-table th:nth-child(3),.pc-activity-table td:nth-child(3),.pc-activity-table th:nth-child(4),.pc-activity-table td:nth-child(4){display:none}
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="pc-page">
-  <div class="pc-header">
+<div class="pc-open">
+  <header class="pc-open-head">
     <div>
-      <h1>Abrir processo de compra</h1>
-      <p>Vincule a compra às atividades da obra e registre os itens necessários antes de iniciar a cotação.</p>
+      <div class="cp-eyebrow">Suprimentos · Nova solicitação</div>
+      <h1>Nova compra</h1>
+      <p>Preencha primeiro os itens que serão comprados, depois relacione as atividades do cronograma e finalize com os dados administrativos.</p>
     </div>
-  </div>
+    <div class="pc-required-note"><span class="req">*</span> Campos obrigatórios</div>
+  </header>
 
-  <div class="pc-stepper" aria-label="Etapas da abertura da compra">
-    <div class="pc-step pc-step--active"><div class="pc-step__num">1</div><div class="pc-step__copy"><strong>Origem e responsável</strong><span>Defina a origem da compra e o responsável.</span></div></div>
-    <div class="pc-step"><div class="pc-step__num">2</div><div class="pc-step__copy"><strong>Atividades relacionadas</strong><span>Selecione as atividades do cronograma.</span></div></div>
-    <div class="pc-step"><div class="pc-step__num">3</div><div class="pc-step__copy"><strong>Itens da compra</strong><span>Adicione os materiais e quantidades.</span></div></div>
-    <div class="pc-step"><div class="pc-step__num">4</div><div class="pc-step__copy"><strong>Revisão</strong><span>Revise e confirme as informações.</span></div></div>
+  <div class="pc-progress" aria-label="Etapas do preenchimento">
+    <div class="pc-progress__item is-active" data-progress-step="1"><span class="pc-progress__dot">1</span>Origem</div>
+    <div class="pc-progress__item" data-progress-step="2"><span class="pc-progress__dot">2</span>Itens</div>
+    <div class="pc-progress__item" data-progress-step="3"><span class="pc-progress__dot">3</span>Atividades</div>
+    <div class="pc-progress__item" data-progress-step="4"><span class="pc-progress__dot">4</span>Finalização</div>
   </div>
+  <div class="pc-progress__line"><div class="pc-progress__fill" id="form-progress-fill"></div></div>
 
   {% if not item_inicial %}
-  <div class="pc-alert"><strong>Suprimento de origem não identificado.</strong><br>O fluxo ideal é iniciar esta compra pelo cronograma de suprimentos, usando a ação “Comprar”.</div>
+    <div class="pc-alert"><strong>Suprimento de origem não identificado.</strong><br>O fluxo recomendado é iniciar esta compra pelo cronograma de suprimentos, usando a ação “Comprar”.</div>
   {% endif %}
 
   <form method="post" id="purchase-form" novalidate>
@@ -157,290 +150,315 @@
     {% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="pc-alert pc-alert--danger">{{ error }}</div>{% endfor %}{% endif %}
     {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="pc-alert pc-alert--danger">{{ error }}</div>{% endfor %}{% endif %}
 
-    <div class="pc-layout">
-      <main class="pc-main">
-        <section class="pc-card">
-          <div class="pc-card__head">
-            <div class="pc-card__title-wrap"><div class="pc-card__icon">⌂</div><div><h2 class="pc-card__title">1. Origem e responsável</h2></div></div>
-          </div>
-          <div class="pc-card__body">
-            {% if item_inicial %}
+    <main class="pc-open-main">
+      <section class="pc-card">
+        <div class="pc-card__head">
+          <div><h2><span class="pc-step">1</span>Origem da compra</h2><p>Confira de qual suprimento esta solicitação está sendo criada.</p></div>
+        </div>
+        <div class="pc-card__body">
+          {% if item_inicial %}
             <div class="pc-origin">
-              <div class="pc-origin__main"><div class="pc-origin__icon">▥</div><div><strong>{{ item_inicial.item }}</strong><span>{{ item_inicial.cronograma_obra.obra.nome }}{% if item_inicial.prazo_limite_contratacao %} · Contratar até {{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% endif %}</span></div></div>
-              <span class="pc-btn pc-btn--soft" aria-disabled="true">Suprimento de origem</span>
-            </div>
-            {% endif %}
-
-            <div class="pc-grid-2">
-              <div class="pc-field"><label for="{{ form.comprador.id_for_label }}">{{ form.comprador.label }}{% if form.comprador.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
-              <div class="pc-field"><label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}{% if form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.descricao }}<div class="pc-field-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
-            </div>
-            <div class="pc-field"><label for="{{ form.observacao.id_for_label }}">{{ form.observacao.label }}{% if form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ form.observacao }}<div class="pc-field-counter"><span id="observation-count">0</span>/500</div>{% for error in form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
-          </div>
-        </section>
-
-        <section class="pc-card">
-          <div class="pc-card__head">
-            <div class="pc-card__title-wrap"><div class="pc-card__icon">▣</div><div><h2 class="pc-card__title">2. Atividades relacionadas</h2><p class="pc-card__desc">Selecione as atividades do cronograma que serão atendidas por esta compra.</p></div></div>
-          </div>
-          <div class="pc-card__body">
-            <div class="pc-native-activities" id="native-activities-wrap">{{ form.atividades }}</div>
-            {% if form.atividades.help_text %}<div class="pc-help" style="margin-bottom:7px">{{ form.atividades.help_text }}</div>{% endif %}
-            {% for error in form.atividades.errors %}<div class="pc-error" style="margin-bottom:7px">{{ error }}</div>{% endfor %}
-
-            <div class="pc-activity-top">
-              <div class="pc-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
-                <input type="text" id="activity-search" placeholder="Buscar atividade por descrição ou código..." autocomplete="off">
-                <button type="button" class="pc-search__clear" id="activity-search-clear">×</button>
+              <div>
+                <strong>{{ item_inicial.item }}</strong>
+                <span>{{ item_inicial.cronograma_obra.obra.nome }}{% if item_inicial.prazo_limite_contratacao %} · Contratar até {{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% endif %}</span>
               </div>
-              <div class="pc-selection-info"><span>Selecionadas: <strong id="selected-count">0</strong></span><button type="button" class="pc-btn pc-btn--sm" id="clear-activities">⌫&nbsp; Limpar seleção</button></div>
+              <span class="pc-origin-badge">Origem vinculada</span>
             </div>
+          {% else %}
+            <div class="pc-help">A origem será validada pelo formulário. Se esta tela foi aberta diretamente, volte ao cronograma de suprimentos para iniciar a compra pelo item correto.</div>
+          {% endif %}
+        </div>
+      </section>
 
-            <div class="pc-selected" id="selected-activities"></div>
-
-            <div class="pc-activity-table-wrap">
-              <div class="pc-activity-table-scroll">
-                <table class="pc-activity-table">
-                  <colgroup><col style="width:34px"><col style="width:37%"><col style="width:26%"><col style="width:23%"><col style="width:90px"></colgroup>
-                  <thead><tr><th></th><th>Atividade</th><th>Informações</th><th>Referência</th><th>Ações</th></tr></thead>
-                  <tbody id="activity-table-body"></tbody>
-                </table>
-                <div class="pc-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="pc-card">
-          <div class="pc-card__head">
-            <div class="pc-card__title-wrap"><div class="pc-card__icon">▢</div><div><h2 class="pc-card__title">3. Itens da compra</h2><p class="pc-card__desc">Adicione os materiais/serviços necessários e suas respectivas quantidades.</p></div></div>
-            <button class="pc-btn pc-btn--sm" type="button" id="add-item">＋ Adicionar item</button>
-          </div>
-          <div class="pc-card__body">
-            <div class="pc-items-table-wrap">
-              <div class="pc-items-head"><div>#</div><div>Material / Serviço{% if formset.empty_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Unidade{% if formset.empty_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Quantidade{% if formset.empty_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Especificação{% if formset.empty_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</div><div>Ações</div></div>
-              <div id="items-container">
-                {% for item_form in formset %}
-                <div class="pc-item" data-form-row>
-                  {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
-                  <div class="pc-item__num" data-row-number>{{ forloop.counter }}</div>
-                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.descricao.label }}{% if item_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.descricao }}{% for error in item_form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
-                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.unidade.label }}{% if item_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.unidade }}{% for error in item_form.unidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
-                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.quantidade.label }}{% if item_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
-                  <div class="pc-item__cell"><div class="pc-field"><label>{{ item_form.especificacao.label }}{% if item_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.especificacao }}{% for error in item_form.especificacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
-                  <div class="pc-item__actions">{% if item_form.DELETE %}<div style="display:none">{{ item_form.DELETE }}</div>{% endif %}<button class="pc-icon-btn pc-icon-btn--danger" type="button" data-remove title="Remover item">⌫</button></div>
-                  <div class="pc-item__extra pc-item__extra--single"><div class="pc-field"><label>{{ item_form.observacao.label }}{% if item_form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ item_form.observacao }}{% for error in item_form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div></div>
+      <section class="pc-card">
+        <div class="pc-card__head">
+          <div><h2><span class="pc-step">2</span>O que será comprado?</h2><p>Cadastre um item por linha. Deixe claro quantidade, unidade e especificação necessária.</p></div>
+          <button class="pc-btn pc-btn--sm" type="button" id="add-item">＋ Adicionar item</button>
+        </div>
+        <div class="pc-card__body">
+          <div class="pc-section-note"><strong>Dica:</strong> use a descrição para identificar o item e a especificação para registrar exigências técnicas, padrão, marca de referência ou características indispensáveis.</div>
+          <div class="pc-items" id="items-container">
+            {% for item_form in formset %}
+              <div class="pc-item" data-form-row>
+                {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <div class="pc-item__top">
+                  <div class="pc-item__title"><span class="pc-item__num" data-row-number>{{ forloop.counter }}</span> Item da compra</div>
+                  <div>{% if item_form.DELETE %}<div style="display:none">{{ item_form.DELETE }}</div>{% endif %}<button class="pc-icon-btn" type="button" data-remove title="Remover item">×</button></div>
                 </div>
-                {% endfor %}
+                <div class="pc-item__grid">
+                  <div class="pc-field"><label>{{ item_form.descricao.label }}{% if item_form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.descricao }}{% for error in item_form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+                  <div class="pc-field"><label>{{ item_form.unidade.label }}{% if item_form.unidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.unidade }}{% for error in item_form.unidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+                  <div class="pc-field"><label>{{ item_form.quantidade.label }}{% if item_form.quantidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+                  <div class="pc-field"><label>{{ item_form.especificacao.label }}{% if item_form.especificacao.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.especificacao }}{% for error in item_form.especificacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}</div>
+                </div>
+                <div class="pc-item__extra">
+                  <details class="pc-details">
+                    <summary>+ Adicionar observação específica deste item</summary>
+                    <div class="pc-field" style="margin-top:10px">
+                      <label>{{ item_form.observacao.label }}{% if item_form.observacao.field.required %} <span class="req">*</span>{% endif %}</label>
+                      {{ item_form.observacao }}
+                      {% for error in item_form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}
+                    </div>
+                  </details>
+                </div>
               </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="pc-card">
+        <div class="pc-card__head">
+          <div><h2><span class="pc-step">3</span>Onde esses itens serão utilizados?</h2><p>Relacione a compra às atividades do cronograma. Você pode pesquisar e selecionar mais de uma.</p></div>
+        </div>
+        <div class="pc-card__body">
+          <div class="pc-native-activities">{{ form.atividades }}</div>
+          {% for error in form.atividades.errors %}<div class="pc-error" style="margin-bottom:10px">{{ error }}</div>{% endfor %}
+
+          <div class="pc-activity-tools">
+            <div class="pc-search">
+              <input type="text" id="activity-search" placeholder="Buscar atividade por descrição, disciplina ou referência..." autocomplete="off">
+              <button type="button" class="pc-search__clear" id="activity-search-clear">×</button>
+            </div>
+            <div class="pc-selection-info">Selecionadas: <strong id="selected-count">0</strong> · <button type="button" class="pc-act-btn pc-act-btn--remove" id="clear-activities">Limpar</button></div>
+          </div>
+
+          <div class="pc-selected" id="selected-activities"></div>
+
+          <div class="pc-activity-table-wrap">
+            <div class="pc-activity-table-scroll">
+              <table class="pc-activity-table">
+                <thead><tr><th></th><th>Atividade</th><th>Informações</th><th>Referência</th><th></th></tr></thead>
+                <tbody id="activity-table-body"></tbody>
+              </table>
+              <div class="pc-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div>
             </div>
           </div>
-        </section>
-      </main>
+          {% if form.atividades.help_text %}<div class="pc-help">{{ form.atividades.help_text }}</div>{% endif %}
+        </div>
+      </section>
 
-      <aside class="pc-aside">
-        <section class="pc-summary">
-          <div class="pc-summary__head"><h3>Resumo da compra</h3><span class="pc-status">Rascunho</span></div>
-          <div class="pc-summary__section">
-            <h4>Visão geral</h4>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">▤</div><div><strong>Suprimento</strong><span id="summary-supply">{% if item_inicial %}{{ item_inicial.item }}<br>{{ item_inicial.cronograma_obra.obra.nome }}{% else %}Não identificado{% endif %}</span></div></div>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">◯</div><div><strong>Comprador responsável</strong><span id="summary-buyer">—</span></div></div>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">▧</div><div><strong>Descrição</strong><span id="summary-description">—</span></div></div>
+      <section class="pc-card">
+        <div class="pc-card__head">
+          <div><h2><span class="pc-step">4</span>Responsável e informações complementares</h2><p>Finalize com os dados administrativos da solicitação.</p></div>
+        </div>
+        <div class="pc-card__body">
+          <div class="pc-grid-2">
+            <div class="pc-field">
+              <label for="{{ form.comprador.id_for_label }}">{{ form.comprador.label }}{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>
+              {{ form.comprador }}
+              {% for error in form.comprador.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}
+              <div class="pc-help">Responsável pela condução da cotação.</div>
+            </div>
+
+            <div class="pc-field">
+              <label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}{% if form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>
+              {{ form.descricao }}
+              <div class="pc-field-counter"><span id="description-count">0</span>/200</div>
+              {% for error in form.descricao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}
+            </div>
           </div>
-          <div class="pc-summary__section">
-            <h4>Resumo</h4>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">▦</div><div><strong>Atividades selecionadas</strong><span><b id="summary-activities">0</b> atividade(s)</span></div></div>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">▣</div><div><strong>Itens da compra</strong><span><b id="summary-items">0</b> item(ns)</span></div></div>
-            <div class="pc-summary-item"><div class="pc-summary-item__icon">↻</div><div><strong>Última atualização</strong><span>Enquanto você preenche</span></div></div>
+
+          <details class="pc-details">
+            <summary>+ Adicionar observação geral da solicitação</summary>
+            <div class="pc-field" style="margin-top:10px">
+              <label for="{{ form.observacao.id_for_label }}">{{ form.observacao.label }}{% if form.observacao.field.required %} <span class="req">*</span>{% endif %}</label>
+              {{ form.observacao }}
+              <div class="pc-field-counter"><span id="observation-count">0</span>/500</div>
+              {% for error in form.observacao.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="pc-card">
+        <div class="pc-card__head">
+          <div><h2>Revisão rápida</h2><p>Confira o resumo antes de salvar ou iniciar a cotação.</p></div>
+        </div>
+        <div class="pc-card__body">
+          <div class="pc-review">
+            <div class="pc-review__item"><span>Itens</span><strong id="summary-items">0</strong></div>
+            <div class="pc-review__item"><span>Atividades</span><strong id="summary-activities">0</strong></div>
+            <div class="pc-review__item"><span>Comprador</span><strong id="summary-buyer">—</strong></div>
+            <div class="pc-review__item"><span>Descrição</span><strong id="summary-description">—</strong></div>
           </div>
-          <div class="pc-tip"><strong>✧ Dicas</strong>Revise as informações e prossiga para iniciar a cotação com os fornecedores.</div>
-        </section>
-      </aside>
-    </div>
+        </div>
+      </section>
+    </main>
 
     <div class="pc-sticky">
       <a class="pc-btn" href="{% url 'compras:dashboard' %}">Cancelar</a>
-      <div class="pc-sticky__summary" aria-live="polite"><strong id="sticky-items">0 itens</strong><span class="pc-sticky__dot">·</span><strong id="sticky-activities">0 atividades selecionadas</strong></div>
-      <div class="pc-sticky__right"><button class="pc-btn" name="acao" value="rascunho" type="submit">▣&nbsp; Salvar rascunho</button><button class="pc-btn pc-btn--primary" name="acao" value="iniciar" type="submit">➤&nbsp; Criar e iniciar cotação</button></div>
+      <div class="pc-sticky__summary"><strong id="sticky-items">0 itens</strong> · <strong id="sticky-activities">0 atividades selecionadas</strong></div>
+      <div class="pc-sticky__right">
+        <button class="pc-btn" name="acao" value="rascunho" type="submit">Salvar rascunho</button>
+        <button class="pc-btn pc-btn--primary" name="acao" value="iniciar" type="submit">Criar e iniciar cotação</button>
+      </div>
     </div>
   </form>
 
   <template id="empty-form-template">
     <div class="pc-item" data-form-row>
       {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
-      <div class="pc-item__num" data-row-number></div>
-      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.descricao.label }}{% if formset.empty_form.descricao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.descricao }}</div></div>
-      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.unidade.label }}{% if formset.empty_form.unidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.unidade }}</div></div>
-      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.quantidade.label }}{% if formset.empty_form.quantidade.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.quantidade }}</div></div>
-      <div class="pc-item__cell"><div class="pc-field"><label>{{ formset.empty_form.especificacao.label }}{% if formset.empty_form.especificacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.especificacao }}</div></div>
-      <div class="pc-item__actions"><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="pc-icon-btn pc-icon-btn--danger" type="button" data-remove title="Remover item">⌫</button></div>
-      <div class="pc-item__extra pc-item__extra--single"><div class="pc-field"><label>{{ formset.empty_form.observacao.label }}{% if formset.empty_form.observacao.field.required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>{{ formset.empty_form.observacao }}</div></div>
+      <div class="pc-item__top">
+        <div class="pc-item__title"><span class="pc-item__num" data-row-number></span> Item da compra</div>
+        <div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="pc-icon-btn" type="button" data-remove title="Remover item">×</button></div>
+      </div>
+      <div class="pc-item__grid">
+        <div class="pc-field"><label>{{ formset.empty_form.descricao.label }}{% if formset.empty_form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.descricao }}</div>
+        <div class="pc-field"><label>{{ formset.empty_form.unidade.label }}{% if formset.empty_form.unidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.unidade }}</div>
+        <div class="pc-field"><label>{{ formset.empty_form.quantidade.label }}{% if formset.empty_form.quantidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.quantidade }}</div>
+        <div class="pc-field"><label>{{ formset.empty_form.especificacao.label }}{% if formset.empty_form.especificacao.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.especificacao }}</div>
+      </div>
+      <div class="pc-item__extra">
+        <details class="pc-details">
+          <summary>+ Adicionar observação específica deste item</summary>
+          <div class="pc-field" style="margin-top:10px"><label>{{ formset.empty_form.observacao.label }}{% if formset.empty_form.observacao.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.observacao }}</div>
+        </details>
+      </div>
     </div>
   </template>
 </div>
 
 <script>
 (function(){
-  const form = document.getElementById('purchase-form');
-  if(!form) return;
+  const form=document.getElementById('purchase-form');if(!form)return;
+  const qs=(s,r=document)=>r.querySelector(s),qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  const escapeHtml=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  const qs = (s,r=document)=>r.querySelector(s);
-  const qsa = (s,r=document)=>Array.from(r.querySelectorAll(s));
-  const escapeHtml = (value)=>String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-
-  /* Contadores e resumo */
-  const desc = document.getElementById('{{ form.descricao.id_for_label }}');
-  const obs = document.getElementById('{{ form.observacao.id_for_label }}');
-  const buyer = document.getElementById('{{ form.comprador.id_for_label }}');
-  const descCount = qs('#description-count');
-  const obsCount = qs('#observation-count');
-  const summaryDesc = qs('#summary-description');
-  const summaryBuyer = qs('#summary-buyer');
-  const summaryItems = qs('#summary-items');
-  const summaryActivities = qs('#summary-activities');
-  const stickyItems = qs('#sticky-items');
-  const stickyActivities = qs('#sticky-activities');
+  const desc=document.getElementById('{{ form.descricao.id_for_label }}'),obs=document.getElementById('{{ form.observacao.id_for_label }}'),buyer=document.getElementById('{{ form.comprador.id_for_label }}');
+  const descCount=qs('#description-count'),obsCount=qs('#observation-count'),summaryDesc=qs('#summary-description'),summaryBuyer=qs('#summary-buyer'),summaryItems=qs('#summary-items'),summaryActivities=qs('#summary-activities'),stickyItems=qs('#sticky-items'),stickyActivities=qs('#sticky-activities');
 
   function updateTextSummary(){
-    if(descCount && desc) descCount.textContent = (desc.value || '').length;
-    if(obsCount && obs) obsCount.textContent = (obs.value || '').length;
-    if(summaryDesc && desc) summaryDesc.textContent = (desc.value || '').trim() || '—';
-    if(summaryBuyer && buyer){
-      const option = buyer.options && buyer.selectedIndex >= 0 ? buyer.options[buyer.selectedIndex] : null;
-      summaryBuyer.textContent = option && option.value ? option.text.trim() : '—';
+    if(descCount&&desc)descCount.textContent=(desc.value||'').length;
+    if(obsCount&&obs)obsCount.textContent=(obs.value||'').length;
+    if(summaryDesc&&desc)summaryDesc.textContent=(desc.value||'').trim()||'—';
+    if(summaryBuyer&&buyer){
+      const o=buyer.options&&buyer.selectedIndex>=0?buyer.options[buyer.selectedIndex]:null;
+      summaryBuyer.textContent=o&&o.value?o.text.trim():'—'
     }
   }
-  if(desc){desc.setAttribute('maxlength','200');desc.addEventListener('input',updateTextSummary)}
-  if(obs){obs.setAttribute('maxlength','500');obs.addEventListener('input',updateTextSummary)}
-  if(buyer) buyer.addEventListener('change',updateTextSummary);
 
-  /* Atividades: transforma o select múltiplo nativo em UI pesquisável */
-  const activitiesSelect = document.getElementById('{{ form.atividades.id_for_label }}');
-  const activitiesBody = qs('#activity-table-body');
-  const selectedBox = qs('#selected-activities');
-  const selectedCount = qs('#selected-count');
-  const search = qs('#activity-search');
-  const clearSearch = qs('#activity-search-clear');
-  const clearActivities = qs('#clear-activities');
-  const emptyActivities = qs('#activity-empty');
+  if(desc){desc.setAttribute('maxlength','200');desc.setAttribute('placeholder','Ex.: Compra de materiais para execução da etapa...');desc.addEventListener('input',updateTextSummary)}
+  if(obs){obs.setAttribute('maxlength','500');obs.setAttribute('placeholder','Informações gerais importantes para a compra...');obs.addEventListener('input',updateTextSummary)}
+  if(buyer)buyer.addEventListener('change',updateTextSummary);
+
+  const activitiesSelect=document.getElementById('{{ form.atividades.id_for_label }}'),activitiesBody=qs('#activity-table-body'),selectedBox=qs('#selected-activities'),selectedCount=qs('#selected-count'),search=qs('#activity-search'),clearSearch=qs('#activity-search-clear'),clearActivities=qs('#clear-activities'),emptyActivities=qs('#activity-empty');
 
   function parseActivityLabel(text){
-    const clean = String(text || '').replace(/\s+/g,' ').trim();
-    const parts = clean.split('|').map(v=>v.trim()).filter(Boolean);
-    const title = parts[0] || clean || 'Atividade';
-    const info = parts[1] || '';
-    const reference = parts.slice(2).join(' | ') || '';
-    return {title,info,reference,raw:clean};
+    const clean=String(text||'').replace(/\s+/g,' ').trim(),parts=clean.split('|').map(v=>v.trim()).filter(Boolean);
+    return{title:parts[0]||clean||'Atividade',info:parts[1]||'',reference:parts.slice(2).join(' | ')||''}
   }
-  function activityOptions(){
-    if(!activitiesSelect) return [];
-    return Array.from(activitiesSelect.options).filter(o=>o.value && !o.disabled);
-  }
+
+  function activityOptions(){return activitiesSelect?Array.from(activitiesSelect.options).filter(o=>o.value&&!o.disabled):[]}
+
   function renderActivities(){
-    if(!activitiesSelect || !activitiesBody || !selectedBox) return;
-    const term = (search?.value || '').trim().toLocaleLowerCase('pt-BR');
-    const options = activityOptions();
-    const selected = options.filter(o=>o.selected);
-
-    selectedCount.textContent = selected.length;
-    if(summaryActivities) summaryActivities.textContent = selected.length;
-    if(stickyActivities) stickyActivities.textContent = `${selected.length} atividade${selected.length===1?'':'s'} selecionada${selected.length===1?'':'s'}`;
-    selectedBox.innerHTML = selected.map(o=>{
+    if(!activitiesSelect||!activitiesBody||!selectedBox)return;
+    const term=(search?.value||'').trim().toLocaleLowerCase('pt-BR'),options=activityOptions(),selected=options.filter(o=>o.selected);
+    selectedCount.textContent=selected.length;
+    if(summaryActivities)summaryActivities.textContent=selected.length;
+    if(stickyActivities)stickyActivities.textContent=`${selected.length} atividade${selected.length===1?'':'s'} selecionada${selected.length===1?'':'s'}`;
+    selectedBox.innerHTML=selected.map(o=>{
       const p=parseActivityLabel(o.text);
-      return `<div class="pc-chip" data-chip-value="${escapeHtml(o.value)}"><div class="pc-chip__ico">▣</div><strong title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</strong><span title="${escapeHtml(p.reference || p.info)}">${escapeHtml(p.reference || p.info || 'Atividade selecionada')}</span><button type="button" data-chip-remove="${escapeHtml(o.value)}" aria-label="Remover">×</button></div>`;
+      return `<div class="pc-chip"><strong>${escapeHtml(p.title)}</strong><span>${escapeHtml(p.reference||p.info||'Atividade selecionada')}</span><button type="button" data-chip-remove="${escapeHtml(o.value)}">×</button></div>`
     }).join('');
-
-    const visible = options.filter(o=>!term || o.text.toLocaleLowerCase('pt-BR').includes(term));
-    activitiesBody.innerHTML = visible.map(o=>{
-      const p=parseActivityLabel(o.text);
-      const action = o.selected ? `<button type="button" class="pc-act-btn pc-act-btn--remove" data-toggle-activity="${escapeHtml(o.value)}">⌫ Remover</button>` : `<button type="button" class="pc-act-btn" data-toggle-activity="${escapeHtml(o.value)}">＋ Selecionar</button>`;
-      return `<tr data-activity-row="${escapeHtml(o.value)}"><td><input class="pc-check" type="checkbox" data-activity-check="${escapeHtml(o.value)}" ${o.selected?'checked':''}></td><td title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</td><td title="${escapeHtml(p.info)}">${escapeHtml(p.info || '—')}</td><td title="${escapeHtml(p.reference)}">${escapeHtml(p.reference || '—')}</td><td>${action}</td></tr>`;
+    const visible=options.filter(o=>!term||o.text.toLocaleLowerCase('pt-BR').includes(term));
+    activitiesBody.innerHTML=visible.map(o=>{
+      const p=parseActivityLabel(o.text),action=o.selected?`<button type="button" class="pc-act-btn pc-act-btn--remove" data-toggle-activity="${escapeHtml(o.value)}">Remover</button>`:`<button type="button" class="pc-act-btn" data-toggle-activity="${escapeHtml(o.value)}">Selecionar</button>`;
+      return `<tr><td><input class="pc-check" type="checkbox" data-activity-check="${escapeHtml(o.value)}" ${o.selected?'checked':''}></td><td><strong>${escapeHtml(p.title)}</strong></td><td>${escapeHtml(p.info||'—')}</td><td>${escapeHtml(p.reference||'—')}</td><td>${action}</td></tr>`
     }).join('');
-    if(emptyActivities) emptyActivities.hidden = visible.length > 0;
-    if(clearSearch) clearSearch.style.display = term ? 'block' : 'none';
-
-    qsa('[data-toggle-activity]',activitiesBody).forEach(btn=>btn.addEventListener('click',()=>toggleActivity(btn.dataset.toggleActivity)));
-    qsa('[data-activity-check]',activitiesBody).forEach(ch=>ch.addEventListener('change',()=>setActivity(ch.dataset.activityCheck,ch.checked)));
-    qsa('[data-chip-remove]',selectedBox).forEach(btn=>btn.addEventListener('click',()=>setActivity(btn.dataset.chipRemove,false)));
+    if(emptyActivities)emptyActivities.hidden=visible.length>0;
+    if(clearSearch)clearSearch.style.display=term?'block':'none';
+    qsa('[data-toggle-activity]',activitiesBody).forEach(b=>b.addEventListener('click',()=>toggleActivity(b.dataset.toggleActivity)));
+    qsa('[data-activity-check]',activitiesBody).forEach(c=>c.addEventListener('change',()=>setActivity(c.dataset.activityCheck,c.checked)));
+    qsa('[data-chip-remove]',selectedBox).forEach(b=>b.addEventListener('click',()=>setActivity(b.dataset.chipRemove,false)))
   }
+
   function setActivity(value,state){
-    if(!activitiesSelect) return;
-    const option = Array.from(activitiesSelect.options).find(o=>String(o.value)===String(value));
-    if(!option) return;
-    option.selected = !!state;
+    const o=activitiesSelect?Array.from(activitiesSelect.options).find(x=>String(x.value)===String(value)):null;
+    if(!o)return;
+    o.selected=!!state;
     activitiesSelect.dispatchEvent(new Event('change',{bubbles:true}));
-    renderActivities();
+    renderActivities()
   }
-  function toggleActivity(value){
-    if(!activitiesSelect) return;
-    const option = Array.from(activitiesSelect.options).find(o=>String(o.value)===String(value));
-    if(option) setActivity(value,!option.selected);
-  }
-  if(search) search.addEventListener('input',renderActivities);
-  if(clearSearch) clearSearch.addEventListener('click',()=>{search.value='';search.focus();renderActivities()});
-  if(clearActivities) clearActivities.addEventListener('click',()=>{activityOptions().forEach(o=>o.selected=false);activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));renderActivities()});
-  if(activitiesSelect) activitiesSelect.addEventListener('change',()=>{ if(summaryActivities) summaryActivities.textContent = activityOptions().filter(o=>o.selected).length; });
 
-  /* Formset de itens */
-  const itemsContainer = qs('#items-container');
-  const addItem = qs('#add-item');
-  const totalForms = qs('input[name$="-TOTAL_FORMS"]');
-  const emptyTemplate = qs('#empty-form-template');
+  function toggleActivity(value){
+    const o=activitiesSelect?Array.from(activitiesSelect.options).find(x=>String(x.value)===String(value)):null;
+    if(o)setActivity(value,!o.selected)
+  }
+
+  if(search)search.addEventListener('input',renderActivities);
+  if(clearSearch)clearSearch.addEventListener('click',()=>{search.value='';search.focus();renderActivities()});
+  if(clearActivities)clearActivities.addEventListener('click',()=>{activityOptions().forEach(o=>o.selected=false);activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));renderActivities()});
+
+  const itemsContainer=qs('#items-container'),addItem=qs('#add-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),emptyTemplate=qs('#empty-form-template');
 
   function isRowDeleted(row){
-    const del = qs('input[type="checkbox"][name$="-DELETE"]',row);
-    return row.classList.contains('pc-row-deleted') || (del && del.checked);
+    const del=qs('input[type="checkbox"][name$="-DELETE"]',row);
+    return row.classList.contains('pc-row-deleted')||(del&&del.checked)
   }
+
   function updateRows(){
-    const activeRows = qsa('[data-form-row]',itemsContainer).filter(r=>!isRowDeleted(r));
-    activeRows.forEach((row,index)=>{const num=qs('[data-row-number]',row); if(num) num.textContent=index+1});
-    if(summaryItems) summaryItems.textContent = activeRows.length;
-    if(stickyItems) stickyItems.textContent = `${activeRows.length} ${activeRows.length===1?'item':'itens'}`;
+    const rows=qsa('[data-form-row]',itemsContainer).filter(r=>!isRowDeleted(r));
+    rows.forEach((r,i)=>{const n=qs('[data-row-number]',r);if(n)n.textContent=i+1});
+    if(summaryItems)summaryItems.textContent=rows.length;
+    if(stickyItems)stickyItems.textContent=`${rows.length} ${rows.length===1?'item':'itens'}`
   }
+
   function bindRow(row){
-    const remove = qs('[data-remove]',row);
-    if(remove && !remove.dataset.bound){
+    const fields=qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]'));
+    if(fields[0]&&!fields[0].getAttribute('placeholder'))fields[0].setAttribute('placeholder','Ex.: Cimento CP II 50 kg');
+    if(fields[2]&&!fields[2].getAttribute('placeholder'))fields[2].setAttribute('placeholder','Ex.: 100');
+    if(fields[3]&&!fields[3].getAttribute('placeholder'))fields[3].setAttribute('placeholder','Ex.: embalagem 50 kg, norma..., acabamento...');
+    const remove=qs('[data-remove]',row);
+    if(remove&&!remove.dataset.bound){
       remove.dataset.bound='1';
       remove.addEventListener('click',()=>{
         const del=qs('input[type="checkbox"][name$="-DELETE"]',row);
-        if(del){del.checked=true;row.classList.add('pc-row-deleted')}else{row.remove()}
-        updateRows();
-      });
+        if(del){del.checked=true;row.classList.add('pc-row-deleted')}else row.remove();
+        updateRows()
+      })
     }
-    qsa('textarea',row).forEach(t=>{
-      const resize=()=>{t.style.height='32px';t.style.height=Math.min(Math.max(t.scrollHeight,32),80)+'px'};
-      t.addEventListener('input',resize);resize();
-    });
-  }
-  qsa('[data-form-row]',itemsContainer).forEach(bindRow);
-  if(addItem && totalForms && emptyTemplate && itemsContainer){
-    addItem.addEventListener('click',()=>{
-      const index=parseInt(totalForms.value||'0',10);
-      const html=emptyTemplate.innerHTML.replaceAll('__prefix__',String(index));
-      itemsContainer.insertAdjacentHTML('beforeend',html);
-      totalForms.value=index+1;
-      const row=itemsContainer.lastElementChild;
-      bindRow(row);updateRows();
-      const first=qs('input,select,textarea',row);if(first)first.focus();
-    });
   }
 
-  /* Pré-preenchimento UX: mantém os campos editáveis e não altera validações do backend. */
-  const currentUserId = '{{ request.user.pk|default:""|escapejs }}';
-  if(buyer && !buyer.value && currentUserId){
-    const ownOption = Array.from(buyer.options || []).find(o=>String(o.value)===String(currentUserId));
-    if(ownOption){ buyer.value = ownOption.value; buyer.dispatchEvent(new Event('change',{bubbles:true})); }
-  }
-  qsa('select:not([multiple])', form).forEach(select=>{
-    if(select.value) return;
-    const useful = Array.from(select.options).filter(o=>o.value && !o.disabled);
-    if(useful.length===1){ select.value=useful[0].value; select.dispatchEvent(new Event('change',{bubbles:true})); }
+  qsa('[data-form-row]',itemsContainer).forEach(bindRow);
+
+  if(addItem&&totalForms&&emptyTemplate&&itemsContainer)addItem.addEventListener('click',()=>{
+    const i=parseInt(totalForms.value||'0',10),html=emptyTemplate.innerHTML.replaceAll('__prefix__',String(i));
+    itemsContainer.insertAdjacentHTML('beforeend',html);
+    totalForms.value=i+1;
+    const row=itemsContainer.lastElementChild;
+    bindRow(row);
+    updateRows();
+    qs('input,select,textarea',row)?.focus()
   });
+
+  const currentUserId='{{ request.user.pk|default:""|escapejs }}';
+  if(buyer&&!buyer.value&&currentUserId){
+    const own=Array.from(buyer.options||[]).find(o=>String(o.value)===String(currentUserId));
+    if(own){buyer.value=own.value;buyer.dispatchEvent(new Event('change',{bubbles:true}))}
+  }
+
+  function updateProgress(){
+    const activeRows=qsa('[data-form-row]',itemsContainer).filter(r=>!isRowDeleted(r));
+    const hasItem=activeRows.some(r=>qsa('input,select,textarea',r).some(el=>!el.matches('[type="hidden"],[type="checkbox"]')&&(el.value||'').trim()));
+    const hasActivity=activityOptions().some(o=>o.selected);
+    const hasFinal=!!((buyer&&buyer.value)||(desc&&(desc.value||'').trim()));
+    let step=1;
+    if(hasItem)step=2;
+    if(hasItem&&hasActivity)step=3;
+    if(hasItem&&hasActivity&&hasFinal)step=4;
+    qsa('[data-progress-step]').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.progressStep)<=step));
+    const fill=qs('#form-progress-fill');
+    if(fill)fill.style.width=({1:'25%',2:'50%',3:'75%',4:'100%'})[step];
+  }
+
+  form.addEventListener('input',updateProgress);
+  form.addEventListener('change',updateProgress);
 
   updateTextSummary();
   renderActivities();
   updateRows();
+  updateProgress();
 })();
 </script>
 {% endblock %}

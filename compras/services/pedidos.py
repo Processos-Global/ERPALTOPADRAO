@@ -146,16 +146,54 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
     return pedidos_resultado
 
 
+# Status logísticos que o usuário pode informar manualmente.
+# ENTREGA_PARCIAL e ENTREGUE são estados derivados exclusivamente dos
+# recebimentos registrados, evitando divergência entre status e quantidades.
 TRANSICOES_STATUS = {
-    PedidoCompra.Status.PEDIDO_EMITIDO: {PedidoCompra.Status.CONFIRMADO, PedidoCompra.Status.CANCELADO},
-    PedidoCompra.Status.CONFIRMADO: {PedidoCompra.Status.EM_PRODUCAO, PedidoCompra.Status.PRONTO_EXPEDICAO, PedidoCompra.Status.EM_TRANSPORTE, PedidoCompra.Status.CANCELADO},
-    PedidoCompra.Status.EM_PRODUCAO: {PedidoCompra.Status.PRONTO_EXPEDICAO, PedidoCompra.Status.EM_TRANSPORTE, PedidoCompra.Status.CANCELADO},
-    PedidoCompra.Status.PRONTO_EXPEDICAO: {PedidoCompra.Status.EM_TRANSPORTE, PedidoCompra.Status.CANCELADO},
-    PedidoCompra.Status.EM_TRANSPORTE: {PedidoCompra.Status.ENTREGA_PARCIAL, PedidoCompra.Status.ENTREGUE, PedidoCompra.Status.CANCELADO},
-    PedidoCompra.Status.ENTREGA_PARCIAL: {PedidoCompra.Status.EM_TRANSPORTE, PedidoCompra.Status.ENTREGUE, PedidoCompra.Status.CANCELADO},
+    PedidoCompra.Status.PEDIDO_EMITIDO: {
+        PedidoCompra.Status.CONFIRMADO,
+        PedidoCompra.Status.CANCELADO,
+    },
+    PedidoCompra.Status.CONFIRMADO: {
+        PedidoCompra.Status.EM_PRODUCAO,
+        PedidoCompra.Status.PRONTO_EXPEDICAO,
+        PedidoCompra.Status.EM_TRANSPORTE,
+        PedidoCompra.Status.CANCELADO,
+    },
+    PedidoCompra.Status.EM_PRODUCAO: {
+        PedidoCompra.Status.PRONTO_EXPEDICAO,
+        PedidoCompra.Status.EM_TRANSPORTE,
+        PedidoCompra.Status.CANCELADO,
+    },
+    PedidoCompra.Status.PRONTO_EXPEDICAO: {
+        PedidoCompra.Status.EM_TRANSPORTE,
+        PedidoCompra.Status.CANCELADO,
+    },
+    PedidoCompra.Status.EM_TRANSPORTE: {
+        PedidoCompra.Status.CANCELADO,
+    },
+    PedidoCompra.Status.ENTREGA_PARCIAL: {
+        PedidoCompra.Status.CANCELADO,
+    },
     PedidoCompra.Status.ENTREGUE: set(),
     PedidoCompra.Status.CANCELADO: set(),
 }
+
+
+STATUS_DERIVADOS_RECEBIMENTO = {
+    PedidoCompra.Status.ENTREGA_PARCIAL,
+    PedidoCompra.Status.ENTREGUE,
+}
+
+
+def transicoes_status_permitidas(pedido):
+    """Retorna apenas as transições manuais válidas, na ordem visual do model."""
+    permitidos = TRANSICOES_STATUS.get(pedido.status, set())
+    return [
+        (valor, rotulo)
+        for valor, rotulo in PedidoCompra.Status.choices
+        if valor in permitidos and valor != PedidoCompra.Status.CANCELADO
+    ]
 
 
 @transaction.atomic
@@ -163,6 +201,10 @@ def atualizar_status_pedido(*, pedido, novo_status, usuario, observacao=""):
     p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
     if novo_status not in PedidoCompra.Status.values:
         raise ValidationError("Status de pedido inválido.")
+    if novo_status in STATUS_DERIVADOS_RECEBIMENTO:
+        raise ValidationError(
+            "Entrega parcial e Entregue são definidos automaticamente ao registrar o recebimento."
+        )
     if novo_status not in TRANSICOES_STATUS.get(p.status, set()):
         raise ValidationError(f"Não é permitido alterar de {p.get_status_display()} para {PedidoCompra.Status(novo_status).label}.")
     if novo_status == PedidoCompra.Status.CANCELADO:

@@ -14,16 +14,19 @@ from usuarios.models import NivelPermissao
 
 from compras.forms import (
     AdjudicacaoForm,
+    AnaliseTecnicaLoteForm,
     AprovacaoForm,
     CompatibilizacaoForm,
-    ContratacaoForm,
+    DocumentoContratacaoForm,
     CotacaoFornecedorForm,
     CotacaoItemForm,
+    DecisaoComercialLoteForm,
     FornecedorCompraForm,
     ItemCompraAberturaFormSet,
     NecessidadeCompraForm,
     NegociacaoForm,
     ProcessoCompraForm,
+    PropostaCompletaForm,
 )
 from compras.models import (
     CotacaoFornecedor,
@@ -36,6 +39,7 @@ from compras.services.permissoes import (
     possui_permissao_compras,
 )
 from compras.services.processos import criar_processo
+from compras.services.pedidos import transicoes_status_permitidas
 
 
 # ============================================================
@@ -346,6 +350,98 @@ def _montar_dados_comerciais(
     )
 
     # --------------------------------------------------------
+    # RESUMO DETALHADO PARA APROVAÇÃO DO GESTOR
+    # --------------------------------------------------------
+
+    resumo_aprovacao_itens = []
+    valor_total_cotado_aprovacao = zero
+    valor_total_final_aprovacao = zero
+
+    for adjudicacao in adjudicacoes:
+
+        item_cotado = adjudicacao.item_cotado
+
+        compat = None
+        compatibilizacoes = list(
+            item_cotado.compatibilizacoes.all()
+        )
+        if compatibilizacoes:
+            compat = compatibilizacoes[0]
+
+        valor_unitario_cotado = (
+            item_cotado.valor_unitario_cotado
+        )
+        valor_unitario_final = (
+            adjudicacao.valor_unitario_final
+        )
+
+        # O total cotado é uma referência usando exatamente a
+        # quantidade que foi selecionada para compra. O total
+        # final usa a adjudicação congelada, incluindo eventual
+        # desconto final aplicado na escolha comercial.
+        valor_cotado_referencia = (
+            adjudicacao.quantidade
+            * valor_unitario_cotado
+        )
+        valor_final = adjudicacao.valor_total
+        economia = (
+            valor_cotado_referencia
+            - valor_final
+        )
+
+        economia_percentual = zero
+        if valor_cotado_referencia > zero:
+            economia_percentual = (
+                economia
+                / valor_cotado_referencia
+            ) * Decimal("100")
+
+        valor_total_cotado_aprovacao += (
+            valor_cotado_referencia
+        )
+        valor_total_final_aprovacao += valor_final
+
+        resumo_aprovacao_itens.append(
+            {
+                "adjudicacao": adjudicacao,
+                "necessidade": adjudicacao.necessidade,
+                "fornecedor": adjudicacao.cotacao.fornecedor,
+                "item_cotado": item_cotado,
+                "compat": compat,
+                "quantidade": adjudicacao.quantidade,
+                "valor_unitario_cotado": valor_unitario_cotado,
+                "valor_unitario_final": valor_unitario_final,
+                "valor_cotado_referencia": valor_cotado_referencia,
+                "valor_final": valor_final,
+                "economia": economia,
+                "economia_percentual": economia_percentual,
+                "houve_alteracao_valor": (
+                    valor_unitario_final
+                    != valor_unitario_cotado
+                    or (adjudicacao.desconto_final or zero) > zero
+                ),
+                "condicao_pagamento": (
+                    adjudicacao.condicao_pagamento_final
+                ),
+                "prazo_entrega_dias": (
+                    adjudicacao.prazo_entrega_dias_final
+                ),
+            }
+        )
+
+    economia_total_aprovacao = (
+        valor_total_cotado_aprovacao
+        - valor_total_final_aprovacao
+    )
+
+    economia_percentual_aprovacao = zero
+    if valor_total_cotado_aprovacao > zero:
+        economia_percentual_aprovacao = (
+            economia_total_aprovacao
+            / valor_total_cotado_aprovacao
+        ) * Decimal("100")
+
+    # --------------------------------------------------------
     # ATENDIMENTO
     # --------------------------------------------------------
 
@@ -378,6 +474,21 @@ def _montar_dados_comerciais(
         "mapa_itens": mapa_itens,
         "resumo_fornecedores": (
             resumo_fornecedores
+        ),
+        "resumo_aprovacao_itens": (
+            resumo_aprovacao_itens
+        ),
+        "valor_total_cotado_aprovacao": (
+            valor_total_cotado_aprovacao
+        ),
+        "valor_total_final_aprovacao": (
+            valor_total_final_aprovacao
+        ),
+        "economia_total_aprovacao": (
+            economia_total_aprovacao
+        ),
+        "economia_percentual_aprovacao": (
+            economia_percentual_aprovacao
         ),
         "valor_total_selecionado": (
             valor_total_selecionado
@@ -415,13 +526,13 @@ def dashboard(request):
         )
     )
 
-    hoje = (
-        timezone.localdate()
-    )
+    hoje = timezone.localdate()
 
+    # Estados terminais não devem ser considerados processos ativos.
     ativos = qs.exclude(
         status__in=[
             ProcessoCompra.Status.CONTRATADO,
+            ProcessoCompra.Status.REPROVADO,
             ProcessoCompra.Status.CANCELADO,
         ]
     )
@@ -432,81 +543,101 @@ def dashboard(request):
     )
 
     aguardando = qs.filter(
-        status=(
-            ProcessoCompra
-            .Status
-            .AGUARDANDO_APROVACAO
-        )
+        status=ProcessoCompra.Status.AGUARDANDO_APROVACAO
+    )
+
+    ajustes = qs.filter(
+        status=ProcessoCompra.Status.AJUSTE_SOLICITADO
     )
 
     contratados = qs.filter(
-        status=(
-            ProcessoCompra
-            .Status
-            .CONTRATADO
-        ),
+        status=ProcessoCompra.Status.CONTRATADO,
         data_contratacao_concluida__date__gte=(
-            hoje
-            - timedelta(
-                days=30
-            )
+            hoje - timedelta(days=30)
         ),
     )
 
+    # O Kanban é organizado pelos STATUS reais do processo.
+    # Isso é importante porque alguns estados relevantes, como
+    # AJUSTE_SOLICITADO, compartilham uma etapa com outro momento
+    # do fluxo (o ajuste retorna para COTAÇÃO), mas precisam ficar
+    # visualmente separados no painel.
     definicoes = [
+        (
+            "RASCUNHO",
+            "Rascunho",
+            [
+                ProcessoCompra.Status.RASCUNHO,
+            ],
+            "Processos ainda não iniciados",
+        ),
         (
             "COTACAO",
             "Cotação",
             [
-                ProcessoCompra
-                .Etapa
-                .COTACAO
+                ProcessoCompra.Status.AGUARDANDO_COTACAO,
+                ProcessoCompra.Status.EM_COTACAO,
             ],
+            "Levantamento e recebimento de propostas",
         ),
         (
             "COMPATIBILIZACAO",
             "Análise técnica",
             [
-                ProcessoCompra
-                .Etapa
-                .COMPATIBILIZACAO
+                ProcessoCompra.Status.AGUARDANDO_COMPATIBILIZACAO,
+                ProcessoCompra.Status.EM_COMPATIBILIZACAO,
             ],
+            "Validação técnica das ofertas",
         ),
         (
             "NEGOCIACAO",
             "Negociação",
             [
-                ProcessoCompra
-                .Etapa
-                .NEGOCIACAO
+                ProcessoCompra.Status.EM_NEGOCIACAO,
             ],
+            "Comparação comercial e escolha",
         ),
         (
             "APROVACAO",
             "Aprovação",
             [
-                ProcessoCompra
-                .Etapa
-                .APROVACAO
+                ProcessoCompra.Status.AGUARDANDO_APROVACAO,
             ],
+            "Aguardando decisão do gestor",
+        ),
+        (
+            "AJUSTE",
+            "Ajuste solicitado",
+            [
+                ProcessoCompra.Status.AJUSTE_SOLICITADO,
+            ],
+            "Retornou para cotação e novo ciclo",
         ),
         (
             "CONTRATACAO",
             "Contratação",
             [
-                ProcessoCompra
-                .Etapa
-                .CONTRATACAO
+                ProcessoCompra.Status.APROVADO,
+                ProcessoCompra.Status.EM_CONTRATACAO,
             ],
+            "Aprovado e em formalização/pedidos",
         ),
         (
-            "CONTRATADO",
+            "CONCLUIDO",
             "Concluído",
             [
-                ProcessoCompra
-                .Etapa
-                .CONTRATADO
+                ProcessoCompra.Status.CONTRATADO,
             ],
+            "Compra concluída",
+        ),
+        (
+            "ENCERRADOS",
+            "Encerrados",
+            [
+                ProcessoCompra.Status.REPROVADO,
+                ProcessoCompra.Status.CANCELADO,
+            ],
+            "Reprovados ou cancelados",
         ),
     ]
 
@@ -514,16 +645,18 @@ def dashboard(request):
         {
             "chave": chave,
             "titulo": titulo,
+            "descricao": descricao,
             "processos": list(
                 qs.filter(
-                    etapa_atual__in=etapas
+                    status__in=statuses
                 )
             ),
         }
         for (
             chave,
             titulo,
-            etapas,
+            statuses,
+            descricao,
         ) in definicoes
     ]
 
@@ -534,6 +667,7 @@ def dashboard(request):
             "ativos": ativos.count(),
             "atrasados": atrasados.count(),
             "aguardando": aguardando.count(),
+            "ajustes": ajustes.count(),
             "contratados": contratados.count(),
             "colunas": colunas,
             "obras": (
@@ -675,7 +809,8 @@ def detalhe_processo(
         queryset=(
             CotacaoFornecedorItem.objects
             .select_related(
-                "necessidade"
+                "necessidade",
+                "negociacao",
             )
             .prefetch_related(
                 "compatibilizacoes"
@@ -761,6 +896,31 @@ def detalhe_processo(
         )
     )
 
+    propostas_forms = [
+        {
+            "cotacao": cotacao,
+            "form": PropostaCompletaForm(
+                processo=processo,
+                cotacao=cotacao,
+            ),
+        }
+        for cotacao in cotacoes
+    ]
+    form_proposta_nova = None
+    form_analise_lote = None
+    form_decisao_lote = None
+
+    if pode_editar:
+        form_proposta_nova = PropostaCompletaForm(
+            processo=processo,
+        )
+        form_analise_lote = AnaliseTecnicaLoteForm(
+            processo=processo,
+        )
+        form_decisao_lote = DecisaoComercialLoteForm(
+            processo=processo,
+        )
+
     contexto = {
         "processo": processo,
         "vinculos": vinculos,
@@ -803,6 +963,11 @@ def detalhe_processo(
         "pode_aprovar": (
             pode_aprovar
         ),
+
+        "propostas_forms": propostas_forms,
+        "form_proposta_nova": form_proposta_nova,
+        "form_analise_lote": form_analise_lote,
+        "form_decisao_lote": form_decisao_lote,
 
         "form_necessidade": (
             NecessidadeCompraForm(
@@ -864,8 +1029,8 @@ def detalhe_processo(
             else None
         ),
 
-        "form_contratacao": (
-            ContratacaoForm(
+        "form_documento_contratacao": (
+            DocumentoContratacaoForm(
                 processo=processo
             )
             if pode_editar
@@ -1100,6 +1265,10 @@ def lista_pedidos(request):
                 fornecedor__nome__icontains=busca
             )
         )
+
+    pedidos = list(pedidos)
+    for pedido in pedidos:
+        pedido.transicoes_status_permitidas = transicoes_status_permitidas(pedido)
 
     return render(
         request,
