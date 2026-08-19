@@ -25,6 +25,7 @@ from compras.models import (
     CotacaoFornecedor,
     CotacaoFornecedorItem,
     PedidoCompra,
+    PedidoCompraAnexo,
     ProcessoCompra,
 )
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
@@ -258,12 +259,17 @@ def acao_excluir_cotacao(request, pk, cotacao_id):
 
 @compras_permission_required(NivelPermissao.EDICAO)
 def acao_analise_tecnica_lote(request, pk):
-    """Salva a análise técnica em lote e conclui a etapa conforme o resultado."""
+    """
+    Salva decisões técnicas individualmente.
+
+    A análise de uma oferta não encerra o mapa. Ao surgir a primeira oferta
+    aprovada, a negociação é liberada, mas novas propostas continuam podendo
+    entrar e ser analisadas posteriormente.
+    """
     processo = _processo(pk)
     if request.method != "POST":
         return _voltar(processo)
 
-    avancar = request.POST.get("acao") == "salvar_avancar"
     form = AnaliseTecnicaLoteForm(request.POST, processo=processo)
     if not form.is_valid():
         for erros in form.errors.values():
@@ -275,8 +281,6 @@ def acao_analise_tecnica_lote(request, pk):
 
     salvas = 0
     try:
-        # As decisões válidas são persistidas primeiro. Se ainda houver pendências
-        # técnicas, elas permanecem salvas e o processo continua na análise técnica.
         with transaction.atomic():
             for dados in form.decisoes():
                 item = dados.pop("item")
@@ -285,6 +289,7 @@ def acao_analise_tecnica_lote(request, pk):
                     atual
                     and processo.data_cotacao_concluida
                     and atual.data >= processo.data_cotacao_concluida
+                    and atual.data >= item.atualizado_em
                 )
                 if decisao_do_ciclo_atual and (
                     atual.resultado == dados["resultado"]
@@ -292,71 +297,48 @@ def acao_analise_tecnica_lote(request, pk):
                     and (atual.ressalva_motivo or "") == (dados.get("ressalva_motivo") or "")
                 ):
                     continue
+
                 registrar_compatibilizacao(
                     item_cotado=item,
                     usuario=request.user,
                     **dados,
                 )
                 salvas += 1
-    except ValidationError as exc:
-        _erro(request, exc)
-        resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
-        return resposta
 
-    if not avancar:
-        messages.success(
-            request,
-            f"Análise técnica atualizada: {salvas} decisão(ões) registrada(s).",
-        )
-        resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
-        return resposta
+            # A primeira aprovação técnica libera a negociação. Não esperamos
+            # as demais ofertas e não fechamos a compatibilização global.
+            processo.refresh_from_db()
+            if processo.etapa_atual == processo.Etapa.COMPATIBILIZACAO:
+                try:
+                    processo = concluir_compatibilizacao(processo, request.user)
+                except ValidationError:
+                    # Nenhuma oferta aprovada ainda: a análise continua aberta.
+                    pass
 
-    try:
-        processo_atualizado = concluir_compatibilizacao(processo, request.user)
-
-        if processo_atualizado.etapa_atual == processo_atualizado.Etapa.COTACAO:
-            prefixo = f"{salvas} decisão(ões) salva(s). " if salvas else ""
-            messages.warning(
-                request,
-                prefixo
-                + "Análise técnica concluída, mas um ou mais itens ficaram sem proposta aprovada. "
-                "O processo retornou para Cotação. Inclua ou corrija as propostas desses itens e conclua a cotação novamente.",
-            )
-            resposta = _voltar(processo_atualizado)
-            resposta["Location"] += "#cotacao"
-            return resposta
-
-        if salvas:
+        if processo.etapa_atual == processo.Etapa.NEGOCIACAO:
             messages.success(
                 request,
-                f"{salvas} decisão(ões) salva(s). Análise técnica concluída e processo enviado para negociação.",
+                (
+                    f"Análise técnica atualizada: {salvas} decisão(ões) registrada(s). "
+                    "Ofertas aprovadas já estão disponíveis para negociação e o mapa continua aberto para novas propostas."
+                ),
             )
         else:
             messages.success(
                 request,
-                "Análise técnica concluída e processo enviado para negociação.",
+                f"Análise técnica atualizada: {salvas} decisão(ões) registrada(s).",
             )
-
-        resposta = _voltar(processo_atualizado)
-        resposta["Location"] += "#comparacao"
-        return resposta
-
     except ValidationError as exc:
-        # As decisões registradas acima permanecem salvas. O erro aqui representa,
-        # por exemplo, alguma oferta que ainda não recebeu decisão técnica.
-        if salvas:
-            messages.success(request, f"{salvas} decisão(ões) técnica(s) foram salvas.")
         _erro(request, exc)
-        resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
-        return resposta
+
+    resposta = _voltar(processo)
+    resposta["Location"] += "#comparacao"
+    return resposta
 
 
 @compras_permission_required(NivelPermissao.EDICAO)
 def acao_decisao_comercial_lote(request, pk):
-    """Salva negociação/quantidades e, quando solicitado, avança para aprovação."""
+    """Salva as condições negociadas e, quando solicitado, envia as alternativas ao gestor."""
     processo = _processo(pk)
     if request.method != "POST":
         return _voltar(processo)
@@ -374,8 +356,6 @@ def acao_decisao_comercial_lote(request, pk):
     try:
         with transaction.atomic():
             linhas = list(form.dados_linhas())
-
-            # 1) Condições negociadas: só cria histórico quando algo realmente mudou.
             for dados in linhas:
                 item = dados["item"]
                 try:
@@ -400,73 +380,18 @@ def acao_decisao_comercial_lote(request, pk):
                     )
                     if igual:
                         continue
-                elif not any(
-                    value not in (None, "")
-                    for value in negociacao_nova.values()
-                ):
+                elif not any(value not in (None, "") for value in negociacao_nova.values()):
                     continue
 
-                registrar_negociacao(
-                    item_cotado=item,
-                    usuario=request.user,
-                    **negociacao_nova,
-                )
+                registrar_negociacao(item_cotado=item, usuario=request.user, **negociacao_nova)
 
-            # 2) Quantidades: reconcilia por necessidade apenas quando a matriz mudou.
-            por_necessidade = {}
-            for dados in linhas:
-                item = dados["item"]
-                por_necessidade.setdefault(item.necessidade_id, []).append(dados)
-
-            for necessidade_id, linhas_necessidade in por_necessidade.items():
-                atuais = list(
-                    processo.adjudicacoes.filter(
-                        cancelada=False, necessidade_id=necessidade_id
-                    ).select_related("item_cotado")
-                )
-                atual_por_item = {}
-                for adj in atuais:
-                    atual_por_item[adj.item_cotado_id] = (
-                        atual_por_item.get(adj.item_cotado_id, 0) + adj.quantidade
-                    )
-                desejado_por_item = {
-                    d["item"].pk: d["quantidade"] for d in linhas_necessidade
-                    if d["quantidade"] > 0
-                }
-                normalizado_atual = {k: v for k, v in atual_por_item.items() if v > 0}
-                if normalizado_atual == desejado_por_item:
-                    continue
-
-                for adj in atuais:
-                    cancelar_adjudicacao(
-                        processo=processo,
-                        adjudicacao=adj,
-                        usuario=request.user,
-                        motivo="Atualização da seleção pela matriz comercial.",
-                    )
-                for dados in linhas_necessidade:
-                    if dados["quantidade"] <= 0:
-                        continue
-                    item_atualizado = CotacaoFornecedorItem.objects.select_related(
-                        "cotacao", "necessidade", "negociacao"
-                    ).get(pk=dados["item"].pk)
-                    adjudicar(
-                        processo=processo,
-                        item_cotado=item_atualizado,
-                        quantidade=dados["quantidade"],
-                        usuario=request.user,
-                    )
-
-            # A ação principal da tela salva a matriz e conclui a negociação
-            # dentro da mesma transação. Se a validação da conclusão falhar,
-            # nenhuma alteração desta submissão é persistida pela metade.
             if avancar:
                 concluir_negociacao(processo, request.user)
 
         if avancar:
-            messages.success(request, "Escolhas salvas e processo enviado para aprovação.")
+            messages.success(request, "Negociações salvas. Todas as propostas tecnicamente aprovadas foram enviadas ao gestor para escolha.")
         else:
-            messages.success(request, "Comparação comercial e quantidades selecionadas foram salvas.")
+            messages.success(request, "Negociações salvas. O mapa continua aberto para novas propostas e análises.")
     except ValidationError as exc:
         _erro(request, exc)
         resposta = _voltar(processo)
@@ -484,7 +409,7 @@ def acao_concluir_cotacao(request, pk):
     if request.method == "POST":
         try:
             concluir_cotacao(processo, request.user)
-            messages.success(request, "Cotação concluída e enviada para compatibilização.")
+            messages.success(request, "Análise técnica iniciada. O mapa continua aberto para receber novas propostas.")
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)
@@ -514,7 +439,7 @@ def acao_concluir_compatibilizacao(request, pk):
     if request.method == "POST":
         try:
             concluir_compatibilizacao(processo, request.user)
-            messages.success(request, "Compatibilização concluída.")
+            messages.success(request, "Negociação liberada para as ofertas tecnicamente aprovadas. O mapa continua aberto.")
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)
@@ -589,7 +514,7 @@ def acao_concluir_negociacao(request, pk):
     if request.method == "POST":
         try:
             concluir_negociacao(processo, request.user)
-            messages.success(request, "Negociação concluída e enviada para aprovação.")
+            messages.success(request, "Mapa comercial fechado e enviado para aprovação.")
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)
@@ -599,23 +524,23 @@ def acao_concluir_negociacao(request, pk):
 def acao_aprovar(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
-        form = AprovacaoForm(request.POST)
+        form = AprovacaoForm(request.POST, processo=processo)
         if form.is_valid():
             try:
                 decisao = form.cleaned_data["decisao"]
+                selecoes = list(form.selecoes_aprovadas()) if decisao == AprovacaoCompra.Decisao.APROVADO else []
                 decidir_aprovacao(
                     processo,
                     request.user,
                     decisao,
                     form.cleaned_data["observacao"],
+                    selecoes=selecoes,
                 )
 
                 if decisao == AprovacaoCompra.Decisao.AJUSTE_SOLICITADO:
                     messages.warning(
                         request,
-                        "Ajuste solicitado. O processo retornou para Cotação. "
-                        "O comprador deverá revisar as propostas e percorrer novamente "
-                        "Cotação, Compatibilização, Comparação Comercial e Aprovação.",
+                        "Ajuste solicitado. O processo retornou para Cotação para revisão do mapa comercial.",
                     )
                     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
                     resposta = _voltar(processo_atualizado)
@@ -625,7 +550,7 @@ def acao_aprovar(request, pk):
                 if decisao == AprovacaoCompra.Decisao.REPROVADO:
                     messages.error(
                         request,
-                        "Compra reprovada pelo gestor. O processo foi encerrado definitivamente e nenhum pedido será gerado.",
+                        "Compra reprovada pelo gestor. O processo foi encerrado e nenhum pedido foi gerado.",
                     )
                     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
                     resposta = _voltar(processo_atualizado)
@@ -634,11 +559,18 @@ def acao_aprovar(request, pk):
 
                 messages.success(
                     request,
-                    "Compra aprovada. Os pedidos foram gerados e o processo seguirá para contratação/entrega.",
+                    "Proposta(s) aprovada(s). Os pedidos foram gerados automaticamente e o mapa foi finalizado.",
                 )
             except ValidationError as exc:
                 _erro(request, exc)
-    return _voltar(processo)
+        else:
+            for erros in form.errors.values():
+                for erro in erros:
+                    messages.error(request, erro)
+    processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
+    resposta = _voltar(processo_atualizado)
+    resposta["Location"] += "#pedido" if processo_atualizado.etapa_atual == ProcessoCompra.Etapa.CONTRATADO else "#aprovacao"
+    return resposta
 
 
 @compras_permission_required(NivelPermissao.EDICAO)
@@ -672,6 +604,31 @@ def acao_gerar_pedidos(request, pk):
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)
+
+
+@compras_permission_required(NivelPermissao.EDICAO)
+def acao_anexar_arquivo_pedido(request, pedido_id):
+    pedido = get_object_or_404(PedidoCompra.objects.select_related("processo"), pk=pedido_id)
+    if request.method == "POST":
+        arquivos = request.FILES.getlist("arquivos")
+        descricao = (request.POST.get("descricao") or "").strip()
+        if not arquivos:
+            messages.error(request, "Selecione ao menos um arquivo para anexar.")
+        else:
+            for arquivo in arquivos:
+                PedidoCompraAnexo.objects.create(
+                    pedido=pedido,
+                    arquivo=arquivo,
+                    descricao=descricao,
+                    enviado_por=request.user,
+                )
+            messages.success(request, f"{len(arquivos)} arquivo(s) anexado(s) ao pedido {pedido.numero}.")
+    origem = request.POST.get("origem")
+    if origem == "processo":
+        resposta = _voltar(pedido.processo)
+        resposta["Location"] += "#pedido"
+        return resposta
+    return redirect("compras:lista_pedidos")
 
 
 @compras_permission_required(NivelPermissao.EDICAO)
@@ -712,16 +669,29 @@ def acao_receber_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
     if request.method == "POST":
         quantidades = {}
+        valores_itens = {}
         for item in pedido.itens.all():
-            valor = request.POST.get(f"item_{item.pk}")
-            if valor not in (None, ""):
-                quantidades[item.pk] = valor
+            quantidade = request.POST.get(f"item_{item.pk}")
+            valor_item = request.POST.get(f"valor_item_{item.pk}")
+            if quantidade not in (None, ""):
+                quantidades[item.pk] = quantidade
+            if valor_item not in (None, ""):
+                valores_itens[item.pk] = valor_item
         try:
-            registrar_recebimento(
-                pedido=pedido, quantidades=quantidades, usuario=request.user,
+            recebimento = registrar_recebimento(
+                pedido=pedido,
+                quantidades=quantidades,
+                valores_itens=valores_itens,
+                usuario=request.user,
+                numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
+                valor_total_nota=request.POST.get("valor_total_nota", ""),
+                arquivo_nota_fiscal=request.FILES.get("arquivo_nota_fiscal"),
                 observacao=request.POST.get("observacao", ""),
             )
-            messages.success(request, "Recebimento registrado.")
+            messages.success(
+                request,
+                f"Recebimento registrado com a NF {recebimento.numero_nota_fiscal}.",
+            )
         except ValidationError as exc:
             _erro(request, exc)
     return redirect("compras:lista_pedidos")

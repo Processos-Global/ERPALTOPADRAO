@@ -37,6 +37,7 @@ class CotacaoFornecedorItem(models.Model):
     valor_unitario_cotado = models.DecimalField(max_digits=18, decimal_places=4, validators=[MinValueValidator(Decimal("0"))])
     desconto_cotado = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"), validators=[MinValueValidator(Decimal("0"))])
     observacoes = models.TextField(blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [

@@ -170,6 +170,15 @@ class HistoricoPrevisaoPedido(models.Model):
 
 class RecebimentoPedido(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="recebimentos")
+    numero_nota_fiscal = models.CharField(max_length=80, null=True, blank=True)
+    arquivo_nota_fiscal = models.FileField(upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
+    valor_total_nota = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -181,6 +190,20 @@ class RecebimentoPedido(models.Model):
 
     class Meta:
         ordering = ("-criado_em", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["pedido", "numero_nota_fiscal"],
+                name="comp_rec_ped_nf_uniq",
+            )
+        ]
+
+    @property
+    def valor_itens_recebidos(self):
+        return sum(((item.valor_recebido or Decimal("0")) for item in self.itens.all()), Decimal("0"))
+
+    @property
+    def nome_arquivo_nota_fiscal(self):
+        return self.arquivo_nota_fiscal.name.rsplit("/", 1)[-1] if self.arquivo_nota_fiscal else ""
 
 
 class RecebimentoPedidoItem(models.Model):
@@ -191,6 +214,13 @@ class RecebimentoPedidoItem(models.Model):
         decimal_places=4,
         validators=[MinValueValidator(Decimal("0.0001"))],
     )
+    valor_recebido = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01"))],
+    )
 
     class Meta:
         constraints = [
@@ -199,3 +229,27 @@ class RecebimentoPedidoItem(models.Model):
                 name="comp_rec_item_uniq",
             )
         ]
+
+
+class PedidoCompraAnexo(models.Model):
+    pedido = models.ForeignKey(PedidoCompra, on_delete=models.CASCADE, related_name="anexos")
+    arquivo = models.FileField(upload_to="compras/pedidos/%Y/%m/")
+    descricao = models.CharField(max_length=255, blank=True)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="anexos_pedidos_compra",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-criado_em",)
+
+    def __str__(self):
+        return f"{self.pedido.numero} - {self.arquivo.name.rsplit('/', 1)[-1]}"
+
+    @property
+    def nome_arquivo(self):
+        return self.arquivo.name.rsplit("/", 1)[-1]

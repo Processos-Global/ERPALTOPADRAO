@@ -19,6 +19,7 @@ from .acoes import (
     acao_incluir_necessidade,
     acao_negociar,
     acao_salvar_proposta_completa,
+    acao_anexar_arquivo_pedido,
     acao_atualizar_status_pedido,
     acao_atualizar_previsao_pedido,
     acao_receber_pedido,

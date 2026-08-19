@@ -23,8 +23,8 @@
   .cp-column[data-column="AJUSTE"]{background:#fff9ee;border-color:#ead9b9}
   .cp-column[data-column="AJUSTE"] .cp-count{background:#f6e8c8;color:#7f5d29}
   .cp-column[data-column="APROVACAO"]{background:#f8f7fd;border-color:#ded9ec}
-  .cp-column[data-column="CONCLUIDO"]{background:#f3f9f5;border-color:#d6e8de}
-  .cp-column[data-column="CONCLUIDO"] .cp-count{background:#dfeee5;color:#416d56}
+  .cp-column[data-column="FINALIZADO"]{background:#f3f9f5;border-color:#d6e8de}
+  .cp-column[data-column="FINALIZADO"] .cp-count{background:#dfeee5;color:#416d56}
   .cp-column[data-column="ENCERRADOS"]{background:#fff6f6;border-color:#efd2d2}
   .cp-column[data-column="ENCERRADOS"] .cp-count{background:#f3dddd;color:#8b4646}
   .cp-process-card__stage{display:block;margin-top:5px;color:#81949c;font-size:9px}
@@ -45,7 +45,7 @@
     <div class="cp-head__copy">
       <div class="cp-eyebrow">Suprimentos</div>
       <h1 class="cp-title">Painel de compras</h1>
-      <div class="cp-sub">Acompanhe cada processo pelo status real do fluxo, da abertura até a contratação ou encerramento.</div>
+      <div class="cp-sub">Acompanhe cada processo pelo fluxo atual, da abertura até a aprovação do gestor e geração automática do pedido.</div>
     </div>
     <div class="cp-actions">
       <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a>
@@ -63,7 +63,7 @@
     <div class="cp-kpi">
       <span>Atrasados</span>
       <strong>{{ atrasados }}</strong>
-      <small>Prazo de contratação vencido</small>
+      <small>Prazo previsto para conclusão da compra vencido</small>
     </div>
     <div class="cp-kpi">
       <span>Aguardando aprovação</span>
@@ -76,9 +76,9 @@
       <small>Voltaram para novo ciclo de cotação</small>
     </div>
     <div class="cp-kpi">
-      <span>Concluídos em 30 dias</span>
+      <span>Finalizados em 30 dias</span>
       <strong>{{ contratados }}</strong>
-      <small>Compras finalizadas recentemente</small>
+      <small>Pedidos gerados e mapas finalizados</small>
     </div>
   </div>
 
@@ -106,7 +106,7 @@
   </form>
 
   <div class="cp-board-hint">
-    <span>Fluxo organizado pelos status atuais do módulo.</span>
+    <span>Fluxo do comprador: cotação, análise técnica, negociação, aprovação e finalização automática.</span>
     <span>Role horizontalmente para ver todas as colunas →</span>
   </div>
 

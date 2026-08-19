@@ -28,6 +28,7 @@ urlpatterns = [
     path("processos/<int:pk>/documentos/anexar/", views.acao_anexar_documento, name="anexar_documento"),
     path("processos/<int:pk>/pedidos/gerar/", views.acao_gerar_pedidos, name="gerar_pedidos"),
     path("pedidos/", views.lista_pedidos, name="lista_pedidos"),
+    path("pedidos/<int:pedido_id>/anexos/", views.acao_anexar_arquivo_pedido, name="anexar_arquivo_pedido"),
     path("pedidos/<int:pedido_id>/status/", views.acao_atualizar_status_pedido, name="atualizar_status_pedido"),
     path("pedidos/<int:pedido_id>/previsao/", views.acao_atualizar_previsao_pedido, name="atualizar_previsao_pedido"),
     path("pedidos/<int:pedido_id>/receber/", views.acao_receber_pedido, name="receber_pedido"),

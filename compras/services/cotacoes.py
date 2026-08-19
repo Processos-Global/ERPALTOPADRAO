@@ -5,6 +5,7 @@ from django.db import transaction
 
 from compras.models import CotacaoFornecedor, CotacaoFornecedorItem, FornecedorCompra
 from .auditoria import registrar_evento
+from .comercial import processo_em_fase_comercial
 
 
 @transaction.atomic
@@ -24,8 +25,10 @@ def criar_fornecedor(*, nome, documento="", email="", telefone=""):
 
 @transaction.atomic
 def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
-    if processo.etapa_atual != processo.Etapa.COTACAO:
-        raise ValidationError("Propostas só podem ser alteradas durante a etapa de cotação.")
+    if not processo_em_fase_comercial(processo):
+        raise ValidationError(
+            "O mapa comercial já foi fechado. Propostas não podem mais ser alteradas."
+        )
     if dados.get("frete") is None:
         dados["frete"] = Decimal("0")
     if processo.status == processo.Status.CANCELADO:
@@ -51,8 +54,10 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
 
 @transaction.atomic
 def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, usuario, **dados):
-    if cotacao.processo.etapa_atual != cotacao.processo.Etapa.COTACAO:
-        raise ValidationError("Itens da proposta só podem ser alterados durante a etapa de cotação.")
+    if not processo_em_fase_comercial(cotacao.processo):
+        raise ValidationError(
+            "O mapa comercial já foi fechado. Itens da proposta não podem mais ser alterados."
+        )
     if necessidade.processo_id != cotacao.processo_id:
         raise ValidationError("A necessidade não pertence ao processo desta cotação.")
     quantidade = Decimal(str(quantidade))
@@ -82,21 +87,34 @@ def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, us
 
 @transaction.atomic
 def excluir_cotacao(*, cotacao, usuario):
-    """Exclui uma proposta completa enquanto o processo ainda está em cotação.
+    """Exclui uma proposta completa enquanto o mapa comercial está aberto.
 
-    Os itens da proposta são removidos em cascata pelo relacionamento
-    CotacaoFornecedor -> CotacaoFornecedorItem. A exclusão é deliberadamente
-    bloqueada após a etapa de cotação para preservar decisões posteriores.
+    Cotação, análise técnica e negociação podem ocorrer em paralelo. A exclusão
+    só é bloqueada depois que o comprador fecha o mapa e o envia à aprovação.
     """
     processo = cotacao.processo
 
-    if processo.etapa_atual != processo.Etapa.COTACAO:
+    if not processo_em_fase_comercial(processo):
         raise ValidationError(
-            "A proposta só pode ser excluída enquanto o processo estiver na etapa de cotação."
+            "A proposta só pode ser excluída enquanto o mapa comercial estiver aberto."
         )
 
     if processo.status == processo.Status.CANCELADO:
         raise ValidationError("Processo cancelado não pode ter propostas alteradas.")
+
+    if cotacao.itens.filter(compatibilizacoes__isnull=False).exists():
+        raise ValidationError(
+            "Esta proposta já possui histórico de análise técnica e não pode ser excluída. "
+            "Mantenha-a no mapa e registre uma nova decisão técnica, se necessário."
+        )
+    if cotacao.itens.filter(historico_negociacoes__isnull=False).exists():
+        raise ValidationError(
+            "Esta proposta já possui histórico de negociação e não pode ser excluída."
+        )
+    if cotacao.adjudicacoes.filter(cancelada=False).exists():
+        raise ValidationError(
+            "Esta proposta possui quantidade selecionada. Remova a seleção comercial antes de excluí-la."
+        )
 
     fornecedor_nome = cotacao.fornecedor.nome
     cotacao_id = cotacao.pk

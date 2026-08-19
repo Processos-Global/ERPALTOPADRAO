@@ -3,13 +3,16 @@ from django.db import transaction
 
 from compras.models import CompatibilizacaoItem
 from .auditoria import registrar_evento
+from .comercial import processo_em_analise_ou_negociacao
 
 
 @transaction.atomic
 def registrar_compatibilizacao(*, item_cotado, resultado, usuario, observacao="", ressalva_motivo=""):
     processo = item_cotado.cotacao.processo
-    if processo.etapa_atual != processo.Etapa.COMPATIBILIZACAO:
-        raise ValidationError("A análise técnica só pode ser registrada na etapa de análise técnica.")
+    if not processo_em_analise_ou_negociacao(processo):
+        raise ValidationError(
+            "A análise técnica só pode ser registrada enquanto o mapa comercial estiver em análise ou negociação."
+        )
     if resultado not in CompatibilizacaoItem.Resultado.values:
         raise ValidationError("Resultado de compatibilização inválido.")
     if resultado == CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA and not ressalva_motivo.strip():

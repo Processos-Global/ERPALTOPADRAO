@@ -1,11 +1,35 @@
 from decimal import Decimal, ROUND_HALF_UP
 
-from django.db.models import OuterRef, Subquery
+from django.db.models import F, OuterRef, Q, Subquery
 
 from compras.models import CompatibilizacaoItem
 
 CENTAVO = Decimal("0.01")
 ZERO = Decimal("0")
+
+
+def processo_em_fase_comercial(processo):
+    """
+    Retorna True enquanto o mapa comercial permanece aberto.
+
+    Cotação, análise técnica e negociação passam a coexistir: depois que a
+    análise técnica é iniciada, novas propostas ainda podem entrar e propostas
+    tecnicamente aprovadas podem ser negociadas sem aguardar os demais
+    fornecedores. O mapa só é congelado quando segue para APROVAÇÃO.
+    """
+    return processo.etapa_atual in {
+        processo.Etapa.COTACAO,
+        processo.Etapa.COMPATIBILIZACAO,
+        processo.Etapa.NEGOCIACAO,
+    }
+
+
+def processo_em_analise_ou_negociacao(processo):
+    """Fase em que uma oferta já pode receber decisão técnica/comercial."""
+    return processo.etapa_atual in {
+        processo.Etapa.COMPATIBILIZACAO,
+        processo.Etapa.NEGOCIACAO,
+    }
 
 
 def quantizar_moeda(valor):
@@ -21,9 +45,18 @@ def ultima_compatibilizacao(item_cotado):
 
 
 def item_tecnicamente_aprovado(item_cotado):
+    """Valida a última decisão técnica e respeita o ciclo comercial atual."""
     ultima = ultima_compatibilizacao(item_cotado)
     if not ultima:
         return False
+
+    processo = item_cotado.cotacao.processo
+    inicio_ciclo = processo.data_cotacao_concluida
+    if inicio_ciclo and ultima.data < inicio_ciclo:
+        return False
+    if item_cotado.atualizado_em and ultima.data < item_cotado.atualizado_em:
+        return False
+
     return ultima.resultado in {
         CompatibilizacaoItem.Resultado.APROVADO,
         CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA,
@@ -31,20 +64,37 @@ def item_tecnicamente_aprovado(item_cotado):
 
 
 def queryset_itens_tecnicamente_aprovados(queryset):
-    """Filtra pelo resultado da ÚLTIMA análise técnica de cada item."""
-    ultima = (
+    """
+    Filtra pelo resultado da ÚLTIMA análise técnica de cada item e ignora
+    decisões de ciclos anteriores quando o gestor solicitou ajuste.
+    """
+    ultima_resultado = (
         CompatibilizacaoItem.objects
         .filter(item_cotado_id=OuterRef("pk"))
         .order_by("-data", "-id")
         .values("resultado")[:1]
     )
+    ultima_data = (
+        CompatibilizacaoItem.objects
+        .filter(item_cotado_id=OuterRef("pk"))
+        .order_by("-data", "-id")
+        .values("data")[:1]
+    )
     return (
-        queryset.annotate(_ultimo_resultado_tecnico=Subquery(ultima))
+        queryset.annotate(
+            _ultimo_resultado_tecnico=Subquery(ultima_resultado),
+            _ultima_data_tecnica=Subquery(ultima_data),
+        )
         .filter(
             _ultimo_resultado_tecnico__in=[
                 CompatibilizacaoItem.Resultado.APROVADO,
                 CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA,
             ]
+        )
+        .filter(_ultima_data_tecnica__gte=F("atualizado_em"))
+        .filter(
+            Q(cotacao__processo__data_cotacao_concluida__isnull=True)
+            | Q(_ultima_data_tecnica__gte=F("cotacao__processo__data_cotacao_concluida"))
         )
     )
 

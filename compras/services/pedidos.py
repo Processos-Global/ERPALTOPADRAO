@@ -239,29 +239,93 @@ def atualizar_previsao_entrega(*, pedido, previsao_nova, usuario, motivo=""):
 
 
 @transaction.atomic
-def registrar_recebimento(*, pedido, quantidades, usuario, observacao=""):
-    """quantidades: dict {pedido_item_id: quantidade_recebida_nesta_entrega}."""
+def registrar_recebimento(
+    *,
+    pedido,
+    quantidades,
+    valores_itens,
+    usuario,
+    numero_nota_fiscal,
+    valor_total_nota,
+    arquivo_nota_fiscal,
+    observacao="",
+):
+    """
+    Registra uma entrega física vinculada obrigatoriamente à respectiva Nota Fiscal.
+
+    quantidades: dict {pedido_item_id: quantidade_recebida_nesta_entrega}
+    valores_itens: dict {pedido_item_id: valor_total_do_item_na_nota}
+    """
     p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
     if p.status in {PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE}:
         raise ValidationError("Este pedido não aceita novos recebimentos.")
 
-    recebimento = RecebimentoPedido.objects.create(pedido=p, usuario=usuario, observacao=(observacao or "").strip())
-    houve = False
+    numero_nota_fiscal = (numero_nota_fiscal or "").strip()
+    if not numero_nota_fiscal:
+        raise ValidationError("Informe o número da Nota Fiscal.")
+    if not arquivo_nota_fiscal:
+        raise ValidationError("Anexe o arquivo da Nota Fiscal.")
+    if RecebimentoPedido.objects.filter(pedido=p, numero_nota_fiscal=numero_nota_fiscal).exists():
+        raise ValidationError(f"A Nota Fiscal {numero_nota_fiscal} já foi registrada neste pedido.")
+
+    try:
+        total_nota = Decimal(str(valor_total_nota).replace(",", "."))
+    except Exception as exc:
+        raise ValidationError("Informe um valor total válido para a Nota Fiscal.") from exc
+    if total_nota <= ZERO:
+        raise ValidationError("O valor total da Nota Fiscal deve ser maior que zero.")
+
+    itens_receber = []
     for item in p.itens.select_for_update().all():
-        quantidade = Decimal(str(quantidades.get(item.pk, ZERO) or ZERO))
-        if quantidade < 0:
+        valor_qtd = quantidades.get(item.pk, ZERO)
+        try:
+            quantidade = Decimal(str(valor_qtd or ZERO).replace(",", "."))
+        except Exception as exc:
+            raise ValidationError(f"Quantidade inválida para {item.descricao}.") from exc
+
+        if quantidade < ZERO:
             raise ValidationError("Quantidade recebida não pode ser negativa.")
-        if quantidade == 0:
+        if quantidade == ZERO:
             continue
         if quantidade > item.saldo_receber:
-            raise ValidationError(f"Recebimento de {item.descricao} excede o saldo de {item.saldo_receber} {item.unidade}.")
+            raise ValidationError(
+                f"Recebimento de {item.descricao} excede o saldo de "
+                f"{item.saldo_receber} {item.unidade}."
+            )
+
+        valor_informado = valores_itens.get(item.pk)
+        if valor_informado in (None, ""):
+            raise ValidationError(f"Informe o valor recebido do item {item.descricao}.")
+        try:
+            valor_recebido = Decimal(str(valor_informado).replace(",", "."))
+        except Exception as exc:
+            raise ValidationError(f"Valor recebido inválido para {item.descricao}.") from exc
+        if valor_recebido <= ZERO:
+            raise ValidationError(f"O valor recebido de {item.descricao} deve ser maior que zero.")
+
+        itens_receber.append((item, quantidade, quantizar_moeda(valor_recebido)))
+
+    if not itens_receber:
+        raise ValidationError("Informe ao menos uma quantidade recebida maior que zero.")
+
+    recebimento = RecebimentoPedido.objects.create(
+        pedido=p,
+        numero_nota_fiscal=numero_nota_fiscal,
+        arquivo_nota_fiscal=arquivo_nota_fiscal,
+        valor_total_nota=quantizar_moeda(total_nota),
+        usuario=usuario,
+        observacao=(observacao or "").strip(),
+    )
+
+    for item, quantidade, valor_recebido in itens_receber:
         item.quantidade_recebida += quantidade
         item.save(update_fields=["quantidade_recebida"])
-        RecebimentoPedidoItem.objects.create(recebimento=recebimento, item_pedido=item, quantidade=quantidade)
-        houve = True
-
-    if not houve:
-        raise ValidationError("Informe ao menos uma quantidade recebida maior que zero.")
+        RecebimentoPedidoItem.objects.create(
+            recebimento=recebimento,
+            item_pedido=item,
+            quantidade=quantidade,
+            valor_recebido=valor_recebido,
+        )
 
     completo = not p.itens.filter(quantidade_recebida__lt=models.F("quantidade")).exists()
     if completo:
@@ -273,7 +337,18 @@ def registrar_recebimento(*, pedido, quantidades, usuario, observacao=""):
         p.status = PedidoCompra.Status.ENTREGA_PARCIAL
         p.save(update_fields=["status", "atualizado_em"])
 
-    registrar_evento(p.processo, "RECEBIMENTO_PEDIDO", usuario, f"Recebimento registrado no pedido {p.numero}.", {"pedido_id": p.pk, "recebimento_id": recebimento.pk})
+    registrar_evento(
+        p.processo,
+        "RECEBIMENTO_PEDIDO",
+        usuario,
+        f"Recebimento registrado no pedido {p.numero} - NF {numero_nota_fiscal}.",
+        {
+            "pedido_id": p.pk,
+            "recebimento_id": recebimento.pk,
+            "numero_nota_fiscal": numero_nota_fiscal,
+            "valor_total_nota": str(recebimento.valor_total_nota),
+        },
+    )
     return recebimento
 
 

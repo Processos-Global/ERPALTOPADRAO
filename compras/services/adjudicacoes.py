@@ -8,7 +8,11 @@ from django.utils import timezone
 from compras.models import AdjudicacaoCompra
 
 from .auditoria import registrar_evento
-from .comercial import calcular_desconto_adjudicacao, item_tecnicamente_aprovado
+from .comercial import (
+    calcular_desconto_adjudicacao,
+    item_tecnicamente_aprovado,
+    processo_em_analise_ou_negociacao,
+)
 
 
 # ============================================================
@@ -196,15 +200,9 @@ def adjudicar(
     # ETAPA
     # --------------------------------------------------------
 
-    if (
-        processo.etapa_atual
-        != processo.Etapa.NEGOCIACAO
-    ):
+    if not processo_em_analise_ou_negociacao(processo):
         raise ValidationError(
-            (
-                "Adjudicações só podem ser registradas "
-                "durante a etapa de negociação."
-            )
+            "A seleção comercial só pode ser alterada enquanto o mapa comercial estiver aberto."
         )
 
     # --------------------------------------------------------
@@ -411,15 +409,9 @@ def cancelar_adjudicacao(
     # ETAPA
     # --------------------------------------------------------
 
-    if (
-        processo.etapa_atual
-        != processo.Etapa.NEGOCIACAO
-    ):
+    if not processo_em_analise_ou_negociacao(processo):
         raise ValidationError(
-            (
-                "A adjudicação só pode ser corrigida "
-                "ou cancelada durante a negociação."
-            )
+            "A seleção comercial só pode ser corrigida enquanto o mapa comercial estiver aberto."
         )
 
     # --------------------------------------------------------

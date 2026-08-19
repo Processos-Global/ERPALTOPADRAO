@@ -595,7 +595,7 @@ def dashboard(request):
             [
                 ProcessoCompra.Status.EM_NEGOCIACAO,
             ],
-            "Comparação comercial e escolha",
+            "Negociação comercial",
         ),
         (
             "APROVACAO",
@@ -614,21 +614,18 @@ def dashboard(request):
             "Retornou para cotação e novo ciclo",
         ),
         (
-            "CONTRATACAO",
-            "Contratação",
+            "FINALIZADO",
+            "Finalizado",
             [
+                # APROVADO e EM_CONTRATACAO permanecem aqui apenas por
+                # compatibilidade com registros antigos. No fluxo atual,
+                # a aprovação do gestor gera os pedidos automaticamente e
+                # o processo é gravado como CONTRATADO na mesma transação.
                 ProcessoCompra.Status.APROVADO,
                 ProcessoCompra.Status.EM_CONTRATACAO,
-            ],
-            "Aprovado e em formalização/pedidos",
-        ),
-        (
-            "CONCLUIDO",
-            "Concluído",
-            [
                 ProcessoCompra.Status.CONTRATADO,
             ],
-            "Compra concluída",
+            "Aprovado pelo gestor e com pedido gerado automaticamente",
         ),
         (
             "ENCERRADOS",
@@ -889,11 +886,61 @@ def detalhe_processo(
             "fornecedor"
         )
         .prefetch_related(
-            "itens"
+            "itens",
+            "anexos",
         )
         .order_by(
             "fornecedor__nome"
         )
+    )
+
+    # Centraliza, para consulta, todos os arquivos já anexados ao processo.
+    # A tela de Pedidos apenas exibe esses arquivos; não exige nova seleção
+    # de fornecedor nem novo upload nesta etapa.
+    documentos_processo = []
+
+    for cotacao in cotacoes:
+        if cotacao.documento:
+            documentos_processo.append(
+                {
+                    "etapa": "Cotação",
+                    "fornecedor": cotacao.fornecedor,
+                    "documento": cotacao.documento,
+                    "nome": cotacao.documento.name.rsplit("/", 1)[-1],
+                    "responsavel": cotacao.criado_por,
+                    "data": cotacao.atualizado_em,
+                }
+            )
+
+    for contratacao in contratacoes:
+        if contratacao.documento:
+            documentos_processo.append(
+                {
+                    "etapa": "Formalização",
+                    "fornecedor": contratacao.fornecedor,
+                    "documento": contratacao.documento,
+                    "nome": contratacao.documento.name.rsplit("/", 1)[-1],
+                    "responsavel": contratacao.formalizado_por,
+                    "data": contratacao.formalizado_em,
+                }
+            )
+
+    for pedido in pedidos:
+        for anexo in pedido.anexos.all():
+            documentos_processo.append(
+                {
+                    "etapa": "Pedido",
+                    "fornecedor": pedido.fornecedor,
+                    "documento": anexo.arquivo,
+                    "nome": anexo.nome_arquivo,
+                    "responsavel": anexo.enviado_por,
+                    "data": anexo.criado_em,
+                }
+            )
+
+    documentos_processo.sort(
+        key=lambda item: item["data"],
+        reverse=True,
     )
 
     propostas_forms = [
@@ -910,10 +957,21 @@ def detalhe_processo(
     form_analise_lote = None
     form_decisao_lote = None
 
-    if pode_editar:
+    fase_comercial_aberta = processo.etapa_atual in {
+        ProcessoCompra.Etapa.COTACAO,
+        ProcessoCompra.Etapa.COMPATIBILIZACAO,
+        ProcessoCompra.Etapa.NEGOCIACAO,
+    }
+    fase_analise_aberta = processo.etapa_atual in {
+        ProcessoCompra.Etapa.COMPATIBILIZACAO,
+        ProcessoCompra.Etapa.NEGOCIACAO,
+    }
+
+    if pode_editar and fase_comercial_aberta:
         form_proposta_nova = PropostaCompletaForm(
             processo=processo,
         )
+    if pode_editar and fase_analise_aberta:
         form_analise_lote = AnaliseTecnicaLoteForm(
             processo=processo,
         )
@@ -930,6 +988,8 @@ def detalhe_processo(
         "possui_saldo_pendente": (
             possui_saldo_pendente
         ),
+        "fase_comercial_aberta": fase_comercial_aberta,
+        "fase_analise_aberta": fase_analise_aberta,
 
         "aprovacoes": (
             processo
@@ -946,6 +1006,10 @@ def detalhe_processo(
 
         "pedidos": (
             pedidos
+        ),
+
+        "documentos_processo": (
+            documentos_processo
         ),
 
         "historico": (
@@ -1024,8 +1088,8 @@ def detalhe_processo(
         ),
 
         "form_aprovacao": (
-            AprovacaoForm()
-            if pode_aprovar
+            AprovacaoForm(processo=processo)
+            if pode_aprovar and processo.etapa_atual == ProcessoCompra.Etapa.APROVACAO
             else None
         ),
 
@@ -1224,6 +1288,7 @@ def lista_pedidos(request):
             "processo",
             "responsavel",
         )
+        .prefetch_related("itens", "anexos", "recebimentos__usuario", "recebimentos__itens__item_pedido")
         .order_by(
             "-criado_em"
         )

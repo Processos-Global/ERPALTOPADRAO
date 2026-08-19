@@ -19,6 +19,7 @@ from .pedido import (
     HistoricoPrevisaoPedido,
     ParcelaPrevistaPedido,
     PedidoCompra,
+    PedidoCompraAnexo,
     PedidoCompraItem,
     RecebimentoPedido,
     RecebimentoPedidoItem,

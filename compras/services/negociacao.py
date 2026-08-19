@@ -1,8 +1,9 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from compras.models import HistoricoNegociacaoItem, NegociacaoItem
 from .auditoria import registrar_evento
-from .comercial import item_tecnicamente_aprovado
+from .comercial import item_tecnicamente_aprovado, processo_em_analise_ou_negociacao
 
 
 @transaction.atomic
@@ -11,11 +12,11 @@ def registrar_negociacao(
     prazo_entrega_dias_negociado=None, condicao_pagamento_negociada="", observacoes=""
 ):
     processo = item_cotado.cotacao.processo
-    if processo.etapa_atual != processo.Etapa.NEGOCIACAO:
-        from django.core.exceptions import ValidationError
-        raise ValidationError("A negociação só pode ser alterada durante a etapa de negociação.")
+    if not processo_em_analise_ou_negociacao(processo):
+        raise ValidationError(
+            "A negociação só pode ser alterada enquanto o mapa comercial estiver aberto para análise/negociação."
+        )
     if not item_tecnicamente_aprovado(item_cotado):
-        from django.core.exceptions import ValidationError
         raise ValidationError("A última análise técnica deste item não está aprovada.")
 
     negociacao, _ = NegociacaoItem.objects.update_or_create(

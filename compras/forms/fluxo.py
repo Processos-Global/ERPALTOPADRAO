@@ -19,19 +19,6 @@ from compras.services.comercial import queryset_itens_tecnicamente_aprovados
 INPUT_CLASS = "cp-input"
 
 
-PRAZOS_ENTREGA_CHOICES = [
-    ("", "Selecione o prazo"),
-    (5, "5 dias"),
-    (10, "10 dias"),
-    (15, "15 dias"),
-    (20, "20 dias"),
-    (25, "25 dias"),
-    (30, "30 dias"),
-    (45, "45 dias"),
-    (60, "60 dias"),
-    (90, "90 dias"),
-]
-
 CONDICOES_PAGAMENTO_CHOICES = [
     ("", "Selecione a condição"),
     ("À vista", "À vista"),
@@ -45,6 +32,7 @@ CONDICOES_PAGAMENTO_CHOICES = [
     ("45 dias", "45 dias"),
     ("60 dias", "60 dias"),
     ("90 dias", "90 dias"),
+    ("Parcelado", "Parcelado"),
     ("A combinar", "A combinar"),
 ]
 
@@ -106,21 +94,27 @@ class CotacaoFornecedorForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
         queryset=FornecedorCompra.objects.filter(ativo=True).order_by("nome")
     )
-    data_proposta = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    prazo_entrega_dias = forms.TypedChoiceField(
-        required=False,
-        choices=PRAZOS_ENTREGA_CHOICES,
-        coerce=int,
-        empty_value=None,
-        label="Prazo de entrega",
+    data_proposta = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
+    prazo_entrega_dias = forms.IntegerField(
+        required=True,
+        min_value=0,
+        label="Prazo de entrega (dias)",
+        widget=forms.NumberInput(attrs={"min": "0", "step": "1", "placeholder": "Ex.: 12"}),
     )
     condicao_pagamento = forms.ChoiceField(
-        required=False,
+        required=True,
         choices=CONDICOES_PAGAMENTO_CHOICES,
         label="Condição de pagamento",
     )
-    frete = forms.DecimalField(required=False, min_value=0, decimal_places=2, initial=0)
-    validade = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    parcelas_pagamento = forms.IntegerField(
+        required=False,
+        min_value=2,
+        max_value=120,
+        label="Número de parcelas",
+        widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
+    )
+    frete = forms.DecimalField(required=True, min_value=0, decimal_places=2, initial=0, label="Frete (R$)")
+    validade = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     documento = forms.FileField(required=False)
 
@@ -132,12 +126,27 @@ class CotacaoFornecedorForm(forms.Form):
             )
         _aplicar_classe_campos(self)
 
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("condicao_pagamento") == "Parcelado":
+            parcelas = cleaned.get("parcelas_pagamento")
+            if not parcelas:
+                self.add_error("parcelas_pagamento", "Informe o número de parcelas.")
+            else:
+                cleaned["condicao_pagamento"] = f"Parcelado em {parcelas}x"
+        cleaned.pop("parcelas_pagamento", None)
+        data_proposta = cleaned.get("data_proposta")
+        validade = cleaned.get("validade")
+        if data_proposta and validade and validade < data_proposta:
+            self.add_error("validade", "A validade não pode ser anterior à data da proposta.")
+        return cleaned
+
 
 class CotacaoItemForm(forms.Form):
     cotacao = forms.ModelChoiceField(queryset=CotacaoFornecedor.objects.none())
     necessidade = forms.ModelChoiceField(queryset=NecessidadeCompra.objects.none())
     descricao_comercial = forms.CharField(required=False, max_length=500)
-    marca = forms.CharField(required=False, max_length=120)
+    marca = forms.CharField(required=True, max_length=120)
     modelo = forms.CharField(required=False, max_length=120)
     especificacao_ofertada = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     quantidade = forms.DecimalField(min_value=0.0001, decimal_places=4, max_digits=18)
@@ -174,32 +183,38 @@ class PropostaCompletaForm(forms.Form):
         label="Fornecedor",
     )
     data_proposta = forms.DateField(
-        required=False,
+        required=True,
         label="Data da proposta",
         widget=forms.DateInput(attrs={"type": "date"}),
     )
-    prazo_entrega_dias = forms.TypedChoiceField(
-        required=False,
-        choices=PRAZOS_ENTREGA_CHOICES,
-        coerce=int,
-        empty_value=None,
-        label="Prazo de entrega",
+    prazo_entrega_dias = forms.IntegerField(
+        required=True,
+        min_value=0,
+        label="Prazo de entrega (dias)",
+        widget=forms.NumberInput(attrs={"min": "0", "step": "1", "placeholder": "Ex.: 12"}),
     )
     condicao_pagamento = forms.ChoiceField(
-        required=False,
+        required=True,
         choices=CONDICOES_PAGAMENTO_CHOICES,
         label="Condição de pagamento",
     )
-    frete = forms.DecimalField(
+    parcelas_pagamento = forms.IntegerField(
         required=False,
+        min_value=2,
+        max_value=120,
+        label="Número de parcelas",
+        widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
+    )
+    frete = forms.DecimalField(
+        required=True,
         min_value=0,
         decimal_places=2,
         initial=0,
-        label="Frete",
+        label="Frete (R$)",
         widget=forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
     )
     validade = forms.DateField(
-        required=False,
+        required=True,
         label="Validade",
         widget=forms.DateInput(attrs={"type": "date"}),
     )
@@ -220,9 +235,6 @@ class PropostaCompletaForm(forms.Form):
             fornecedores = FornecedorCompra.objects.filter(pk=cotacao.fornecedor_id)
             self.fields["fornecedor"].initial = cotacao.fornecedor
             self.fields["fornecedor"].disabled = True
-            self.fields["prazo_entrega_dias"].choices = _choices_com_valor_atual(
-                PRAZOS_ENTREGA_CHOICES, cotacao.prazo_entrega_dias, " dias"
-            )
             self.fields["condicao_pagamento"].choices = _choices_com_valor_atual(
                 CONDICOES_PAGAMENTO_CHOICES, cotacao.condicao_pagamento
             )
@@ -230,7 +242,12 @@ class PropostaCompletaForm(forms.Form):
                 {
                     "data_proposta": cotacao.data_proposta,
                     "prazo_entrega_dias": cotacao.prazo_entrega_dias,
-                    "condicao_pagamento": cotacao.condicao_pagamento,
+                    "condicao_pagamento": ("Parcelado" if (cotacao.condicao_pagamento or "").startswith("Parcelado em ") else cotacao.condicao_pagamento),
+                    "parcelas_pagamento": (
+                        int((cotacao.condicao_pagamento or "").replace("Parcelado em ", "").replace("x", ""))
+                        if (cotacao.condicao_pagamento or "").startswith("Parcelado em ")
+                        else None
+                    ),
                     "frete": _numero_para_input(cotacao.frete),
                     "validade": cotacao.validade,
                     "observacoes": cotacao.observacoes,
@@ -345,6 +362,19 @@ class PropostaCompletaForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
+
+        if cleaned.get("condicao_pagamento") == "Parcelado":
+            parcelas = cleaned.get("parcelas_pagamento")
+            if not parcelas:
+                self.add_error("parcelas_pagamento", "Informe o número de parcelas.")
+            else:
+                cleaned["condicao_pagamento"] = f"Parcelado em {parcelas}x"
+
+        data_proposta = cleaned.get("data_proposta")
+        validade = cleaned.get("validade")
+        if data_proposta and validade and validade < data_proposta:
+            self.add_error("validade", "A validade não pode ser anterior à data da proposta.")
+
         if not self.processo.necessidades.filter(situacao="ATIVA").exists():
             raise forms.ValidationError("Inclua ao menos um item na compra antes de registrar propostas.")
 
@@ -354,6 +384,7 @@ class PropostaCompletaForm(forms.Form):
             valor = cleaned.get(f"valor_{sufixo}")
             quantidade = cleaned.get(f"quantidade_{sufixo}")
             item_existente = linha["item_existente"]
+            marca = (cleaned.get(f"marca_{sufixo}") or "").strip()
 
             if valor is None:
                 # Em edição, limpar preço não remove silenciosamente a oferta existente.
@@ -362,6 +393,8 @@ class PropostaCompletaForm(forms.Form):
             if quantidade is None:
                 self.add_error(f"quantidade_{sufixo}", "Informe a quantidade cotada.")
                 continue
+            if not marca:
+                self.add_error(f"marca_{sufixo}", "Informe a marca do item cotado.")
             if quantidade > necessidade.quantidade_incluida:
                 self.add_error(
                     f"quantidade_{sufixo}",
@@ -487,8 +520,8 @@ class NegociacaoForm(forms.Form):
     item_cotado = forms.ModelChoiceField(queryset=CotacaoFornecedorItem.objects.none())
     valor_unitario_negociado = forms.DecimalField(required=False, min_value=0, decimal_places=4)
     frete_negociado = forms.DecimalField(required=False, min_value=0, decimal_places=2)
-    prazo_entrega_dias_negociado = forms.TypedChoiceField(
-        required=False, choices=PRAZOS_ENTREGA_CHOICES, coerce=int, empty_value=None
+    prazo_entrega_dias_negociado = forms.IntegerField(
+        required=False, min_value=0, widget=forms.NumberInput(attrs={"min": "0", "step": "1"})
     )
     condicao_pagamento_negociada = forms.ChoiceField(
         required=False, choices=CONDICOES_PAGAMENTO_CHOICES
@@ -518,11 +551,7 @@ class AdjudicacaoForm(forms.Form):
 
 
 class DecisaoComercialLoteForm(forms.Form):
-    """
-    Une na mesma superfície de trabalho a condição negociada e a quantidade
-    escolhida por fornecedor. A view continua usando registrar_negociacao e
-    adjudicar/cancelar_adjudicacao para persistir.
-    """
+    """Matriz de negociação por proposta, sem escolha de fornecedor."""
 
     def __init__(self, *args, processo, **kwargs):
         self.processo = processo
@@ -534,12 +563,6 @@ class DecisaoComercialLoteForm(forms.Form):
             .select_related("cotacao__fornecedor", "necessidade")
             .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
         )
-        ativos = list(
-            processo.adjudicacoes.filter(cancelada=False).select_related("item_cotado")
-        )
-        quantidade_por_item = defaultdict(lambda: Decimal("0"))
-        for adj in ativos:
-            quantidade_por_item[adj.item_cotado_id] += adj.quantidade
 
         grupos = defaultdict(list)
         self.linhas = []
@@ -559,21 +582,12 @@ class DecisaoComercialLoteForm(forms.Form):
                 initial=_numero_para_input(negociacao.valor_unitario_negociado) if negociacao else None,
                 widget=forms.NumberInput(attrs={"step": "0.0001", "min": "0", "data-decisao-valor": "1"}),
             )
-            self.fields[f"quantidade_{sid}"] = forms.DecimalField(
-                required=False,
-                min_value=0,
-                max_digits=18,
-                decimal_places=4,
-                label="Comprar",
-                initial=_numero_para_input(quantidade_por_item[item.pk]),
-                widget=forms.NumberInput(attrs={"step": "0.0001", "min": "0", "data-decisao-quantidade": "1"}),
-            )
             self.fields[f"frete_{sid}"] = forms.DecimalField(
                 required=False,
                 min_value=0,
                 max_digits=18,
                 decimal_places=2,
-                label="Frete negociado",
+                label="Frete negociado (R$)",
                 initial=_numero_para_input(negociacao.frete_negociado) if negociacao else None,
                 widget=forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             )
@@ -583,13 +597,12 @@ class DecisaoComercialLoteForm(forms.Form):
                 if negociacao and negociacao.condicao_pagamento_negociada
                 else item.cotacao.condicao_pagamento
             )
-            self.fields[f"prazo_{sid}"] = forms.TypedChoiceField(
+            self.fields[f"prazo_{sid}"] = forms.IntegerField(
                 required=False,
-                choices=_choices_com_valor_atual(PRAZOS_ENTREGA_CHOICES, prazo_atual, " dias"),
-                coerce=int,
-                empty_value=None,
-                label="Prazo negociado",
+                min_value=0,
+                label="Prazo negociado (dias)",
                 initial=prazo_atual,
+                widget=forms.NumberInput(attrs={"min": "0", "step": "1"}),
             )
             self.fields[f"pagamento_{sid}"] = forms.ChoiceField(
                 required=False,
@@ -615,11 +628,9 @@ class DecisaoComercialLoteForm(forms.Form):
             linha = {
                 "item": item,
                 "negociacao": negociacao,
-                "quantidade_atual": quantidade_por_item[item.pk],
                 "quantidade_ofertada": item.quantidade,
                 "valor_original": item.valor_unitario_cotado,
                 "valor": self[f"valor_{sid}"],
-                "quantidade": self[f"quantidade_{sid}"],
                 "frete": self[f"frete_{sid}"],
                 "prazo": self[f"prazo_{sid}"],
                 "pagamento": self[f"pagamento_{sid}"],
@@ -627,36 +638,13 @@ class DecisaoComercialLoteForm(forms.Form):
             }
             self.linhas.append(linha)
             grupos[item.necessidade].append(linha)
+
         self.grupos = []
         for necessidade, linhas in grupos.items():
             menor_preco = min((linha["item"].valor_unitario_cotado for linha in linhas), default=None)
             for linha in linhas:
-                linha["menor_preco"] = (
-                    menor_preco is not None and linha["item"].valor_unitario_cotado == menor_preco
-                )
-            self.grupos.append({
-                "necessidade": necessidade,
-                "linhas": linhas,
-                "menor_preco": menor_preco,
-            })
-
-    def clean(self):
-        cleaned = super().clean()
-        totais = defaultdict(lambda: Decimal("0"))
-        for linha in self.linhas:
-            item = linha["item"]
-            quantidade = cleaned.get(f"quantidade_{item.pk}") or Decimal("0")
-            totais[item.necessidade_id] += quantidade
-
-        necessidades = {n.pk: n for n in self.processo.necessidades.filter(situacao="ATIVA")}
-        for necessidade_id, total in totais.items():
-            necessidade = necessidades.get(necessidade_id)
-            if necessidade and total > necessidade.quantidade_incluida:
-                raise forms.ValidationError(
-                    f"{necessidade.descricao}: selecionado {total} {necessidade.unidade}, "
-                    f"mas o máximo é {necessidade.quantidade_incluida} {necessidade.unidade}."
-                )
-        return cleaned
+                linha["menor_preco"] = menor_preco is not None and linha["item"].valor_unitario_cotado == menor_preco
+            self.grupos.append({"necessidade": necessidade, "linhas": linhas, "menor_preco": menor_preco})
 
     def dados_linhas(self):
         for linha in self.linhas:
@@ -665,7 +653,6 @@ class DecisaoComercialLoteForm(forms.Form):
             yield {
                 "item": item,
                 "valor_unitario_negociado": self.cleaned_data.get(f"valor_{sid}"),
-                "quantidade": self.cleaned_data.get(f"quantidade_{sid}") or Decimal("0"),
                 "frete_negociado": self.cleaned_data.get(f"frete_{sid}"),
                 "prazo_entrega_dias_negociado": self.cleaned_data.get(f"prazo_{sid}"),
                 "condicao_pagamento_negociada": self.cleaned_data.get(f"pagamento_{sid}", ""),
@@ -674,12 +661,144 @@ class DecisaoComercialLoteForm(forms.Form):
 
 
 class AprovacaoForm(forms.Form):
+    """
+    Decisão do gestor e escolha das propostas vencedoras na mesma etapa.
+
+    A negociação apenas registra alternativas. A adjudicação nasce somente
+    quando o gestor aprova e informa quanto de cada proposta será comprado.
+    """
+
     decisao = forms.ChoiceField(choices=AprovacaoCompra.Decisao.choices)
     observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, processo=None, **kwargs):
+        self.processo = processo
         super().__init__(*args, **kwargs)
+        self.linhas = []
+        self.grupos = []
+        if not processo:
+            _aplicar_classe_campos(self)
+            return
+
+        itens = list(
+            queryset_itens_tecnicamente_aprovados(
+                CotacaoFornecedorItem.objects.filter(
+                    cotacao__processo=processo,
+                    necessidade__situacao="ATIVA",
+                )
+            )
+            .select_related("cotacao__fornecedor", "necessidade", "negociacao")
+            .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
+        )
+        grupos = defaultdict(list)
+        for item in itens:
+            sid = str(item.pk)
+            self.fields[f"quantidade_{sid}"] = forms.DecimalField(
+                required=False,
+                min_value=0,
+                max_digits=18,
+                decimal_places=4,
+                label="Quantidade aprovada",
+                initial="0",
+                widget=forms.NumberInput(
+                    attrs={
+                        "step": "0.0001",
+                        "min": "0",
+                        "max": _numero_para_input(item.quantidade),
+                        "data-aprovacao-quantidade": "1",
+                    }
+                ),
+            )
+
         _aplicar_classe_campos(self)
+
+        for item in itens:
+            sid = str(item.pk)
+            try:
+                negociacao = item.negociacao
+            except Exception:
+                negociacao = None
+            valor_final = negociacao.valor_final_unitario if negociacao else item.valor_unitario_cotado
+            linha = {
+                "item": item,
+                "negociacao": negociacao,
+                "valor_final": valor_final,
+                "quantidade": self[f"quantidade_{sid}"],
+            }
+            self.linhas.append(linha)
+            grupos[item.necessidade].append(linha)
+        self.grupos = []
+        for necessidade, linhas in grupos.items():
+            for linha in linhas:
+                negociacao = linha["negociacao"]
+                linha["prazo_final"] = (
+                    negociacao.prazo_entrega_dias_negociado
+                    if negociacao and negociacao.prazo_entrega_dias_negociado is not None
+                    else linha["item"].cotacao.prazo_entrega_dias
+                )
+                linha["total_opcao"] = linha["valor_final"] * linha["item"].quantidade
+
+            menor_total = min((linha["total_opcao"] for linha in linhas), default=Decimal("0"))
+            prazos = [linha["prazo_final"] for linha in linhas if linha["prazo_final"] is not None]
+            menor_prazo = min(prazos) if prazos else None
+
+            for linha in linhas:
+                linha["diferenca_valor"] = linha["total_opcao"] - menor_total
+                linha["menor_custo"] = linha["diferenca_valor"] == 0
+                linha["diferenca_dias"] = (
+                    linha["prazo_final"] - menor_prazo
+                    if menor_prazo is not None and linha["prazo_final"] is not None
+                    else None
+                )
+                linha["menor_prazo"] = linha["diferenca_dias"] == 0 if linha["diferenca_dias"] is not None else False
+
+            self.grupos.append({
+                "necessidade": necessidade,
+                "linhas": linhas,
+                "menor_total": menor_total,
+                "menor_prazo": menor_prazo,
+            })
+
+    def clean(self):
+        cleaned = super().clean()
+        decisao = cleaned.get("decisao")
+        observacao = (cleaned.get("observacao") or "").strip()
+
+        if decisao in {AprovacaoCompra.Decisao.AJUSTE_SOLICITADO, AprovacaoCompra.Decisao.REPROVADO}:
+            if not observacao:
+                self.add_error("observacao", "Informe o motivo da decisão.")
+            return cleaned
+
+        if decisao != AprovacaoCompra.Decisao.APROVADO or not self.processo:
+            return cleaned
+
+        totais = defaultdict(lambda: Decimal("0"))
+        for linha in self.linhas:
+            item = linha["item"]
+            qtd = cleaned.get(f"quantidade_{item.pk}") or Decimal("0")
+            if qtd > item.quantidade:
+                self.add_error(
+                    f"quantidade_{item.pk}",
+                    f"Máximo ofertado por este fornecedor: {item.quantidade} {item.necessidade.unidade}.",
+                )
+            totais[item.necessidade_id] += qtd
+
+        for necessidade in self.processo.necessidades.filter(situacao="ATIVA"):
+            total = totais[necessidade.pk]
+            esperado = necessidade.quantidade_incluida or Decimal("0")
+            if total != esperado:
+                raise forms.ValidationError(
+                    f"{necessidade.descricao}: o gestor deve aprovar exatamente {esperado} {necessidade.unidade}. "
+                    f"Quantidade atualmente aprovada: {total} {necessidade.unidade}."
+                )
+        return cleaned
+
+    def selecoes_aprovadas(self):
+        for linha in self.linhas:
+            item = linha["item"]
+            qtd = self.cleaned_data.get(f"quantidade_{item.pk}") or Decimal("0")
+            if qtd > 0:
+                yield {"item_cotado": item, "quantidade": qtd}
 
 
 class DocumentoContratacaoForm(forms.Form):
