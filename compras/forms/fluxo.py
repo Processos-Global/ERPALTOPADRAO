@@ -591,11 +591,28 @@ class DecisaoComercialLoteForm(forms.Form):
                 initial=_numero_para_input(negociacao.frete_negociado) if negociacao else None,
                 widget=forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             )
-            prazo_atual = negociacao.prazo_entrega_dias_negociado if negociacao else item.cotacao.prazo_entrega_dias
+            # Os campos de negociação precisam começar vazios quando ainda não
+            # houve negociação. A condição original já é exibida no card da
+            # proposta; copiá-la para estes inputs fazia o simples envio do
+            # formulário criar uma NegociacaoItem e marcar a oferta como
+            # "Negociada" sem qualquer alteração comercial do comprador.
+            prazo_atual = (
+                negociacao.prazo_entrega_dias_negociado
+                if (
+                    negociacao
+                    and negociacao.prazo_entrega_dias_negociado is not None
+                    and negociacao.prazo_entrega_dias_negociado != item.cotacao.prazo_entrega_dias
+                )
+                else None
+            )
             pagamento_atual = (
                 negociacao.condicao_pagamento_negociada
-                if negociacao and negociacao.condicao_pagamento_negociada
-                else item.cotacao.condicao_pagamento
+                if (
+                    negociacao
+                    and negociacao.condicao_pagamento_negociada
+                    and negociacao.condicao_pagamento_negociada != item.cotacao.condicao_pagamento
+                )
+                else ""
             )
             self.fields[f"prazo_{sid}"] = forms.IntegerField(
                 required=False,

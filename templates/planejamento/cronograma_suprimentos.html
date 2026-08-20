@@ -1,328 +1,539 @@
 {% extends "layouts/base.html" %}
 {% load l10n %}
+
 {% block title %}Cronograma de Suprimentos{% endblock %}
 
 {% block content %}
 <style>
   :root {
-    --cs-accent:#256c7d;
-    --cs-accent-dark:#1f5d6b;
-    --cs-text:#172033;
-    --cs-muted:#667085;
-    --cs-border:#e4e7ec;
-    --cs-soft:#f8fafc;
-    --cs-success:#067647;
-    --cs-success-bg:#ecfdf3;
-    --cs-warning:#b54708;
-    --cs-warning-bg:#fff4e8;
-    --cs-danger:#b42318;
-    --cs-danger-bg:#fef3f2;
+    --ps-accent: #256c7d;
+    --ps-accent-strong: #1f5d6b;
+    --ps-accent-soft: #edf6f8;
+    --ps-text: #172033;
+    --ps-muted: #667085;
+    --ps-subtle: #98a2b3;
+    --ps-border: #e4e7ec;
+    --ps-border-soft: #eef1f4;
+    --ps-bg: #f7f9fb;
+    --ps-panel: #ffffff;
+    --ps-success: #067647;
+    --ps-success-bg: #ecfdf3;
+    --ps-warning: #b54708;
+    --ps-warning-bg: #fff7ed;
+    --ps-danger: #b42318;
+    --ps-danger-bg: #fef3f2;
+    --ps-info: #175cd3;
+    --ps-info-bg: #eff8ff;
   }
 
-  .cs-page { display:flex; flex-direction:column; gap:16px; }
-  .cs-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-  .cs-title-wrap { display:flex; align-items:flex-start; gap:12px; }
-  .cs-title-icon { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; background:#edf6f8; color:var(--cs-accent); flex:0 0 42px; }
-  .cs-title-icon svg { width:21px; height:21px; }
-  .cs-title { margin:0; font-size:1.55rem; font-weight:750; color:var(--cs-text); }
-  .cs-subtitle { margin:5px 0 0; color:var(--cs-muted); font-size:.9rem; max-width:720px; }
-  .cs-actions { display:flex; gap:8px; flex-wrap:wrap; }
-
-  .cs-btn { min-height:38px; border:1px solid #d0d5dd; background:#fff; color:#344054; border-radius:9px; padding:8px 12px; display:inline-flex; align-items:center; justify-content:center; gap:7px; font-weight:650; cursor:pointer; text-decoration:none; transition:.16s ease; }
-  .cs-btn:hover { background:#f8fafc; border-color:#b8c0cc; transform:translateY(-1px); }
-  .cs-btn-primary { background:var(--cs-accent); border-color:var(--cs-accent); color:#fff; }
-  .cs-btn-primary:hover { background:var(--cs-accent-dark); border-color:var(--cs-accent-dark); }
-  .cs-btn-sm { min-height:33px; padding:6px 10px; font-size:.8rem; }
-  .cs-btn svg { width:15px; height:15px; }
-
-  .cs-filters { background:#fff; border:1px solid var(--cs-border); border-radius:13px; padding:14px; display:grid; grid-template-columns:minmax(180px,1.1fr) minmax(150px,.8fr) minmax(150px,.8fr) minmax(220px,1.4fr) auto; gap:10px; align-items:end; box-shadow:0 1px 2px rgba(16,24,40,.03); }
-  .cs-field label { display:block; font-size:.73rem; font-weight:750; color:var(--cs-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.025em; }
-  .cs-field select,.cs-field input { width:100%; min-height:38px; border:1px solid #d0d5dd; border-radius:8px; padding:7px 10px; background:#fff; color:#344054; outline:none; transition:border-color .15s, box-shadow .15s; }
-  .cs-field select:focus,.cs-field input:focus { border-color:#76a7b3; box-shadow:0 0 0 3px rgba(37,108,125,.10); }
-
-  .cs-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
-  .cs-kpi { background:#fff; border:1px solid var(--cs-border); border-radius:12px; padding:13px 14px; position:relative; overflow:hidden; box-shadow:0 1px 2px rgba(16,24,40,.025); }
-  .cs-kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:#d8e9ed; }
-  .cs-kpi.is-accent::before { background:var(--cs-accent); }
-  .cs-kpi.is-success::before { background:#12b76a; }
-  .cs-kpi.is-warning::before { background:#f79009; }
-  .cs-kpi-label { color:var(--cs-muted); font-size:.72rem; font-weight:750; text-transform:uppercase; letter-spacing:.025em; }
-  .cs-kpi-value { display:block; margin-top:4px; color:var(--cs-text); font-size:1.28rem; font-weight:780; }
-  .cs-kpi-help { color:#98a2b3; font-size:.7rem; margin-top:2px; }
-
-  .cs-legend { display:flex; align-items:center; gap:15px; flex-wrap:wrap; color:var(--cs-muted); font-size:.77rem; padding:0 2px; }
-  .cs-legend-item { display:inline-flex; align-items:center; gap:6px; }
-  .cs-dot { width:8px; height:8px; border-radius:50%; background:#98a2b3; }
-  .cs-dot.done { background:#12b76a; }
-  .cs-dot.late { background:#f79009; }
-  .cs-dot.pending { background:#98a2b3; }
-
-  .cs-table-wrap {
-    --cs-table-head-h:46px;
-    position:relative;
-    background:#fff;
-    border:1px solid var(--cs-border);
-    border-radius:14px;
-    overflow:auto;
-    max-height:calc(100vh - 285px);
-    min-height:260px;
-    box-shadow:0 1px 2px rgba(16,24,40,.025), 0 10px 28px rgba(16,24,40,.035);
-    scrollbar-width:thin;
-    scrollbar-color:#cbd5e1 transparent;
-    overscroll-behavior:contain;
-  }
-  .cs-table-wrap::-webkit-scrollbar { width:10px; height:10px; }
-  .cs-table-wrap::-webkit-scrollbar-track { background:transparent; }
-  .cs-table-wrap::-webkit-scrollbar-thumb { background:#cbd5e1; border:3px solid #fff; border-radius:999px; }
-  .cs-table-wrap::-webkit-scrollbar-thumb:hover { background:#aeb8c5; }
-
-  .cs-table { width:100%; min-width:1180px; border-collapse:separate; border-spacing:0; }
-
-  .cs-table thead { position:relative; z-index:30; }
-  .cs-table th {
-    position:sticky;
-    top:0;
-    z-index:30;
-    height:var(--cs-table-head-h);
-    background:rgba(248,250,252,.97);
-    backdrop-filter:blur(10px);
-    border-bottom:1px solid #dfe4ea;
-    padding:11px 12px;
-    text-align:left;
-    color:#526077;
-    font-size:.69rem;
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.045em;
-    white-space:nowrap;
-    box-shadow:0 1px 0 rgba(16,24,40,.03);
+  .ps-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
-  .cs-table td {
-    padding:11px 12px;
-    border-bottom:1px solid #edf0f3;
-    vertical-align:middle;
-    color:#344054;
-    font-size:.86rem;
-    background:#fff;
-    transition:background .14s ease, box-shadow .14s ease;
-  }
-  .cs-table tbody tr:last-child td { border-bottom:0; }
-  .cs-item-row { scroll-margin-top:112px; }
-  .cs-item-row:hover td { background:#f9fbfc; }
-  .cs-item-row:hover .cs-item-name { color:var(--cs-accent-dark); }
-
-  /* Mantém o nome do suprimento visível em rolagens horizontais. */
-  .cs-table th:first-child,
-  .cs-table td:first-child {
-    position:sticky;
-    left:0;
-  }
-  .cs-table th:first-child {
-    z-index:34;
-    background:#f8fafc;
-    box-shadow:1px 0 0 #e6e9ee;
-  }
-  .cs-item-row td:first-child {
-    z-index:8;
-    background:#fff;
-    box-shadow:1px 0 0 #edf0f3;
-  }
-  .cs-item-row:hover td:first-child { background:#f9fbfc; }
-
-  /* A ação permanece acessível mesmo quando a tabela é rolada para a direita. */
-  .cs-table th:last-child,
-  .cs-table td:last-child {
-    position:sticky;
-    right:0;
-  }
-  .cs-table th:last-child {
-    z-index:34;
-    background:#f8fafc;
-    box-shadow:-1px 0 0 #e6e9ee;
-  }
-  .cs-item-row td:last-child {
-    z-index:8;
-    background:#fff;
-    box-shadow:-1px 0 0 #edf0f3;
-  }
-  .cs-item-row:hover td:last-child { background:#f9fbfc; }
-
-  /* A categoria acompanha a rolagem e fica logo abaixo do cabeçalho. */
-  .cs-category td {
-    position:sticky !important;
-    top:var(--cs-table-head-h);
-    left:0 !important;
-    right:auto !important;
-    z-index:24 !important;
-    background:#f3f6f8 !important;
-    color:#475467;
-    font-size:.71rem;
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.055em;
-    padding:9px 12px;
-    border-top:0;
-    border-bottom:1px solid #e5e9ee;
-    box-shadow:0 2px 5px rgba(16,24,40,.035);
-  }
-  .cs-category td::before {
-    content:"";
-    display:inline-block;
-    width:3px;
-    height:13px;
-    border-radius:999px;
-    background:var(--cs-accent);
-    margin-right:8px;
-    vertical-align:-2px;
-    opacity:.72;
+  .ps-topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    flex-wrap: wrap;
   }
 
-  .cs-item-cell { min-width:270px; }
-  .cs-item-main { display:flex; align-items:flex-start; gap:9px; }
-  .cs-item-marker { width:8px; height:38px; border-radius:999px; background:#d8e9ed; flex:0 0 8px; margin-top:1px; }
-  .cs-item-marker.done { background:#12b76a; }
-  .cs-item-marker.late { background:#f79009; }
-  .cs-item-name { font-weight:730; color:var(--cs-text); max-width:280px; line-height:1.28; }
-  .cs-item-meta { color:var(--cs-muted); font-size:.74rem; margin-top:4px; max-width:280px; display:flex; align-items:center; gap:5px; }
-  .cs-item-meta svg { width:12px; height:12px; flex:0 0 12px; }
-
-  .cs-stage { min-width:126px; }
-  .cs-stage-card {
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    min-height:58px;
-    justify-content:center;
-    padding:6px 8px;
-    margin:-3px -5px;
-    border-radius:9px;
-    transition:background .14s ease;
-  }
-  .cs-item-row:hover .cs-stage-card { background:rgba(248,250,252,.8); }
-  .cs-stage-top { display:flex; align-items:center; gap:6px; }
-  .cs-stage-status { width:8px; height:8px; border-radius:50%; background:#c7cdd5; flex:0 0 8px; }
-  .cs-stage-status.done { background:#12b76a; box-shadow:0 0 0 3px #ecfdf3; }
-  .cs-stage-status.late { background:#f79009; box-shadow:0 0 0 3px #fff4e8; }
-  .cs-stage-base { color:#344054; font-weight:680; white-space:nowrap; font-size:.82rem; }
-  .cs-stage-caption { color:#98a2b3; font-size:.67rem; text-transform:uppercase; font-weight:720; letter-spacing:.02em; }
-  .cs-stage-real { color:var(--cs-muted); font-size:.73rem; white-space:nowrap; }
-  .cs-stage-real.done { color:var(--cs-success); font-weight:700; }
-  .cs-stage-real.late { color:var(--cs-warning); font-weight:700; }
-  .cs-stage-result { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .cs-stage-delta { display:inline-flex; align-items:center; border-radius:999px; padding:2px 6px; font-size:.66rem; line-height:1.25; font-weight:760; white-space:nowrap; }
-  .cs-stage-delta.late { color:var(--cs-danger); background:var(--cs-danger-bg); }
-  .cs-stage-delta.early { color:var(--cs-success); background:var(--cs-success-bg); }
-  .cs-stage-delta.ontime { color:var(--cs-accent-dark); background:#edf6f8; }
-
-  .cs-progress { min-width:130px; }
-  .cs-progress-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .cs-progress-value { color:var(--cs-text); font-weight:780; font-size:.88rem; }
-  .cs-progress-step { color:#98a2b3; font-size:.68rem; }
-  .cs-progress-line { height:8px; background:#e9eef2; border-radius:999px; overflow:hidden; margin:7px 0 2px; box-shadow:inset 0 1px 1px rgba(16,24,40,.04); }
-  .cs-progress-line > span { display:block; height:100%; background:var(--cs-accent); border-radius:inherit; transition:width .2s ease; }
-  .cs-progress-line.done > span { background:#12b76a; }
-
-  .cs-stage-badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:.73rem; font-weight:720; background:#eef6f8; color:var(--cs-accent-dark); white-space:nowrap; }
-  .cs-stage-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.75; }
-  .cs-stage-badge.late { background:var(--cs-warning-bg); color:var(--cs-warning); }
-  .cs-stage-badge.done { background:var(--cs-success-bg); color:var(--cs-success); }
-  .cs-delay { color:var(--cs-warning); font-size:.7rem; font-weight:700; margin-top:5px; }
-
-  .cs-table-toolbar {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:-7px;
-    padding:0 3px;
-  }
-  .cs-table-toolbar-info { display:flex; align-items:baseline; gap:9px; min-width:0; }
-  .cs-table-toolbar-title { color:var(--cs-text); font-size:.82rem; font-weight:760; white-space:nowrap; }
-  .cs-table-toolbar-help { color:#98a2b3; font-size:.72rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .cs-table-toolbar-count {
-    display:inline-flex;
-    align-items:center;
-    min-height:26px;
-    padding:4px 9px;
-    border:1px solid #dbe4e8;
-    border-radius:999px;
-    background:#f8fbfc;
-    color:var(--cs-accent-dark);
-    font-size:.7rem;
-    font-weight:760;
-    white-space:nowrap;
+  .ps-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
   }
 
-  .cs-empty { padding:42px 20px; text-align:center; color:var(--cs-muted); }
-
-  /* Modal anexado diretamente ao BODY pelo JS para não sofrer com transform/overflow do layout. */
-  .cs-modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.52); display:none; align-items:flex-start; justify-content:center; padding:clamp(28px,7vh,72px) 20px 24px; z-index:99999; overflow-y:auto; backdrop-filter:blur(2px); }
-  .cs-modal-backdrop.open { display:flex; }
-  .cs-modal { width:min(780px,100%); max-height:calc(100vh - clamp(56px,14vh,144px)); overflow:auto; background:#fff; border-radius:15px; box-shadow:0 24px 65px rgba(15,23,42,.30); border:1px solid rgba(255,255,255,.45); animation:csModalIn .16s ease-out; }
-  @keyframes csModalIn { from { opacity:0; transform:translateY(-8px) scale(.99); } to { opacity:1; transform:translateY(0) scale(1); } }
-  body.cs-modal-open { overflow:hidden; }
-
-  .cs-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:18px 20px 16px; border-bottom:1px solid var(--cs-border); background:linear-gradient(180deg,#fff,#fcfdfe); position:sticky; top:0; z-index:2; }
-  .cs-modal-title-row { display:flex; gap:11px; align-items:flex-start; }
-  .cs-modal-icon { width:36px; height:36px; border-radius:10px; display:grid; place-items:center; background:#edf6f8; color:var(--cs-accent); flex:0 0 36px; }
-  .cs-modal-icon svg { width:18px; height:18px; }
-  .cs-modal-title { margin:0; font-size:1.06rem; color:var(--cs-text); font-weight:760; }
-  .cs-modal-subtitle { margin:4px 0 0; font-size:.8rem; color:var(--cs-muted); }
-  .cs-close { border:1px solid transparent; background:transparent; font-size:1.4rem; line-height:1; color:var(--cs-muted); cursor:pointer; padding:4px 7px; border-radius:8px; }
-  .cs-close:hover { background:#f2f4f7; color:#344054; }
-  .cs-modal-body { padding:18px 20px; }
-  .cs-modal-note { background:#f8fafc; border:1px solid var(--cs-border); border-radius:10px; padding:11px 12px; color:var(--cs-muted); font-size:.8rem; margin-bottom:15px; display:flex; gap:9px; align-items:flex-start; }
-  .cs-modal-note svg { width:16px; height:16px; flex:0 0 16px; color:var(--cs-accent); margin-top:1px; }
-
-  .cs-edit-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:0; border:1px solid var(--cs-border); border-radius:11px; overflow:hidden; }
-  .cs-edit-head { background:#f8fafc; color:var(--cs-muted); font-size:.7rem; font-weight:780; text-transform:uppercase; letter-spacing:.035em; min-height:42px !important; }
-  .cs-edit-cell { min-height:60px; padding:10px 12px; border-right:1px solid var(--cs-border); border-bottom:1px solid var(--cs-border); display:flex; align-items:center; }
-  .cs-edit-cell:nth-child(3n) { border-right:0; }
-  .cs-edit-grid > .cs-edit-cell:nth-last-child(-n+3) { border-bottom:0; }
-  .cs-edit-label { font-weight:720; color:#344054; gap:8px; }
-  .cs-edit-label .cs-mini-dot { width:8px; height:8px; border-radius:50%; background:#d0d5dd; }
-  .cs-base-date { color:#475467; font-weight:650; background:#fcfcfd; }
-  .cs-real-input { width:100%; min-width:0; border:1px solid #d0d5dd; border-radius:8px; padding:8px 9px; color:#344054; background:#fff; outline:none; }
-  .cs-real-input:focus { border-color:#76a7b3; box-shadow:0 0 0 3px rgba(37,108,125,.10); }
-  .cs-modal-foot { padding:13px 20px 16px; display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--cs-border); background:#fff; position:sticky; bottom:0; z-index:2; }
-
-  @media (max-width:900px) {
-    .cs-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
-    .cs-filters { grid-template-columns:1fr 1fr; }
-    .cs-table-wrap { max-height:calc(100vh - 245px); }
-    .cs-table-toolbar-help { display:none; }
+  .ps-heading-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--ps-accent-soft);
+    color: var(--ps-accent);
   }
-  @media (max-width:620px) {
-    .cs-title-icon { display:none; }
-    .cs-kpis,.cs-filters { grid-template-columns:1fr; }
-    .cs-modal-backdrop { padding:18px 10px; }
-    .cs-table-wrap { max-height:68vh; border-radius:11px; }
-    .cs-table-toolbar { align-items:flex-start; }
-    .cs-table-toolbar-info { display:block; }
-    .cs-modal { max-height:calc(100vh - 36px); }
-    .cs-edit-grid { grid-template-columns:1fr; }
-    .cs-edit-head { display:none; }
-    .cs-edit-cell { border-right:0; }
-    .cs-edit-cell:nth-child(n) { border-bottom:1px solid var(--cs-border); }
-    .cs-edit-cell:nth-last-child(1) { border-bottom:0; }
-    .cs-edit-cell[data-label]::before { content:attr(data-label); display:block; width:102px; flex:0 0 102px; color:var(--cs-muted); font-size:.68rem; font-weight:780; text-transform:uppercase; }
+
+  .ps-heading-icon svg { width: 20px; height: 20px; }
+  .ps-heading h1 {
+    margin: 0;
+    color: var(--ps-text);
+    font-size: 1.52rem;
+    line-height: 1.15;
+    font-weight: 800;
+  }
+  .ps-heading p {
+    margin: 5px 0 0;
+    color: var(--ps-muted);
+    font-size: .87rem;
+    line-height: 1.45;
+  }
+
+  .ps-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ps-btn {
+    min-height: 38px;
+    padding: 8px 12px;
+    border-radius: 9px;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    color: #344054;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: .8rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+  }
+  .ps-btn:hover { background: #f8fafc; border-color: #b9c1cc; transform: translateY(-1px); }
+  .ps-btn svg { width: 15px; height: 15px; }
+  .ps-btn-primary { background: var(--ps-accent); border-color: var(--ps-accent); color: #fff; }
+  .ps-btn-primary:hover { background: var(--ps-accent-strong); border-color: var(--ps-accent-strong); }
+  .ps-btn-sm { min-height: 32px; padding: 6px 9px; font-size: .74rem; }
+  .ps-btn-icon { width: 32px; padding: 0; }
+
+  .ps-toolbar {
+    background: #fff;
+    border: 1px solid var(--ps-border);
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16,24,40,.03), 0 7px 24px rgba(16,24,40,.035);
+    padding: 13px;
+    display: grid;
+    grid-template-columns: minmax(170px,1fr) minmax(150px,.9fr) minmax(150px,.9fr) minmax(240px,1.45fr) auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .ps-field label {
+    display: block;
+    margin: 0 0 5px;
+    color: #667085;
+    font-size: .67rem;
+    text-transform: uppercase;
+    letter-spacing: .045em;
+    font-weight: 800;
+  }
+  .ps-field select,
+  .ps-field input {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #d0d5dd;
+    border-radius: 9px;
+    background: #fff;
+    color: #344054;
+    padding: 7px 10px;
+    outline: none;
+    font-size: .81rem;
+  }
+  .ps-field select:focus,
+  .ps-field input:focus {
+    border-color: #76a7b3;
+    box-shadow: 0 0 0 3px rgba(37,108,125,.10);
+  }
+
+  .ps-summary {
+    display: grid;
+    grid-template-columns: minmax(180px,1.1fr) repeat(4,minmax(125px,.8fr));
+    border: 1px solid var(--ps-border);
+    border-radius: 14px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,40,.025);
+  }
+  .ps-summary-item {
+    position: relative;
+    min-height: 74px;
+    padding: 13px 15px;
+    border-right: 1px solid var(--ps-border-soft);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .ps-summary-item:last-child { border-right: 0; }
+  .ps-summary-label {
+    color: var(--ps-muted);
+    font-size: .66rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 800;
+  }
+  .ps-summary-value {
+    margin-top: 3px;
+    color: var(--ps-text);
+    font-size: 1.28rem;
+    line-height: 1.1;
+    font-weight: 820;
+  }
+  .ps-summary-note { margin-top: 3px; color: var(--ps-subtle); font-size: .68rem; }
+  .ps-summary-item.is-accent { box-shadow: inset 3px 0 0 var(--ps-accent); }
+  .ps-summary-item.is-success { box-shadow: inset 3px 0 0 #12b76a; }
+  .ps-summary-item.is-warning { box-shadow: inset 3px 0 0 #f79009; }
+
+  .ps-board {
+    background: #fff;
+    border: 1px solid var(--ps-border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(16,24,40,.03), 0 9px 28px rgba(16,24,40,.04);
+  }
+
+  .ps-board-head {
+    padding: 13px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--ps-border);
+  }
+  .ps-board-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .ps-board-title strong { color: var(--ps-text); font-size: .88rem; }
+  .ps-board-title span { color: var(--ps-subtle); font-size: .72rem; }
+  .ps-count {
+    min-height: 27px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid #d9e6e9;
+    color: var(--ps-accent-strong);
+    background: #f7fbfc;
+    display: inline-flex;
+    align-items: center;
+    font-size: .7rem;
+    font-weight: 800;
+  }
+  .ps-legend { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; color: var(--ps-muted); font-size: .69rem; }
+  .ps-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+  .ps-dot { width: 7px; height: 7px; border-radius: 50%; background: #c7cdd5; }
+  .ps-dot.done { background: #12b76a; }
+  .ps-dot.late { background: #f79009; }
+
+  .ps-table-wrap { overflow: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+  .ps-table-wrap::-webkit-scrollbar { width: 9px; height: 9px; }
+  .ps-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: 2px solid #fff; }
+
+  .ps-table { width: 100%; min-width: 1460px; border-collapse: separate; border-spacing: 0; }
+  .ps-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8fafc;
+    padding: 10px 11px;
+    border-bottom: 1px solid var(--ps-border);
+    color: #667085;
+    font-size: .65rem;
+    text-transform: uppercase;
+    letter-spacing: .045em;
+    font-weight: 820;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .ps-table td {
+    padding: 11px;
+    border-bottom: 1px solid var(--ps-border-soft);
+    color: #344054;
+    font-size: .79rem;
+    vertical-align: middle;
+    background: #fff;
+  }
+  .ps-table tbody tr:last-child td { border-bottom: 0; }
+  .ps-item-row:hover td { background: #fcfdfd; }
+
+  .ps-table th:first-child,
+  .ps-table td:first-child {
+    position: sticky;
+    left: 0;
+  }
+  .ps-table th:first-child { z-index: 13; background: #f8fafc; box-shadow: 1px 0 0 var(--ps-border); }
+  .ps-item-row td:first-child { z-index: 5; background: #fff; box-shadow: 1px 0 0 var(--ps-border-soft); }
+  .ps-item-row:hover td:first-child { background: #fcfdfd; }
+
+  .ps-category td {
+    position: sticky !important;
+    top: 38px;
+    z-index: 9 !important;
+    background: #f2f5f7 !important;
+    padding: 8px 11px;
+    color: #475467;
+    font-size: .67rem;
+    font-weight: 820;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1px solid #e3e7eb;
+  }
+  .ps-category td::before {
+    content: "";
+    width: 3px;
+    height: 12px;
+    display: inline-block;
+    border-radius: 999px;
+    margin-right: 7px;
+    vertical-align: -2px;
+    background: var(--ps-accent);
+  }
+
+  .ps-item-cell { min-width: 280px; }
+  .ps-item { display: flex; align-items: flex-start; gap: 10px; }
+  .ps-item-state { width: 4px; height: 40px; flex: 0 0 4px; border-radius: 999px; background: #d9e1e5; }
+  .ps-item-state.done { background: #12b76a; }
+  .ps-item-state.late { background: #f79009; }
+  .ps-item-name { color: var(--ps-text); font-size: .83rem; line-height: 1.3; font-weight: 790; max-width: 265px; }
+  .ps-item-local { margin-top: 4px; display: flex; align-items: center; gap: 5px; color: var(--ps-muted); font-size: .69rem; }
+  .ps-item-local svg { width: 11px; height: 11px; flex: 0 0 11px; }
+
+  .ps-milestone { min-width: 145px; }
+  .ps-milestone-label { color: var(--ps-subtle); font-size: .61rem; text-transform: uppercase; letter-spacing: .035em; font-weight: 760; }
+  .ps-milestone-date { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .ps-milestone-date strong { color: #344054; font-size: .78rem; white-space: nowrap; }
+  .ps-milestone-status { width: 7px; height: 7px; border-radius: 50%; background: #c7cdd5; flex: 0 0 7px; }
+  .ps-milestone-status.done { background: #12b76a; box-shadow: 0 0 0 3px var(--ps-success-bg); }
+  .ps-milestone-status.late { background: #f79009; box-shadow: 0 0 0 3px var(--ps-warning-bg); }
+  .ps-milestone-real { margin-top: 3px; color: var(--ps-muted); font-size: .67rem; line-height: 1.25; white-space: nowrap; }
+  .ps-milestone-real.done { color: var(--ps-success); font-weight: 720; }
+  .ps-milestone-real.late { color: var(--ps-warning); font-weight: 720; }
+  .ps-delta {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 4px;
+    padding: 2px 5px;
+    border-radius: 999px;
+    font-size: .61rem;
+    line-height: 1.1;
+    font-weight: 780;
+    white-space: nowrap;
+  }
+  .ps-delta.late { color: var(--ps-danger); background: var(--ps-danger-bg); }
+  .ps-delta.early { color: var(--ps-success); background: var(--ps-success-bg); }
+  .ps-delta.ontime { color: var(--ps-accent-strong); background: var(--ps-accent-soft); }
+
+  .ps-progress { min-width: 130px; }
+  .ps-progress-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ps-progress-top strong { color: var(--ps-text); font-size: .82rem; }
+  .ps-progress-top span { color: var(--ps-subtle); font-size: .64rem; }
+  .ps-progress-track { height: 6px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: #e8edf1; }
+  .ps-progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--ps-accent); }
+  .ps-progress-track.done > span { background: #12b76a; }
+
+  .ps-stage-badge,
+  .ps-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-weight: 740;
+  }
+  .ps-stage-badge { padding: 4px 8px; font-size: .67rem; color: var(--ps-accent-strong); background: var(--ps-accent-soft); }
+  .ps-stage-badge::before,
+  .ps-status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .8; }
+  .ps-stage-badge.done { color: var(--ps-success); background: var(--ps-success-bg); }
+  .ps-stage-badge.late { color: var(--ps-warning); background: var(--ps-warning-bg); }
+  .ps-delay { margin-top: 4px; color: var(--ps-warning); font-size: .64rem; font-weight: 720; }
+
+  .ps-row-actions { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; }
+  .ps-detail-trigger { color: var(--ps-accent); border-color: #b9d3da; background: #f8fbfc; }
+  .ps-detail-trigger[aria-expanded="true"] { background: #eaf5f7; border-color: #9fc5ce; }
+  .ps-chevron { transition: transform .17s ease; }
+  .ps-detail-trigger[aria-expanded="true"] .ps-chevron { transform: rotate(180deg); }
+
+  .ps-detail-row { display: none; }
+  .ps-detail-row.open { display: table-row; }
+  .ps-detail-row > td { padding: 0 11px 13px !important; background: #f7f9fb !important; border-bottom: 1px solid var(--ps-border); }
+  .ps-detail-shell {
+    border: 1px solid #dde4e8;
+    border-radius: 13px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(16,24,40,.045);
+  }
+  .ps-detail-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 15px;
+    border-bottom: 1px solid var(--ps-border-soft);
+  }
+  .ps-detail-title { margin: 0; color: var(--ps-text); font-size: .93rem; font-weight: 800; }
+  .ps-detail-context { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-top: 7px; }
+  .ps-context-pill,
+  .ps-process-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 4px 8px;
+    border: 1px solid #dfe5e9;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475467;
+    font-size: .67rem;
+  }
+  .ps-context-pill strong { margin-right: 4px; color: var(--ps-text); }
+  .ps-processes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .ps-process-pill { border-radius: 999px; font-weight: 700; }
+
+  .ps-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(6,minmax(115px,1fr));
+    border-bottom: 1px solid var(--ps-border-soft);
+    background: #fcfdfd;
+  }
+  .ps-detail-kpi { padding: 11px 12px; border-right: 1px solid var(--ps-border-soft); min-width: 0; }
+  .ps-detail-kpi:last-child { border-right: 0; }
+  .ps-detail-kpi span { display: block; color: var(--ps-muted); font-size: .6rem; font-weight: 780; text-transform: uppercase; letter-spacing: .025em; }
+  .ps-detail-kpi strong { display: block; margin-top: 3px; color: var(--ps-text); font-size: .86rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ps-detail-kpi strong.money { color: var(--ps-success); }
+
+  .ps-supplier-wrap { overflow-x: auto; padding: 12px 14px; }
+  .ps-supplier-table { width: 100%; min-width: 1260px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--ps-border-soft); border-radius: 11px; overflow: hidden; }
+  .ps-supplier-table th { position: static !important; z-index: auto !important; background: #f8fafc !important; padding: 9px !important; color: #667085 !important; font-size: .61rem !important; }
+  .ps-supplier-table td { position: static !important; padding: 10px 9px !important; background: #fff !important; font-size: .71rem; white-space: nowrap; }
+  .ps-supplier-name { color: var(--ps-text); font-weight: 790; }
+  .ps-supplier-process { display: block; margin-top: 2px; color: var(--ps-subtle); font-size: .61rem; }
+  .ps-money { color: var(--ps-text); font-weight: 780; font-variant-numeric: tabular-nums; }
+  .ps-status { padding: 3px 7px; font-size: .61rem; border: 1px solid transparent; }
+  .ps-status.success { color: #067647; background: #ecfdf3; border-color: #abefc6; }
+  .ps-status.warning { color: #b54708; background: #fff7ed; border-color: #fed7aa; }
+  .ps-status.danger { color: #b42318; background: #fef3f2; border-color: #fecdca; }
+  .ps-status.info { color: #175cd3; background: #eff8ff; border-color: #b2ddff; }
+  .ps-status.muted { color: #475467; background: #f2f4f7; border-color: #e4e7ec; }
+  .ps-order-block { min-width: 210px; max-width: 300px; white-space: normal; }
+  .ps-order-block + .ps-order-block { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--ps-border); }
+  .ps-order-number { display: block; margin-bottom: 4px; color: #667085; font-size: .6rem; font-weight: 800; }
+  .ps-order-meta { display: block; margin-top: 1px; color: var(--ps-subtle); font-size: .59rem; }
+  .ps-order-item { display: grid; grid-template-columns: minmax(115px,1fr) auto; align-items: start; gap: 7px; padding: 2px 0; }
+  .ps-order-item-name { color: var(--ps-text); font-weight: 700; line-height: 1.3; }
+  .ps-order-qty { color: #475467; font-size: .64rem; font-weight: 800; white-space: nowrap; }
+  .ps-detail-foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--ps-border-soft); background: #fcfdfd; color: var(--ps-muted); font-size: .65rem; }
+  .ps-detail-empty,
+  .ps-empty { padding: 34px 18px; text-align: center; color: var(--ps-muted); font-size: .8rem; }
+
+  .ps-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(28px,7vh,72px) 18px 24px;
+    overflow-y: auto;
+    background: rgba(15,23,42,.5);
+    backdrop-filter: blur(2px);
+  }
+  .ps-modal-backdrop.open { display: flex; }
+  body.ps-modal-open { overflow: hidden; }
+  .ps-modal {
+    width: min(720px,100%);
+    max-height: calc(100vh - clamp(56px,14vh,144px));
+    overflow: auto;
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 65px rgba(15,23,42,.28);
+    animation: psModalIn .16s ease-out;
+  }
+  @keyframes psModalIn { from { opacity: 0; transform: translateY(-7px) scale(.99); } to { opacity: 1; transform: none; } }
+  .ps-modal-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--ps-border);
+    background: #fff;
+  }
+  .ps-modal-title-row { display: flex; gap: 10px; align-items: flex-start; }
+  .ps-modal-icon { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border-radius: 9px; background: var(--ps-accent-soft); color: var(--ps-accent); }
+  .ps-modal-icon svg { width: 17px; height: 17px; }
+  .ps-modal-title { margin: 0; color: var(--ps-text); font-size: 1rem; font-weight: 800; }
+  .ps-modal-subtitle { margin: 4px 0 0; color: var(--ps-muted); font-size: .75rem; }
+  .ps-close { border: 0; background: transparent; color: var(--ps-muted); font-size: 1.35rem; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 7px; }
+  .ps-close:hover { background: #f2f4f7; color: #344054; }
+  .ps-modal-body { padding: 16px 18px; }
+  .ps-modal-note { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 13px; padding: 10px 11px; border: 1px solid var(--ps-border); border-radius: 9px; background: #f8fafc; color: var(--ps-muted); font-size: .74rem; }
+  .ps-modal-note svg { width: 15px; height: 15px; flex: 0 0 15px; color: var(--ps-accent); margin-top: 1px; }
+  .ps-edit-grid { display: grid; grid-template-columns: 1.15fr .9fr 1fr; border: 1px solid var(--ps-border); border-radius: 10px; overflow: hidden; }
+  .ps-edit-cell { min-height: 56px; padding: 9px 11px; display: flex; align-items: center; border-right: 1px solid var(--ps-border); border-bottom: 1px solid var(--ps-border); }
+  .ps-edit-cell:nth-child(3n) { border-right: 0; }
+  .ps-edit-grid > .ps-edit-cell:nth-last-child(-n+3) { border-bottom: 0; }
+  .ps-edit-head { min-height: 39px; background: #f8fafc; color: var(--ps-muted); font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+  .ps-edit-label { color: #344054; font-weight: 730; gap: 7px; }
+  .ps-mini-dot { width: 7px; height: 7px; border-radius: 50%; background: #d0d5dd; }
+  .ps-base-date { color: #475467; font-weight: 680; background: #fcfcfd; }
+  .ps-real-input { width: 100%; min-width: 0; border: 1px solid #d0d5dd; border-radius: 8px; padding: 7px 8px; color: #344054; background: #fff; outline: none; }
+  .ps-real-input:focus { border-color: #76a7b3; box-shadow: 0 0 0 3px rgba(37,108,125,.10); }
+  .ps-modal-foot { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px 15px; border-top: 1px solid var(--ps-border); background: #fff; }
+
+  @media (max-width: 1200px) {
+    .ps-toolbar { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .ps-toolbar .ps-field:nth-child(4) { grid-column: span 2; }
+    .ps-detail-summary { grid-template-columns: repeat(3,minmax(120px,1fr)); }
+    .ps-detail-kpi:nth-child(3) { border-right: 0; }
+    .ps-detail-kpi:nth-child(-n+3) { border-bottom: 1px solid var(--ps-border-soft); }
+  }
+  @media (max-width: 900px) {
+    .ps-summary { grid-template-columns: repeat(2,1fr); }
+    .ps-summary-item { border-bottom: 1px solid var(--ps-border-soft); }
+    .ps-summary-item:nth-child(2n) { border-right: 0; }
+    .ps-summary-item:last-child { grid-column: span 2; border-bottom: 0; }
+    .ps-board-title span { display: none; }
+  }
+  @media (max-width: 680px) {
+    .ps-heading-icon { display: none; }
+    .ps-toolbar { grid-template-columns: 1fr; }
+    .ps-toolbar .ps-field:nth-child(4) { grid-column: auto; }
+    .ps-summary { grid-template-columns: 1fr; }
+    .ps-summary-item,
+    .ps-summary-item:nth-child(2n) { border-right: 0; border-bottom: 1px solid var(--ps-border-soft); }
+    .ps-summary-item:last-child { grid-column: auto; border-bottom: 0; }
+    .ps-detail-summary { grid-template-columns: repeat(2,1fr); }
+    .ps-detail-kpi:nth-child(n) { border-right: 1px solid var(--ps-border-soft); border-bottom: 1px solid var(--ps-border-soft); }
+    .ps-detail-kpi:nth-child(2n) { border-right: 0; }
+    .ps-detail-kpi:nth-last-child(-n+2) { border-bottom: 0; }
+    .ps-modal-backdrop { padding: 16px 9px; }
+    .ps-modal { max-height: calc(100vh - 32px); }
+    .ps-edit-grid { grid-template-columns: 1fr; }
+    .ps-edit-head { display: none; }
+    .ps-edit-cell { border-right: 0 !important; }
+    .ps-edit-cell:nth-child(n) { border-bottom: 1px solid var(--ps-border); }
+    .ps-edit-cell:last-child { border-bottom: 0; }
+    .ps-edit-cell[data-label]::before { content: attr(data-label); width: 92px; flex: 0 0 92px; color: var(--ps-muted); font-size: .62rem; font-weight: 800; text-transform: uppercase; }
   }
 </style>
 
-<div class="cs-page">
-  <div class="cs-head">
-    <div class="cs-title-wrap">
-      <div class="cs-title-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M7 3v4m10-4v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/><path d="m8 13 2 2 5-5"/></svg>
+<div class="ps-page">
+  <div class="ps-topbar">
+    <div class="ps-heading">
+      <div class="ps-heading-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+          <path d="M4 7h16M7 3v4m10-4v4M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/>
+          <path d="m8 13 2 2 5-5"/>
+        </svg>
       </div>
       <div>
-        <h1 class="cs-title">Cronograma de Suprimentos</h1>
-        <p class="cs-subtitle">Compare o planejamento importado com o realizado e acompanhe rapidamente em qual etapa cada suprimento se encontra.</p>
+        <h1>Cronograma de Suprimentos</h1>
+        <p>Planejamento de compras, marcos do processo e acompanhamento comercial em uma única visão.</p>
       </div>
     </div>
-    <div class="cs-actions">
-      <a class="cs-btn cs-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id }}{% endif %}">
+
+    <div class="ps-actions">
+      <a class="ps-btn ps-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id }}{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>
         Kanban
       </a>
@@ -330,13 +541,13 @@
       <form method="post" action="{% url 'planejamento:atualizar_cronograma_suprimentos' %}">
         {% csrf_token %}
         {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
-        <button class="cs-btn" type="submit">
+        <button class="ps-btn" type="submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg>
-          Atualizar base planejada
+          Atualizar base
         </button>
       </form>
       {% endif %}
-      <a class="cs-btn" href="{% url 'planejamento:historico_importacoes_cronograma_suprimentos' %}">
+      <a class="ps-btn" href="{% url 'planejamento:historico_importacoes_cronograma_suprimentos' %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
         Importações
       </a>
@@ -344,8 +555,8 @@
   </div>
 
   {% if importacao_ativa %}
-  <form class="cs-filters" method="get">
-    <div class="cs-field">
+  <form class="ps-toolbar" method="get">
+    <div class="ps-field">
       <label for="f-obra">Obra</label>
       <select id="f-obra" name="obra">
         {% for registro in obras %}
@@ -353,7 +564,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="cs-field">
+    <div class="ps-field">
       <label for="f-categoria">Categoria</label>
       <select id="f-categoria" name="categoria">
         <option value="">Todas</option>
@@ -362,7 +573,7 @@
         {% endfor %}
       </select>
     </div>
-    <div class="cs-field">
+    <div class="ps-field">
       <label for="f-etapa">Etapa atual</label>
       <select id="f-etapa" name="etapa">
         <option value="">Todas</option>
@@ -371,224 +582,359 @@
         {% endfor %}
       </select>
     </div>
-    <div class="cs-field">
+    <div class="ps-field">
       <label for="f-busca">Pesquisar</label>
-      <input id="f-busca" type="search" name="busca" value="{{ filtros.busca }}" placeholder="Item, local ou responsável">
+      <input id="f-busca" type="search" name="busca" value="{{ filtros.busca }}" placeholder="Suprimento, fornecedor, processo ou responsável">
     </div>
-    <button class="cs-btn cs-btn-primary" type="submit">
+    <button class="ps-btn ps-btn-primary" type="submit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       Filtrar
     </button>
   </form>
 
-  <div class="cs-kpis">
-    <div class="cs-kpi"><span class="cs-kpi-label">Itens</span><span class="cs-kpi-value">{{ resumo.total }}</span><div class="cs-kpi-help">suprimentos no filtro atual</div></div>
-    <div class="cs-kpi is-accent"><span class="cs-kpi-label">Avanço médio</span><span class="cs-kpi-value">{{ resumo.percentual_medio }}%</span><div class="cs-kpi-help">média das etapas realizadas</div></div>
-    <div class="cs-kpi"><span class="cs-kpi-label">Em andamento</span><span class="cs-kpi-value">{{ resumo.em_andamento }}</span><div class="cs-kpi-help">ainda não concluídos</div></div>
-    <div class="cs-kpi is-success"><span class="cs-kpi-label">Concluídos</span><span class="cs-kpi-value">{{ resumo.concluidos }}</span><div class="cs-kpi-help">contratação realizada</div></div>
-    <div class="cs-kpi is-warning"><span class="cs-kpi-label">Etapa atrasada</span><span class="cs-kpi-value">{{ resumo.atrasados }}</span><div class="cs-kpi-help">próxima etapa fora do prazo</div></div>
-  </div>
-
-  <div class="cs-legend" aria-label="Legenda de status">
-    <span class="cs-legend-item"><span class="cs-dot done"></span> Realizado</span>
-    <span class="cs-legend-item"><span class="cs-dot pending"></span> Pendente</span>
-    <span class="cs-legend-item"><span class="cs-dot late"></span> Pendente e atrasado</span>
-    <span class="cs-legend-item">A primeira data é sempre a <strong>base planejada</strong>.</span>
-  </div>
-
-  <div class="cs-table-toolbar">
-    <div class="cs-table-toolbar-info">
-      <span class="cs-table-toolbar-title">Acompanhamento das etapas</span>
-      <span class="cs-table-toolbar-help">Role a lista sem perder o cabeçalho, o suprimento ou a ação de atualização.</span>
+  <div class="ps-summary">
+    <div class="ps-summary-item">
+      <span class="ps-summary-label">Suprimentos</span>
+      <strong class="ps-summary-value">{{ resumo.total }}</strong>
+      <span class="ps-summary-note">itens no filtro atual</span>
     </div>
-    <div class="cs-table-toolbar-count">{{ resumo.total }} item{{ resumo.total|pluralize }}</div>
+    <div class="ps-summary-item is-accent">
+      <span class="ps-summary-label">Avanço médio</span>
+      <strong class="ps-summary-value">{{ resumo.percentual_medio }}%</strong>
+      <span class="ps-summary-note">etapas concluídas</span>
+    </div>
+    <div class="ps-summary-item">
+      <span class="ps-summary-label">Em andamento</span>
+      <strong class="ps-summary-value">{{ resumo.em_andamento }}</strong>
+      <span class="ps-summary-note">processos ativos</span>
+    </div>
+    <div class="ps-summary-item is-success">
+      <span class="ps-summary-label">Concluídos</span>
+      <strong class="ps-summary-value">{{ resumo.concluidos }}</strong>
+      <span class="ps-summary-note">contratação realizada</span>
+    </div>
+    <div class="ps-summary-item is-warning">
+      <span class="ps-summary-label">Atrasados</span>
+      <strong class="ps-summary-value">{{ resumo.atrasados }}</strong>
+      <span class="ps-summary-note">etapa fora do prazo</span>
+    </div>
   </div>
 
-  <div class="cs-table-wrap" id="cs-table-wrap">
-    <table class="cs-table">
-      <thead>
-        <tr>
-          <th>Suprimento</th>
-          <th>Cotação</th>
-          <th>Compatibilização</th>
-          <th>Negociação</th>
-          <th>Contratação</th>
-          <th>Avanço</th>
-          <th>Etapa atual</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for grupo in categorias %}
-        <tr class="cs-category"><td colspan="8">{{ grupo.nome }}</td></tr>
-          {% for item in grupo.itens %}
-          <tr class="cs-item-row" id="suprimento-{{ item.id }}">
-            <td class="cs-item-cell">
-              <div class="cs-item-main">
-                <span class="cs-item-marker {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}"></span>
-                <div>
-                  <div class="cs-item-name">{{ item.item }}</div>
-                  <div class="cs-item-meta">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                    {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
+  <section class="ps-board">
+    <div class="ps-board-head">
+      <div class="ps-board-title">
+        <strong>Registro de suprimentos</strong>
+        <span>Datas planejadas, realizadas e situação atual do processo.</span>
+      </div>
+      <div class="ps-legend" aria-label="Legenda de status">
+        <span class="ps-legend-item"><span class="ps-dot done"></span>Realizado</span>
+        <span class="ps-legend-item"><span class="ps-dot"></span>Pendente</span>
+        <span class="ps-legend-item"><span class="ps-dot late"></span>Atrasado</span>
+        <span class="ps-count">{{ resumo.total }} item{{ resumo.total|pluralize }}</span>
+      </div>
+    </div>
+
+    <div class="ps-table-wrap" id="ps-table-wrap">
+      <table class="ps-table">
+        <thead>
+          <tr>
+            <th>Suprimento</th>
+            <th>Cotação</th>
+            <th>Compatibilização</th>
+            <th>Negociação</th>
+            <th>Contratação</th>
+            <th>Entrega</th>
+            <th>Avanço</th>
+            <th>Etapa atual</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for grupo in categorias %}
+          <tr class="ps-category"><td colspan="9">{{ grupo.nome }}</td></tr>
+            {% for item in grupo.itens %}
+            <tr class="ps-item-row" id="suprimento-{{ item.id }}">
+              <td class="ps-item-cell">
+                <div class="ps-item">
+                  <span class="ps-item-state {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}"></span>
+                  <div>
+                    <div class="ps-item-name">{{ item.item }}</div>
+                    <div class="ps-item-local">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                      {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </td>
+              </td>
 
-            <td class="cs-stage">
-              <div class="cs-stage-card">
-                <div class="cs-stage-caption">Planejado</div>
-                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_cotacao %}done{% elif item.cotacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_cotacao|date:"d/m/Y"|default:"—" }}</span></div>
-                {% if item.data_real_cotacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_cotacao|date:"d/m/Y" }}</div>{% if item.cotacao_desvio_label %}<span class="cs-stage-delta {{ item.cotacao_desvio_classe }}">{{ item.cotacao_desvio_label }}</span>{% endif %}</div>{% elif item.cotacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
-              </div>
-            </td>
+              <td class="ps-milestone">
+                <div class="ps-milestone-label">Planejado</div>
+                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_cotacao %}done{% elif item.cotacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_cotacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                {% if item.data_real_cotacao %}
+                  <div class="ps-milestone-real done">Realizado {{ item.data_real_cotacao|date:"d/m/Y" }}</div>
+                  {% if item.cotacao_desvio_label %}<span class="ps-delta {{ item.cotacao_desvio_classe }}">{{ item.cotacao_desvio_label }}</span>{% endif %}
+                {% elif item.cotacao_atrasada %}
+                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% else %}
+                  <div class="ps-milestone-real">Pendente</div>
+                {% endif %}
+              </td>
 
-            <td class="cs-stage">
-              <div class="cs-stage-card">
-                <div class="cs-stage-caption">Planejado</div>
-                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_compatibilizacao %}done{% elif item.compatibilizacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_compatibilizacao|date:"d/m/Y"|default:"—" }}</span></div>
-                {% if item.data_real_compatibilizacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_compatibilizacao|date:"d/m/Y" }}</div>{% if item.compatibilizacao_desvio_label %}<span class="cs-stage-delta {{ item.compatibilizacao_desvio_classe }}">{{ item.compatibilizacao_desvio_label }}</span>{% endif %}</div>{% elif item.compatibilizacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
-              </div>
-            </td>
+              <td class="ps-milestone">
+                <div class="ps-milestone-label">Planejado</div>
+                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_compatibilizacao %}done{% elif item.compatibilizacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_compatibilizacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                {% if item.data_real_compatibilizacao %}
+                  <div class="ps-milestone-real done">Realizado {{ item.data_real_compatibilizacao|date:"d/m/Y" }}</div>
+                  {% if item.compatibilizacao_desvio_label %}<span class="ps-delta {{ item.compatibilizacao_desvio_classe }}">{{ item.compatibilizacao_desvio_label }}</span>{% endif %}
+                {% elif item.compatibilizacao_atrasada %}
+                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% else %}
+                  <div class="ps-milestone-real">Pendente</div>
+                {% endif %}
+              </td>
 
-            <td class="cs-stage">
-              <div class="cs-stage-card">
-                <div class="cs-stage-caption">Planejado</div>
-                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_negociacao %}done{% elif item.negociacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.data_negociacao|date:"d/m/Y"|default:"—" }}</span></div>
-                {% if item.data_real_negociacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_negociacao|date:"d/m/Y" }}</div>{% if item.negociacao_desvio_label %}<span class="cs-stage-delta {{ item.negociacao_desvio_classe }}">{{ item.negociacao_desvio_label }}</span>{% endif %}</div>{% elif item.negociacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
-              </div>
-            </td>
+              <td class="ps-milestone">
+                <div class="ps-milestone-label">Planejado</div>
+                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_negociacao %}done{% elif item.negociacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_negociacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                {% if item.data_real_negociacao %}
+                  <div class="ps-milestone-real done">Realizado {{ item.data_real_negociacao|date:"d/m/Y" }}</div>
+                  {% if item.negociacao_desvio_label %}<span class="ps-delta {{ item.negociacao_desvio_classe }}">{{ item.negociacao_desvio_label }}</span>{% endif %}
+                {% elif item.negociacao_atrasada %}
+                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% else %}
+                  <div class="ps-milestone-real">Pendente</div>
+                {% endif %}
+              </td>
 
-            <td class="cs-stage">
-              <div class="cs-stage-card">
-                <div class="cs-stage-caption">Planejado</div>
-                <div class="cs-stage-top"><span class="cs-stage-status {% if item.data_real_contratacao %}done{% elif item.contratacao_atrasada %}late{% endif %}"></span><span class="cs-stage-base">{{ item.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</span></div>
-                {% if item.data_real_contratacao %}<div class="cs-stage-result"><div class="cs-stage-real done">Realizado {{ item.data_real_contratacao|date:"d/m/Y" }}</div>{% if item.contratacao_desvio_label %}<span class="cs-stage-delta {{ item.contratacao_desvio_classe }}">{{ item.contratacao_desvio_label }}</span>{% endif %}</div>{% elif item.contratacao_atrasada %}<div class="cs-stage-real late">Realizado — · atrasado</div>{% else %}<div class="cs-stage-real">Realizado —</div>{% endif %}
-              </div>
-            </td>
+              <td class="ps-milestone">
+                <div class="ps-milestone-label">Planejado</div>
+                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_contratacao %}done{% elif item.contratacao_atrasada %}late{% endif %}"></span><strong>{{ item.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                {% if item.data_real_contratacao %}
+                  <div class="ps-milestone-real done">Realizado {{ item.data_real_contratacao|date:"d/m/Y" }}</div>
+                  {% if item.contratacao_desvio_label %}<span class="ps-delta {{ item.contratacao_desvio_classe }}">{{ item.contratacao_desvio_label }}</span>{% endif %}
+                {% elif item.contratacao_atrasada %}
+                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% else %}
+                  <div class="ps-milestone-real">Pendente</div>
+                {% endif %}
+              </td>
 
-            <td class="cs-progress">
-              <div class="cs-progress-head">
-                <span class="cs-progress-value">{{ item.percentual_calculado }}%</span>
-                <span class="cs-progress-step">{{ item.etapas_concluidas|default:0 }}/4 etapas</span>
-              </div>
-              <div class="cs-progress-line {% if item.percentual_calculado == 100 %}done{% endif %}"><span style="width:{{ item.percentual_calculado }}%"></span></div>
-            </td>
+              <td class="ps-milestone">
+                <div class="ps-milestone-label">Previsão</div>
+                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.previsao_entrega_compra and not item.previsao_entrega_atrasada %}done{% elif item.previsao_entrega_atrasada %}late{% endif %}"></span><strong>{{ item.previsao_entrega_compra|date:"d/m/Y"|default:"—" }}</strong></div>
+                {% if item.previsao_entrega_compra %}
+                  {% if item.previsao_entrega_atrasada %}
+                    <div class="ps-milestone-real late">Previsão vencida</div>
+                    <span class="ps-delta late">+{{ item.previsao_entrega_dias_atraso }} dia{{ item.previsao_entrega_dias_atraso|pluralize }}</span>
+                  {% else %}
+                    <div class="ps-milestone-real done">{{ item.previsao_entrega_qtd_pedidos }} pedido{{ item.previsao_entrega_qtd_pedidos|pluralize }}</div>
+                  {% endif %}
+                {% else %}
+                  <div class="ps-milestone-real">Sem previsão</div>
+                {% endif %}
+              </td>
 
-            <td>
-              <span class="cs-stage-badge {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}">{{ item.etapa_calculada_label }}</span>
-              {% if item.atrasado_calculado %}<div class="cs-delay">{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }} de atraso</div>{% endif %}
-            </td>
+              <td class="ps-progress">
+                <div class="ps-progress-top"><strong>{{ item.percentual_calculado }}%</strong><span>{{ item.etapas_concluidas|default:0 }}/4</span></div>
+                <div class="ps-progress-track {% if item.percentual_calculado == 100 %}done{% endif %}"><span style="width:{{ item.percentual_calculado }}%"></span></div>
+              </td>
 
-            <td>
-              <div style="display:flex; gap:6px; align-items:center;">
-             {% load l10n %}
+              <td>
+                <span class="ps-stage-badge {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}">{{ item.etapa_calculada_label }}</span>
+                {% if item.atrasado_calculado %}<div class="ps-delay">{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }} de atraso</div>{% endif %}
+              </td>
 
-<a
-  href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}"
-  class="cs-btn cs-btn-sm"
-  title="Iniciar processo de compra para este suprimento"
->
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-  >
-    <circle cx="9" cy="20" r="1"/>
-    <circle cx="19" cy="20" r="1"/>
-    <path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/>
-  </svg>
+              <td>
+                <div class="ps-row-actions">
+                  <button type="button" class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" data-detail-target="detalhe-suprimento-{{ item.id }}" aria-expanded="false" title="Ver andamento comercial">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    Detalhes
+                    <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                  </button>
+                  <a href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}" class="ps-btn ps-btn-sm ps-btn-icon" title="Iniciar processo de compra">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></svg>
+                  </a>
+                  <button type="button" class="ps-btn ps-btn-sm ps-btn-icon js-open-progress"
+                          data-item-id="{{ item.id }}"
+                          data-url="{% url 'planejamento:salvar_datas_item_cronograma_suprimentos' item.id %}"
+                          data-item="{{ item.item|escape }}"
+                          data-local="{{ item.local|escape }}"
+                          data-base-cotacao="{{ item.data_cotacao|date:'d/m/Y'|default:'—' }}"
+                          data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
+                          data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
+                          data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
+                          data-real-cotacao="{{ item.data_real_cotacao|date:'Y-m-d' }}"
+                          data-real-compat="{{ item.data_real_compatibilizacao|date:'Y-m-d' }}"
+                          data-real-negociacao="{{ item.data_real_negociacao|date:'Y-m-d' }}"
+                          data-real-contratacao="{{ item.data_real_contratacao|date:'Y-m-d' }}"
+                          title="Atualizar datas realizadas">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
 
-  Comprar
-</a>
-              <button
-                type="button"
-                class="cs-btn cs-btn-sm js-open-progress"
-                data-item-id="{{ item.id }}"
-                data-url="{% url 'planejamento:salvar_datas_item_cronograma_suprimentos' item.id %}"
-                data-item="{{ item.item|escape }}"
-                data-local="{{ item.local|escape }}"
-                data-base-cotacao="{{ item.data_cotacao|date:'d/m/Y'|default:'—' }}"
-                data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
-                data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
-                data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
-                data-real-cotacao="{{ item.data_real_cotacao|date:'Y-m-d' }}"
-                data-real-compat="{{ item.data_real_compatibilizacao|date:'Y-m-d' }}"
-                data-real-negociacao="{{ item.data_real_negociacao|date:'Y-m-d' }}"
-                data-real-contratacao="{{ item.data_real_contratacao|date:'Y-m-d' }}"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
-                Atualizar
-              </button>
-              </div>
-            </td>
-          </tr>
+            <tr id="detalhe-suprimento-{{ item.id }}" class="ps-detail-row">
+              <td colspan="9">
+                <div class="ps-detail-shell">
+                  <div class="ps-detail-head">
+                    <div>
+                      <h3 class="ps-detail-title">{{ item.item }}</h3>
+                      <div class="ps-detail-context">
+                        <span class="ps-context-pill"><strong>Atividade{% if item.acompanhamento_atividades|length != 1 %}s{% endif %}:</strong>{{ item.acompanhamento_atividades_texto }}</span>
+                      </div>
+                    </div>
+                    {% if item.acompanhamento_processos %}
+                    <div class="ps-processes">
+                      {% for processo in item.acompanhamento_processos %}
+                      <span class="ps-process-pill">{{ processo.numero }} · {{ processo.get_status_display }}</span>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+
+                  {% if item.acompanhamento_tem_compras %}
+                  <div class="ps-detail-summary">
+                    <div class="ps-detail-kpi"><span>Fornecedores</span><strong>{{ item.acompanhamento_resumo.fornecedores }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Propostas</span><strong>{{ item.acompanhamento_resumo.propostas_recebidas }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Compatibilizados</span><strong>{{ item.acompanhamento_resumo.compatibilizados }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Aguardando</span><strong>{{ item.acompanhamento_resumo.aguardando_proposta }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Menor cotado</span><strong class="money">{{ item.acompanhamento_resumo.menor_valor_formatado }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Menor negociado</span><strong class="money">{{ item.acompanhamento_resumo.menor_negociado_formatado }}</strong></div>
+                  </div>
+
+                  <div class="ps-supplier-wrap">
+                    <table class="ps-supplier-table">
+                      <thead>
+                        <tr>
+                          <th>Fornecedor</th>
+                          <th>Proposta</th>
+                          <th>Valor cotado</th>
+                          <th>Compatibilização</th>
+                          <th>Negociação</th>
+                          <th>Valor negociado</th>
+                          <th>Aprovação</th>
+                          <th>Itens / quantidade</th>
+                          <th>Valor pedido</th>
+                          <th>Status atual</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for fornecedor in item.acompanhamento_fornecedores %}
+                        <tr>
+                          <td><span class="ps-supplier-name">{{ fornecedor.fornecedor_nome }}</span><span class="ps-supplier-process">{{ fornecedor.processo_numero }}</span></td>
+                          <td><span class="ps-status {{ fornecedor.proposta.classe }}">{{ fornecedor.proposta.label }}</span></td>
+                          <td class="ps-money">{{ fornecedor.valor_cotado_formatado }}</td>
+                          <td><span class="ps-status {{ fornecedor.compatibilizacao.classe }}">{{ fornecedor.compatibilizacao.label }}</span></td>
+                          <td><span class="ps-status {{ fornecedor.negociacao.classe }}">{{ fornecedor.negociacao.label }}</span></td>
+                          <td class="ps-money">{{ fornecedor.valor_negociado_formatado }}</td>
+                          <td><span class="ps-status {{ fornecedor.aprovacao.classe }}">{{ fornecedor.aprovacao.label }}</span></td>
+                          <td>
+                            {% if fornecedor.pedidos_detalhes %}
+                              {% for pedido in fornecedor.pedidos_detalhes %}
+                              <div class="ps-order-block">
+                                <span class="ps-order-number">{{ pedido.numero }}</span>
+                                {% if pedido.previsao_entrega %}<span class="ps-order-meta">Previsão: {{ pedido.previsao_entrega|date:"d/m/Y" }}</span>{% endif %}
+                                {% for item_pedido in pedido.itens %}
+                                <div class="ps-order-item">
+                                  <div>
+                                    <span class="ps-order-item-name">{{ item_pedido.descricao }}</span>
+                                    <span class="ps-order-meta">{{ item_pedido.valor_total_formatado }}</span>
+                                  </div>
+                                  <span class="ps-order-qty">{{ item_pedido.quantidade_formatada }} {{ item_pedido.unidade }}</span>
+                                </div>
+                                {% empty %}
+                                <span class="ps-order-meta">Pedido sem itens.</span>
+                                {% endfor %}
+                              </div>
+                              {% endfor %}
+                            {% else %}—{% endif %}
+                          </td>
+                          <td class="ps-money">{{ fornecedor.valor_pedido_formatado }}</td>
+                          <td><span class="ps-status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span></td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div class="ps-detail-foot">
+                    <span>{{ item.acompanhamento_resumo.fornecedores }} fornecedor{{ item.acompanhamento_resumo.fornecedores|pluralize }} no acompanhamento</span>
+                    <span>
+                      {% if item.acompanhamento_resumo.valor_pedidos %}Pedidos emitidos: <strong>{{ item.acompanhamento_resumo.valor_pedidos_formatado }}</strong>{% endif %}
+                      {% if item.acompanhamento_resumo.ultima_atualizacao %}{% if item.acompanhamento_resumo.valor_pedidos %}&nbsp;&nbsp;•&nbsp;&nbsp;{% endif %}Última atualização: <strong>{{ item.acompanhamento_resumo.ultima_atualizacao|date:"d/m/Y H:i" }}</strong>{% endif %}
+                    </span>
+                  </div>
+                  {% else %}
+                  <div class="ps-detail-empty">Ainda não existe processo de compra iniciado para este suprimento. Use <strong>Comprar</strong> para iniciar o acompanhamento.</div>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          {% empty %}
+          <tr><td colspan="9" class="ps-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
           {% endfor %}
-        {% empty %}
-        <tr><td colspan="8" class="cs-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+        </tbody>
+      </table>
+    </div>
+  </section>
   {% else %}
-  <div class="cs-empty">Nenhuma base de cronograma de suprimentos foi importada ainda.</div>
+  <div class="ps-empty">Nenhuma base de cronograma de suprimentos foi importada ainda.</div>
   {% endif %}
 </div>
 
-<div id="cs-modal" class="cs-modal-backdrop" aria-hidden="true">
-  <div class="cs-modal" role="dialog" aria-modal="true" aria-labelledby="cs-modal-title">
-    <form id="cs-progress-form" method="post">
+<div id="ps-modal" class="ps-modal-backdrop" aria-hidden="true">
+  <div class="ps-modal" role="dialog" aria-modal="true" aria-labelledby="ps-modal-title">
+    <form id="ps-progress-form" method="post">
       {% csrf_token %}
       {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
       <input type="hidden" name="categoria" value="{{ filtros.categoria }}">
       <input type="hidden" name="etapa" value="{{ filtros.etapa }}">
       <input type="hidden" name="busca" value="{{ filtros.busca }}">
 
-      <div class="cs-modal-head">
-        <div class="cs-modal-title-row">
-          <div class="cs-modal-icon" aria-hidden="true">
+      <div class="ps-modal-head">
+        <div class="ps-modal-title-row">
+          <div class="ps-modal-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
           </div>
           <div>
-            <h2 id="cs-modal-title" class="cs-modal-title">Atualizar andamento</h2>
-            <p id="cs-modal-subtitle" class="cs-modal-subtitle"></p>
+            <h2 id="ps-modal-title" class="ps-modal-title">Atualizar andamento</h2>
+            <p id="ps-modal-subtitle" class="ps-modal-subtitle"></p>
           </div>
         </div>
-        <button type="button" class="cs-close js-close-progress" aria-label="Fechar">×</button>
+        <button type="button" class="ps-close js-close-progress" aria-label="Fechar">×</button>
       </div>
 
-      <div class="cs-modal-body">
-        <div class="cs-modal-note">
+      <div class="ps-modal-body">
+        <div class="ps-modal-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-          <span>As datas base são importadas do planejamento e permanecem bloqueadas. Preencha somente a data em que cada etapa foi efetivamente concluída.</span>
+          <span>As datas base vêm do planejamento e permanecem bloqueadas. Informe apenas a data em que cada etapa foi efetivamente concluída.</span>
         </div>
 
-        <div class="cs-edit-grid">
-          <div class="cs-edit-cell cs-edit-head">Etapa</div><div class="cs-edit-cell cs-edit-head">Data base</div><div class="cs-edit-cell cs-edit-head">Data realizada</div>
+        <div class="ps-edit-grid">
+          <div class="ps-edit-cell ps-edit-head">Etapa</div><div class="ps-edit-cell ps-edit-head">Data base</div><div class="ps-edit-cell ps-edit-head">Data realizada</div>
+          <div class="ps-edit-cell ps-edit-label" data-label="Etapa"><span class="ps-mini-dot"></span>Cotação</div>
+          <div id="base-cotacao" class="ps-edit-cell ps-base-date" data-label="Base">—</div>
+          <div class="ps-edit-cell" data-label="Real"><input class="ps-real-input" id="real-cotacao" name="data_real_cotacao" type="date"></div>
 
-          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Cotação</div>
-          <div id="base-cotacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
-          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-cotacao" name="data_real_cotacao" type="date"></div>
+          <div class="ps-edit-cell ps-edit-label" data-label="Etapa"><span class="ps-mini-dot"></span>Compatibilização</div>
+          <div id="base-compat" class="ps-edit-cell ps-base-date" data-label="Base">—</div>
+          <div class="ps-edit-cell" data-label="Real"><input class="ps-real-input" id="real-compat" name="data_real_compatibilizacao" type="date"></div>
 
-          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Compatibilização</div>
-          <div id="base-compat" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
-          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-compat" name="data_real_compatibilizacao" type="date"></div>
+          <div class="ps-edit-cell ps-edit-label" data-label="Etapa"><span class="ps-mini-dot"></span>Negociação</div>
+          <div id="base-negociacao" class="ps-edit-cell ps-base-date" data-label="Base">—</div>
+          <div class="ps-edit-cell" data-label="Real"><input class="ps-real-input" id="real-negociacao" name="data_real_negociacao" type="date"></div>
 
-          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Negociação</div>
-          <div id="base-negociacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
-          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-negociacao" name="data_real_negociacao" type="date"></div>
-
-          <div class="cs-edit-cell cs-edit-label" data-label="Etapa"><span class="cs-mini-dot"></span>Contratação</div>
-          <div id="base-contratacao" class="cs-edit-cell cs-base-date" data-label="Base">—</div>
-          <div class="cs-edit-cell" data-label="Real"><input class="cs-real-input" id="real-contratacao" name="data_real_contratacao" type="date"></div>
+          <div class="ps-edit-cell ps-edit-label" data-label="Etapa"><span class="ps-mini-dot"></span>Contratação</div>
+          <div id="base-contratacao" class="ps-edit-cell ps-base-date" data-label="Base">—</div>
+          <div class="ps-edit-cell" data-label="Real"><input class="ps-real-input" id="real-contratacao" name="data_real_contratacao" type="date"></div>
         </div>
       </div>
 
-      <div class="cs-modal-foot">
-        <button type="button" class="cs-btn js-close-progress">Cancelar</button>
-        <button type="submit" class="cs-btn cs-btn-primary">
+      <div class="ps-modal-foot">
+        <button type="button" class="ps-btn js-close-progress">Cancelar</button>
+        <button type="submit" class="ps-btn ps-btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
           Salvar andamento
         </button>
@@ -599,24 +945,36 @@
 
 <script>
 (function () {
-  const modal = document.getElementById('cs-modal');
-  const form = document.getElementById('cs-progress-form');
+  const modal = document.getElementById('ps-modal');
+  const form = document.getElementById('ps-progress-form');
   if (!modal || !form) return;
 
-  /* O base.html pode ter containers com transform/overflow. Isso faz position:fixed
-     se comportar como se estivesse preso ao conteúdo. No body o modal fica sempre
-     relativo à janela visível do navegador. */
-  if (modal.parentElement !== document.body) {
-    document.body.appendChild(modal);
-  }
+  if (modal.parentElement !== document.body) document.body.appendChild(modal);
 
   const STORAGE_SCROLL = 'cronogramaSuprimentosScrollY';
   const STORAGE_TABLE_SCROLL = 'cronogramaSuprimentosTableScrollTop';
   const STORAGE_TABLE_SCROLL_X = 'cronogramaSuprimentosTableScrollLeft';
   const STORAGE_ITEM = 'cronogramaSuprimentosItemId';
-  const tableWrap = document.getElementById('cs-table-wrap');
-  const subtitle = document.getElementById('cs-modal-subtitle');
+  const tableWrap = document.getElementById('ps-table-wrap');
+  const subtitle = document.getElementById('ps-modal-subtitle');
   let opener = null;
+
+  document.querySelectorAll('.js-toggle-detail').forEach((button) => {
+    button.addEventListener('click', () => {
+      const targetId = button.dataset.detailTarget;
+      const detail = targetId ? document.getElementById(targetId) : null;
+      if (!detail) return;
+      const willOpen = !detail.classList.contains('open');
+      detail.classList.toggle('open', willOpen);
+      button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      if (willOpen) {
+        requestAnimationFrame(() => {
+          const row = button.closest('.ps-item-row');
+          if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    });
+  });
 
   const fields = {
     baseCotacao: document.getElementById('base-cotacao'),
@@ -632,7 +990,7 @@
   function closeModal() {
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('cs-modal-open');
+    document.body.classList.remove('ps-modal-open');
     if (opener) opener.focus({ preventScroll: true });
   }
 
@@ -640,10 +998,7 @@
     opener = button;
     form.action = button.dataset.url;
     form.dataset.itemId = button.dataset.itemId || '';
-    subtitle.textContent = button.dataset.local
-      ? `${button.dataset.item} · ${button.dataset.local}`
-      : button.dataset.item;
-
+    subtitle.textContent = button.dataset.local ? `${button.dataset.item} · ${button.dataset.local}` : button.dataset.item;
     fields.baseCotacao.textContent = button.dataset.baseCotacao || '—';
     fields.baseCompat.textContent = button.dataset.baseCompat || '—';
     fields.baseNegociacao.textContent = button.dataset.baseNegociacao || '—';
@@ -652,36 +1007,20 @@
     fields.realCompat.value = button.dataset.realCompat || '';
     fields.realNegociacao.value = button.dataset.realNegociacao || '';
     fields.realContratacao.value = button.dataset.realContratacao || '';
-
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('cs-modal-open');
-
+    document.body.classList.add('ps-modal-open');
     requestAnimationFrame(() => {
-      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao]
-        .find((input) => !input.value);
+      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao].find((input) => !input.value);
       (firstEmpty || fields.realContratacao).focus({ preventScroll: true });
     });
   }
 
-  document.querySelectorAll('.js-open-progress').forEach((button) => {
-    button.addEventListener('click', () => openModal(button));
-  });
+  document.querySelectorAll('.js-open-progress').forEach((button) => button.addEventListener('click', () => openModal(button)));
+  document.querySelectorAll('.js-close-progress').forEach((button) => button.addEventListener('click', closeModal));
+  modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && modal.classList.contains('open')) closeModal(); });
 
-  document.querySelectorAll('.js-close-progress').forEach((button) => {
-    button.addEventListener('click', closeModal);
-  });
-
-  modal.addEventListener('click', (event) => {
-    if (event.target === modal) closeModal();
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && modal.classList.contains('open')) closeModal();
-  });
-
-  /* Antes do POST, salva a posição atual. O Django continua usando o redirect
-     normal e, após recarregar, devolvemos o usuário exatamente ao mesmo ponto. */
   form.addEventListener('submit', () => {
     try {
       sessionStorage.setItem(STORAGE_SCROLL, String(window.scrollY));
@@ -690,12 +1029,9 @@
         sessionStorage.setItem(STORAGE_TABLE_SCROLL_X, String(tableWrap.scrollLeft));
       }
       if (form.dataset.itemId) sessionStorage.setItem(STORAGE_ITEM, form.dataset.itemId);
-    } catch (error) {
-      /* sessionStorage indisponível: o salvamento continua normalmente. */
-    }
+    } catch (error) {}
   });
 
-  /* Restaura a posição depois do redirect do salvamento. */
   try {
     const savedScroll = sessionStorage.getItem(STORAGE_SCROLL);
     const savedTableScroll = sessionStorage.getItem(STORAGE_TABLE_SCROLL);
@@ -711,26 +1047,22 @@
       const restore = () => {
         const y = Number(savedScroll);
         if (Number.isFinite(y)) window.scrollTo({ top: y, behavior: 'auto' });
-
         if (tableWrap) {
           const tableY = Number(savedTableScroll);
           const tableX = Number(savedTableScrollX);
           if (Number.isFinite(tableY)) tableWrap.scrollTop = tableY;
           if (Number.isFinite(tableX)) tableWrap.scrollLeft = tableX;
         }
-
         if (savedItem) {
           const row = document.getElementById(`suprimento-${savedItem}`);
           if (row) {
-            /* Como a tabela agora possui rolagem própria, destacamos a linha
-               sem forçar scrollIntoView e sem tirar o usuário do ponto salvo. */
-            row.style.transition = 'background-color .4s ease, box-shadow .4s ease';
+            row.style.transition = 'background-color .35s ease, box-shadow .35s ease';
             row.style.backgroundColor = 'rgba(37,108,125,.08)';
             row.style.boxShadow = 'inset 3px 0 0 rgba(37,108,125,.55)';
             setTimeout(() => {
               row.style.backgroundColor = '';
               row.style.boxShadow = '';
-            }, 1600);
+            }, 1500);
           }
         }
       };
@@ -738,9 +1070,7 @@
       requestAnimationFrame(() => requestAnimationFrame(restore));
       window.addEventListener('load', restore, { once: true });
     }
-  } catch (error) {
-    /* Sem restauração, a página continua funcional. */
-  }
+  } catch (error) {}
 })();
 </script>
 {% endblock %}

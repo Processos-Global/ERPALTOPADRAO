@@ -279,10 +279,31 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
         aprovacao = AprovacaoCompra.objects.create(
             processo=p, ciclo=ciclo, alcada=None, usuario=usuario, decisao=decisao, observacao=observacao
         )
+
+        # A reprovação do gestor encerra o processo sem fornecedor aprovado.
+        # Cancela qualquer adjudicação ativa que possa ter ficado de ciclo anterior/legado,
+        # evitando que outras telas interpretem a proposta como aprovada pelo gestor.
+        agora = timezone.now()
+        AdjudicacaoCompra.objects.filter(processo=p, cancelada=False).update(
+            cancelada=True,
+            cancelada_por=usuario,
+            cancelada_em=agora,
+            motivo_cancelamento=(
+                f"Seleção cancelada automaticamente no ciclo {ciclo}: "
+                "processo reprovado pelo gestor."
+            ),
+        )
+
         p.status = p.Status.REPROVADO
         p.etapa_atual = p.Etapa.APROVACAO
         p.save(update_fields=["status", "etapa_atual", "atualizado_em"])
-        registrar_evento(p, "PROCESSO_REPROVADO", usuario, "Compra reprovada e processo encerrado.", {"ciclo": ciclo})
+        registrar_evento(
+            p,
+            "PROCESSO_REPROVADO",
+            usuario,
+            "Compra reprovada pelo gestor e processo encerrado sem fornecedor aprovado.",
+            {"ciclo": ciclo, "observacao": observacao},
+        )
         return aprovacao
 
     _criar_adjudicacoes_da_aprovacao(processo=p, usuario=usuario, selecoes=selecoes)
