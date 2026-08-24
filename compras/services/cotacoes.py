@@ -3,13 +3,14 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from compras.models import CotacaoFornecedor, CotacaoFornecedorItem, FornecedorCompra
+from compras.models import CotacaoFornecedor, CotacaoFornecedorItem, FornecedorCompra, SolicitacaoCotacaoFornecedor
 from .auditoria import registrar_evento
 from .comercial import processo_em_fase_comercial
+from .solicitacoes_cotacao import marcar_solicitacao_respondida, restaurar_solicitacao_apos_exclusao_proposta
 
 
 @transaction.atomic
-def criar_fornecedor(*, nome, documento="", email="", telefone=""):
+def criar_fornecedor(*, nome, documento="", email="", telefone="", avaliacao=None):
     nome = (nome or "").strip()
     documento = (documento or "").strip()
     if not nome:
@@ -17,10 +18,10 @@ def criar_fornecedor(*, nome, documento="", email="", telefone=""):
     if documento:
         fornecedor, _ = FornecedorCompra.objects.get_or_create(
             documento=documento,
-            defaults={"nome": nome, "email": email, "telefone": telefone},
+            defaults={"nome": nome, "email": email, "telefone": telefone, "avaliacao": avaliacao},
         )
         return fornecedor
-    return FornecedorCompra.objects.create(nome=nome, email=email, telefone=telefone)
+    return FornecedorCompra.objects.create(nome=nome, email=email, telefone=telefone, avaliacao=avaliacao)
 
 
 @transaction.atomic
@@ -33,15 +34,42 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
         dados["frete"] = Decimal("0")
     if processo.status == processo.Status.CANCELADO:
         raise ValidationError("Processo cancelado não pode receber cotação.")
+
+    cotacao_existente = CotacaoFornecedor.objects.filter(
+        processo=processo,
+        fornecedor=fornecedor,
+    ).first()
+    if cotacao_existente is None:
+        envio_registrado = SolicitacaoCotacaoFornecedor.objects.filter(
+            processo=processo,
+            fornecedor=fornecedor,
+            status=SolicitacaoCotacaoFornecedor.Status.ENVIADA,
+            enviada_em__isnull=False,
+        ).exists()
+        if not envio_registrado:
+            raise ValidationError(
+                "A proposta só pode ser cadastrada depois que o envio da solicitação de cotação para este fornecedor for registrado."
+            )
+
     cotacao, criada = CotacaoFornecedor.objects.get_or_create(
         processo=processo,
         fornecedor=fornecedor,
         defaults={"criado_por": usuario, **dados},
     )
     if not criada:
+        if cotacao.enviada_compatibilizacao_em:
+            raise ValidationError(
+                "A proposta já foi enviada para compatibilização e não pode mais ser alterada."
+            )
         for campo, valor in dados.items():
             setattr(cotacao, campo, valor)
         cotacao.save()
+    marcar_solicitacao_respondida(
+        processo=processo,
+        fornecedor=fornecedor,
+        usuario=usuario,
+        data=cotacao.criado_em,
+    )
     registrar_evento(
         processo,
         "FORNECEDOR_COTACAO",
@@ -54,6 +82,10 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
 
 @transaction.atomic
 def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, usuario, **dados):
+    if cotacao.enviada_compatibilizacao_em:
+        raise ValidationError(
+            "A proposta já foi enviada para compatibilização e não pode mais ser alterada."
+        )
     if not processo_em_fase_comercial(cotacao.processo):
         raise ValidationError(
             "O mapa comercial já foi fechado. Itens da proposta não podem mais ser alterados."
@@ -116,9 +148,10 @@ def excluir_cotacao(*, cotacao, usuario):
             "Esta proposta possui quantidade selecionada. Remova a seleção comercial antes de excluí-la."
         )
 
-    fornecedor_nome = cotacao.fornecedor.nome
+    fornecedor = cotacao.fornecedor
+    fornecedor_nome = fornecedor.nome
     cotacao_id = cotacao.pk
-    fornecedor_id = cotacao.fornecedor_id
+    fornecedor_id = fornecedor.pk
     quantidade_itens = cotacao.itens.count()
 
     registrar_evento(
@@ -134,4 +167,8 @@ def excluir_cotacao(*, cotacao, usuario):
     )
 
     cotacao.delete()
+    restaurar_solicitacao_apos_exclusao_proposta(
+        processo=processo,
+        fornecedor=fornecedor,
+    )
     return fornecedor_nome

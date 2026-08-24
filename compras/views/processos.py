@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from obras.models import Obra
 from planejamento.models import ItemCronogramaSuprimento
-from usuarios.models import NivelPermissao
+from usuarios.models import AcaoCompra, NivelPermissao
 
 from compras.forms import (
     AdjudicacaoForm,
@@ -33,12 +33,15 @@ from compras.models import (
     CotacaoFornecedorItem,
     PedidoCompra,
     ProcessoCompra,
+    SolicitacaoCotacaoFornecedor,
 )
 from compras.services.permissoes import (
-    compras_permission_required,
+    compras_acao_required,
+    possui_acao_compras,
     possui_permissao_compras,
 )
 from compras.services.processos import criar_processo
+from compras.services.comercial import item_tecnicamente_aprovado
 from compras.services.pedidos import transicoes_status_permitidas
 
 
@@ -171,13 +174,9 @@ def _montar_dados_comerciais(
                 item.valor_total_cotado
             )
 
-        cotacao.total_proposta = (
-            total
-        )
-
-        cotacao.qtd_itens_proposta = (
-            len(itens)
-        )
+        cotacao.total_proposta = total
+        cotacao.total_proposta_com_frete = total + (cotacao.frete or zero)
+        cotacao.qtd_itens_proposta = len(itens)
 
     # --------------------------------------------------------
     # MATRIZ DE COTAÇÃO
@@ -201,18 +200,83 @@ def _montar_dados_comerciais(
                 )
             )
 
+            negociacao = None
+            if item is not None:
+                try:
+                    negociacao = item.negociacao
+                except Exception:
+                    negociacao = None
+
+            valor_final = None
+            total_final = None
+            elegivel_aprovacao = False
+            if item is not None:
+                valor_final = (
+                    negociacao.valor_final_unitario
+                    if negociacao is not None
+                    else item.valor_unitario_cotado
+                )
+                total_final = valor_final * item.quantidade
+                elegivel_aprovacao = item_tecnicamente_aprovado(item)
+
             ofertas.append(
                 {
                     "cotacao": cotacao,
                     "item": item,
+                    "menor_preco": False,
+                    "negociacao": negociacao,
+                    "valor_final": valor_final,
+                    "total_final": total_final,
+                    "elegivel_aprovacao": elegivel_aprovacao,
                 }
+            )
+
+        valores_validos = [
+            oferta["item"].valor_unitario_cotado
+            for oferta in ofertas
+            if oferta["item"] is not None
+        ]
+        menor_preco = min(valores_validos) if valores_validos else None
+        for oferta in ofertas:
+            oferta["menor_preco"] = bool(
+                oferta["item"] is not None
+                and menor_preco is not None
+                and oferta["item"].valor_unitario_cotado == menor_preco
+            )
+
+        valores_finais_elegiveis = [
+            oferta["valor_final"]
+            for oferta in ofertas
+            if oferta["elegivel_aprovacao"] and oferta["valor_final"] is not None
+        ]
+        menor_valor_final = min(valores_finais_elegiveis) if valores_finais_elegiveis else None
+        for oferta in ofertas:
+            oferta["menor_valor_final"] = bool(
+                oferta["elegivel_aprovacao"]
+                and menor_valor_final is not None
+                and oferta["valor_final"] == menor_valor_final
             )
 
         matriz_cotacao.append(
             {
                 "necessidade": necessidade,
                 "ofertas": ofertas,
+                "menor_preco": menor_preco,
+                "menor_valor_final": menor_valor_final,
             }
+        )
+
+    prazos_validos = [c.prazo_entrega_dias for c in cotacoes if c.prazo_entrega_dias is not None]
+    menor_prazo = min(prazos_validos) if prazos_validos else None
+    avaliacoes_validas = [c.fornecedor.avaliacao for c in cotacoes if c.fornecedor.avaliacao is not None]
+    melhor_avaliacao = max(avaliacoes_validas) if avaliacoes_validas else None
+
+    for cotacao in cotacoes:
+        cotacao.menor_prazo = bool(
+            menor_prazo is not None and cotacao.prazo_entrega_dias == menor_prazo
+        )
+        cotacao.melhor_avaliado = bool(
+            melhor_avaliacao is not None and cotacao.fornecedor.avaliacao == melhor_avaliacao
         )
 
     # --------------------------------------------------------
@@ -511,8 +575,8 @@ def _montar_dados_comerciais(
 # ============================================================
 
 
-@compras_permission_required(
-    NivelPermissao.LEITURA
+@compras_acao_required(
+    AcaoCompra.VISUALIZAR
 )
 def dashboard(request):
 
@@ -575,6 +639,8 @@ def dashboard(request):
             "COTACAO",
             "Cotação",
             [
+                ProcessoCompra.Status.PEDIDO_ENVIADO,
+                ProcessoCompra.Status.SOLICITACAO_COTACAO,
                 ProcessoCompra.Status.AGUARDANDO_COTACAO,
                 ProcessoCompra.Status.EM_COTACAO,
             ],
@@ -691,8 +757,8 @@ def dashboard(request):
 # ============================================================
 
 
-@compras_permission_required(
-    NivelPermissao.LEITURA
+@compras_acao_required(
+    AcaoCompra.VISUALIZAR
 )
 def lista_processos(request):
 
@@ -734,8 +800,8 @@ def lista_processos(request):
 # ============================================================
 
 
-@compras_permission_required(
-    NivelPermissao.LEITURA
+@compras_acao_required(
+    AcaoCompra.VISUALIZAR
 )
 def detalhe_processo(
     request,
@@ -765,6 +831,39 @@ def detalhe_processo(
             NivelPermissao.APROVACAO,
         )
     )
+
+    permissoes_compras = {
+        "pode_visualizar": possui_acao_compras(
+            request.user, AcaoCompra.VISUALIZAR
+        ),
+        "pode_solicitar": possui_acao_compras(
+            request.user, AcaoCompra.SOLICITAR
+        ),
+        "pode_cotar": possui_acao_compras(
+            request.user, AcaoCompra.COTAR
+        ),
+        "pode_compatibilizar": possui_acao_compras(
+            request.user, AcaoCompra.COMPATIBILIZAR
+        ),
+        "pode_negociar": possui_acao_compras(
+            request.user, AcaoCompra.NEGOCIAR
+        ),
+        "pode_aprovar": possui_acao_compras(
+            request.user, AcaoCompra.APROVAR
+        ),
+        "pode_gerenciar_pedidos": possui_acao_compras(
+            request.user, AcaoCompra.GERENCIAR_PEDIDOS
+        ),
+        "pode_receber_pedidos": possui_acao_compras(
+            request.user, AcaoCompra.RECEBER_PEDIDOS
+        ),
+        "pode_cancelar_pedidos": possui_acao_compras(
+            request.user, AcaoCompra.CANCELAR_PEDIDOS
+        ),
+        "pode_administrar": possui_acao_compras(
+            request.user, AcaoCompra.ADMINISTRAR
+        ),
+    }
 
     vinculos = list(
         processo
@@ -813,6 +912,13 @@ def detalhe_processo(
                 "compatibilizacoes"
             )
         ),
+    )
+
+    solicitacoes_cotacao = list(
+        processo
+        .solicitacoes_cotacao
+        .select_related("fornecedor", "enviada_por")
+        .order_by("fornecedor__nome")
     )
 
     cotacoes = list(
@@ -954,6 +1060,7 @@ def detalhe_processo(
         for cotacao in cotacoes
     ]
     form_proposta_nova = None
+    pode_cadastrar_nova_proposta = False
     form_analise_lote = None
     form_decisao_lote = None
 
@@ -971,6 +1078,7 @@ def detalhe_processo(
         form_proposta_nova = PropostaCompletaForm(
             processo=processo,
         )
+        pode_cadastrar_nova_proposta = form_proposta_nova.fields["fornecedor"].queryset.exists()
     if pode_editar and fase_analise_aberta:
         form_analise_lote = AnaliseTecnicaLoteForm(
             processo=processo,
@@ -984,6 +1092,8 @@ def detalhe_processo(
         "vinculos": vinculos,
         "necessidades": necessidades,
         "cotacoes": cotacoes,
+        "solicitacoes_cotacao": solicitacoes_cotacao,
+        "meios_envio_cotacao": SolicitacaoCotacaoFornecedor.MeioEnvio.choices,
         "adjudicacoes": adjudicacoes,
         "possui_saldo_pendente": (
             possui_saldo_pendente
@@ -1028,8 +1138,13 @@ def detalhe_processo(
             pode_aprovar
         ),
 
+        "permissoes_compras": (
+            permissoes_compras
+        ),
+
         "propostas_forms": propostas_forms,
         "form_proposta_nova": form_proposta_nova,
+        "pode_cadastrar_nova_proposta": pode_cadastrar_nova_proposta,
         "form_analise_lote": form_analise_lote,
         "form_decisao_lote": form_decisao_lote,
 
@@ -1116,8 +1231,8 @@ def detalhe_processo(
 # ============================================================
 
 
-@compras_permission_required(
-    NivelPermissao.EDICAO
+@compras_acao_required(
+    AcaoCompra.SOLICITAR
 )
 def novo_processo(request):
 
@@ -1210,6 +1325,12 @@ def novo_processo(request):
                     ]
                 ),
 
+                fornecedores_sugeridos=(
+                    form.cleaned_data[
+                        "fornecedores_sugeridos"
+                    ]
+                ),
+
                 atividades=(
                     form.cleaned_data[
                         "atividades"
@@ -1275,8 +1396,8 @@ def novo_processo(request):
 # ============================================================
 
 
-@compras_permission_required(
-    NivelPermissao.LEITURA
+@compras_acao_required(
+    AcaoCompra.VISUALIZAR
 )
 def lista_pedidos(request):
 

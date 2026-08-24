@@ -9,7 +9,7 @@ from .core import FornecedorCompra, NecessidadeCompra, ProcessoCompra
 
 class PedidoCompra(models.Model):
     class Status(models.TextChoices):
-        PEDIDO_EMITIDO = "PEDIDO_EMITIDO", "Pedido emitido"
+        PEDIDO_EMITIDO = "PEDIDO_EMITIDO", "Aguardando fornecedor"
         CONFIRMADO = "CONFIRMADO", "Confirmado"
         EM_PRODUCAO = "EM_PRODUCAO", "Em produção"
         PRONTO_EXPEDICAO = "PRONTO_EXPEDICAO", "Pronto para expedição"
@@ -118,6 +118,11 @@ class PedidoCompraItem(models.Model):
     @property
     def saldo_receber(self):
         return max(self.quantidade - self.quantidade_recebida, Decimal("0"))
+
+    @property
+    def quantidade_excedente(self):
+        """Quantidade recebida acima do que foi originalmente pedido."""
+        return max(self.quantidade_recebida - self.quantidade, Decimal("0"))
 
 
 class ParcelaPrevistaPedido(models.Model):

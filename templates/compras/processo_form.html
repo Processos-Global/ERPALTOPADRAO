@@ -2,7 +2,7 @@
 {% block extra_css %}
 {% include "compras/_styles.html" %}
 <style>
-  .pc-open{max-width:1440px;margin:0 auto;padding:14px 22px 118px;color:#183746}
+  .pc-open{max-width:1560px;margin:0 auto;padding:24px 28px 118px;color:#183746}
   .pc-open::before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 15% 0%,rgba(7,143,165,.035),transparent 28%),linear-gradient(180deg,#f8fbfc 0,#fff 260px);z-index:-1}
   .pc-open *{box-sizing:border-box}
 
@@ -12,21 +12,21 @@
   .pc-required-note{font-size:11px;color:#85969d;white-space:nowrap}
   .req{color:#b84e55}
 
-  .pc-open-main{display:grid;gap:18px}
-  .pc-card{border:1px solid #dbe5e9;border-radius:18px;background:#fff;overflow:hidden;box-shadow:0 10px 30px rgba(31,64,78,.055);transition:box-shadow .18s ease,border-color .18s ease}
+  .pc-open-main{display:block}.pc-form-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}.pc-flow-column{display:grid;gap:16px}.pc-form-side{position:sticky;top:18px;display:grid;gap:14px}
+  .pc-card{border:1px solid #dbe5e9;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(31,64,78,.045);transition:box-shadow .18s ease,border-color .18s ease}
   .pc-card:hover{border-color:#cfdfe4;box-shadow:0 14px 34px rgba(31,64,78,.07)}
-  .pc-card__head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid #edf2f4;background:linear-gradient(180deg,#fcfefe 0,#fafcfd 100%)}
+  .pc-card__head{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:16px 19px;border-bottom:1px solid #edf2f4;background:linear-gradient(180deg,#fcfefe 0,#fafcfd 100%)}
   .pc-card__head h2{margin:0;color:#183746;font-size:16px}
   .pc-card__head p{margin:4px 0 0;color:#788d96;font-size:12px;line-height:1.5}
   .pc-step{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:9px;border-radius:9px;background:#e9f7f9;color:#087d90;font-size:11px;font-weight:900;vertical-align:middle;box-shadow:inset 0 0 0 1px #d7edf1}
-  .pc-card__body{padding:22px}
+  .pc-card__body{padding:19px}
 
   .pc-origin{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 17px;border:1px solid #c8e3e8;border-radius:12px;background:#f3fbfc}
   .pc-origin strong{display:block;font-size:15px;color:#224958}
   .pc-origin span{display:block;margin-top:4px;color:#6f8791;font-size:12px;line-height:1.45}
   .pc-origin-badge{padding:6px 9px;border-radius:999px;background:#fff;color:#087d90!important;border:1px solid #cfe7eb;font-size:10px!important;font-weight:850}
 
-  .pc-grid-2{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);gap:16px}
+  .pc-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:15px}.pc-field--full{grid-column:1/-1}.pc-field--full select[multiple]{min-height:132px;padding:6px}.pc-field--full select[multiple] option{padding:8px 9px;border-radius:6px;margin:2px 0}
   .pc-field{min-width:0}
   .pc-field label{display:block;margin:0 0 7px;font-size:12px;font-weight:800;color:#496572}
   .pc-field input:not([type=checkbox]):not([type=radio]),.pc-field select,.pc-field textarea{width:100%;min-height:45px;padding:10px 12px;border:1px solid #cad9de;border-radius:10px;background:#fff;color:#294b58;font:inherit;font-size:13px;outline:none;transition:.15s}
@@ -83,8 +83,8 @@
   .pc-alert{margin-bottom:14px;padding:12px 14px;border:1px solid #e6d4aa;border-radius:10px;background:#fff8e9;color:#7e5d23;font-size:12px;line-height:1.5}
   .pc-alert--danger{border-color:#edd0d0;background:#fff1f1;color:#8d4646}
 
-  .pc-review{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
-  .pc-review__item{padding:13px 14px;border:1px solid #e0e9ec;border-radius:11px;background:#fbfdfd}
+  .pc-review{display:grid;grid-template-columns:1fr;gap:8px}.pc-review-panel .pc-card__head{background:#183746;border-bottom-color:#284a58}.pc-review-panel .pc-card__head h2{color:#fff}.pc-review-panel .pc-card__head p{color:#bfd0d6}.pc-review-panel .pc-card__body{padding:13px}.pc-review-panel{box-shadow:0 14px 35px rgba(31,64,78,.09)}
+  .pc-review__item{padding:11px 12px;border:1px solid #e0e9ec;border-radius:11px;background:#fbfdfd}
   .pc-review__item span{display:block;color:#7b9099;font-size:10px;text-transform:uppercase;letter-spacing:.035em}
   .pc-review__item strong{display:block;margin-top:4px;color:#31515f;font-size:12px;line-height:1.35}
 
@@ -103,6 +103,7 @@
   details.pc-details{border-top:1px solid #edf2f4;margin-top:14px;padding-top:12px}
   details.pc-details summary{cursor:pointer;color:#55727e;font-size:11px;font-weight:800}
 
+  @media(max-width:1180px){.pc-form-layout{grid-template-columns:1fr}.pc-form-side{position:static}.pc-review{grid-template-columns:repeat(3,minmax(0,1fr))}}
   @media(max-width:1050px){
     .pc-item__grid{grid-template-columns:minmax(220px,2fr) 110px 130px}
     .pc-item__grid>div:nth-child(4){grid-column:1/-1}
@@ -111,7 +112,7 @@
   @media(max-width:760px){
     .pc-open{padding:0 12px 120px}
     .pc-open-head,.pc-sticky{flex-direction:column;align-items:stretch}
-    .pc-grid-2,.pc-item__grid,.pc-activity-tools,.pc-review{grid-template-columns:1fr}
+    .pc-grid-2,.pc-item__grid,.pc-activity-tools,.pc-review{grid-template-columns:1fr}.pc-field--full{grid-column:auto}
     .pc-sticky__right{display:grid;grid-template-columns:1fr 1fr}
     .pc-activity-table th:nth-child(3),.pc-activity-table td:nth-child(3),.pc-activity-table th:nth-child(4),.pc-activity-table td:nth-child(4){display:none}
   }
@@ -151,6 +152,8 @@
     {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="pc-alert pc-alert--danger">{{ error }}</div>{% endfor %}{% endif %}
 
     <main class="pc-open-main">
+      <div class="pc-form-layout">
+        <div class="pc-flow-column">
       <section class="pc-card">
         <div class="pc-card__head">
           <div><h2><span class="pc-step">1</span>Origem da compra</h2><p>Confira de qual suprimento esta solicitação está sendo criada.</p></div>
@@ -244,6 +247,13 @@
         </div>
         <div class="pc-card__body">
           <div class="pc-grid-2">
+            <div class="pc-field pc-field--full">
+              <label for="{{ form.fornecedores_sugeridos.id_for_label }}">{{ form.fornecedores_sugeridos.label }}{% if form.fornecedores_sugeridos.field.required %} <span class="req">*</span>{% endif %}</label>
+              {{ form.fornecedores_sugeridos }}
+              {% for error in form.fornecedores_sugeridos.errors %}<div class="pc-error">{{ error }}</div>{% endfor %}
+              {% if form.fornecedores_sugeridos.help_text %}<div class="pc-help">{{ form.fornecedores_sugeridos.help_text }}</div>{% endif %}
+            </div>
+
             <div class="pc-field">
               <label for="{{ form.comprador.id_for_label }}">{{ form.comprador.label }}{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>
               {{ form.comprador }}
@@ -271,19 +281,25 @@
         </div>
       </section>
 
-      <section class="pc-card">
+        </div>
+        <aside class="pc-form-side">
+      <section class="pc-card pc-review-panel">
         <div class="pc-card__head">
-          <div><h2>Revisão rápida</h2><p>Confira o resumo antes de salvar ou iniciar a cotação.</p></div>
+          <div><h2>Resumo da solicitação</h2><p>Confira os principais dados enquanto preenche.</p></div>
         </div>
         <div class="pc-card__body">
           <div class="pc-review">
             <div class="pc-review__item"><span>Itens</span><strong id="summary-items">0</strong></div>
             <div class="pc-review__item"><span>Atividades</span><strong id="summary-activities">0</strong></div>
+            <div class="pc-review__item"><span>Fornecedores</span><strong id="summary-supplier">—</strong></div>
             <div class="pc-review__item"><span>Comprador</span><strong id="summary-buyer">—</strong></div>
             <div class="pc-review__item"><span>Descrição</span><strong id="summary-description">—</strong></div>
           </div>
         </div>
       </section>
+        <div class="pc-section-note" style="margin:0"><strong>Fluxo:</strong> ao enviar, o pedido entra automaticamente em solicitação de cotação e os fornecedores escolhidos ficam disponíveis para o comprador.</div>
+        </aside>
+      </div>
     </main>
 
     <div class="pc-sticky">
@@ -291,7 +307,7 @@
       <div class="pc-sticky__summary"><strong id="sticky-items">0 itens</strong> · <strong id="sticky-activities">0 atividades selecionadas</strong></div>
       <div class="pc-sticky__right">
         <button class="pc-btn" name="acao" value="rascunho" type="submit">Salvar rascunho</button>
-        <button class="pc-btn pc-btn--primary" name="acao" value="iniciar" type="submit">Criar e iniciar cotação</button>
+        <button class="pc-btn pc-btn--primary" name="acao" value="iniciar" type="submit">Enviar pedido para Suprimentos</button>
       </div>
     </div>
   </form>
@@ -325,7 +341,7 @@
   const qs=(s,r=document)=>r.querySelector(s),qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
   const escapeHtml=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  const desc=document.getElementById('{{ form.descricao.id_for_label }}'),obs=document.getElementById('{{ form.observacao.id_for_label }}'),buyer=document.getElementById('{{ form.comprador.id_for_label }}');
+  const desc=document.getElementById('{{ form.descricao.id_for_label }}'),obs=document.getElementById('{{ form.observacao.id_for_label }}'),buyer=document.getElementById('{{ form.comprador.id_for_label }}'),supplier=document.getElementById('{{ form.fornecedores_sugeridos.id_for_label }}');
   const descCount=qs('#description-count'),obsCount=qs('#observation-count'),summaryDesc=qs('#summary-description'),summaryBuyer=qs('#summary-buyer'),summaryItems=qs('#summary-items'),summaryActivities=qs('#summary-activities'),stickyItems=qs('#sticky-items'),stickyActivities=qs('#sticky-activities');
 
   function updateTextSummary(){
@@ -336,11 +352,17 @@
       const o=buyer.options&&buyer.selectedIndex>=0?buyer.options[buyer.selectedIndex]:null;
       summaryBuyer.textContent=o&&o.value?o.text.trim():'—'
     }
+    const summarySupplier=qs('#summary-supplier');
+    if(summarySupplier&&supplier){
+      const selected=Array.from(supplier.selectedOptions||[]).filter(o=>o.value);
+      summarySupplier.textContent=selected.length?selected.map(o=>o.text.trim()).join(', '):'—';
+    }
   }
 
   if(desc){desc.setAttribute('maxlength','200');desc.setAttribute('placeholder','Ex.: Compra de materiais para execução da etapa...');desc.addEventListener('input',updateTextSummary)}
   if(obs){obs.setAttribute('maxlength','500');obs.setAttribute('placeholder','Informações gerais importantes para a compra...');obs.addEventListener('input',updateTextSummary)}
   if(buyer)buyer.addEventListener('change',updateTextSummary);
+  if(supplier)supplier.addEventListener('change',updateTextSummary);
 
   const activitiesSelect=document.getElementById('{{ form.atividades.id_for_label }}'),activitiesBody=qs('#activity-table-body'),selectedBox=qs('#selected-activities'),selectedCount=qs('#selected-count'),search=qs('#activity-search'),clearSearch=qs('#activity-search-clear'),clearActivities=qs('#clear-activities'),emptyActivities=qs('#activity-empty');
 

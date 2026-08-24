@@ -1,0 +1,68 @@
+<details class="usr-module" {% if modulo.ativo %}open{% endif %}>
+  <summary class="usr-module__summary">
+    <div class="usr-module__identity">
+      <div class="usr-module__icon">{{ modulo.titulo|slice:":1"|upper }}</div>
+      <div>
+        <strong>{{ modulo.titulo }}</strong>
+        <small>{{ modulo.descricao }}</small>
+      </div>
+    </div>
+    <div class="usr-module__state">
+      {% if modulo.ativo %}<span class="usr-badge usr-badge--ok">Liberado</span>{% else %}<span class="usr-badge">Sem acesso</span>{% endif %}
+      {% if modulo.tem_permissoes_especificas %}<span class="usr-badge usr-badge--info">Permissões específicas</span>{% endif %}
+    </div>
+  </summary>
+
+  <div class="usr-module__body">
+    <div class="usr-access">
+      <div>
+        <strong>Acesso ao módulo</strong>
+        <small>Controla se este módulo fica disponível para o usuário.</small>
+      </div>
+      <label class="usr-switch">
+        <input type="checkbox" name="{{ modulo.input_ativo }}" {% if modulo.ativo %}checked{% endif %} data-module-toggle="{{ modulo.codigo }}">
+        <span></span>
+      </label>
+    </div>
+
+    <div class="usr-level-row" data-module-content="{{ modulo.codigo }}">
+      <div>
+        <strong>Nível geral</strong>
+        {% if modulo.nivel_automatico %}
+          <small>Calculado automaticamente a partir das permissões específicas para manter compatibilidade com o módulo.</small>
+        {% else %}
+          <small>Define o nível-base de acesso enquanto este módulo não possuir regras mais granulares.</small>
+        {% endif %}
+      </div>
+      {% if modulo.nivel_automatico %}
+        <select class="usr-input usr-input--level" disabled>
+          {% for valor, rotulo in modulo.niveis %}<option value="{{ valor }}" {% if modulo.nivel == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <select class="usr-input usr-input--level" name="{{ modulo.input_nivel }}">
+          {% for valor, rotulo in modulo.niveis %}<option value="{{ valor }}" {% if modulo.nivel == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+        </select>
+      {% endif %}
+    </div>
+
+    {% if modulo.tem_permissoes_especificas %}
+      <div class="usr-specific" data-module-content="{{ modulo.codigo }}">
+        <div class="usr-specific__head">
+          <div><strong>Ações específicas</strong><small>Estas regras complementam o nível geral e representam o fluxo real deste módulo.</small></div>
+        </div>
+        <div class="usr-permission-grid">
+          {% for permissao in modulo.permissoes %}
+            <label class="usr-permission {% if permissao.destaque == 'danger' %}usr-permission--danger{% elif permissao.destaque == 'admin' %}usr-permission--admin{% endif %}">
+              <input type="checkbox" name="{{ permissao.input_name }}" {% if permissao.marcada %}checked{% endif %}>
+              <span><strong>{{ permissao.rotulo }}</strong><small>{{ permissao.descricao }}</small></span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="usr-note" data-module-content="{{ modulo.codigo }}">
+        Este módulo ainda utiliza apenas o nível geral. Quando forem definidas permissões específicas no futuro, elas aparecerão automaticamente nesta mesma seção.
+      </div>
+    {% endif %}
+  </div>
+</details>

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -10,6 +10,14 @@ class FornecedorCompra(models.Model):
     documento = models.CharField(max_length=30, blank=True, db_index=True)
     email = models.EmailField(blank=True)
     telefone = models.CharField(max_length=40, blank=True)
+    avaliacao = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("5"))],
+        help_text="Avaliação comercial do fornecedor, de 0 a 5.",
+    )
     ativo = models.BooleanField(default=True, db_index=True)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -39,8 +47,10 @@ class ProcessoCompra(models.Model):
 
     class Status(models.TextChoices):
         RASCUNHO = "RASCUNHO", "Rascunho"
-        AGUARDANDO_COTACAO = "AGUARDANDO_COTACAO", "Aguardando cotação"
-        EM_COTACAO = "EM_COTACAO", "Em cotação"
+        PEDIDO_ENVIADO = "PEDIDO_ENVIADO", "Solicitação enviada"
+        SOLICITACAO_COTACAO = "SOLICITACAO_COTACAO", "Aguardando fornecedor"
+        AGUARDANDO_COTACAO = "AGUARDANDO_COTACAO", "Aguardando fornecedor"
+        EM_COTACAO = "EM_COTACAO", "Proposta recebida"
         AGUARDANDO_COMPATIBILIZACAO = "AGUARDANDO_COMPATIBILIZACAO", "Aguardando análise técnica"
         EM_COMPATIBILIZACAO = "EM_COMPATIBILIZACAO", "Em análise técnica"
         EM_NEGOCIACAO = "EM_NEGOCIACAO", "Em negociação"
@@ -67,6 +77,12 @@ class ProcessoCompra(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="processos_compra_responsavel",
+    )
+    fornecedores_sugeridos = models.ManyToManyField(
+        FornecedorCompra,
+        blank=True,
+        related_name="processos_compra_sugeridos",
+        help_text="Fornecedores indicados no pedido inicial para orientar o Suprimentos.",
     )
     etapa_atual = models.CharField(max_length=30, choices=Etapa.choices, default=Etapa.COTACAO, db_index=True)
     status = models.CharField(max_length=40, choices=Status.choices, default=Status.RASCUNHO, db_index=True)

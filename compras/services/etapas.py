@@ -24,6 +24,50 @@ from .integracao_planejamento import sincronizar_data_real
 
 
 @transaction.atomic
+def enviar_cotacao_para_compatibilizacao(cotacao, usuario):
+    """Envia somente uma proposta para análise técnica, mantendo o mapa comercial aberto."""
+    from compras.models import CotacaoFornecedor
+
+    c = (
+        CotacaoFornecedor.objects.select_for_update()
+        .select_related("processo", "fornecedor")
+        .get(pk=cotacao.pk)
+    )
+    p = ProcessoCompra.objects.select_for_update().get(pk=c.processo_id)
+
+    if p.etapa_atual not in {p.Etapa.COTACAO, p.Etapa.COMPATIBILIZACAO, p.Etapa.NEGOCIACAO}:
+        raise ValidationError("O mapa comercial já foi fechado e não aceita novos envios para compatibilização.")
+    if p.status in {p.Status.CANCELADO, p.Status.REPROVADO, p.Status.CONTRATADO}:
+        raise ValidationError("Este processo não pode mais ser alterado.")
+    if not c.itens.exists():
+        raise ValidationError("A proposta precisa possuir ao menos um item cotado antes do envio.")
+    if c.enviada_compatibilizacao_em:
+        return c
+
+    agora = timezone.now()
+    c.enviada_compatibilizacao_em = agora
+    c.enviada_compatibilizacao_por = usuario
+    c.save(update_fields=["enviada_compatibilizacao_em", "enviada_compatibilizacao_por", "atualizado_em"])
+
+    # O primeiro envio abre a etapa técnica; os próximos entram individualmente
+    # na mesma fila sem encerrar a cotação dos demais fornecedores.
+    if p.etapa_atual == p.Etapa.COTACAO:
+        p.data_cotacao_concluida = p.data_cotacao_concluida or agora
+        p.etapa_atual = p.Etapa.COMPATIBILIZACAO
+        p.status = p.Status.EM_COMPATIBILIZACAO
+        p.save(update_fields=["data_cotacao_concluida", "etapa_atual", "status", "atualizado_em"])
+        sincronizar_data_real(p, "COTACAO", usuario)
+
+    registrar_evento(
+        p,
+        "PROPOSTA_ENVIADA_COMPATIBILIZACAO",
+        usuario,
+        f"Proposta de {c.fornecedor.nome} enviada individualmente para compatibilização técnica.",
+    )
+    return c
+
+
+@transaction.atomic
 def concluir_cotacao(processo, usuario):
     """Inicia a análise técnica sem fechar o mapa de cotação."""
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
@@ -62,7 +106,11 @@ def concluir_compatibilizacao(processo, usuario):
         raise ValidationError("Este processo não pode mais ser alterado.")
 
     itens_aprovados = queryset_itens_tecnicamente_aprovados(
-        CotacaoFornecedorItem.objects.filter(cotacao__processo=p, necessidade__situacao="ATIVA")
+        CotacaoFornecedorItem.objects.filter(
+            cotacao__processo=p,
+            cotacao__enviada_compatibilizacao_em__isnull=False,
+            necessidade__situacao="ATIVA",
+        )
     )
     if not itens_aprovados.exists():
         raise ValidationError("Ainda não existe oferta tecnicamente aprovada para liberar a negociação.")
@@ -144,11 +192,13 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
     if not selecoes:
         raise ValidationError("Selecione ao menos uma proposta para aprovar.")
 
-    # Garante que a soma aprovada cubra exatamente cada necessidade ativa.
+    # O gestor escolhe diretamente os itens no mapa. A quantidade aprovada
+    # é sempre a quantidade já ofertada/compatibilizada; não existe edição
+    # manual de quantidade na etapa de aprovação.
     totais = {}
     for selecao in selecoes:
         item = selecao["item_cotado"]
-        quantidade = Decimal(str(selecao["quantidade"] or 0))
+        quantidade = Decimal(str(item.quantidade or 0))
         if item.cotacao.processo_id != processo.pk:
             raise ValidationError("Uma das propostas selecionadas não pertence a este processo.")
         if not item_tecnicamente_aprovado(item):
@@ -156,10 +206,8 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
                 f"A proposta de {item.cotacao.fornecedor.nome} para {item.necessidade.descricao} não possui aprovação técnica válida."
             )
         if quantidade <= 0:
-            continue
-        if quantidade > item.quantidade:
             raise ValidationError(
-                f"A quantidade aprovada para {item.cotacao.fornecedor.nome} excede a quantidade ofertada."
+                f"A proposta de {item.cotacao.fornecedor.nome} para {item.necessidade.descricao} não possui quantidade válida."
             )
         totais[item.necessidade_id] = totais.get(item.necessidade_id, Decimal("0")) + quantidade
 
@@ -184,9 +232,7 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
         item = CotacaoFornecedorItem.objects.select_related(
             "cotacao__fornecedor", "cotacao__processo", "necessidade", "negociacao"
         ).get(pk=selecao["item_cotado"].pk)
-        quantidade = Decimal(str(selecao["quantidade"] or 0))
-        if quantidade <= 0:
-            continue
+        quantidade = Decimal(str(item.quantidade or 0))
 
         negociacao = getattr(item, "negociacao", None)
         valor = negociacao.valor_final_unitario if negociacao else item.valor_unitario_cotado
@@ -219,7 +265,7 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
             processo,
             "PROPOSTA_APROVADA_GESTOR",
             usuario,
-            f"Gestor aprovou {quantidade} {item.necessidade.unidade} de {item.necessidade.descricao} com {item.cotacao.fornecedor.nome}.",
+            f"Gestor selecionou {item.necessidade.descricao} com {item.cotacao.fornecedor.nome} no mapa de cotação ({quantidade} {item.necessidade.unidade}).",
             {"adjudicacao_id": adj.pk, "item_cotado_id": item.pk},
         )
     return criadas

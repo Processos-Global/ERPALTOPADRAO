@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 
-from usuarios.models import NivelPermissao
+from usuarios.models import AcaoCompra
 
 from compras.forms import (
     AdjudicacaoForm,
@@ -27,6 +27,7 @@ from compras.models import (
     PedidoCompra,
     PedidoCompraAnexo,
     ProcessoCompra,
+    SolicitacaoCotacaoFornecedor,
 )
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
 from compras.services.compatibilizacao import registrar_compatibilizacao
@@ -37,14 +38,16 @@ from compras.services.etapas import (
     concluir_cotacao,
     concluir_negociacao,
     decidir_aprovacao,
+    enviar_cotacao_para_compatibilizacao,
 )
 from compras.services.negociacao import registrar_negociacao
 from compras.services.pedidos import (
     atualizar_previsao_entrega, atualizar_status_pedido, cancelar_pedido,
     gerar_pedidos, registrar_recebimento,
 )
-from compras.services.permissoes import compras_permission_required
+from compras.services.permissoes import compras_acao_required
 from compras.services.processos import incluir_necessidade
+from compras.services.solicitacoes_cotacao import marcar_solicitacao_enviada
 
 
 def _processo(pk):
@@ -63,7 +66,7 @@ def _erro(request, exc):
         messages.error(request, str(exc))
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.SOLICITAR)
 def acao_incluir_necessidade(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -87,7 +90,36 @@ def acao_incluir_necessidade(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
+def acao_marcar_solicitacao_enviada(request, pk, solicitacao_id):
+    processo = _processo(pk)
+    solicitacao = get_object_or_404(
+        SolicitacaoCotacaoFornecedor.objects.select_related("fornecedor", "processo"),
+        pk=solicitacao_id,
+        processo=processo,
+    )
+
+    if request.method == "POST":
+        try:
+            marcar_solicitacao_enviada(
+                solicitacao=solicitacao,
+                usuario=request.user,
+                meio_envio=request.POST.get("meio_envio", ""),
+                observacao=request.POST.get("observacao_envio", ""),
+            )
+            messages.success(
+                request,
+                f"Envio para {solicitacao.fornecedor.nome} registrado. Agora estamos aguardando a proposta.",
+            )
+        except ValidationError as exc:
+            _erro(request, exc)
+
+    resposta = _voltar(processo)
+    resposta["Location"] = resposta["Location"] + "#cotacao"
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_criar_fornecedor(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -103,7 +135,7 @@ def acao_criar_fornecedor(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_incluir_cotacao(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -113,7 +145,12 @@ def acao_incluir_cotacao(request, pk):
             fornecedor = dados.pop("fornecedor")
             try:
                 incluir_cotacao(processo=processo, fornecedor=fornecedor, usuario=request.user, **dados)
-                if processo.status in [processo.Status.RASCUNHO, processo.Status.AGUARDANDO_COTACAO]:
+                if processo.status in [
+                    processo.Status.RASCUNHO,
+                    processo.Status.PEDIDO_ENVIADO,
+                    processo.Status.SOLICITACAO_COTACAO,
+                    processo.Status.AGUARDANDO_COTACAO,
+                ]:
                     processo.status = processo.Status.EM_COTACAO
                     processo.save(update_fields=["status", "atualizado_em"])
                 messages.success(request, "Fornecedor incluído na cotação.")
@@ -124,7 +161,7 @@ def acao_incluir_cotacao(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_incluir_item_cotacao(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -154,7 +191,7 @@ def acao_incluir_item_cotacao(request, pk):
 
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_salvar_proposta_completa(request, pk):
     """Salva cabeçalho e todos os itens preenchidos de uma proposta em um único POST."""
     processo = _processo(pk)
@@ -169,6 +206,12 @@ def acao_salvar_proposta_completa(request, pk):
             pk=cotacao_id,
             processo=processo,
         )
+        if cotacao.enviada_compatibilizacao_em:
+            messages.error(
+                request,
+                "Esta proposta já foi enviada para compatibilização e ficou congelada para preservar a análise técnica.",
+            )
+            return redirect(f"{_voltar(processo).url}#cotacao")
 
     form = PropostaCompletaForm(
         request.POST,
@@ -217,7 +260,12 @@ def acao_salvar_proposta_completa(request, pk):
                 )
                 quantidade_itens += 1
 
-            if processo.status in [processo.Status.RASCUNHO, processo.Status.AGUARDANDO_COTACAO]:
+            if processo.status in [
+                processo.Status.RASCUNHO,
+                processo.Status.PEDIDO_ENVIADO,
+                processo.Status.SOLICITACAO_COTACAO,
+                processo.Status.AGUARDANDO_COTACAO,
+            ]:
                 processo.status = processo.Status.EM_COTACAO
                 processo.save(update_fields=["status", "atualizado_em"])
 
@@ -233,7 +281,7 @@ def acao_salvar_proposta_completa(request, pk):
     return resposta
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_excluir_cotacao(request, pk, cotacao_id):
     processo = _processo(pk)
 
@@ -246,6 +294,12 @@ def acao_excluir_cotacao(request, pk, cotacao_id):
         processo=processo,
     )
 
+    if cotacao.enviada_compatibilizacao_em:
+        messages.error(request, "A proposta já enviada para compatibilização não pode ser excluída.")
+        resposta = _voltar(processo)
+        resposta["Location"] = resposta["Location"] + "#cotacao"
+        return resposta
+
     try:
         fornecedor_nome = excluir_cotacao(cotacao=cotacao, usuario=request.user)
         messages.success(request, f"Proposta de {fornecedor_nome} excluída.")
@@ -257,7 +311,29 @@ def acao_excluir_cotacao(request, pk, cotacao_id):
     return resposta
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
+def acao_enviar_cotacao_compatibilizacao(request, pk, cotacao_id):
+    processo = _processo(pk)
+    cotacao = get_object_or_404(
+        CotacaoFornecedor.objects.select_related("fornecedor"),
+        pk=cotacao_id,
+        processo=processo,
+    )
+    if request.method == "POST":
+        try:
+            enviar_cotacao_para_compatibilizacao(cotacao, request.user)
+            messages.success(
+                request,
+                f"Proposta de {cotacao.fornecedor.nome} enviada para compatibilização.",
+            )
+        except ValidationError as exc:
+            _erro(request, exc)
+    resposta = _voltar(processo)
+    resposta["Location"] += "#comparacao"
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.COMPATIBILIZAR)
 def acao_analise_tecnica_lote(request, pk):
     """
     Salva decisões técnicas individualmente.
@@ -336,7 +412,7 @@ def acao_analise_tecnica_lote(request, pk):
     return resposta
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.NEGOCIAR)
 def acao_decisao_comercial_lote(request, pk):
     """Salva as condições negociadas e, quando solicitado, envia as alternativas ao gestor."""
     processo = _processo(pk)
@@ -403,7 +479,7 @@ def acao_decisao_comercial_lote(request, pk):
     return resposta
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COTAR)
 def acao_concluir_cotacao(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -415,7 +491,7 @@ def acao_concluir_cotacao(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COMPATIBILIZAR)
 def acao_compatibilizar(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -433,7 +509,7 @@ def acao_compatibilizar(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.COMPATIBILIZAR)
 def acao_concluir_compatibilizacao(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -445,7 +521,7 @@ def acao_concluir_compatibilizacao(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.NEGOCIAR)
 def acao_negociar(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -460,7 +536,7 @@ def acao_negociar(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.NEGOCIAR)
 def acao_adjudicar(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -481,7 +557,7 @@ def acao_adjudicar(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.NEGOCIAR)
 def acao_cancelar_adjudicacao(request, pk, adjudicacao_id):
     processo = _processo(pk)
     adjudicacao = get_object_or_404(
@@ -508,7 +584,7 @@ def acao_cancelar_adjudicacao(request, pk, adjudicacao_id):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.NEGOCIAR)
 def acao_concluir_negociacao(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -520,7 +596,7 @@ def acao_concluir_negociacao(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.APROVACAO)
+@compras_acao_required(AcaoCompra.APROVAR)
 def acao_aprovar(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -573,7 +649,7 @@ def acao_aprovar(request, pk):
     return resposta
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 def acao_anexar_documento(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -594,7 +670,7 @@ def acao_anexar_documento(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 def acao_gerar_pedidos(request, pk):
     processo = _processo(pk)
     if request.method == "POST":
@@ -606,7 +682,7 @@ def acao_gerar_pedidos(request, pk):
     return _voltar(processo)
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 def acao_anexar_arquivo_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra.objects.select_related("processo"), pk=pedido_id)
     if request.method == "POST":
@@ -631,7 +707,7 @@ def acao_anexar_arquivo_pedido(request, pedido_id):
     return redirect("compras:lista_pedidos")
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 def acao_atualizar_status_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
     if request.method == "POST":
@@ -646,7 +722,7 @@ def acao_atualizar_status_pedido(request, pedido_id):
     return redirect("compras:lista_pedidos")
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 def acao_atualizar_previsao_pedido(request, pedido_id):
     from datetime import date
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
@@ -664,7 +740,7 @@ def acao_atualizar_previsao_pedido(request, pedido_id):
     return redirect("compras:lista_pedidos")
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.RECEBER_PEDIDOS)
 def acao_receber_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
     if request.method == "POST":
@@ -697,7 +773,7 @@ def acao_receber_pedido(request, pedido_id):
     return redirect("compras:lista_pedidos")
 
 
-@compras_permission_required(NivelPermissao.EDICAO)
+@compras_acao_required(AcaoCompra.CANCELAR_PEDIDOS)
 def acao_cancelar_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
     if request.method == "POST":

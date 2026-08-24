@@ -50,7 +50,7 @@
     <div class="cp-actions">
       <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a>
       <a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a>
-      <a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a>
+      {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.solicitar_compra %}<a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a>{% endif %}
     </div>
   </div>
 

@@ -189,6 +189,52 @@
 
                     <span class="module-card__accent"></span>
                 </a>
+
+                {% if request.user.is_superuser %}
+                    <a
+                        href="{% url 'usuarios:lista_usuarios' %}"
+                        class="module-card"
+                        data-transition-link
+                    >
+                        <header class="module-card__header">
+                            <span class="module-card__number">
+                                03
+                            </span>
+
+                            <span class="module-card__permission">
+                                Administração
+                            </span>
+                        </header>
+
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon">
+                                    <use href="#icon-user"></use>
+                                </svg>
+                            </span>
+
+                            <div class="module-card__content">
+                                <h3>
+                                    Usuários
+                                </h3>
+
+                                <p>
+                                    Gerencie usuários, acessos aos módulos e permissões do sistema.
+                                </p>
+                            </div>
+                        </div>
+
+                        <footer class="module-card__footer">
+                            <span>Acessar</span>
+
+                            <svg class="icon">
+                                <use href="#icon-arrow"></use>
+                            </svg>
+                        </footer>
+
+                        <span class="module-card__accent"></span>
+                    </a>
+                {% endif %}
             </div>
         </section>
     </div>

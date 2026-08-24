@@ -12,6 +12,7 @@ from compras.models import (
     CotacaoFornecedorItem,
     FornecedorCompra,
     NecessidadeCompra,
+    SolicitacaoCotacaoFornecedor,
 )
 from compras.services.comercial import queryset_itens_tecnicamente_aprovados
 
@@ -86,8 +87,14 @@ class NecessidadeCompraForm(forms.Form):
 class FornecedorCompraForm(forms.ModelForm):
     class Meta:
         model = FornecedorCompra
-        fields = ["nome", "documento", "email", "telefone"]
-        widgets = {f: forms.TextInput(attrs={"class": INPUT_CLASS}) for f in fields}
+        fields = ["nome", "documento", "email", "telefone", "avaliacao"]
+        widgets = {
+            "nome": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "documento": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "email": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "telefone": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "avaliacao": forms.NumberInput(attrs={"class": INPUT_CLASS, "min": "0", "max": "5", "step": "0.1"}),
+        }
 
 
 class CotacaoFornecedorForm(forms.Form):
@@ -255,7 +262,13 @@ class PropostaCompletaForm(forms.Form):
             )
         else:
             usados = processo.cotacoes.values_list("fornecedor_id", flat=True)
-            fornecedores = fornecedores.exclude(pk__in=usados)
+            fornecedores_liberados = processo.solicitacoes_cotacao.filter(
+                status=SolicitacaoCotacaoFornecedor.Status.ENVIADA,
+                enviada_em__isnull=False,
+            ).values_list("fornecedor_id", flat=True)
+            fornecedores = fornecedores.filter(
+                pk__in=fornecedores_liberados,
+            ).exclude(pk__in=usados)
 
         self.fields["fornecedor"].queryset = fornecedores
 
@@ -434,7 +447,8 @@ class CompatibilizacaoForm(forms.Form):
         super().__init__(*args, **kwargs)
         if processo:
             self.fields["item_cotado"].queryset = CotacaoFornecedorItem.objects.filter(
-                cotacao__processo=processo
+                cotacao__processo=processo,
+                cotacao__enviada_compatibilizacao_em__isnull=False,
             ).select_related("cotacao__fornecedor", "necessidade")
         _aplicar_classe_campos(self)
 
@@ -446,7 +460,10 @@ class AnaliseTecnicaLoteForm(forms.Form):
         self.processo = processo
         super().__init__(*args, **kwargs)
         itens = list(
-            CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            CotacaoFornecedorItem.objects.filter(
+                cotacao__processo=processo,
+                cotacao__enviada_compatibilizacao_em__isnull=False,
+            )
             .select_related("cotacao__fornecedor", "necessidade")
             .prefetch_related("compatibilizacoes")
             .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
@@ -678,103 +695,42 @@ class DecisaoComercialLoteForm(forms.Form):
 
 
 class AprovacaoForm(forms.Form):
-    """
-    Decisão do gestor e escolha das propostas vencedoras na mesma etapa.
+    """Decisão do gestor diretamente sobre a matriz materiais × fornecedores.
 
-    A negociação apenas registra alternativas. A adjudicação nasce somente
-    quando o gestor aprova e informa quanto de cada proposta será comprado.
+    O gestor não informa quantidade. Cada célula selecionada utiliza a quantidade
+    já cotada e tecnicamente aprovada para aquele fornecedor/item.
     """
 
     decisao = forms.ChoiceField(choices=AprovacaoCompra.Decisao.choices)
     observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    itens_selecionados = forms.MultipleChoiceField(
+        required=False,
+        choices=(),
+        widget=forms.CheckboxSelectMultiple,
+    )
 
     def __init__(self, *args, processo=None, **kwargs):
         self.processo = processo
         super().__init__(*args, **kwargs)
-        self.linhas = []
-        self.grupos = []
-        if not processo:
-            _aplicar_classe_campos(self)
-            return
+        self.itens_elegiveis = []
 
-        itens = list(
-            queryset_itens_tecnicamente_aprovados(
-                CotacaoFornecedorItem.objects.filter(
-                    cotacao__processo=processo,
-                    necessidade__situacao="ATIVA",
+        if processo:
+            self.itens_elegiveis = list(
+                queryset_itens_tecnicamente_aprovados(
+                    CotacaoFornecedorItem.objects.filter(
+                        cotacao__processo=processo,
+                        necessidade__situacao="ATIVA",
+                    )
                 )
+                .select_related("cotacao__fornecedor", "necessidade", "negociacao")
+                .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
             )
-            .select_related("cotacao__fornecedor", "necessidade", "negociacao")
-            .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
-        )
-        grupos = defaultdict(list)
-        for item in itens:
-            sid = str(item.pk)
-            self.fields[f"quantidade_{sid}"] = forms.DecimalField(
-                required=False,
-                min_value=0,
-                max_digits=18,
-                decimal_places=4,
-                label="Quantidade aprovada",
-                initial="0",
-                widget=forms.NumberInput(
-                    attrs={
-                        "step": "0.0001",
-                        "min": "0",
-                        "max": _numero_para_input(item.quantidade),
-                        "data-aprovacao-quantidade": "1",
-                    }
-                ),
-            )
+            self.fields["itens_selecionados"].choices = [
+                (str(item.pk), f"{item.necessidade.descricao} · {item.cotacao.fornecedor.nome}")
+                for item in self.itens_elegiveis
+            ]
 
         _aplicar_classe_campos(self)
-
-        for item in itens:
-            sid = str(item.pk)
-            try:
-                negociacao = item.negociacao
-            except Exception:
-                negociacao = None
-            valor_final = negociacao.valor_final_unitario if negociacao else item.valor_unitario_cotado
-            linha = {
-                "item": item,
-                "negociacao": negociacao,
-                "valor_final": valor_final,
-                "quantidade": self[f"quantidade_{sid}"],
-            }
-            self.linhas.append(linha)
-            grupos[item.necessidade].append(linha)
-        self.grupos = []
-        for necessidade, linhas in grupos.items():
-            for linha in linhas:
-                negociacao = linha["negociacao"]
-                linha["prazo_final"] = (
-                    negociacao.prazo_entrega_dias_negociado
-                    if negociacao and negociacao.prazo_entrega_dias_negociado is not None
-                    else linha["item"].cotacao.prazo_entrega_dias
-                )
-                linha["total_opcao"] = linha["valor_final"] * linha["item"].quantidade
-
-            menor_total = min((linha["total_opcao"] for linha in linhas), default=Decimal("0"))
-            prazos = [linha["prazo_final"] for linha in linhas if linha["prazo_final"] is not None]
-            menor_prazo = min(prazos) if prazos else None
-
-            for linha in linhas:
-                linha["diferenca_valor"] = linha["total_opcao"] - menor_total
-                linha["menor_custo"] = linha["diferenca_valor"] == 0
-                linha["diferenca_dias"] = (
-                    linha["prazo_final"] - menor_prazo
-                    if menor_prazo is not None and linha["prazo_final"] is not None
-                    else None
-                )
-                linha["menor_prazo"] = linha["diferenca_dias"] == 0 if linha["diferenca_dias"] is not None else False
-
-            self.grupos.append({
-                "necessidade": necessidade,
-                "linhas": linhas,
-                "menor_total": menor_total,
-                "menor_prazo": menor_prazo,
-            })
 
     def clean(self):
         cleaned = super().clean()
@@ -789,33 +745,30 @@ class AprovacaoForm(forms.Form):
         if decisao != AprovacaoCompra.Decisao.APROVADO or not self.processo:
             return cleaned
 
+        ids = {int(pk) for pk in (cleaned.get("itens_selecionados") or [])}
+        selecionados = [item for item in self.itens_elegiveis if item.pk in ids]
+        if not selecionados:
+            raise forms.ValidationError("Selecione no mapa ao menos um item/fornecedor para aprovar.")
+
         totais = defaultdict(lambda: Decimal("0"))
-        for linha in self.linhas:
-            item = linha["item"]
-            qtd = cleaned.get(f"quantidade_{item.pk}") or Decimal("0")
-            if qtd > item.quantidade:
-                self.add_error(
-                    f"quantidade_{item.pk}",
-                    f"Máximo ofertado por este fornecedor: {item.quantidade} {item.necessidade.unidade}.",
-                )
-            totais[item.necessidade_id] += qtd
+        for item in selecionados:
+            totais[item.necessidade_id] += item.quantidade or Decimal("0")
 
         for necessidade in self.processo.necessidades.filter(situacao="ATIVA"):
             total = totais[necessidade.pk]
             esperado = necessidade.quantidade_incluida or Decimal("0")
             if total != esperado:
                 raise forms.ValidationError(
-                    f"{necessidade.descricao}: o gestor deve aprovar exatamente {esperado} {necessidade.unidade}. "
-                    f"Quantidade atualmente aprovada: {total} {necessidade.unidade}."
+                    f"{necessidade.descricao}: selecione ofertas que totalizem exatamente {esperado} "
+                    f"{necessidade.unidade}. Total selecionado: {total} {necessidade.unidade}."
                 )
         return cleaned
 
     def selecoes_aprovadas(self):
-        for linha in self.linhas:
-            item = linha["item"]
-            qtd = self.cleaned_data.get(f"quantidade_{item.pk}") or Decimal("0")
-            if qtd > 0:
-                yield {"item_cotado": item, "quantidade": qtd}
+        ids = {int(pk) for pk in (self.cleaned_data.get("itens_selecionados") or [])}
+        for item in self.itens_elegiveis:
+            if item.pk in ids:
+                yield {"item_cotado": item, "quantidade": item.quantidade}
 
 
 class DocumentoContratacaoForm(forms.Form):

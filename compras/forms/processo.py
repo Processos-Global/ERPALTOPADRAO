@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import formset_factory
 
-from compras.models import NecessidadeCompra, ProcessoCompra
+from compras.models import FornecedorCompra, NecessidadeCompra, ProcessoCompra
 from planejamento.models import (
     AtividadePlanejamento,
     ImportacaoCronograma,
@@ -455,6 +455,7 @@ class ProcessoCompraForm(
             "item_cronograma",
             "titulo",
             "descricao",
+            "fornecedores_sugeridos",
             "comprador",
             "observacao",
         ]
@@ -477,6 +478,15 @@ class ProcessoCompraForm(
                         "placeholder": (
                             "Descrição geral da compra"
                         ),
+                    }
+                )
+            ),
+
+            "fornecedores_sugeridos": (
+                forms.SelectMultiple(
+                    attrs={
+                        "class": "cp-input",
+                        "size": 6,
                     }
                 )
             ),
@@ -517,6 +527,18 @@ class ProcessoCompraForm(
         # ----------------------------------------------------
         # SUPRIMENTOS
         # ----------------------------------------------------
+
+        self.fields["fornecedores_sugeridos"].queryset = (
+            FornecedorCompra.objects
+            .filter(ativo=True)
+            .order_by("nome")
+        )
+        self.fields["fornecedores_sugeridos"].required = True
+        self.fields["fornecedores_sugeridos"].label = "Fornecedores para solicitar cotação"
+        self.fields["fornecedores_sugeridos"].help_text = (
+            "Selecione quantos fornecedores quiser para esta solicitação. "
+            "Todos aparecerão no cronograma de suprimentos e ficarão disponíveis para a cotação."
+        )
 
         self.fields[
             "item_cronograma"

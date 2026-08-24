@@ -1,0 +1,120 @@
+{% extends "layouts/base.html" %}
+{% block title %}Configurar usuário | ERP Alto Padrão{% endblock %}
+{% block page_name %}Gerenciamento de usuários{% endblock %}
+{% block extra_css %}{% include "usuarios/_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="usr-page">
+  <div class="usr-head">
+    <div>
+      <div class="usr-eyebrow">Administração</div>
+      <h1 class="usr-title">Configurar usuário</h1>
+      <div class="usr-sub">Edite os dados da pessoa e defina, módulo por módulo, o que ela pode acessar e executar.</div>
+    </div>
+    <div class="usr-actions"><a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Voltar para usuários</a></div>
+  </div>
+
+  <div class="usr-card usr-profile-card">
+    <div class="usr-card__body">
+      <div class="usr-profile">
+        <div class="usr-avatar usr-avatar--lg">
+          {% if usuario_alvo.perfil_erp.foto %}<img src="{{ usuario_alvo.perfil_erp.foto.url }}" alt="">{% else %}{{ usuario_alvo.first_name|default:usuario_alvo.username|slice:":1"|upper }}{% endif %}
+        </div>
+        <div>
+          <strong>{{ usuario_alvo.get_full_name|default:usuario_alvo.username }}</strong>
+          <small>{{ usuario_alvo.username }}{% if usuario_alvo.email %} · {{ usuario_alvo.email }}{% endif %}</small>
+          <div class="usr-profile-meta">
+            <span class="usr-badge">{{ usuario_alvo.perfil_erp.get_cargo_display|default:"Cargo não informado" }}</span>
+            {% if usuario_alvo.is_active %}<span class="usr-badge usr-badge--ok">Ativo</span>{% else %}<span class="usr-badge usr-badge--danger">Inativo</span>{% endif %}
+            {% if usuario_alvo.is_superuser %}<span class="usr-badge usr-badge--warn">Superusuário</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" id="usuario-config-form">
+    {% csrf_token %}
+    <div class="usr-layout usr-layout--config">
+      <div>
+        <section class="usr-section">
+          <div class="usr-section__head"><h2>Dados do usuário</h2><p>Identificação, cargo, contato, status e senha.</p></div>
+          <div class="usr-section__body">
+            <div class="usr-form-grid usr-form-grid--2">
+              {% for field in form %}
+                <div class="usr-field {% if field.name == 'ativo' %}usr-field--full{% endif %}">
+                  {% if field.name == 'ativo' %}
+                    <label class="usr-access usr-access--compact">
+                      <div><strong>{{ field.label }}</strong><small>Usuários inativos não conseguem entrar no ERP.</small></div>
+                      <span class="usr-switch">{{ field }}<span></span></span>
+                    </label>
+                  {% else %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="usr-required">*</span>{% endif %}</label>
+                    {{ field }}
+                    {% if field.help_text %}<small class="usr-help">{{ field.help_text }}</small>{% endif %}
+                    {% for error in field.errors %}<small class="usr-error">{{ error }}</small>{% endfor %}
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+
+        <section class="usr-section">
+          <div class="usr-section__head">
+            <h2>Módulos e permissões</h2>
+            <p>Ative apenas os módulos necessários. Permissões específicas aparecem automaticamente quando o módulo possuir regras próprias.</p>
+          </div>
+          <div class="usr-section__body usr-modules-list">
+            {% for modulo in modulos %}{% include "usuarios/_modulo_permissoes.html" with modulo=modulo %}{% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <aside>
+        <section class="usr-section usr-sticky">
+          <div class="usr-section__head"><h2>Resumo</h2><p>As alterações só entram em vigor depois de salvar.</p></div>
+          <div class="usr-section__body">
+            <div class="usr-note">O <strong>nível geral</strong> funciona para todos os módulos. Quando um módulo ganhar permissões próprias, os novos controles aparecem aqui sem alterar esta tela.</div>
+            <div class="usr-note" style="margin-top:8px">No módulo de <strong>Compras</strong>, as permissões específicas já estão integradas ao backend e aos templates atuais.</div>
+            {% if usuario_alvo.is_superuser %}<div class="usr-note" style="margin-top:8px">Este usuário é superusuário e continuará tendo acesso total ao sistema independentemente das marcações.</div>{% endif %}
+            <button class="usr-btn usr-btn--primary usr-btn--block" type="submit">Salvar alterações</button>
+          </div>
+        </section>
+
+        {% if usuario_alvo.pk != request.user.pk %}
+        <section class="usr-section usr-danger-zone">
+          <div class="usr-section__head"><h2>Zona de segurança</h2></div>
+          <div class="usr-section__body">
+            <p class="usr-muted">Prefira desativar usuários com histórico no sistema. A exclusão é definitiva e pode ser bloqueada quando houver registros protegidos.</p>
+            <button class="usr-btn usr-btn--danger usr-btn--block" type="submit" form="excluir-usuario-form">Excluir usuário</button>
+          </div>
+        </section>
+        {% endif %}
+      </aside>
+    </div>
+  </form>
+
+  {% if usuario_alvo.pk != request.user.pk %}
+  <form id="excluir-usuario-form" method="post" action="{% url 'usuarios:excluir_usuario' usuario_alvo.id %}" onsubmit="return confirm('Excluir definitivamente este usuário? Prefira desativar se ele já possuir histórico no ERP.');">
+    {% csrf_token %}
+  </form>
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  function syncModule(code){
+    const toggle = document.querySelector('[data-module-toggle="' + code + '"]');
+    if(!toggle) return;
+    document.querySelectorAll('[data-module-content="' + code + '"]').forEach(function(el){
+      el.classList.toggle('usr-module-disabled', !toggle.checked);
+    });
+  }
+  document.querySelectorAll('[data-module-toggle]').forEach(function(toggle){
+    syncModule(toggle.dataset.moduleToggle);
+    toggle.addEventListener('change', function(){ syncModule(toggle.dataset.moduleToggle); });
+  });
+})();
+</script>
+{% endblock %}

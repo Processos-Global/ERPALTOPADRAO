@@ -561,7 +561,11 @@
                         Módulos
                     </span>
 
-                    <small>2</small>
+                    {% if request.user.is_superuser %}
+                        <small>3</small>
+                    {% else %}
+                        <small>2</small>
+                    {% endif %}
                 </header>
 
                 <div class="sidebar__modules-list">
@@ -598,6 +602,25 @@
                             Suprimentos
                         </span>
                     </a>
+
+                    {% if request.user.is_superuser %}
+                        <a
+                            href="{% url 'usuarios:lista_usuarios' %}"
+                            class="sidebar-link {% if request.resolver_match.namespace == 'usuarios' %}sidebar-link--active{% endif %}"
+                            data-transition-link
+                            title="Usuários"
+                        >
+                            <span class="sidebar-link__icon">
+                                <svg class="icon">
+                                    <use href="#icon-user"></use>
+                                </svg>
+                            </span>
+
+                            <span class="sidebar-link__text">
+                                Usuários
+                            </span>
+                        </a>
+                    {% endif %}
                 </div>
             </section>
 

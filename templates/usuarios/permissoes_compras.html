@@ -1,0 +1,136 @@
+{% extends "layouts/base.html" %}
+{% block title %}Permissões de Compras | ERP Alto Padrão{% endblock %}
+{% block page_name %}Usuários e permissões{% endblock %}
+{% block extra_css %}{% include "usuarios/_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="usr-page">
+  <div class="usr-head">
+    <div>
+      <div class="usr-eyebrow">Administração · Compras</div>
+      <h1 class="usr-title">Permissões do usuário</h1>
+      <div class="usr-sub">Defina exatamente o que esta pessoa pode visualizar e executar no fluxo de Compras.</div>
+    </div>
+    <div class="usr-actions"><a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Voltar para usuários</a></div>
+  </div>
+
+  <div class="usr-card" style="margin-bottom:14px">
+    <div class="usr-card__body">
+      <div class="usr-profile">
+        <div class="usr-avatar">
+          {% if usuario_alvo.perfil_erp.foto %}<img src="{{ usuario_alvo.perfil_erp.foto.url }}" alt="">{% else %}{{ usuario_alvo.first_name|default:usuario_alvo.username|slice:":1"|upper }}{% endif %}
+        </div>
+        <div>
+          <strong>{{ usuario_alvo.get_full_name|default:usuario_alvo.username }}</strong>
+          <small>{{ usuario_alvo.username }}{% if usuario_alvo.email %} · {{ usuario_alvo.email }}{% endif %}</small>
+          <div class="usr-profile-meta">
+            <span class="usr-badge">{{ usuario_alvo.perfil_erp.get_cargo_display|default:"Cargo não informado" }}</span>
+            {% if usuario_alvo.is_active %}<span class="usr-badge usr-badge--ok">Usuário ativo</span>{% else %}<span class="usr-badge usr-badge--danger">Usuário inativo</span>{% endif %}
+            {% if usuario_alvo.is_superuser %}<span class="usr-badge usr-badge--warn">Superusuário</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" id="permissoes-compras-form">
+    {% csrf_token %}
+    <div class="usr-layout">
+      <div>
+        <section class="usr-section">
+          <div class="usr-section__head"><h2>Acesso ao módulo</h2><p>Esta chave controla a entrada no módulo de Compras e a visualização dos processos.</p></div>
+          <div class="usr-section__body">
+            <div class="usr-access">
+              <div><strong>{{ form.acesso_compras.label }}</strong><small>{{ form.acesso_compras.help_text }}</small></div>
+              <label class="usr-switch">{{ form.acesso_compras }}<span></span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="usr-section">
+          <div class="usr-section__head"><h2>Etapas e ações permitidas</h2><p>Marque somente as etapas que fazem parte da responsabilidade deste usuário.</p></div>
+          <div class="usr-section__body">
+            <div class="usr-permission-grid">
+              <label class="usr-permission">{{ form.solicitar_compra }}<span><strong>{{ form.solicitar_compra.label }}</strong><small>{{ form.solicitar_compra.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.executar_cotacao }}<span><strong>{{ form.executar_cotacao.label }}</strong><small>{{ form.executar_cotacao.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.compatibilizar }}<span><strong>{{ form.compatibilizar.label }}</strong><small>{{ form.compatibilizar.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.negociar }}<span><strong>{{ form.negociar.label }}</strong><small>{{ form.negociar.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.aprovar_compra }}<span><strong>{{ form.aprovar_compra.label }}</strong><small>{{ form.aprovar_compra.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.gerenciar_pedidos }}<span><strong>{{ form.gerenciar_pedidos.label }}</strong><small>{{ form.gerenciar_pedidos.help_text }}</small></span></label>
+              <label class="usr-permission">{{ form.receber_pedidos }}<span><strong>{{ form.receber_pedidos.label }}</strong><small>{{ form.receber_pedidos.help_text }}</small></span></label>
+              <label class="usr-permission usr-permission--danger">{{ form.cancelar_pedidos }}<span><strong>{{ form.cancelar_pedidos.label }}</strong><small>{{ form.cancelar_pedidos.help_text }}</small></span></label>
+              <label class="usr-permission usr-permission--admin" style="grid-column:1/-1">{{ form.administrar }}<span><strong>{{ form.administrar.label }}</strong><small>{{ form.administrar.help_text }}</small></span></label>
+            </div>
+
+            {% if form.errors %}<div class="usr-note" style="margin-top:12px;color:#8b4646;background:#fff1f1;border-color:#efd2d2">Revise os campos informados antes de salvar.</div>{% endif %}
+
+            <div class="usr-footer-actions">
+              <a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Cancelar</a>
+              <button class="usr-btn usr-btn--primary" type="submit">Salvar permissões</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <aside>
+        <section class="usr-section">
+          <div class="usr-section__head"><h2>Perfis rápidos</h2><p>Use como ponto de partida. Você pode ajustar qualquer checkbox antes de salvar.</p></div>
+          <div class="usr-section__body">
+            <div class="usr-presets">
+              <button class="usr-preset" type="button" data-preset="engenheiro">Engenheiro</button>
+              <button class="usr-preset" type="button" data-preset="comprador">Comprador</button>
+              <button class="usr-preset" type="button" data-preset="engenheiro_comprador">Eng. comprador</button>
+              <button class="usr-preset" type="button" data-preset="compatibilizacao">Compatibilização</button>
+              <button class="usr-preset" type="button" data-preset="gestor">Gestor</button>
+              <button class="usr-preset" type="button" data-preset="recebimento">Recebimento</button>
+              <button class="usr-preset" type="button" data-preset="administrador" style="grid-column:1/-1">Administrador de Compras</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="usr-section">
+          <div class="usr-section__head"><h2>Como funciona</h2></div>
+          <div class="usr-section__body">
+            <div class="usr-note">O cargo informa a função da pessoa na empresa. As permissões desta tela determinam o que ela pode fazer no sistema.</div>
+            <div class="usr-note" style="margin-top:8px">Ao marcar <strong>Administrar Compras</strong>, o usuário recebe acesso a todas as ações do módulo, mesmo que outros campos estejam desmarcados.</div>
+            {% if usuario_alvo.is_superuser %}<div class="usr-note" style="margin-top:8px">Este usuário é superusuário do Django e, por isso, continuará tendo acesso total independentemente destes marcadores.</div>{% endif %}
+          </div>
+        </section>
+      </aside>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  const form = document.getElementById('permissoes-compras-form');
+  if(!form) return;
+
+  const names = [
+    'solicitar_compra','executar_cotacao','compatibilizar','negociar',
+    'aprovar_compra','gerenciar_pedidos','receber_pedidos','cancelar_pedidos','administrar'
+  ];
+  const presets = {
+    engenheiro: ['solicitar_compra'],
+    comprador: ['executar_cotacao','negociar','gerenciar_pedidos'],
+    engenheiro_comprador: ['solicitar_compra','executar_cotacao','negociar','gerenciar_pedidos'],
+    compatibilizacao: ['compatibilizar'],
+    gestor: ['aprovar_compra'],
+    recebimento: ['receber_pedidos'],
+    administrador: ['administrar']
+  };
+
+  document.querySelectorAll('[data-preset]').forEach(function(button){
+    button.addEventListener('click', function(){
+      const selected = presets[button.dataset.preset] || [];
+      const access = form.querySelector('[name="acesso_compras"]');
+      if(access) access.checked = true;
+      names.forEach(function(name){
+        const input = form.querySelector('[name="' + name + '"]');
+        if(input) input.checked = selected.includes(name);
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

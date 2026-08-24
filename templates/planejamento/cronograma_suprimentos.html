@@ -224,7 +224,7 @@
   .ps-table-wrap::-webkit-scrollbar { width: 9px; height: 9px; }
   .ps-table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: 2px solid #fff; }
 
-  .ps-table { width: 100%; min-width: 1460px; border-collapse: separate; border-spacing: 0; }
+  .ps-table { width: 100%; min-width: 1120px; border-collapse: separate; border-spacing: 0; }
   .ps-table th {
     position: sticky;
     top: 0;
@@ -284,7 +284,7 @@
     background: var(--ps-accent);
   }
 
-  .ps-item-cell { min-width: 280px; }
+  .ps-item-cell { min-width: 250px; }
   .ps-item { display: flex; align-items: flex-start; gap: 10px; }
   .ps-item-state { width: 4px; height: 40px; flex: 0 0 4px; border-radius: 999px; background: #d9e1e5; }
   .ps-item-state.done { background: #12b76a; }
@@ -292,8 +292,19 @@
   .ps-item-name { color: var(--ps-text); font-size: .83rem; line-height: 1.3; font-weight: 790; max-width: 265px; }
   .ps-item-local { margin-top: 4px; display: flex; align-items: center; gap: 5px; color: var(--ps-muted); font-size: .69rem; }
   .ps-item-local svg { width: 11px; height: 11px; flex: 0 0 11px; }
+  .ps-item-suppliers { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px; max-width: 330px; }
+  .ps-item-supplier { display: inline-flex; align-items: center; gap: 5px; min-width: 0; padding: 3px 7px; border: 1px solid #e4e7ec; border-radius: 999px; background: #f8fafc; color: #344054; font-size: .61rem; font-weight: 720; line-height: 1.2; }
+  .ps-item-supplier__name { max-width: 112px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ps-item-supplier__status { display: inline-flex; align-items: center; gap: 4px; color: #667085; font-weight: 650; white-space: nowrap; }
+  .ps-item-supplier__status::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: 0 0 5px; }
+  .ps-item-supplier__status.info { color: #175cd3; }
+  .ps-item-supplier__status.success { color: #067647; }
+  .ps-item-supplier__status.warning { color: #b54708; }
+  .ps-item-supplier__status.danger { color: #b42318; }
+  .ps-item-supplier__status.muted { color: #667085; }
+  .ps-item-supplier-more { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 999px; background: #eef4f6; color: #526b75; font-size: .61rem; font-weight: 760; }
 
-  .ps-milestone { min-width: 145px; }
+  .ps-milestone { min-width: 130px; }
   .ps-milestone-label { color: var(--ps-subtle); font-size: .61rem; text-transform: uppercase; letter-spacing: .035em; font-weight: 760; }
   .ps-milestone-date { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
   .ps-milestone-date strong { color: #344054; font-size: .78rem; white-space: nowrap; }
@@ -398,7 +409,7 @@
   .ps-detail-kpi strong.money { color: var(--ps-success); }
 
   .ps-supplier-wrap { overflow-x: auto; padding: 12px 14px; }
-  .ps-supplier-table { width: 100%; min-width: 1260px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--ps-border-soft); border-radius: 11px; overflow: hidden; }
+  .ps-supplier-table { width: 100%; min-width: 1180px; border-collapse: separate; border-spacing: 0; border: 1px solid var(--ps-border-soft); border-radius: 11px; overflow: hidden; }
   .ps-supplier-table th { position: static !important; z-index: auto !important; background: #f8fafc !important; padding: 9px !important; color: #667085 !important; font-size: .61rem !important; }
   .ps-supplier-table td { position: static !important; padding: 10px 9px !important; background: #fff !important; font-size: .71rem; white-space: nowrap; }
   .ps-supplier-name { color: var(--ps-text); font-weight: 790; }
@@ -515,6 +526,8 @@
     .ps-edit-cell:last-child { border-bottom: 0; }
     .ps-edit-cell[data-label]::before { content: attr(data-label); width: 92px; flex: 0 0 92px; color: var(--ps-muted); font-size: .62rem; font-weight: 800; text-transform: uppercase; }
   }
+
+  .ps-order-current-status{margin-top:5px}.ps-muted-cell{color:var(--ps-subtle)}
 </style>
 
 <div class="ps-page">
@@ -645,13 +658,12 @@
             <th>Contratação</th>
             <th>Entrega</th>
             <th>Avanço</th>
-            <th>Etapa atual</th>
             <th>Ações</th>
           </tr>
         </thead>
         <tbody>
           {% for grupo in categorias %}
-          <tr class="ps-category"><td colspan="9">{{ grupo.nome }}</td></tr>
+          <tr class="ps-category"><td colspan="8">{{ grupo.nome }}</td></tr>
             {% for item in grupo.itens %}
             <tr class="ps-item-row" id="suprimento-{{ item.id }}">
               <td class="ps-item-cell">
@@ -663,9 +675,21 @@
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
                       {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
                     </div>
+                    {% if item.acompanhamento_fornecedores_resumo %}
+                    <div class="ps-item-suppliers" aria-label="Fornecedores e status">
+                      {% for fornecedor in item.acompanhamento_fornecedores_resumo %}
+                      <span class="ps-item-supplier" title="{{ fornecedor.fornecedor_nome }} · {{ fornecedor.status_atual.label }}">
+                        <span class="ps-item-supplier__name">{{ fornecedor.fornecedor_nome }}</span>
+                        <span class="ps-item-supplier__status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span>
+                      </span>
+                      {% endfor %}
+                      {% if item.acompanhamento_fornecedores_extras %}<span class="ps-item-supplier-more">+{{ item.acompanhamento_fornecedores_extras }}</span>{% endif %}
+                    </div>
+                    {% endif %}
                   </div>
                 </div>
               </td>
+
 
               <td class="ps-milestone">
                 <div class="ps-milestone-label">Planejado</div>
@@ -740,11 +764,6 @@
               </td>
 
               <td>
-                <span class="ps-stage-badge {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}">{{ item.etapa_calculada_label }}</span>
-                {% if item.atrasado_calculado %}<div class="ps-delay">{{ item.dias_atraso_calculado }} dia{{ item.dias_atraso_calculado|pluralize }} de atraso</div>{% endif %}
-              </td>
-
-              <td>
                 <div class="ps-row-actions">
                   <button type="button" class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" data-detail-target="detalhe-suprimento-{{ item.id }}" aria-expanded="false" title="Ver andamento comercial">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -775,14 +794,11 @@
             </tr>
 
             <tr id="detalhe-suprimento-{{ item.id }}" class="ps-detail-row">
-              <td colspan="9">
+              <td colspan="8">
                 <div class="ps-detail-shell">
                   <div class="ps-detail-head">
-                    <div>
-                      <h3 class="ps-detail-title">{{ item.item }}</h3>
-                      <div class="ps-detail-context">
-                        <span class="ps-context-pill"><strong>Atividade{% if item.acompanhamento_atividades|length != 1 %}s{% endif %}:</strong>{{ item.acompanhamento_atividades_texto }}</span>
-                      </div>
+                    <div class="ps-detail-context">
+                      <span class="ps-context-pill"><strong>Atividade{% if item.acompanhamento_atividades|length != 1 %}s{% endif %}:</strong>{{ item.acompanhamento_atividades_texto }}</span>
                     </div>
                     {% if item.acompanhamento_processos %}
                     <div class="ps-processes">
@@ -814,7 +830,7 @@
                           <th>Negociação</th>
                           <th>Valor negociado</th>
                           <th>Aprovação</th>
-                          <th>Itens / quantidade</th>
+                          <th>Itens</th>
                           <th>Valor pedido</th>
                           <th>Status atual</th>
                         </tr>
@@ -841,7 +857,6 @@
                                     <span class="ps-order-item-name">{{ item_pedido.descricao }}</span>
                                     <span class="ps-order-meta">{{ item_pedido.valor_total_formatado }}</span>
                                   </div>
-                                  <span class="ps-order-qty">{{ item_pedido.quantidade_formatada }} {{ item_pedido.unidade }}</span>
                                 </div>
                                 {% empty %}
                                 <span class="ps-order-meta">Pedido sem itens.</span>
@@ -873,7 +888,7 @@
             </tr>
             {% endfor %}
           {% empty %}
-          <tr><td colspan="9" class="ps-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
+          <tr><td colspan="8" class="ps-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
           {% endfor %}
         </tbody>
       </table>

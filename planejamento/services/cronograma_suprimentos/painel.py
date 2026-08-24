@@ -135,7 +135,10 @@ def _valor_cotado(cotacao):
     itens = list(cotacao.itens.all())
     if not itens:
         return None
-    return sum((_decimal(item.valor_total_cotado) for item in itens), Decimal("0")) + _decimal(cotacao.frete)
+    return sum(
+        (_decimal(item.valor_total_cotado) for item in itens),
+        Decimal("0"),
+    ) + _decimal(cotacao.frete)
 
 
 def _negociacao_tem_alteracao(item, negociacao):
@@ -151,19 +154,28 @@ def _negociacao_tem_alteracao(item, negociacao):
 
     if negociacao.valor_unitario_negociado is not None:
         return True
+
     if negociacao.frete_negociado is not None:
         return True
+
     if (negociacao.observacoes or "").strip():
         return True
 
     if (
         negociacao.prazo_entrega_dias_negociado is not None
-        and negociacao.prazo_entrega_dias_negociado != item.cotacao.prazo_entrega_dias
+        and negociacao.prazo_entrega_dias_negociado
+        != item.cotacao.prazo_entrega_dias
     ):
         return True
 
-    pagamento_negociado = (negociacao.condicao_pagamento_negociada or "").strip()
-    pagamento_original = (item.cotacao.condicao_pagamento or "").strip()
+    pagamento_negociado = (
+        negociacao.condicao_pagamento_negociada or ""
+    ).strip()
+
+    pagamento_original = (
+        item.cotacao.condicao_pagamento or ""
+    ).strip()
+
     if pagamento_negociado and pagamento_negociado != pagamento_original:
         return True
 
@@ -172,12 +184,15 @@ def _negociacao_tem_alteracao(item, negociacao):
 
 def _valor_negociado(cotacao):
     itens = list(cotacao.itens.all())
+
     if not itens:
         return None
 
     negociacoes_reais = []
+
     for item in itens:
         negociacao = getattr(item, "negociacao", None)
+
         if _negociacao_tem_alteracao(item, negociacao):
             negociacoes_reais.append((item, negociacao))
 
@@ -187,18 +202,32 @@ def _valor_negociado(cotacao):
         return None
 
     total = Decimal("0")
+
     for item in itens:
         negociacao = getattr(item, "negociacao", None)
-        negociacao_real = _negociacao_tem_alteracao(item, negociacao)
-        tem_preco_negociado = bool(
-            negociacao_real and negociacao.valor_unitario_negociado is not None
+
+        negociacao_real = _negociacao_tem_alteracao(
+            item,
+            negociacao,
         )
+
+        tem_preco_negociado = bool(
+            negociacao_real
+            and negociacao.valor_unitario_negociado is not None
+        )
+
         unitario = (
             negociacao.valor_unitario_negociado
             if tem_preco_negociado
             else item.valor_unitario_cotado
         )
-        desconto = Decimal("0") if tem_preco_negociado else _decimal(item.desconto_cotado)
+
+        desconto = (
+            Decimal("0")
+            if tem_preco_negociado
+            else _decimal(item.desconto_cotado)
+        )
+
         total += max(
             _decimal(item.quantidade) * _decimal(unitario) - desconto,
             Decimal("0"),
@@ -209,115 +238,266 @@ def _valor_negociado(cotacao):
         for item, negociacao in negociacoes_reais
         if negociacao.frete_negociado is not None
     ]
+
     if fretes_informados:
-        frete_mais_recente = max(fretes_informados, key=lambda n: (n.atualizado_em, n.id))
+        frete_mais_recente = max(
+            fretes_informados,
+            key=lambda n: (n.atualizado_em, n.id),
+        )
         frete = frete_mais_recente.frete_negociado
     else:
         frete = cotacao.frete
 
     total += _decimal(frete)
+
     return total
 
 
 def _status_compatibilizacao(cotacao):
     itens = list(cotacao.itens.all())
+
+    if itens and not cotacao.enviada_compatibilizacao_em:
+        return {
+            "label": "Não enviada",
+            "classe": "muted",
+            "estado": "NAO_ENVIADA",
+        }
+
     if not itens:
-        return {"label": "—", "classe": "muted", "estado": "SEM_PROPOSTA"}
+        return {
+            "label": "—",
+            "classe": "muted",
+            "estado": "SEM_PROPOSTA",
+        }
 
     resultados = []
     pendentes = 0
+
     for item in itens:
         ultimo = _ultimo_resultado_compat(item)
+
         if ultimo is None:
             pendentes += 1
         else:
             resultados.append(ultimo.resultado)
 
-    aprovados = {"APROVADO", "APROVADO_COM_RESSALVA"}
-    if resultados and all(resultado == "REPROVADO" for resultado in resultados) and not pendentes:
-        return {"label": "Reprovado técnico", "classe": "danger", "estado": "REPROVADO"}
-    if not pendentes and resultados and all(resultado in aprovados for resultado in resultados):
-        return {"label": "Compatibilizado", "classe": "success", "estado": "APROVADO"}
-    if resultados:
-        return {"label": "Em análise", "classe": "warning", "estado": "PARCIAL"}
-    return {"label": "Pendente", "classe": "muted", "estado": "PENDENTE"}
+    aprovados = {
+        "APROVADO",
+        "APROVADO_COM_RESSALVA",
+    }
+
+    # Nenhum item desta proposta foi analisado ainda.
+    if not resultados:
+        return {
+            "label": "Pendente",
+            "classe": "muted",
+            "estado": "PENDENTE",
+        }
+
+    # Já existem análises, mas ainda há itens sem decisão técnica.
+    if pendentes > 0:
+        return {
+            "label": "Em análise",
+            "classe": "warning",
+            "estado": "PARCIAL",
+        }
+
+    # Todos os itens foram analisados e todos foram tecnicamente reprovados.
+    if all(resultado == "REPROVADO" for resultado in resultados):
+        return {
+            "label": "Reprovado técnico",
+            "classe": "danger",
+            "estado": "REPROVADO",
+        }
+
+    # Todos os itens foram analisados e existe pelo menos um item tecnicamente
+    # aprovado. Os demais podem ter sido reprovados sem deixar a proposta
+    # eternamente como "Em análise".
+    if any(resultado in aprovados for resultado in resultados):
+        return {
+            "label": "Compatibilizado",
+            "classe": "success",
+            "estado": "APROVADO",
+        }
+
+    # Fallback de segurança para eventual novo status técnico futuro.
+    return {
+        "label": "Compatibilizado",
+        "classe": "success",
+        "estado": "APROVADO",
+    }
 
 
 def _status_negociacao(cotacao, compat):
     itens = list(cotacao.itens.all())
-    if not itens or compat["estado"] in {"SEM_PROPOSTA", "REPROVADO", "PENDENTE"}:
-        return {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"}
+
+    if not itens or compat["estado"] in {
+        "SEM_PROPOSTA",
+        "NAO_ENVIADA",
+        "REPROVADO",
+        "PENDENTE",
+    }:
+        return {
+            "label": "—",
+            "classe": "muted",
+            "estado": "NAO_APLICAVEL",
+        }
 
     elegiveis = []
+
     for item in itens:
         ultimo = _ultimo_resultado_compat(item)
-        if ultimo and ultimo.resultado in {"APROVADO", "APROVADO_COM_RESSALVA"}:
+
+        if (
+            ultimo
+            and ultimo.resultado
+            in {
+                "APROVADO",
+                "APROVADO_COM_RESSALVA",
+            }
+        ):
             elegiveis.append(item)
 
     if not elegiveis:
-        return {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"}
+        return {
+            "label": "—",
+            "classe": "muted",
+            "estado": "NAO_APLICAVEL",
+        }
 
     negociados = sum(
         1
         for item in elegiveis
-        if _negociacao_tem_alteracao(item, getattr(item, "negociacao", None))
+        if _negociacao_tem_alteracao(
+            item,
+            getattr(item, "negociacao", None),
+        )
     )
+
     if negociados == len(elegiveis):
-        return {"label": "Negociado", "classe": "success", "estado": "CONCLUIDO"}
+        return {
+            "label": "Negociado",
+            "classe": "success",
+            "estado": "CONCLUIDO",
+        }
+
     if negociados:
-        return {"label": "Em negociação", "classe": "warning", "estado": "PARCIAL"}
-    return {"label": "Pendente", "classe": "warning", "estado": "PENDENTE"}
+        return {
+            "label": "Em negociação",
+            "classe": "warning",
+            "estado": "PARCIAL",
+        }
+
+    return {
+        "label": "Pendente",
+        "classe": "warning",
+        "estado": "PENDENTE",
+    }
 
 
-def _montar_linha_fornecedor(cotacao, processo):
+def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
     itens = list(cotacao.itens.all())
     proposta_recebida = bool(itens)
+
     compat = _status_compatibilizacao(cotacao)
     negociacao = _status_negociacao(cotacao, compat)
 
-    adjudicacoes = [a for a in cotacao.adjudicacoes.all() if not a.cancelada]
+    adjudicacoes = [
+        a
+        for a in cotacao.adjudicacoes.all()
+        if not a.cancelada
+    ]
+
     pedidos = [
         pedido
         for pedido in processo.pedidos.all()
         if pedido.fornecedor_id == cotacao.fornecedor_id
     ]
-    pedidos_ativos = [pedido for pedido in pedidos if pedido.status != "CANCELADO"]
+
+    pedidos_ativos = [
+        pedido
+        for pedido in pedidos
+        if pedido.status != "CANCELADO"
+    ]
 
     # A compatibilização técnica e a aprovação do gestor são etapas distintas.
     # Se o processo foi reprovado pelo gestor, uma proposta tecnicamente aceita
     # não pode aparecer como "Aprovado" apenas porque existe adjudicação residual.
-    if processo.status == "REPROVADO" and compat["estado"] == "APROVADO":
+    if (
+        processo.status == "REPROVADO"
+        and compat["estado"] == "APROVADO"
+    ):
         aprovacao = {
             "label": "Reprovado pelo gestor",
             "classe": "danger",
             "estado": "REPROVADO_GESTOR",
         }
+
     elif adjudicacoes:
-        aprovacao = {"label": "Aprovado", "classe": "success", "estado": "APROVADO"}
-    elif processo.status == "AGUARDANDO_APROVACAO" and compat["estado"] == "APROVADO":
-        aprovacao = {"label": "Aguardando gestor", "classe": "warning", "estado": "AGUARDANDO"}
-    elif processo.status in {"APROVADO", "EM_CONTRATACAO", "CONTRATADO"} and proposta_recebida:
-        aprovacao = {"label": "Não selecionado", "classe": "muted", "estado": "NAO_SELECIONADO"}
+        aprovacao = {
+            "label": "Aprovado",
+            "classe": "success",
+            "estado": "APROVADO",
+        }
+
+    elif (
+        processo.status == "AGUARDANDO_APROVACAO"
+        and compat["estado"] == "APROVADO"
+    ):
+        aprovacao = {
+            "label": "Aguardando gestor",
+            "classe": "warning",
+            "estado": "AGUARDANDO",
+        }
+
+    elif (
+        processo.status
+        in {
+            "APROVADO",
+            "EM_CONTRATACAO",
+            "CONTRATADO",
+        }
+        and proposta_recebida
+    ):
+        aprovacao = {
+            "label": "Não selecionado",
+            "classe": "muted",
+            "estado": "NAO_SELECIONADO",
+        }
+
     else:
-        aprovacao = {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"}
+        aprovacao = {
+            "label": "—",
+            "classe": "muted",
+            "estado": "NAO_APLICAVEL",
+        }
 
     valor_aprovado = (
-        sum((_decimal(a.valor_total) for a in adjudicacoes), Decimal("0"))
+        sum(
+            (_decimal(a.valor_total) for a in adjudicacoes),
+            Decimal("0"),
+        )
         if adjudicacoes
         else None
     )
+
     valor_pedido = (
-        sum((_decimal(p.valor_total) for p in pedidos_ativos), Decimal("0"))
+        sum(
+            (_decimal(p.valor_total) for p in pedidos_ativos),
+            Decimal("0"),
+        )
         if pedidos_ativos
         else None
     )
 
     # Detalha os ITENS existentes dentro de cada Pedido de Compra.
-    # Aqui "quantidade" é a quantidade comprada daquele item (ex.: 12 UN, 35,5 M²),
-    # e não a quantidade de pedidos de compra.
+    # Aqui "quantidade" é a quantidade comprada daquele item
+    # (ex.: 12 UN, 35,5 M²), e não a quantidade de pedidos de compra.
     pedidos_detalhes = []
+
     for pedido in pedidos_ativos:
         itens_pedido = []
+
         for item_pedido in pedido.itens.all():
             itens_pedido.append(
                 {
@@ -325,15 +505,25 @@ def _montar_linha_fornecedor(cotacao, processo):
                     "descricao": item_pedido.descricao,
                     "unidade": item_pedido.unidade,
                     "quantidade": item_pedido.quantidade,
-                    "quantidade_formatada": _quantidade_br(item_pedido.quantidade),
+                    "quantidade_formatada": _quantidade_br(
+                        item_pedido.quantidade
+                    ),
                     "quantidade_recebida": item_pedido.quantidade_recebida,
-                    "quantidade_recebida_formatada": _quantidade_br(item_pedido.quantidade_recebida),
+                    "quantidade_recebida_formatada": _quantidade_br(
+                        item_pedido.quantidade_recebida
+                    ),
                     "valor_total": item_pedido.valor_total,
-                    "valor_total_formatado": _moeda_br(item_pedido.valor_total),
+                    "valor_total_formatado": _moeda_br(
+                        item_pedido.valor_total
+                    ),
                 }
             )
 
-        previsao_pedido = pedido.previsao_entrega_atual or pedido.previsao_entrega_original
+        previsao_pedido = (
+            pedido.previsao_entrega_atual
+            or pedido.previsao_entrega_original
+        )
+
         pedidos_detalhes.append(
             {
                 "numero": pedido.numero,
@@ -344,49 +534,115 @@ def _montar_linha_fornecedor(cotacao, processo):
         )
 
     quantidade_itens_pedidos = sum(
-        detalhe["quantidade_itens"] for detalhe in pedidos_detalhes
+        detalhe["quantidade_itens"]
+        for detalhe in pedidos_detalhes
     )
 
     # O status final do processo precisa prevalecer sobre adjudicações/pedidos
     # residuais quando o gestor reprovou a compra. Mantemos a reprovação técnica
     # específica para fornecedores que nem chegaram elegíveis à aprovação.
     if compat["estado"] == "REPROVADO":
-        status_atual = {"label": "Reprovado tecnicamente", "classe": "danger"}
+        status_atual = {
+            "label": "Reprovado tecnicamente",
+            "classe": "danger",
+        }
+
     elif aprovacao["estado"] == "REPROVADO_GESTOR":
-        status_atual = {"label": "Reprovado pelo gestor", "classe": "danger"}
+        status_atual = {
+            "label": "Reprovado pelo gestor",
+            "classe": "danger",
+        }
+
     elif pedidos_ativos:
-        pedido_atual = max(pedidos_ativos, key=lambda p: (p.atualizado_em, p.id))
+        pedido_atual = max(
+            pedidos_ativos,
+            key=lambda p: (
+                p.atualizado_em,
+                p.id,
+            ),
+        )
+
         status_atual = {
             "label": pedido_atual.get_status_display(),
-            "classe": STATUS_PEDIDO_CLASSE.get(pedido_atual.status, "info"),
+            "classe": STATUS_PEDIDO_CLASSE.get(
+                pedido_atual.status,
+                "info",
+            ),
         }
+
     elif adjudicacoes:
-        status_atual = {"label": "Aprovado", "classe": "success"}
+        status_atual = {
+            "label": "Aprovado",
+            "classe": "success",
+        }
+
     elif aprovacao["estado"] == "AGUARDANDO":
-        status_atual = {"label": "Em aprovação", "classe": "warning"}
+        status_atual = {
+            "label": "Em aprovação",
+            "classe": "warning",
+        }
+
     elif aprovacao["estado"] == "NAO_SELECIONADO":
-        status_atual = {"label": "Não selecionado", "classe": "muted"}
+        status_atual = {
+            "label": "Não selecionado",
+            "classe": "muted",
+        }
+
     elif not proposta_recebida:
-        status_atual = {"label": "Aguardando proposta", "classe": "muted"}
-    elif compat["estado"] in {"PENDENTE", "PARCIAL"}:
-        status_atual = {"label": "Em compatibilização", "classe": "warning"}
+        status_atual = {
+            "label": "Aguardando fornecedor",
+            "classe": "muted",
+        }
+
+    elif compat["estado"] == "NAO_ENVIADA":
+        status_atual = {
+            "label": "Cotação recebida",
+            "classe": "info",
+        }
+
+    elif compat["estado"] in {
+        "PENDENTE",
+        "PARCIAL",
+    }:
+        status_atual = {
+            "label": "Em compatibilização",
+            "classe": "warning",
+        }
+
     elif negociacao["estado"] != "CONCLUIDO":
-        status_atual = {"label": "Em negociação", "classe": "info"}
+        status_atual = {
+            "label": "Em negociação",
+            "classe": "info",
+        }
+
     else:
-        status_atual = {"label": "Negociado", "classe": "info"}
+        status_atual = {
+            "label": "Negociado",
+            "classe": "info",
+        }
 
     datas_compat = [
         registro.data
         for item in itens
         for registro in item.compatibilizacoes.all()
     ]
+
     datas_negociacao = [
         item.negociacao.atualizado_em
         for item in itens
         if getattr(item, "negociacao", None) is not None
     ]
-    datas_adjudicacao = [a.selecionado_em for a in adjudicacoes]
-    datas_pedidos = [p.atualizado_em for p in pedidos]
+
+    datas_adjudicacao = [
+        a.selecionado_em
+        for a in adjudicacoes
+    ]
+
+    datas_pedidos = [
+        p.atualizado_em
+        for p in pedidos
+    ]
+
     ultima_atualizacao = _mais_recente(
         cotacao.atualizado_em,
         *[item.atualizado_em for item in itens],
@@ -396,32 +652,134 @@ def _montar_linha_fornecedor(cotacao, processo):
         *datas_pedidos,
     )
 
+    if solicitacao is not None:
+        solicitacao_status = {
+            "label": solicitacao.get_status_display(),
+            "classe": (
+                "success" if solicitacao.status == "RESPONDIDA"
+                else "info" if solicitacao.status == "ENVIADA"
+                else "warning" if solicitacao.status == "PENDENTE_ENVIO"
+                else "muted"
+            ),
+            "codigo": solicitacao.status,
+            "enviada_em": solicitacao.enviada_em,
+            "meio_envio": solicitacao.get_meio_envio_display() if solicitacao.meio_envio else "",
+        }
+    else:
+        solicitacao_status = {
+            "label": "Proposta recebida",
+            "classe": "success",
+            "codigo": "RESPONDIDA",
+            "enviada_em": None,
+            "meio_envio": "",
+        }
+
     return {
         "cotacao_id": cotacao.id,
         "processo_id": processo.id,
         "processo_numero": processo.numero,
         "fornecedor_id": cotacao.fornecedor_id,
         "fornecedor_nome": cotacao.fornecedor.nome,
+        "solicitacao": solicitacao_status,
         "proposta": {
-            "label": "Proposta recebida" if proposta_recebida else "Não recebida",
-            "classe": "success" if proposta_recebida else "muted",
+            "label": (
+                "Proposta recebida"
+                if proposta_recebida
+                else "Não recebida"
+            ),
+            "classe": (
+                "success"
+                if proposta_recebida
+                else "muted"
+            ),
         },
         "valor_cotado": _valor_cotado(cotacao),
-        "valor_cotado_formatado": _moeda_br(_valor_cotado(cotacao)),
+        "valor_cotado_formatado": _moeda_br(
+            _valor_cotado(cotacao)
+        ),
         "valor_negociado": _valor_negociado(cotacao),
-        "valor_negociado_formatado": _moeda_br(_valor_negociado(cotacao)),
+        "valor_negociado_formatado": _moeda_br(
+            _valor_negociado(cotacao)
+        ),
         "valor_aprovado": valor_aprovado,
-        "valor_aprovado_formatado": _moeda_br(valor_aprovado),
+        "valor_aprovado_formatado": _moeda_br(
+            valor_aprovado
+        ),
         "valor_pedido": valor_pedido,
-        "valor_pedido_formatado": _moeda_br(valor_pedido),
+        "valor_pedido_formatado": _moeda_br(
+            valor_pedido
+        ),
         "compatibilizacao": compat,
         "negociacao": negociacao,
         "aprovacao": aprovacao,
-        "pedido_numeros": ", ".join(p.numero for p in pedidos_ativos) or "—",
+        "pedido_numeros": (
+            ", ".join(
+                p.numero
+                for p in pedidos_ativos
+            )
+            or "—"
+        ),
         "pedidos_detalhes": pedidos_detalhes,
         "quantidade_itens_pedidos": quantidade_itens_pedidos,
         "status_atual": status_atual,
         "ultima_atualizacao": ultima_atualizacao,
+    }
+
+
+def _montar_linha_fornecedor_indicado(fornecedor, processo, solicitacao=None):
+    """Fornecedor selecionado para cotação que ainda não possui proposta."""
+    if solicitacao is None:
+        solicitacao_status = {
+            "label": "Pendente de envio",
+            "classe": "warning",
+            "codigo": "PENDENTE_ENVIO",
+            "enviada_em": None,
+            "meio_envio": "",
+        }
+    else:
+        solicitacao_status = {
+            "label": solicitacao.get_status_display(),
+            "classe": (
+                "success" if solicitacao.status == "RESPONDIDA"
+                else "info" if solicitacao.status == "ENVIADA"
+                else "warning" if solicitacao.status == "PENDENTE_ENVIO"
+                else "muted"
+            ),
+            "codigo": solicitacao.status,
+            "enviada_em": solicitacao.enviada_em,
+            "meio_envio": solicitacao.get_meio_envio_display() if solicitacao.meio_envio else "",
+        }
+
+    status_atual = {
+        "label": solicitacao_status["label"],
+        "classe": solicitacao_status["classe"],
+    }
+
+    return {
+        "cotacao_id": None,
+        "processo_id": processo.id,
+        "processo_numero": processo.numero,
+        "fornecedor_id": fornecedor.id,
+        "fornecedor_nome": fornecedor.nome,
+        "solicitacao": solicitacao_status,
+        "proposta": {"label": "Não recebida", "classe": "muted"},
+        "valor_cotado": None,
+        "valor_cotado_formatado": "—",
+        "valor_negociado": None,
+        "valor_negociado_formatado": "—",
+        "valor_aprovado": None,
+        "valor_aprovado_formatado": "—",
+        "valor_pedido": None,
+        "valor_pedido_formatado": "—",
+        "compatibilizacao": {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"},
+        "negociacao": {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"},
+        "aprovacao": {"label": "—", "classe": "muted", "estado": "NAO_APLICAVEL"},
+        "pedido_numeros": "—",
+        "pedidos_detalhes": [],
+        "quantidade_itens_pedidos": 0,
+        "status_atual": status_atual,
+        "ultima_atualizacao": (solicitacao.atualizado_em if solicitacao is not None else processo.atualizado_em),
+        "origem_fornecedor": "INDICADO",
     }
 
 
@@ -442,37 +800,77 @@ def _anexar_acompanhamento_compras(itens):
         NecessidadeCompra,
         PedidoCompra,
         ProcessoCompra,
+        SolicitacaoCotacaoFornecedor,
     )
 
-    ids = [item.id for item in itens]
+    ids = [
+        item.id
+        for item in itens
+    ]
 
-    compat_qs = CompatibilizacaoItem.objects.select_related("responsavel").order_by("-data", "-id")
-    negociacao_qs = NegociacaoItem.objects.select_related("atualizado_por")
+    compat_qs = (
+        CompatibilizacaoItem.objects
+        .select_related("responsavel")
+        .order_by("-data", "-id")
+    )
+
+    negociacao_qs = (
+        NegociacaoItem.objects
+        .select_related("atualizado_por")
+    )
+
     item_cotado_qs = (
         CotacaoFornecedorItem.objects
         .select_related("necessidade")
         .prefetch_related(
-            Prefetch("compatibilizacoes", queryset=compat_qs),
-            Prefetch("negociacao", queryset=negociacao_qs),
+            Prefetch(
+                "compatibilizacoes",
+                queryset=compat_qs,
+            ),
+            Prefetch(
+                "negociacao",
+                queryset=negociacao_qs,
+            ),
         )
         .order_by("id")
     )
-    adjudicacao_qs = AdjudicacaoCompra.objects.filter(cancelada=False).order_by("id")
+
+    adjudicacao_qs = (
+        AdjudicacaoCompra.objects
+        .filter(cancelada=False)
+        .order_by("id")
+    )
+
     cotacao_qs = (
         CotacaoFornecedor.objects
         .select_related("fornecedor")
         .prefetch_related(
-            Prefetch("itens", queryset=item_cotado_qs),
-            Prefetch("adjudicacoes", queryset=adjudicacao_qs),
+            Prefetch(
+                "itens",
+                queryset=item_cotado_qs,
+            ),
+            Prefetch(
+                "adjudicacoes",
+                queryset=adjudicacao_qs,
+            ),
         )
         .order_by("fornecedor__nome", "id")
     )
+
     pedido_qs = (
         PedidoCompra.objects
         .select_related("fornecedor")
         .prefetch_related("itens")
         .order_by("criado_em", "id")
     )
+
+
+    solicitacao_qs = (
+        SolicitacaoCotacaoFornecedor.objects
+        .select_related("fornecedor", "enviada_por")
+        .order_by("fornecedor__nome", "id")
+    )
+
     necessidade_qs = (
         NecessidadeCompra.objects
         .exclude(situacao="CANCELADA")
@@ -485,21 +883,84 @@ def _anexar_acompanhamento_compras(itens):
         .filter(item_cronograma_id__in=ids)
         .select_related("item_cronograma")
         .prefetch_related(
-            Prefetch("cotacoes", queryset=cotacao_qs),
-            Prefetch("pedidos", queryset=pedido_qs),
-            Prefetch("necessidades", queryset=necessidade_qs),
+            Prefetch(
+                "cotacoes",
+                queryset=cotacao_qs,
+            ),
+            Prefetch(
+                "pedidos",
+                queryset=pedido_qs,
+            ),
+            Prefetch(
+                "necessidades",
+                queryset=necessidade_qs,
+            ),
+            Prefetch(
+                "solicitacoes_cotacao",
+                queryset=solicitacao_qs,
+            ),
             "vinculos_atividades__atividade",
+            "fornecedores_sugeridos",
         )
         .order_by("criado_em", "id")
     )
 
-    por_item = {item_id: [] for item_id in ids}
+    por_item = {
+        item_id: []
+        for item_id in ids
+    }
+
     for processo in processos:
-        por_item.setdefault(processo.item_cronograma_id, []).append(processo)
+        por_item.setdefault(
+            processo.item_cronograma_id,
+            [],
+        ).append(processo)
 
     for item in itens:
         linhas = []
-        processos_item = por_item.get(item.id, [])
+
+        processos_item = por_item.get(
+            item.id,
+            [],
+        )
+
+        processo_referencia = processos_item[-1] if processos_item else None
+        if processo_referencia is None:
+            item.status_compras_codigo = "AGUARDANDO_PEDIDO"
+            item.status_compras_label = "Aguardando pedido"
+            item.status_compras_classe = "muted"
+        else:
+            status = processo_referencia.status
+            mapa_status = {
+                "RASCUNHO": ("RASCUNHO", "Rascunho", "muted"),
+                "PEDIDO_ENVIADO": ("PEDIDO_ENVIADO", "Solicitação enviada", "info"),
+                "SOLICITACAO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
+                "AGUARDANDO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
+                "EM_COTACAO": ("COTACAO", "Proposta recebida", "info"),
+                "AGUARDANDO_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
+                "EM_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
+                "EM_NEGOCIACAO": ("NEGOCIACAO", "Negociação", "info"),
+                "AGUARDANDO_APROVACAO": ("APROVACAO", "Aguardando aprovação", "warning"),
+                "AJUSTE_SOLICITADO": ("AJUSTE", "Ajuste solicitado", "warning"),
+                "APROVADO": ("APROVADO", "Aprovado", "success"),
+                "EM_CONTRATACAO": ("CONTRATACAO", "Contratação", "info"),
+                "CONTRATADO": ("CONTRATADO", "Contratado", "success"),
+                "REPROVADO": ("REPROVADO", "Reprovado", "danger"),
+                "CANCELADO": ("CANCELADO", "Cancelado", "danger"),
+            }
+            codigo, label, classe = mapa_status.get(
+                status,
+                (status, processo_referencia.get_status_display(), "muted"),
+            )
+            item.status_compras_codigo = codigo
+            item.status_compras_label = label
+            item.status_compras_classe = classe
+
+        item.fornecedor_pedido_nome = (
+            ", ".join(f.nome for f in processo_referencia.fornecedores_sugeridos.all())
+            if processo_referencia
+            else ""
+        )
 
         # Previsão de entrega do suprimento: usa a previsão ATUAL do pedido
         # (com fallback para a original). Havendo vários pedidos, mostra a
@@ -511,105 +972,335 @@ def _anexar_acompanhamento_compras(itens):
             for pedido in processo.pedidos.all()
             if pedido.status != "CANCELADO"
         ]
-        pedidos_pendentes = [p for p in pedidos_do_item if p.status != "ENTREGUE"]
-        previsoes_pendentes = [
-            p.previsao_entrega_atual or p.previsao_entrega_original
-            for p in pedidos_pendentes
-            if (p.previsao_entrega_atual or p.previsao_entrega_original)
-        ]
-        previsoes_todas = [
-            p.previsao_entrega_atual or p.previsao_entrega_original
+
+        pedidos_pendentes = [
+            p
             for p in pedidos_do_item
-            if (p.previsao_entrega_atual or p.previsao_entrega_original)
+            if p.status != "ENTREGUE"
         ]
+
+        previsoes_pendentes = [
+            p.previsao_entrega_atual
+            or p.previsao_entrega_original
+            for p in pedidos_pendentes
+            if (
+                p.previsao_entrega_atual
+                or p.previsao_entrega_original
+            )
+        ]
+
+        previsoes_todas = [
+            p.previsao_entrega_atual
+            or p.previsao_entrega_original
+            for p in pedidos_do_item
+            if (
+                p.previsao_entrega_atual
+                or p.previsao_entrega_original
+            )
+        ]
+
         item.previsao_entrega_compra = (
             min(previsoes_pendentes)
             if previsoes_pendentes
-            else (max(previsoes_todas) if previsoes_todas else None)
+            else (
+                max(previsoes_todas)
+                if previsoes_todas
+                else None
+            )
         )
+
         item.previsao_entrega_atrasada = bool(
             previsoes_pendentes
             and item.previsao_entrega_compra
-            and item.previsao_entrega_compra < timezone.localdate()
+            and item.previsao_entrega_compra
+            < timezone.localdate()
         )
+
         item.previsao_entrega_dias_atraso = (
-            (timezone.localdate() - item.previsao_entrega_compra).days
+            (
+                timezone.localdate()
+                - item.previsao_entrega_compra
+            ).days
             if item.previsao_entrega_atrasada
             else 0
         )
-        item.previsao_entrega_qtd_pedidos = len(pedidos_do_item)
 
+        item.previsao_entrega_qtd_pedidos = len(
+            pedidos_do_item
+        )
+
+        vistos = set()
         for processo in processos_item:
+            solicitacoes_por_fornecedor = {
+                solicitacao.fornecedor_id: solicitacao
+                for solicitacao in processo.solicitacoes_cotacao.all()
+            }
+
             for cotacao in processo.cotacoes.all():
-                linhas.append(_montar_linha_fornecedor(cotacao, processo))
+                chave = (processo.id, cotacao.fornecedor_id)
+                vistos.add(chave)
+                linha = _montar_linha_fornecedor(
+                    cotacao,
+                    processo,
+                    solicitacoes_por_fornecedor.get(cotacao.fornecedor_id),
+                )
+                linha["origem_fornecedor"] = "COTACAO"
+                linhas.append(linha)
 
-        linhas.sort(key=lambda x: (x["fornecedor_nome"].casefold(), x["processo_numero"]))
+            # Mantém visíveis também os fornecedores que ainda não responderam,
+            # mesmo quando outro fornecedor do mesmo processo já enviou proposta.
+            for solicitacao in processo.solicitacoes_cotacao.all():
+                chave = (processo.id, solicitacao.fornecedor_id)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                linhas.append(
+                    _montar_linha_fornecedor_indicado(
+                        solicitacao.fornecedor,
+                        processo,
+                        solicitacao,
+                    )
+                )
 
-        valores_cotados = [x["valor_cotado"] for x in linhas if x["valor_cotado"] is not None]
-        valores_negociados = [x["valor_negociado"] for x in linhas if x["valor_negociado"] is not None]
-        valores_aprovados = [x["valor_aprovado"] for x in linhas if x["valor_aprovado"] is not None]
-        valores_pedidos = [x["valor_pedido"] for x in linhas if x["valor_pedido"] is not None]
+            # Fallback para processos antigos que ainda não possuam registros
+            # individualizados de solicitação.
+            for fornecedor in processo.fornecedores_sugeridos.all():
+                chave = (processo.id, fornecedor.id)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
+                linhas.append(
+                    _montar_linha_fornecedor_indicado(
+                        fornecedor,
+                        processo,
+                    )
+                )
+
+        linhas.sort(
+            key=lambda x: (
+                x["fornecedor_nome"].casefold(),
+                x["processo_numero"],
+            )
+        )
+
+        valores_cotados = [
+            x["valor_cotado"]
+            for x in linhas
+            if x["valor_cotado"] is not None
+        ]
+
+        valores_negociados = [
+            x["valor_negociado"]
+            for x in linhas
+            if x["valor_negociado"] is not None
+        ]
+
+        valores_aprovados = [
+            x["valor_aprovado"]
+            for x in linhas
+            if x["valor_aprovado"] is not None
+        ]
+
+        valores_pedidos = [
+            x["valor_pedido"]
+            for x in linhas
+            if x["valor_pedido"] is not None
+        ]
 
         # Contexto do suprimento: atividades vinculadas ao(s) processo(s).
         # A quantidade de itens é mostrada por pedido de compra na planilha
         # de fornecedores, e não como quantidade de pedidos/necessidades.
         atividades_por_id = {}
+
         for processo in processos_item:
-            necessidades = list(processo.necessidades.all())
+            necessidades = list(
+                processo.necessidades.all()
+            )
 
             for vinculo in processo.vinculos_atividades.all():
                 atividade = vinculo.atividade
-                atividades_por_id[atividade.id] = atividade
+
+                atividades_por_id[
+                    atividade.id
+                ] = atividade
 
             # Também considera a atividade de origem do item, quando houver,
             # para cobrir processos antigos ou itens vinculados individualmente.
             for necessidade in necessidades:
                 atividade = necessidade.atividade_origem
+
                 if atividade is not None:
-                    atividades_por_id[atividade.id] = atividade
+                    atividades_por_id[
+                        atividade.id
+                    ] = atividade
 
         atividades = sorted(
             atividades_por_id.values(),
-            key=lambda atividade: (atividade.nome_tarefa or "").casefold(),
+            key=lambda atividade: (
+                atividade.nome_tarefa or ""
+            ).casefold(),
         )
+
         atividades_nomes = [
-            (atividade.nome_tarefa or str(atividade)).strip()
+            (
+                atividade.nome_tarefa
+                or str(atividade)
+            ).strip()
             for atividade in atividades
         ]
 
         item.acompanhamento_fornecedores = linhas
+        item.acompanhamento_fornecedores_resumo = linhas[:3]
+        item.acompanhamento_fornecedores_extras = max(len(linhas) - 3, 0)
         item.acompanhamento_processos = processos_item
-        item.acompanhamento_tem_compras = bool(processos_item)
+        item.acompanhamento_tem_compras = bool(
+            processos_item
+        )
         item.acompanhamento_atividades = atividades
-        item.acompanhamento_atividades_nomes = atividades_nomes
-        item.acompanhamento_atividades_texto = " • ".join(atividades_nomes) or "—"
+        item.acompanhamento_atividades_nomes = (
+            atividades_nomes
+        )
+        item.acompanhamento_atividades_texto = (
+            " • ".join(atividades_nomes)
+            or "—"
+        )
+
         ultimas_atualizacoes = [
             x["ultima_atualizacao"]
             for x in linhas
             if x.get("ultima_atualizacao") is not None
         ]
-        ultima_atualizacao_geral = max(ultimas_atualizacoes) if ultimas_atualizacoes else None
+
+        ultima_atualizacao_geral = (
+            max(ultimas_atualizacoes)
+            if ultimas_atualizacoes
+            else None
+        )
 
         item.acompanhamento_resumo = {
             "fornecedores": len(linhas),
-            "propostas_recebidas": sum(1 for x in linhas if x["proposta"]["classe"] == "success"),
-            "compatibilizados": sum(1 for x in linhas if x["compatibilizacao"]["estado"] == "APROVADO"),
-            "aguardando_proposta": sum(1 for x in linhas if x["proposta"]["classe"] != "success"),
-            "menor_valor": min(valores_cotados) if valores_cotados else None,
-            "menor_valor_formatado": _moeda_br(min(valores_cotados)) if valores_cotados else "—",
-            "menor_negociado": min(valores_negociados) if valores_negociados else None,
-            "menor_negociado_formatado": _moeda_br(min(valores_negociados)) if valores_negociados else "—",
-            "valor_aprovado": sum(valores_aprovados, Decimal("0")) if valores_aprovados else None,
-            "valor_aprovado_formatado": _moeda_br(sum(valores_aprovados, Decimal("0"))) if valores_aprovados else "—",
-            "valor_pedidos": sum(valores_pedidos, Decimal("0")) if valores_pedidos else None,
-            "valor_pedidos_formatado": _moeda_br(sum(valores_pedidos, Decimal("0"))) if valores_pedidos else "—",
-            "ultima_atualizacao": ultima_atualizacao_geral,
+
+            "solicitacoes_enviadas": sum(
+                1
+                for x in linhas
+                if x.get("solicitacao", {}).get("codigo") in {"ENVIADA", "RESPONDIDA"}
+            ),
+
+            "pendentes_envio": sum(
+                1
+                for x in linhas
+                if x.get("solicitacao", {}).get("codigo") == "PENDENTE_ENVIO"
+            ),
+
+            "propostas_recebidas": sum(
+                1
+                for x in linhas
+                if x["proposta"]["classe"] == "success"
+            ),
+
+            "compatibilizados": sum(
+                1
+                for x in linhas
+                if x["compatibilizacao"]["estado"] == "APROVADO"
+            ),
+
+            "aguardando_proposta": sum(
+                1
+                for x in linhas
+                if x["proposta"]["classe"] != "success"
+            ),
+
+            "menor_valor": (
+                min(valores_cotados)
+                if valores_cotados
+                else None
+            ),
+
+            "menor_valor_formatado": (
+                _moeda_br(
+                    min(valores_cotados)
+                )
+                if valores_cotados
+                else "—"
+            ),
+
+            "menor_negociado": (
+                min(valores_negociados)
+                if valores_negociados
+                else None
+            ),
+
+            "menor_negociado_formatado": (
+                _moeda_br(
+                    min(valores_negociados)
+                )
+                if valores_negociados
+                else "—"
+            ),
+
+            "valor_aprovado": (
+                sum(
+                    valores_aprovados,
+                    Decimal("0"),
+                )
+                if valores_aprovados
+                else None
+            ),
+
+            "valor_aprovado_formatado": (
+                _moeda_br(
+                    sum(
+                        valores_aprovados,
+                        Decimal("0"),
+                    )
+                )
+                if valores_aprovados
+                else "—"
+            ),
+
+            "valor_pedidos": (
+                sum(
+                    valores_pedidos,
+                    Decimal("0"),
+                )
+                if valores_pedidos
+                else None
+            ),
+
+            "valor_pedidos_formatado": (
+                _moeda_br(
+                    sum(
+                        valores_pedidos,
+                        Decimal("0"),
+                    )
+                )
+                if valores_pedidos
+                else "—"
+            ),
+
+            "ultima_atualizacao": (
+                ultima_atualizacao_geral
+            ),
         }
+
         item.acompanhamento_busca = " ".join(
             [
-                *(x["fornecedor_nome"] for x in linhas),
-                *(x["processo_numero"] for x in linhas),
-                *(x["status_atual"]["label"] for x in linhas),
+                *(
+                    x["fornecedor_nome"]
+                    for x in linhas
+                ),
+                *(
+                    x["processo_numero"]
+                    for x in linhas
+                ),
+                *(
+                    x["status_atual"]["label"]
+                    for x in linhas
+                ),
+                *(
+                    x.get("solicitacao", {}).get("label", "")
+                    for x in linhas
+                ),
                 *atividades_nomes,
             ]
         ).casefold()
@@ -624,9 +1315,13 @@ def montar_painel_cronograma_suprimentos(
     busca: str = "",
 ):
     etapa = etapa or situacao
+
     importacao = (
         ImportacaoCronogramaSuprimentos.objects
-        .filter(ativa=True, status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA)
+        .filter(
+            ativa=True,
+            status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
+        )
         .select_related("executado_por")
         .first()
     )
@@ -647,18 +1342,38 @@ def montar_painel_cronograma_suprimentos(
             "filtrados": 0,
             "percentual_medio": 0,
         },
-        "filtros": {"categoria": categoria, "etapa": etapa, "busca": busca},
+        "filtros": {
+            "categoria": categoria,
+            "etapa": etapa,
+            "busca": busca,
+        },
     }
+
     if not importacao:
         return vazio
 
     obras = list(
-        importacao.obras_importadas.select_related("obra").order_by("ordem_aba", "nome_aba")
+        importacao.obras_importadas
+        .select_related("obra")
+        .order_by(
+            "ordem_aba",
+            "nome_aba",
+        )
     )
 
     selecionado = None
+
     if obra_id:
-        selecionado = next((x for x in obras if str(x.obra_id) == str(obra_id)), None)
+        selecionado = next(
+            (
+                x
+                for x in obras
+                if str(x.obra_id)
+                == str(obra_id)
+            ),
+            None,
+        )
+
     if selecionado is None and obras:
         selecionado = obras[0]
 
@@ -668,55 +1383,133 @@ def montar_painel_cronograma_suprimentos(
 
     if selecionado:
         hoje = timezone.localdate()
+
         todos_itens = [
-            _decorar_item(item, hoje)
-            for item in selecionado.itens.all().order_by("ordem", "id")
+            _decorar_item(
+                item,
+                hoje,
+            )
+            for item
+            in selecionado.itens.all().order_by(
+                "ordem",
+                "id",
+            )
         ]
 
         # Consulta Compras uma única vez e anexa a visão comercial a cada item.
-        _anexar_acompanhamento_compras(todos_itens)
+        _anexar_acompanhamento_compras(
+            todos_itens
+        )
 
         categorias_filtro = sorted(
-            {x.categoria for x in todos_itens if x.categoria}, key=str.casefold
+            {
+                x.categoria
+                for x in todos_itens
+                if x.categoria
+            },
+            key=str.casefold,
         )
 
-        resumo["total"] = len(todos_itens)
-        resumo["concluidos"] = sum(
-            1 for x in todos_itens if x.etapa_atual == ItemCronogramaSuprimento.Etapa.CONCLUIDO
+        resumo["total"] = len(
+            todos_itens
         )
-        resumo["nao_iniciados"] = sum(1 for x in todos_itens if x.percentual_andamento == 0)
-        resumo["em_andamento"] = sum(1 for x in todos_itens if 0 < x.percentual_andamento < 100)
-        resumo["atrasados"] = sum(1 for x in todos_itens if x.atrasado_calculado)
+
+        resumo["concluidos"] = sum(
+            1
+            for x in todos_itens
+            if x.etapa_atual
+            == ItemCronogramaSuprimento.Etapa.CONCLUIDO
+        )
+
+        resumo["nao_iniciados"] = sum(
+            1
+            for x in todos_itens
+            if x.percentual_andamento == 0
+        )
+
+        resumo["em_andamento"] = sum(
+            1
+            for x in todos_itens
+            if 0 < x.percentual_andamento < 100
+        )
+
+        resumo["atrasados"] = sum(
+            1
+            for x in todos_itens
+            if x.atrasado_calculado
+        )
+
         if todos_itens:
             resumo["percentual_medio"] = round(
-                sum(x.percentual_andamento for x in todos_itens) / len(todos_itens)
+                sum(
+                    x.percentual_andamento
+                    for x in todos_itens
+                )
+                / len(todos_itens)
             )
 
         itens = todos_itens
+
         if categoria:
-            itens = [x for x in itens if x.categoria == categoria]
-        if etapa:
-            itens = _filtrar_por_etapa(itens, etapa)
-        if busca:
-            termo = busca.casefold()
             itens = [
-                x for x in itens
-                if termo in (x.item or "").casefold()
-                or termo in (x.local or "").casefold()
-                or termo in (x.contratada_responsavel or "").casefold()
-                or termo in getattr(x, "acompanhamento_busca", "")
+                x
+                for x in itens
+                if x.categoria == categoria
             ]
 
-        resumo["filtrados"] = len(itens)
+        if etapa:
+            itens = _filtrar_por_etapa(
+                itens,
+                etapa,
+            )
+
+        if busca:
+            termo = busca.casefold()
+
+            itens = [
+                x
+                for x in itens
+                if termo
+                in (x.item or "").casefold()
+                or termo
+                in (x.local or "").casefold()
+                or termo
+                in (
+                    x.contratada_responsavel
+                    or ""
+                ).casefold()
+                or termo
+                in getattr(
+                    x,
+                    "acompanhamento_busca",
+                    "",
+                )
+            ]
+
+        resumo["filtrados"] = len(
+            itens
+        )
 
         mapa = {}
+
         for item in itens:
-            nome_categoria = item.categoria or "SEM CATEGORIA"
-            mapa.setdefault(nome_categoria, []).append(item)
+            nome_categoria = (
+                item.categoria
+                or "SEM CATEGORIA"
+            )
+
+            mapa.setdefault(
+                nome_categoria,
+                [],
+            ).append(item)
 
         grupos = [
-            {"nome": nome, "itens": itens_categoria}
-            for nome, itens_categoria in mapa.items()
+            {
+                "nome": nome,
+                "itens": itens_categoria,
+            }
+            for nome, itens_categoria
+            in mapa.items()
         ]
 
     return {
@@ -727,5 +1520,9 @@ def montar_painel_cronograma_suprimentos(
         "categorias_filtro": categorias_filtro,
         "etapas_filtro": ETAPAS_FILTRO,
         "resumo": resumo,
-        "filtros": {"categoria": categoria, "etapa": etapa, "busca": busca},
+        "filtros": {
+            "categoria": categoria,
+            "etapa": etapa,
+            "busca": busca,
+        },
     }

@@ -98,6 +98,69 @@
   #processo-compra .pc-upload-inline{grid-template-columns:1fr}
 }
 
+/* Compatibilização técnica — leitura por item e progresso */
+#processo-compra .pc-tech-progress{position:sticky;top:58px;z-index:12;display:grid;grid-template-columns:minmax(230px,1fr) repeat(4,minmax(90px,auto)) auto;gap:8px;align-items:center;margin-bottom:14px;padding:11px 12px;border:1px solid #cfe1e5;border-radius:12px;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 8px 22px rgba(31,69,82,.08)}
+#processo-compra .pc-tech-progress__main strong{display:block;color:var(--pc-ink);font-size:11px}#processo-compra .pc-tech-progress__main span{display:block;margin-top:2px;color:var(--pc-muted);font-size:9.5px}
+#processo-compra .pc-tech-stat{min-width:88px;padding:7px 9px;border:1px solid #e3ebee;border-radius:8px;background:#fbfdfd;text-align:center}#processo-compra .pc-tech-stat span{display:block;color:var(--pc-muted);font-size:7.5px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}#processo-compra .pc-tech-stat strong{display:block;margin-top:2px;color:var(--pc-ink);font-size:13px}.pc-tech-stat--ok strong{color:var(--pc-ok)!important}.pc-tech-stat--warn strong{color:var(--pc-warn)!important}.pc-tech-stat--danger strong{color:var(--pc-danger)!important}
+#processo-compra .pc-tech-group{margin-bottom:16px;border:1px solid #d4e1e5;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 5px 16px rgba(31,69,82,.04)}#processo-compra .pc-tech-group:last-of-type{margin-bottom:0}#processo-compra .pc-tech-group.is-complete{border-color:#c9dfd3}#processo-compra .pc-tech-group.is-partial{border-color:#e5d7b9}
+#processo-compra .pc-tech-group__head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px 16px;background:#eef8fa;border-bottom:1px solid #d7e8eb}#processo-compra .pc-tech-group.is-complete .pc-tech-group__head{background:#f1f8f4;border-bottom-color:#d7e8de}#processo-compra .pc-tech-index{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:#0b879b;color:#fff;font-size:15px;font-weight:950;box-shadow:0 4px 10px rgba(7,143,165,.16)}#processo-compra .pc-tech-group__title small{display:block;margin-bottom:3px;color:#5f7d88;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.07em}#processo-compra .pc-tech-group__title strong{display:block;color:#173d4b;font-size:14px;line-height:1.3}#processo-compra .pc-tech-group__title p{margin:4px 0 0;color:#6d838c;font-size:9.5px;line-height:1.4}#processo-compra .pc-tech-group__meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}#processo-compra .pc-tech-chip{display:inline-flex;align-items:center;min-height:28px;padding:6px 9px;border:1px solid #d6e4e8;border-radius:999px;background:#fff;color:#466571;font-size:9px;font-weight:850;white-space:nowrap}#processo-compra .pc-tech-group-state{display:inline-flex;align-items:center;min-height:28px;padding:6px 9px;border-radius:999px;background:#eef2f4;color:#71858d;font-size:8.5px;font-weight:900;text-transform:uppercase;white-space:nowrap}.pc-tech-group.is-complete .pc-tech-group-state{background:var(--pc-ok-soft)!important;color:var(--pc-ok)!important}.pc-tech-group.is-partial .pc-tech-group-state{background:var(--pc-warn-soft)!important;color:var(--pc-warn)!important}
+#processo-compra .pc-tech-group__body{padding:12px;display:grid;gap:9px}
+#processo-compra .pc-tech-offer{position:relative;border:1px solid #dfe8eb;border-radius:11px;background:#fff;overflow:hidden;transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease}#processo-compra .pc-tech-offer:hover{border-color:#c8dce1;box-shadow:0 6px 15px rgba(31,69,82,.05)}#processo-compra .pc-tech-offer.is-approved{border-left:4px solid var(--pc-ok)}#processo-compra .pc-tech-offer.is-restricted{border-left:4px solid var(--pc-warn)}#processo-compra .pc-tech-offer.is-rejected{border-left:4px solid var(--pc-danger)}#processo-compra .pc-tech-offer.is-pending{border-left:4px solid #c6d2d6}
+#processo-compra .pc-tech-offer__main{display:grid;grid-template-columns:34px minmax(220px,1.2fr) minmax(125px,.55fr) minmax(210px,.75fr);gap:12px;align-items:center;padding:12px 13px}#processo-compra .pc-tech-offer__number{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:#f0f5f6;color:#607983;font-size:10px;font-weight:950}#processo-compra .pc-tech-supplier strong{display:block;color:#203f4c;font-size:12px}#processo-compra .pc-tech-supplier small{display:block;margin-top:3px;color:var(--pc-muted);font-size:9px}#processo-compra .pc-tech-price span{display:block;color:var(--pc-muted);font-size:8px;text-transform:uppercase;font-weight:850}#processo-compra .pc-tech-price strong{display:block;margin-top:3px;color:#173d4b;font-size:14px}#processo-compra .pc-tech-decision{display:grid;grid-template-columns:1fr auto;gap:7px;align-items:end}#processo-compra .pc-tech-decision .pc-inline-field{min-width:0}#processo-compra .pc-tech-status{display:inline-flex;align-items:center;justify-content:center;min-width:82px;min-height:39px;padding:6px 8px;border-radius:8px;background:#eef2f4;color:#71858d;font-size:8px;font-weight:950;text-transform:uppercase}.pc-tech-offer.is-approved .pc-tech-status{background:var(--pc-ok-soft)!important;color:var(--pc-ok)!important}.pc-tech-offer.is-restricted .pc-tech-status{background:var(--pc-warn-soft)!important;color:var(--pc-warn)!important}.pc-tech-offer.is-rejected .pc-tech-status{background:var(--pc-danger-soft)!important;color:var(--pc-danger)!important}
+#processo-compra .pc-tech-offer__details{border-top:1px solid #edf2f3;background:#fbfcfd}#processo-compra .pc-tech-offer__details summary{display:flex;align-items:center;gap:7px;padding:8px 13px;cursor:pointer;list-style:none;color:#607a84;font-size:9px;font-weight:850}#processo-compra .pc-tech-offer__details summary::-webkit-details-marker{display:none}#processo-compra .pc-tech-offer__details summary:before{content:'+';display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:5px;background:#eaf1f3;color:#58727d;font-size:11px}.pc-tech-offer__details[open] summary:before{content:'–'}#processo-compra .pc-tech-offer__details-body{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px 13px 13px}
+#processo-compra .pc-tech-guide{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:12px 14px;border:1px solid #d9e7ea;border-radius:10px;background:#f8fbfc}#processo-compra .pc-tech-guide strong{display:block;color:var(--pc-ink);font-size:11px}#processo-compra .pc-tech-guide span{display:block;margin-top:3px;color:var(--pc-muted);font-size:9.5px;line-height:1.4}#processo-compra .pc-tech-legend{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}#processo-compra .pc-tech-legend i{font-style:normal;padding:5px 7px;border-radius:999px;font-size:8px;font-weight:850}.pc-tech-legend .ok{background:var(--pc-ok-soft);color:var(--pc-ok)}.pc-tech-legend .warn{background:var(--pc-warn-soft);color:var(--pc-warn)}.pc-tech-legend .danger{background:var(--pc-danger-soft);color:var(--pc-danger)}
+@media(max-width:1100px){#processo-compra .pc-tech-progress{grid-template-columns:1fr repeat(4,80px)}#processo-compra .pc-tech-progress .cp-btn{grid-column:1/-1}#processo-compra .pc-tech-offer__main{grid-template-columns:34px minmax(180px,1fr) 120px}.pc-tech-decision{grid-column:2/-1!important}}
+@media(max-width:700px){#processo-compra .pc-tech-progress{position:static;grid-template-columns:1fr 1fr}#processo-compra .pc-tech-progress__main{grid-column:1/-1}#processo-compra .pc-tech-group__head{grid-template-columns:auto 1fr}#processo-compra .pc-tech-group__meta{grid-column:1/-1;justify-content:flex-start}#processo-compra .pc-tech-offer__main{grid-template-columns:34px 1fr}.pc-tech-price{grid-column:2}.pc-tech-decision{grid-column:1/-1!important}#processo-compra .pc-tech-offer__details-body{grid-template-columns:1fr}#processo-compra .pc-tech-guide{align-items:flex-start;flex-direction:column}.pc-tech-legend{justify-content:flex-start!important}}
+
+
+#processo-compra .pc-manager-choice{padding:0!important;transition:background .16s ease,box-shadow .16s ease}#processo-compra .pc-map-choice-label{position:relative;min-height:96px;padding:12px;display:flex;flex-direction:column;gap:4px;cursor:pointer}#processo-compra .pc-map-choice-input{position:absolute;opacity:0;pointer-events:none}#processo-compra .pc-map-choice-check{position:absolute;top:8px;right:8px;width:22px;height:22px;border:1px solid #cbd9de;border-radius:7px;display:grid;place-items:center;background:#fff;color:transparent;font-weight:900}#processo-compra .pc-manager-choice:has(.pc-map-choice-input:checked){background:#edf7f2!important;box-shadow:inset 0 0 0 2px #4b946f}#processo-compra .pc-manager-choice:has(.pc-map-choice-input:checked) .pc-map-choice-check{background:#327257;border-color:#327257;color:#fff}#processo-compra .pc-manager-choice.is-disabled{opacity:.52;background:#f7f9fa!important}#processo-compra .pc-manager-choice.is-disabled small{color:#8a9aa1}
+
+/* Redesign visual: leitura operacional mais limpa e hierarquia por etapa */
+#processo-compra{max-width:1740px;padding:24px 28px 84px;background:linear-gradient(180deg,#f7fafb 0,#fff 240px)}
+#processo-compra .pc-hero{padding:24px 26px;border-radius:18px;border-color:#d7e3e7;box-shadow:0 14px 36px rgba(25,65,79,.07);background:linear-gradient(120deg,#fff 0,#fbfefe 70%,#f1fafb 100%)}
+#processo-compra .pc-title{font-size:30px;max-width:980px}
+#processo-compra .pc-hero-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+#processo-compra .pc-hero-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #dce8eb;border-radius:999px;background:#fff;color:#5d7680;font-size:10px;font-weight:800}
+#processo-compra .pc-hero-chip strong{color:#274d5b}
+#processo-compra .pc-status{min-height:34px;padding:7px 11px;border:1px solid #cbe4e8;background:#eaf7f9}
+#processo-compra .pc-progress{position:relative;gap:0;margin:4px 0 16px;padding:5px;border:1px solid #dbe5e9;border-radius:14px;background:#fff;overflow:hidden}
+#processo-compra .pc-progress-step{position:relative;border:0;border-radius:10px;padding:12px 14px 12px 40px;background:transparent}
+#processo-compra .pc-progress-step:before{content:attr(data-step);position:absolute;left:12px;top:50%;transform:translateY(-50%);width:21px;height:21px;display:grid;place-items:center;border-radius:7px;background:#edf3f5;color:#6c838c;font-size:9px;font-weight:950}
+#processo-compra .pc-progress-step span{display:none}
+#processo-compra .pc-progress-step strong{margin:0;font-size:11px}
+#processo-compra .pc-progress-step.is-current{border:0;background:#eaf7f9;box-shadow:none}
+#processo-compra .pc-progress-step.is-current:before{background:#078fa5;color:#fff}
+#processo-compra .pc-progress-step.is-done{border:0;background:#f1f8f4}
+#processo-compra .pc-progress-step.is-done:before{content:'✓';background:#327257;color:#fff}
+#processo-compra .pc-next{padding:14px 18px;border-radius:13px;border-color:#c7e1e6;box-shadow:0 5px 18px rgba(36,82,98,.035)}
+#processo-compra .pc-tabs-shell{top:8px;padding:7px;border-radius:14px;box-shadow:0 8px 24px rgba(31,69,82,.06)}
+#processo-compra .pc-tab{min-height:38px;padding:9px 15px;border-radius:9px;font-size:11px}
+#processo-compra .pc-tab.is-active{background:#173f4e;color:#fff;box-shadow:0 5px 13px rgba(24,63,78,.15)}
+#processo-compra .pc-tab.is-active .pc-count{background:rgba(255,255,255,.18);color:#fff}
+#processo-compra .pc-workspace{grid-template-columns:minmax(0,1fr) 300px;gap:18px}
+#processo-compra .pc-main{gap:16px}
+#processo-compra .pc-aside{top:74px;gap:12px}
+#processo-compra .pc-card,#processo-compra .pc-provider,#processo-compra .pc-context-panel{border-radius:14px;border-color:#dce6e9;box-shadow:0 7px 22px rgba(31,69,82,.035)}
+#processo-compra .pc-card-head{padding:17px 20px;background:linear-gradient(180deg,#fcfefe,#f9fbfc)}
+#processo-compra .pc-card-head h2,#processo-compra .pc-card-head h3{font-size:16px;letter-spacing:-.01em}
+#processo-compra .pc-card-body{padding:20px}
+#processo-compra .pc-kpis{gap:12px}
+#processo-compra .pc-kpi{padding:16px 17px;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdfd);box-shadow:0 4px 14px rgba(31,69,82,.025)}
+#processo-compra .pc-kpi strong{font-size:21px}
+#processo-compra .pc-provider-static-head,#processo-compra .pc-provider summary{padding:16px 18px;background:#fbfdfd}
+#processo-compra .pc-provider-name{font-size:14px}
+#processo-compra .pc-provider-total{font-size:17px}
+#processo-compra .pc-form-grid{gap:14px 16px}
+#processo-compra .pc-field .cp-input{min-height:44px;border-radius:9px}
+#processo-compra .cp-table-wrap{border-radius:10px;overflow:auto}
+#processo-compra .cp-table thead th{background:#f2f6f7}
+#processo-compra .pc-quote-map{border-color:#cfdee3}
+#processo-compra .pc-quote-map .pc-card-head{background:#f4f9fa}
+#processo-compra .pc-note{border-radius:11px;padding:12px 14px}
+#processo-compra .pc-empty{padding:30px 20px}
+@media(max-width:1180px){#processo-compra .pc-workspace{grid-template-columns:1fr}#processo-compra .pc-aside{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){#processo-compra{padding:12px 12px 70px}#processo-compra .pc-hero{padding:18px;flex-direction:column}#processo-compra .pc-title{font-size:23px}#processo-compra .pc-progress{grid-template-columns:1fr 1fr!important;gap:4px}#processo-compra .pc-progress-step{padding-left:38px}#processo-compra .pc-aside{grid-template-columns:1fr}}
+
 </style>
 {% endblock %}
 
@@ -110,6 +173,11 @@
       <p class="pc-subtitle">
         {{ processo.obra.nome }}{% if processo.item_cronograma %} · {{ processo.item_cronograma.item }}{% endif %}
       </p>
+      <div class="pc-hero-meta">
+        <span class="pc-hero-chip"><strong>{{ necessidades|length }}</strong> item{{ necessidades|length|pluralize }}</span>
+        <span class="pc-hero-chip"><strong>{{ cotacoes|length }}</strong> fornecedor{{ cotacoes|length|pluralize }}</span>
+        <span class="pc-hero-chip"><strong>{{ pedidos|length }}</strong> pedido{{ pedidos|length|pluralize }}</span>
+      </div>
     </div>
     <div class="pc-hero-actions">
       <span class="pc-status">{{ processo.get_status_display }}</span>
@@ -119,10 +187,10 @@
   </header>
 
   <div class="pc-progress" aria-label="Andamento da compra" style="grid-template-columns:repeat(4,minmax(0,1fr))">
-    <div class="pc-progress-step {% if processo.etapa_atual == 'COTACAO' %}is-current{% else %}is-done{% endif %}"><span>1</span><strong>Cotação</strong></div>
-    <div class="pc-progress-step {% if processo.etapa_atual == 'COMPATIBILIZACAO' or processo.etapa_atual == 'NEGOCIACAO' %}is-current{% elif processo.etapa_atual == 'APROVACAO' or processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>2</span><strong>Compatibilização / negociação</strong></div>
-    <div class="pc-progress-step {% if processo.etapa_atual == 'APROVACAO' %}is-current{% elif processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>3</span><strong>Aprovação do gestor</strong></div>
-    <div class="pc-progress-step {% if processo.etapa_atual == 'CONTRATACAO' %}is-current{% elif processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>4</span><strong>Pedidos / entrega</strong></div>
+    <div data-step="1" class="pc-progress-step {% if processo.etapa_atual == 'COTACAO' %}is-current{% else %}is-done{% endif %}"><span>1</span><strong>Cotação</strong></div>
+    <div data-step="2" class="pc-progress-step {% if processo.etapa_atual == 'COMPATIBILIZACAO' or processo.etapa_atual == 'NEGOCIACAO' %}is-current{% elif processo.etapa_atual == 'APROVACAO' or processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>2</span><strong>Compatibilização / negociação</strong></div>
+    <div data-step="3" class="pc-progress-step {% if processo.etapa_atual == 'APROVACAO' %}is-current{% elif processo.etapa_atual == 'CONTRATACAO' or processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>3</span><strong>Aprovação do gestor</strong></div>
+    <div data-step="4" class="pc-progress-step {% if processo.etapa_atual == 'CONTRATACAO' %}is-current{% elif processo.etapa_atual == 'CONTRATADO' %}is-done{% endif %}"><span>4</span><strong>Pedidos / entrega</strong></div>
   </div>
 
   <section class="pc-next">
@@ -199,8 +267,91 @@
   <section class="pc-tab-panel" data-panel="cotacao">
     <div class="pc-workspace">
       <main class="pc-main">
-        {% if fase_comercial_aberta and pode_editar %}
-        
+        {% if solicitacoes_cotacao %}
+          <section class="pc-card">
+            <div class="pc-card-head">
+              <div>
+                <h2>Envio das solicitações de cotação</h2>
+                <p>Controle por fornecedor do que ainda precisa ser enviado, do que já está aguardando retorno e das propostas recebidas.</p>
+              </div>
+            </div>
+            <div class="pc-card-body pc-card-body--flush">
+              <div class="cp-table-wrap">
+                <table class="pc-items-table">
+                  <thead>
+                    <tr>
+                      <th>Fornecedor</th>
+                      <th>Status da solicitação</th>
+                      <th>Envio</th>
+                      <th>Responsável</th>
+                      <th>Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for solicitacao in solicitacoes_cotacao %}
+                      <tr>
+                        <td><strong>{{ solicitacao.fornecedor.nome }}</strong></td>
+                        <td>
+                          {% if solicitacao.status == 'PENDENTE_ENVIO' %}
+                            <span class="pc-proposal-state">Pendente de envio</span>
+                          {% elif solicitacao.status == 'ENVIADA' %}
+                            <span class="pc-proposal-state is-sent">Aguardando proposta</span>
+                          {% elif solicitacao.status == 'RESPONDIDA' %}
+                            <span class="pc-proposal-state is-sent">Proposta recebida</span>
+                          {% else %}
+                            <span class="pc-proposal-state">{{ solicitacao.get_status_display }}</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if solicitacao.enviada_em %}
+                            <strong>{{ solicitacao.enviada_em|date:"d/m/Y H:i" }}</strong>
+                            {% if solicitacao.meio_envio %}<small style="display:block">{{ solicitacao.get_meio_envio_display }}</small>{% endif %}
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
+                        <td>{% if solicitacao.enviada_por %}{{ solicitacao.enviada_por.get_full_name|default:solicitacao.enviada_por.username }}{% else %}—{% endif %}</td>
+                        <td>
+                          {% if solicitacao.status == 'PENDENTE_ENVIO' and fase_comercial_aberta and permissoes_compras.pode_cotar %}
+                            <details class="pc-edit-proposal">
+                              <summary>Registrar envio <span>⌄</span></summary>
+                              <div class="pc-edit-proposal-body">
+                                <form method="post" action="{% url 'compras:marcar_solicitacao_enviada' processo.pk solicitacao.pk %}">
+                                  {% csrf_token %}
+                                  <div class="pc-form-grid">
+                                    <div class="pc-field">
+                                      <label>Forma de envio</label>
+                                      <select name="meio_envio" class="cp-input">
+                                        <option value="">Não informar</option>
+                                        {% for valor, rotulo in meios_envio_cotacao %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}
+                                      </select>
+                                    </div>
+                                    <div class="pc-field wide">
+                                      <label>Observação</label>
+                                      <input type="text" name="observacao_envio" class="cp-input" placeholder="Opcional">
+                                    </div>
+                                  </div>
+                                  <div class="pc-form-actions" style="margin-top:10px">
+                                    <button type="submit" class="cp-btn cp-btn--primary cp-btn--sm">Confirmar envio</button>
+                                  </div>
+                                </form>
+                              </div>
+                            </details>
+                          {% elif solicitacao.status == 'ENVIADA' %}
+                            <span class="pc-provider-meta">Aguardando retorno</span>
+                          {% elif solicitacao.status == 'RESPONDIDA' %}
+                            <span class="pc-provider-meta">Concluído</span>
+                          {% else %}
+                            —
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
         {% endif %}
 
         {% for bloco in propostas_forms %}
@@ -212,7 +363,13 @@
               </div>
               <div class="pc-provider-head-actions">
                 <div class="pc-provider-total">R$ {{ bloco.cotacao.total_proposta|floatformat:2 }}</div>
-                {% if fase_comercial_aberta and pode_editar %}
+                {% if bloco.cotacao.enviada_compatibilizacao_em %}
+                  <span class="pc-proposal-state is-sent">Enviada para compatibilização</span>
+                {% elif fase_comercial_aberta and permissoes_compras.pode_cotar %}
+                  <form method="post" action="{% url 'compras:enviar_cotacao_compatibilizacao' processo.pk bloco.cotacao.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="cp-btn cp-btn--primary cp-btn--sm">Enviar para compatibilização</button>
+                  </form>
                   <form method="post"
                         action="{% url 'compras:excluir_cotacao' processo.pk bloco.cotacao.pk %}"
                         class="pc-delete-proposal-form"
@@ -228,6 +385,9 @@
               <div class="pc-saved-bar">
                 <div>
                   <strong>✓ Dados da proposta salvos</strong>
+                  {% if bloco.cotacao.enviada_compatibilizacao_em %}
+                    <small>Enviada para análise técnica em {{ bloco.cotacao.enviada_compatibilizacao_em|date:"d/m/Y H:i" }}</small>
+                  {% endif %}
                 </div>
                 {% if bloco.cotacao.atualizado_em %}<span>Atualizada em {{ bloco.cotacao.atualizado_em|date:"d/m/Y H:i" }}</span>{% endif %}
               </div>
@@ -272,7 +432,7 @@
                 </table>
               </div>
 
-              {% if fase_comercial_aberta and pode_editar %}
+              {% if fase_comercial_aberta and permissoes_compras.pode_cotar and not bloco.cotacao.enviada_compatibilizacao_em %}
                 <details class="pc-edit-proposal">
                   <summary>Editar proposta <span>⌄</span></summary>
                   <div class="pc-edit-proposal-body">
@@ -325,7 +485,89 @@
           <div class="pc-card"><div class="pc-empty">Nenhuma proposta cadastrada ainda.</div></div>
         {% endfor %}
 
-        {% if fase_comercial_aberta and pode_editar and form_proposta_nova %}
+        {% if cotacoes %}
+          <section class="pc-card pc-quote-map">
+            <div class="pc-card-head">
+              <div>
+                <h2>Mapa de cotação</h2>
+                <p>Matriz materiais × fornecedores. O menor preço por item é destacado em verde; prazo e avaliação são sinalizados no cabeçalho.</p>
+              </div>
+              <div class="pc-map-legend">
+                <span><i class="price"></i>Menor preço</span>
+                <span><i class="deadline"></i>Menor prazo</span>
+                <span><i class="rating"></i>Melhor avaliação</span>
+              </div>
+            </div>
+            <div class="pc-card-body pc-card-body--flush">
+              <div class="pc-map-wrap">
+                <table class="pc-map-table">
+                  <thead>
+                    <tr>
+                      <th class="sticky-col item-col">Material</th>
+                      <th class="sticky-col qty-col">Qtd.</th>
+                      {% for cotacao in cotacoes %}
+                        <th class="supplier-col">
+                          <strong>{{ cotacao.fornecedor.nome }}</strong>
+                          <div class="pc-map-badges">
+                            {% if cotacao.menor_prazo %}<span class="is-deadline">Menor prazo</span>{% endif %}
+                            {% if cotacao.melhor_avaliado %}<span class="is-rating">Melhor avaliado</span>{% endif %}
+                            {% if cotacao.enviada_compatibilizacao_em %}<span class="is-sent">Em compatibilização</span>{% endif %}
+                          </div>
+                        </th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for linha in matriz_cotacao %}
+                      <tr>
+                        <td class="sticky-col item-col">
+                          <strong>{{ linha.necessidade.descricao }}</strong>
+                          {% if linha.necessidade.especificacao %}<small>{{ linha.necessidade.especificacao }}</small>{% endif %}
+                        </td>
+                        <td class="sticky-col qty-col"><strong>{{ linha.necessidade.quantidade_incluida|floatformat:"-4" }}</strong><small>{{ linha.necessidade.unidade }}</small></td>
+                        {% for oferta in linha.ofertas %}
+                          <td class="pc-map-offer {% if oferta.menor_preco %}is-best-price{% endif %}">
+                            {% if oferta.item %}
+                              <span>Unit. R$ {{ oferta.item.valor_unitario_cotado|floatformat:"-4" }}</span>
+                              <strong>R$ {{ oferta.item.valor_total_cotado|floatformat:2 }}</strong>
+                              {% if oferta.menor_preco %}<em>Menor preço</em>{% endif %}
+                            {% else %}
+                              <span class="pc-map-empty">Não cotado</span>
+                            {% endif %}
+                          </td>
+                        {% endfor %}
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Total da proposta</th>
+                      {% for cotacao in cotacoes %}<td><strong>R$ {{ cotacao.total_proposta|floatformat:2 }}</strong></td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Frete</th>
+                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Condição de pagamento</th>
+                      {% for cotacao in cotacoes %}<td>{{ cotacao.condicao_pagamento|default:"—" }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Prazo de entrega</th>
+                      {% for cotacao in cotacoes %}<td class="{% if cotacao.menor_prazo %}is-best-meta{% endif %}">{% if cotacao.prazo_entrega_dias is not None %}{{ cotacao.prazo_entrega_dias }} dias{% else %}—{% endif %}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Avaliação do fornecedor</th>
+                      {% for cotacao in cotacoes %}<td class="{% if cotacao.melhor_avaliado %}is-best-meta{% endif %}">{% if cotacao.fornecedor.avaliacao is not None %}★ {{ cotacao.fornecedor.avaliacao|floatformat:1 }}/5{% else %}Não avaliado{% endif %}</td>{% endfor %}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </section>
+        {% endif %}
+
+        {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_proposta_nova and pode_cadastrar_nova_proposta %}
           <details class="pc-provider" {% if not cotacoes %}open{% endif %}>
             <summary>
              <div>
@@ -500,19 +742,9 @@
 </div>
 </details> 
 
-          {% if processo.etapa_atual == 'COTACAO' %}
-            <div class="pc-form-footer">
-              <div>
-                <strong style="font-size:10px;color:#31515f">Quando houver ao menos uma proposta, inicie a análise técnica.</strong>
-                <span class="pc-subtitle">O mapa não será fechado: novas propostas poderão ser incluídas normalmente depois.</span>
-              </div>
-              <div class="pc-form-actions">
-                <form method="post" action="{% url 'compras:concluir_cotacao' processo.pk %}">{% csrf_token %}<button class="cp-btn cp-btn--primary" type="submit">Iniciar análise técnica</button></form>
-              </div>
-            </div>
-          {% else %}
-            <div class="pc-note pc-note--warn"><strong>Mapa comercial aberto.</strong> Você pode continuar incluindo e editando propostas enquanto compatibiliza e negocia as ofertas já recebidas. O mapa só fecha ao ser enviado para aprovação.</div>
-          {% endif %}
+          <div class="pc-note pc-note--warn"><strong>Envio individual.</strong> Cada proposta possui o botão “Enviar para compatibilização”. Somente a proposta enviada aparece para a análise técnica; as demais continuam em cotação e podem ser editadas normalmente.</div>
+        {% elif fase_comercial_aberta and permissoes_compras.pode_cotar and form_proposta_nova and not pode_cadastrar_nova_proposta %}
+          <div class="pc-note pc-note--warn"><strong>Cotação bloqueada.</strong> Registre primeiro o envio da solicitação para pelo menos um fornecedor. A proposta só ficará disponível para os fornecedores com envio confirmado.</div>
         {% elif not fase_comercial_aberta %}
           <div class="pc-note">O mapa comercial foi fechado. As propostas permanecem disponíveis para conferência.</div>
         {% endif %}
@@ -530,53 +762,85 @@
             <div class="pc-card-head">
               <div>
                 <h2>Compatibilização técnica</h2>
+                <p>Analise as propostas item por item. As cores e o progresso ajudam a identificar rapidamente o que já foi decidido.</p>
               </div>
             </div>
             <div class="pc-card-body">
-              <div class="pc-stage-intro" style="margin-bottom:12px">
-                <div>
-                  <strong>Avalie cada proposta por item.</strong>
-                </div>
-              </div>
-
-              {% if pode_editar and form_analise_lote %}
-                <form method="post" action="{% url 'compras:analise_tecnica_lote' processo.pk %}">
+              {% if permissoes_compras.pode_compatibilizar and form_analise_lote %}
+                <form method="post" action="{% url 'compras:analise_tecnica_lote' processo.pk %}" data-tech-analysis-form>
                   {% csrf_token %}
-                  {% for grupo in form_analise_lote.grupos %}
-                    <div class="pc-need-block">
-                      <div class="pc-need-head">
-                        <div>
-                          <strong>{{ grupo.necessidade.descricao }}</strong>
-                          <small>{{ grupo.necessidade.quantidade_incluida|floatformat:"-4" }} {{ grupo.necessidade.unidade }}</small>
-                        </div>
-                      </div>
 
-                      <div class="pc-tech-list">
+                  <div class="pc-tech-progress" data-tech-progress>
+                    <div class="pc-tech-progress__main">
+                      <strong>Progresso da compatibilização</strong>
+                      <span><b data-tech-done>0</b> de <b data-tech-total>0</b> decisões analisadas</span>
+                    </div>
+                    <div class="pc-tech-stat"><span>Pendentes</span><strong data-tech-pending>0</strong></div>
+                    <div class="pc-tech-stat pc-tech-stat--ok"><span>Aprovadas</span><strong data-tech-approved>0</strong></div>
+                    <div class="pc-tech-stat pc-tech-stat--warn"><span>Ressalvas</span><strong data-tech-restricted>0</strong></div>
+                    <div class="pc-tech-stat pc-tech-stat--danger"><span>Reprovadas</span><strong data-tech-rejected>0</strong></div>
+                    <button class="cp-btn cp-btn--sm" type="button" data-next-tech-pending>Ir para próximo pendente</button>
+                  </div>
+
+                  <div class="pc-tech-guide">
+                    <div>
+                      <strong>Um bloco = um item solicitado</strong>
+                      <span>Dentro de cada item, compare os fornecedores e defina o resultado técnico de cada proposta.</span>
+                    </div>
+                    <div class="pc-tech-legend" aria-label="Legenda dos resultados">
+                      <i class="ok">Aprovado</i>
+                      <i class="warn">Com ressalva</i>
+                      <i class="danger">Reprovado</i>
+                    </div>
+                  </div>
+
+                  {% for grupo in form_analise_lote.grupos %}
+                    <section class="pc-tech-group" data-tech-group>
+                      <header class="pc-tech-group__head">
+                        <div class="pc-tech-index">{{ forloop.counter|stringformat:"02d" }}</div>
+                        <div class="pc-tech-group__title">
+                          <small>Item {{ forloop.counter }} de {{ form_analise_lote.grupos|length }}</small>
+                          <strong>{{ grupo.necessidade.descricao }}</strong>
+                          {% if grupo.necessidade.especificacao %}<p>{{ grupo.necessidade.especificacao }}</p>{% endif %}
+                        </div>
+                        <div class="pc-tech-group__meta">
+                          <span class="pc-tech-chip">Solicitado: {{ grupo.necessidade.quantidade_incluida|floatformat:"-4" }} {{ grupo.necessidade.unidade }}</span>
+                          <span class="pc-tech-chip">{{ grupo.linhas|length }} proposta{{ grupo.linhas|length|pluralize }}</span>
+                          <span class="pc-tech-group-state" data-tech-group-state>Pendente</span>
+                        </div>
+                      </header>
+
+                      <div class="pc-tech-group__body">
                         {% for linha in grupo.linhas %}
-                          <article class="pc-tech-item">
-                            <div class="pc-tech-item__head">
-                              <div class="pc-tech-item__name">
+                          <article class="pc-tech-offer is-pending" data-tech-offer>
+                            <div class="pc-tech-offer__main">
+                              <div class="pc-tech-offer__number">{{ forloop.counter }}</div>
+
+                              <div class="pc-tech-supplier">
                                 <strong>{{ linha.item.cotacao.fornecedor.nome }}</strong>
                                 <small>
                                   {{ linha.item.quantidade|floatformat:"-4" }} {{ grupo.necessidade.unidade }}
-                                  {% if linha.item.marca %} · {{ linha.item.marca }}{% endif %}
+                                  {% if linha.item.marca %} · Marca: {{ linha.item.marca }}{% endif %}
                                 </small>
                               </div>
 
-                              <div class="pc-tech-item__price">
-                                <span>Preço cotado</span>
+                              <div class="pc-tech-price">
+                                <span>Preço unitário cotado</span>
                                 <strong>R$ {{ linha.item.valor_unitario_cotado|floatformat:"-4" }}</strong>
                               </div>
 
-                              <div class="pc-inline-field">
-                                <label>Resultado técnico</label>
-                                {{ linha.resultado }}
+                              <div class="pc-tech-decision">
+                                <div class="pc-inline-field">
+                                  <label>Resultado técnico</label>
+                                  {{ linha.resultado }}
+                                </div>
+                                <span class="pc-tech-status" data-tech-status>Pendente</span>
                               </div>
                             </div>
 
-                            <details class="pc-tech-item__details" {% if linha.ressalva.errors %}open{% endif %}>
-                              <summary>Adicionar ressalva ou observação</summary>
-                              <div class="pc-tech-item__details-body">
+                            <details class="pc-tech-offer__details" {% if linha.ressalva.errors %}open{% endif %}>
+                              <summary>Ressalva ou observação técnica</summary>
+                              <div class="pc-tech-offer__details-body">
                                 <div class="pc-field">
                                   <label>Motivo da ressalva</label>
                                   {{ linha.ressalva }}
@@ -592,20 +856,22 @@
                           </article>
                         {% endfor %}
                       </div>
-                    </div>
+                    </section>
                   {% empty %}
-                    <div class="pc-empty">Não existem itens cotados para compatibilizar.</div>
+                    <div class="pc-empty">Nenhuma proposta foi enviada para compatibilização. O comprador deve enviar uma proposta individualmente pela aba Cotação.</div>
                   {% endfor %}
 
+                  {% if form_analise_lote.grupos %}
                   <div class="pc-form-footer">
                     <div>
-                      <strong style="display:block;color:#31515f;font-size:11px">Salve o que já foi analisado.</strong>
-                      <span class="pc-subtitle">Não é necessário concluir todos os fornecedores para seguir negociando as propostas aprovadas.</span>
+                      <strong style="display:block;color:#31515f;font-size:11px">Salve a compatibilização realizada.</strong>
+                      <span class="pc-subtitle">Os resultados ficam registrados por proposta. Você pode continuar a análise posteriormente.</span>
                     </div>
                     <div class="pc-form-actions">
                       <button class="cp-btn cp-btn--primary" type="submit">Salvar compatibilização</button>
                     </div>
                   </div>
+                  {% endif %}
                 </form>
               {% else %}
                 <div class="pc-note">Você pode consultar as ofertas, mas não possui permissão de edição.</div>
@@ -623,7 +889,7 @@
               </div>
             </div>
             <div class="pc-card-body">
-              {% if pode_editar and form_decisao_lote %}
+              {% if permissoes_compras.pode_negociar and form_decisao_lote %}
                 <form method="post" action="{% url 'compras:decisao_comercial_lote' processo.pk %}" data-decisao-form>
                   {% csrf_token %}
                   {% for grupo in form_decisao_lote.grupos %}
@@ -746,7 +1012,7 @@
           <div class="pc-note pc-note--danger">
             <strong>Compra reprovada.</strong> Este processo foi encerrado pelo gestor e nenhum pedido foi gerado.
           </div>
-        {% elif processo.etapa_atual == 'APROVACAO' and pode_aprovar and form_aprovacao %}
+        {% elif processo.etapa_atual == 'APROVACAO' and permissoes_compras.pode_aprovar and form_aprovacao %}
           <div class="pc-stage-intro">
             <div>
               <strong>Escolha do gestor</strong>
@@ -757,94 +1023,89 @@
           <form method="post" action="{% url 'compras:aprovar' processo.pk %}" data-aprovacao-form>
             {% csrf_token %}
 
-            {% for grupo in form_aprovacao.grupos %}
-              <section class="pc-card">
-                <div class="pc-card-head">
-                  <div>
-                    <h2>{{ grupo.necessidade.descricao }}</h2>
-                    <p>{% if grupo.necessidade.especificacao %}{{ grupo.necessidade.especificacao }} · {% endif %}Necessidade: {{ grupo.necessidade.quantidade_incluida|floatformat:"-4" }} {{ grupo.necessidade.unidade }}</p>
-                  </div>
+            <section class="pc-card pc-quote-map">
+              <div class="pc-card-head">
+                <div>
+                  <h2>Mapa de cotação para decisão</h2>
+                  <p>Mesma matriz materiais × fornecedores usada pelo comprador. Clique nas células elegíveis para escolher os itens que irão compor os pedidos.</p>
                 </div>
-                <div class="pc-card-body pc-card-body--flush">
-                  <div class="cp-table-wrap">
-                    <table class="cp-table pc-approval-table">
-                      <thead>
+                <div class="pc-map-legend">
+                  <span><i class="price"></i>Menor valor final</span>
+                  <span><i class="deadline"></i>Menor prazo</span>
+                  <span><i class="rating"></i>Melhor avaliação</span>
+                </div>
+              </div>
+              <div class="pc-card-body pc-card-body--flush">
+                <div class="cp-table-wrap">
+                  <table class="pc-quote-matrix pc-manager-map">
+                    <thead>
+                      <tr>
+                        <th class="sticky-col item-col">Material</th>
+                        <th class="sticky-col qty-col">Qtde.</th>
+                        {% for cotacao in cotacoes %}
+                          <th>
+                            <div class="pc-map-supplier">
+                              <strong>{{ cotacao.fornecedor.nome }}</strong>
+                              <span>{% if cotacao.fornecedor.avaliacao is not None %}★ {{ cotacao.fornecedor.avaliacao|floatformat:1 }}/5{% else %}Não avaliado{% endif %}</span>
+                              <div class="pc-map-tags">
+                                {% if cotacao.menor_prazo %}<em class="deadline">Menor prazo</em>{% endif %}
+                                {% if cotacao.melhor_avaliado %}<em class="rating">Melhor avaliado</em>{% endif %}
+                              </div>
+                            </div>
+                          </th>
+                        {% endfor %}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for linha in matriz_cotacao %}
                         <tr>
-                          <th>Fornecedor</th>
-                          <th>Compatibilização</th>
-                          <th>Qtd. ofertada</th>
-                          <th>Cotado</th>
-                          <th>Negociado</th>
-                          <th>Dif. custo</th>
-                          <th>Prazo / diferença</th>
-                          <th>Pagamento</th>
-                          <th>Qtd. a aprovar</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for linha in grupo.linhas %}
-                          <tr>
-                            <td>
-                              <strong>{{ linha.item.cotacao.fornecedor.nome }}</strong>
-                              {% if linha.item.marca %}<div class="cp-muted">{{ linha.item.marca }}</div>{% endif %}
-                            </td>
-                            <td>
-                              {% if linha.item.compatibilizacoes.first.resultado == 'APROVADO_COM_RESSALVA' %}
-                                <span class="cp-badge cp-badge--warn">Com ressalva</span>
-                                {% if linha.item.compatibilizacoes.first.ressalva_motivo %}
-                                  <span class="pc-tech-note">{{ linha.item.compatibilizacoes.first.ressalva_motivo }}</span>
+                          <td class="sticky-col item-col">
+                            <strong>{{ linha.necessidade.descricao }}</strong>
+                            {% if linha.necessidade.especificacao %}<small>{{ linha.necessidade.especificacao }}</small>{% endif %}
+                          </td>
+                          <td class="sticky-col qty-col"><strong>{{ linha.necessidade.quantidade_incluida|floatformat:"-4" }}</strong><small>{{ linha.necessidade.unidade }}</small></td>
+                          {% for oferta in linha.ofertas %}
+                            <td class="pc-map-offer pc-manager-choice {% if oferta.menor_valor_final %}is-best-price{% endif %} {% if not oferta.elegivel_aprovacao %}is-disabled{% endif %}">
+                              {% if oferta.item %}
+                                {% if oferta.elegivel_aprovacao %}
+                                  <label class="pc-map-choice-label">
+                                    <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk }}" class="pc-map-choice-input">
+                                    <span class="pc-map-choice-check">✓</span>
+                                    <span>Unit. final R$ {{ oferta.valor_final|floatformat:"-4" }}</span>
+                                    <strong>R$ {{ oferta.total_final|floatformat:2 }}</strong>
+                                    <small>{{ oferta.item.quantidade|floatformat:"-4" }} {{ linha.necessidade.unidade }} ofertado</small>
+                                    {% if oferta.menor_valor_final %}<em>Menor valor final</em>{% endif %}
+                                  </label>
+                                {% else %}
+                                  <span>Unit. R$ {{ oferta.item.valor_unitario_cotado|floatformat:"-4" }}</span>
+                                  <strong>R$ {{ oferta.item.valor_total_cotado|floatformat:2 }}</strong>
+                                  <small>Não elegível para aprovação</small>
                                 {% endif %}
                               {% else %}
-                                <span class="cp-badge cp-badge--ok">Aprovado</span>
+                                <span class="pc-map-empty">Não cotado</span>
                               {% endif %}
                             </td>
-                            <td>{{ linha.item.quantidade|floatformat:"-4" }} {{ grupo.necessidade.unidade }}</td>
-                            <td>R$ {{ linha.item.valor_unitario_cotado|floatformat:"-4" }}</td>
-                            <td><strong>R$ {{ linha.valor_final|floatformat:"-4" }}</strong><div class="cp-muted">Total: R$ {{ linha.total_opcao|floatformat:2 }}</div></td>
-                            <td>
-                              {% if linha.menor_custo %}<span class="cp-badge cp-badge--ok">Menor custo</span>
-                              {% else %}<strong class="pc-diff-cost">+ R$ {{ linha.diferenca_valor|floatformat:2 }}</strong>{% endif %}
-                            </td>
-                            <td>
-                              <strong>{% if linha.prazo_final is not None %}{{ linha.prazo_final }} dias{% else %}—{% endif %}</strong>
-                              <div class="cp-muted">{% if linha.menor_prazo %}Menor prazo{% elif linha.diferenca_dias is not None %}+ {{ linha.diferenca_dias }} dias{% else %}—{% endif %}</div>
-                            </td>
-                            <td>
-                              {% if linha.negociacao and linha.negociacao.condicao_pagamento_negociada %}
-                                {{ linha.negociacao.condicao_pagamento_negociada }}
-                              {% else %}
-                                {{ linha.item.cotacao.condicao_pagamento|default:"—" }}
-                              {% endif %}
-                            </td>
-                            <td>
-                              <div class="pc-field">
-                                {{ linha.quantidade }}
-                                <div class="pc-help">0 = não escolher</div>
-                                {% for e in linha.quantidade.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}
-                              </div>
-                            </td>
-                          </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
+                          {% endfor %}
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot>
+                      <tr><th colspan="2" class="sticky-col">Frete</th>{% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete|floatformat:2 }}</td>{% endfor %}</tr>
+                      <tr><th colspan="2" class="sticky-col">Condição de pagamento</th>{% for cotacao in cotacoes %}<td>{{ cotacao.condicao_pagamento|default:"—" }}</td>{% endfor %}</tr>
+                      <tr><th colspan="2" class="sticky-col">Prazo de entrega</th>{% for cotacao in cotacoes %}<td class="{% if cotacao.menor_prazo %}is-best-meta{% endif %}">{% if cotacao.prazo_entrega_dias is not None %}{{ cotacao.prazo_entrega_dias }} dias{% else %}—{% endif %}</td>{% endfor %}</tr>
+                      <tr><th colspan="2" class="sticky-col">Avaliação</th>{% for cotacao in cotacoes %}<td class="{% if cotacao.melhor_avaliado %}is-best-meta{% endif %}">{% if cotacao.fornecedor.avaliacao is not None %}★ {{ cotacao.fornecedor.avaliacao|floatformat:1 }}/5{% else %}Não avaliado{% endif %}</td>{% endfor %}</tr>
+                    </tfoot>
+                  </table>
                 </div>
-              </section>
-            {% empty %}
-              <div class="pc-empty">Nenhuma proposta tecnicamente aprovada foi enviada ao gestor.</div>
-            {% endfor %}
+              </div>
+            </section>
 
             {% if form_aprovacao.non_field_errors %}
               {% for e in form_aprovacao.non_field_errors %}<div class="pc-note pc-note--danger">{{ e }}</div>{% endfor %}
             {% endif %}
 
             <section class="pc-card">
-              <div class="pc-card-head">
-                <div>
-                  <h2>Confirmar decisão</h2>
-
-                </div>
-              </div>
+              <div class="pc-card-head"><div><h2>Confirmar decisão</h2><p>Ao aprovar, o sistema usa as quantidades das ofertas selecionadas e monta os pedidos automaticamente por fornecedor.</p></div></div>
               <div class="pc-card-body">
                 <div class="pc-manager-decision">
                   <div class="pc-field">
@@ -859,7 +1120,7 @@
                     {% for e in form_aprovacao.observacao.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}
                   </div>
                   <div class="pc-form-actions">
-                    <button class="cp-btn cp-btn--primary" type="submit">Confirmar decisão</button>
+                    <button class="cp-btn cp-btn--primary" type="submit">Aprovar seleção e montar pedidos</button>
                   </div>
                 </div>
               </div>
@@ -888,7 +1149,7 @@
                   </tbody>
                 </table>
               </div>
-              {% if not pode_aprovar %}<div class="pc-note pc-note--warn" style="margin:14px">Seu usuário não possui permissão para registrar a decisão.</div>{% endif %}
+              {% if not permissoes_compras.pode_aprovar %}<div class="pc-note pc-note--warn" style="margin:14px">Seu usuário não possui permissão para registrar a decisão.</div>{% endif %}
             </div>
           </section>
         {% else %}
@@ -944,7 +1205,7 @@
                   {% if pedido.anexos.all %}
                     <div class="pc-file-chips">{% for anexo in pedido.anexos.all %}<a href="{{ anexo.arquivo.url }}" target="_blank" rel="noopener">{{ anexo.nome_arquivo }}</a>{% endfor %}</div>
                   {% endif %}
-                  {% if pode_editar %}
+                  {% if permissoes_compras.pode_gerenciar_pedidos %}
                     <form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}" class="pc-upload-inline">
                       {% csrf_token %}<input type="hidden" name="origem" value="processo">
                       <input class="cp-input" type="file" name="arquivos" multiple required>
@@ -1195,6 +1456,54 @@
       });
     });
   });
+
+  const techForm=root.querySelector('[data-tech-analysis-form]');
+  if(techForm){
+    const offers=[...techForm.querySelectorAll('[data-tech-offer]')];
+    const groups=[...techForm.querySelectorAll('[data-tech-group]')];
+    const normalizeDecision=select=>{
+      if(!select)return 'pending';
+      const option=select.options?.[select.selectedIndex];
+      const text=(option?.textContent||'').trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const value=(select.value||'').trim().toLocaleLowerCase('pt-BR');
+      const basis=`${text} ${value}`;
+      if(!value||basis.includes('pendente')||basis.includes('selecione'))return 'pending';
+      if(basis.includes('ressalva'))return 'restricted';
+      if(basis.includes('reprov'))return 'rejected';
+      if(basis.includes('aprov'))return 'approved';
+      return 'pending';
+    };
+    const labels={pending:'Pendente',approved:'Aprovado',restricted:'Com ressalva',rejected:'Reprovado'};
+    const refreshTech=()=>{
+      const counts={pending:0,approved:0,restricted:0,rejected:0};
+      offers.forEach(offer=>{
+        const select=offer.querySelector('.pc-tech-decision select');
+        const state=normalizeDecision(select);
+        Object.keys(counts).forEach(k=>offer.classList.toggle(`is-${k}`,k===state));
+        const status=offer.querySelector('[data-tech-status]');
+        if(status)status.textContent=labels[state];
+        counts[state]++;
+      });
+      groups.forEach(group=>{
+        const states=[...group.querySelectorAll('[data-tech-offer]')].map(offer=>normalizeDecision(offer.querySelector('.pc-tech-decision select')));
+        const pending=states.filter(s=>s==='pending').length;
+        group.classList.toggle('is-complete',states.length>0&&pending===0);
+        group.classList.toggle('is-partial',pending>0&&pending<states.length);
+        const state=group.querySelector('[data-tech-group-state]');
+        if(state)state.textContent=pending===0?'Concluído':(pending<states.length?`${pending} pendente${pending===1?'':'s'}`:'Pendente');
+      });
+      const total=offers.length,done=total-counts.pending;
+      const set=(sel,val)=>{const el=techForm.querySelector(sel);if(el)el.textContent=val;};
+      set('[data-tech-total]',total);set('[data-tech-done]',done);set('[data-tech-pending]',counts.pending);set('[data-tech-approved]',counts.approved);set('[data-tech-restricted]',counts.restricted);set('[data-tech-rejected]',counts.rejected);
+    };
+    techForm.addEventListener('change',e=>{if(e.target.matches('.pc-tech-decision select'))refreshTech();});
+    techForm.querySelector('[data-next-tech-pending]')?.addEventListener('click',()=>{
+      const pending=offers.find(offer=>normalizeDecision(offer.querySelector('.pc-tech-decision select'))==='pending');
+      pending?.scrollIntoView({behavior:'smooth',block:'center'});
+      pending?.querySelector('.pc-tech-decision select')?.focus({preventScroll:true});
+    });
+    refreshTech();
+  }
 
   root.querySelectorAll('[data-need-block]').forEach(block=>{
     const update=()=>{

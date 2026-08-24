@@ -8,7 +8,9 @@
   .cp-order{overflow:hidden;border:1px solid var(--cp-line);border-radius:16px;background:#fff;box-shadow:0 8px 24px rgba(34,61,70,.055)}
   .cp-order__head{display:grid;grid-template-columns:minmax(230px,1.55fr) minmax(120px,.65fr) minmax(130px,.7fr) minmax(160px,.8fr) auto;gap:16px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--cp-line);background:linear-gradient(180deg,#fff 0%,#fbfdfe 100%)}
   .cp-order__number{margin-bottom:3px;color:var(--cp-primary-dark);font-size:15px;font-weight:900;letter-spacing:.01em}
-  .cp-order__supplier{color:var(--cp-ink);font-size:12px;font-weight:850}
+  .cp-order__supplier{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:var(--cp-ink);font-size:12px;font-weight:850}
+  .cp-order__supplier-label{display:inline-flex;align-items:center;padding:3px 6px;border-radius:999px;background:var(--cp-primary-soft);color:var(--cp-primary-dark);font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em}
+  .cp-order__supplier-name{color:var(--cp-ink);font-size:12px;font-weight:900}
   .cp-order__meta{margin-top:4px;color:var(--cp-muted);font-size:10px}
   .cp-order__label{display:block;margin-bottom:4px;color:var(--cp-muted);font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.075em}
   .cp-order__value{text-align:right;color:var(--cp-ink);font-size:18px;font-weight:900;white-space:nowrap}
@@ -19,7 +21,7 @@
   .cp-order__body{padding:0 17px 17px}
   .cp-order-details{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,.72fr);gap:14px}
   .cp-order-main,.cp-order-actions{display:grid;gap:12px;align-content:start}
-  .cp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .cp-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
   .cp-kpi{padding:11px 12px;border:1px solid var(--cp-line);border-radius:11px;background:#fbfcfd}
   .cp-kpi span{display:block;margin-bottom:4px;color:var(--cp-muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.055em}
   .cp-kpi strong{display:block;color:var(--cp-ink);font-size:12px}
@@ -50,6 +52,8 @@
   .cp-receive-row{display:grid;grid-template-columns:minmax(0,1fr) 105px 128px;gap:7px;align-items:end;padding:9px;border:1px solid var(--cp-line);border-radius:10px;background:#fbfcfd}
   .cp-receive-name strong{display:block;color:var(--cp-ink);font-size:10px}.cp-receive-name span{display:block;margin-top:3px;color:var(--cp-muted);font-size:9px}
   .cp-mini-label{display:block;margin-bottom:4px;color:var(--cp-muted);font-size:8px;font-weight:850;text-transform:uppercase}
+  .cp-overage{display:inline-flex;margin-top:4px;padding:3px 6px;border-radius:999px;background:#fff1e6;color:#a54b00;font-size:8px;font-weight:900}
+  .cp-receive-help{padding:9px 10px;border:1px solid #b8d8de;border-radius:9px;background:#f5fbfc;color:#466772;font-size:9px;line-height:1.45}
   .cp-nf-total-box{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 11px;border:1px solid #b8d8de;border-radius:10px;background:var(--cp-primary-soft)}
   .cp-nf-total-box span{color:var(--cp-primary-dark);font-size:9px;font-weight:850}.cp-nf-total-box strong{color:var(--cp-primary-dark);font-size:13px}
   .cp-file-input{padding:8px;background:#fff}
@@ -98,7 +102,7 @@
     <div class="cp-order__head">
       <div>
         <div class="cp-order__number">{{ pedido.numero }}</div>
-        <div class="cp-order__supplier">{{ pedido.fornecedor.nome }}</div>
+        <div class="cp-order__supplier"><span class="cp-order__supplier-label">Fornecedor</span><span class="cp-order__supplier-name">{{ pedido.fornecedor.nome|default:"—" }}</span></div>
         <div class="cp-order__meta">{{ pedido.obra.nome }} · <a href="{% url 'compras:detalhe_processo' pedido.processo.pk %}">{{ pedido.processo.numero }}</a></div>
       </div>
       <div>
@@ -126,6 +130,7 @@
               <div class="cp-kpi"><span>Descontos</span><strong>R$ {{ pedido.descontos|floatformat:2 }}</strong></div>
               <div class="cp-kpi"><span>Frete</span><strong>R$ {{ pedido.frete|floatformat:2 }}</strong></div>
               <div class="cp-kpi"><span>Pagamento</span><strong>{{ pedido.condicao_pagamento|default:"—" }}</strong></div>
+              <div class="cp-kpi"><span>Fornecedor</span><strong>{{ pedido.fornecedor.nome|default:"—" }}</strong></div>
             </div>
 
             <section class="cp-panel">
@@ -138,7 +143,10 @@
                     <tr>
                       <td><strong>{{ item.descricao }}</strong>{% if item.especificacao %}<div class="cp-muted">{{ item.especificacao|truncatechars:80 }}</div>{% endif %}</td>
                       <td>{{ item.quantidade|floatformat:"-4" }} {{ item.unidade }}</td>
-                      <td>{{ item.quantidade_recebida|floatformat:"-4" }} {{ item.unidade }}</td>
+                      <td>
+                        {{ item.quantidade_recebida|floatformat:"-4" }} {{ item.unidade }}
+                        {% if item.quantidade_excedente > 0 %}<div><span class="cp-overage">+{{ item.quantidade_excedente|floatformat:"-4" }} excedente</span></div>{% endif %}
+                      </td>
                       <td><strong>{{ item.saldo_receber|floatformat:"-4" }}</strong> {{ item.unidade }}</td>
                       <td>R$ {{ item.valor_unitario|floatformat:2 }}</td>
                       <td>R$ {{ item.valor_total|floatformat:2 }}</td>
@@ -187,6 +195,7 @@
           <aside class="cp-order-actions">
             {% if pedido.status != 'ENTREGUE' and pedido.status != 'CANCELADO' %}
               {% if pedido.transicoes_status_permitidas %}
+                {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.gerenciar_pedidos %}
               <details class="cp-action-card">
                 <summary>Atualizar andamento</summary>
                 <div class="cp-action-card__body">
@@ -198,10 +207,13 @@
                   </form>
                 </div>
               </details>
+                {% endif %}
               {% endif %}
 
+              {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.gerenciar_pedidos %}
               <details class="cp-action-card">
                 <summary>Alterar previsão</summary>
+
                 <div class="cp-action-card__body">
                   <form method="post" action="{% url 'compras:atualizar_previsao_pedido' pedido.pk %}">
                     {% csrf_token %}
@@ -212,6 +224,9 @@
                 </div>
               </details>
 
+              {% endif %}
+
+              {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.receber_pedidos %}
               <details class="cp-action-card">
                 <summary>Registrar recebimento + NF</summary>
                 <div class="cp-action-card__body">
@@ -233,24 +248,27 @@
                       <input class="cp-input cp-file-input" type="file" name="arquivo_nota_fiscal" accept=".pdf,.xml,.jpg,.jpeg,.png,.webp,application/pdf,text/xml,image/*" required>
                     </div>
 
+                    <div class="cp-receive-help">
+                      A quantidade recebida pode ser maior que a quantidade do pedido. Se houver excedente, informe a quantidade total que chegou e o valor total desse item na Nota Fiscal; o excedente ficará registrado no recebimento.
+                    </div>
+
                     <div class="cp-receive-items">
                       {% for item in pedido.itens.all %}
-                        {% if item.saldo_receber > 0 %}
                         <div class="cp-receive-row" data-unit-price="{{ item.valor_unitario }}">
                           <div class="cp-receive-name">
                             <strong>{{ item.descricao }}</strong>
-                            <span>Saldo {{ item.saldo_receber|floatformat:"-4" }} {{ item.unidade }} · R$ {{ item.valor_unitario|floatformat:2 }}/{{ item.unidade }}</span>
+                            <span>Pedido {{ item.quantidade|floatformat:"-4" }} · Já recebido {{ item.quantidade_recebida|floatformat:"-4" }} · Saldo {{ item.saldo_receber|floatformat:"-4" }} {{ item.unidade }} · R$ {{ item.valor_unitario|floatformat:2 }}/{{ item.unidade }}</span>
+                            {% if item.quantidade_excedente > 0 %}<span class="cp-overage">Excedente acumulado: +{{ item.quantidade_excedente|floatformat:"-4" }} {{ item.unidade }}</span>{% endif %}
                           </div>
                           <div>
-                            <span class="cp-mini-label">Qtd. recebida</span>
-                            <input class="cp-input js-receipt-qty" type="number" name="item_{{ item.pk }}" min="0" max="{{ item.saldo_receber }}" step="0.0001" placeholder="0">
+                            <span class="cp-mini-label">Qtd. nesta entrega</span>
+                            <input class="cp-input js-receipt-qty" type="number" name="item_{{ item.pk }}" min="0" step="0.0001" placeholder="0">
                           </div>
                           <div>
-                            <span class="cp-mini-label">Valor dos itens</span>
+                            <span class="cp-mini-label">Valor total do item na NF</span>
                             <div class="cp-money-wrap"><input class="cp-input js-receipt-value" type="number" name="valor_item_{{ item.pk }}" min="0.01" step="0.01" placeholder="0,00"></div>
                           </div>
                         </div>
-                        {% endif %}
                       {% endfor %}
                     </div>
 
@@ -262,19 +280,22 @@
                 </div>
               </details>
 
+              {% endif %}
+
               <details class="cp-action-card">
                 <summary>Arquivos do pedido</summary>
                 <div class="cp-action-card__body">
                   {% if pedido.anexos.all %}<div class="cp-order-files-list">{% for anexo in pedido.anexos.all %}<div class="cp-order-file"><div><strong>{{ anexo.nome_arquivo }}</strong>{% if anexo.descricao %}<span>{{ anexo.descricao }}</span>{% endif %}<small>{{ anexo.criado_em|date:"d/m/Y H:i" }} · {{ anexo.enviado_por|default:"—" }}</small></div><a class="cp-btn cp-btn--sm" href="{{ anexo.arquivo.url }}" target="_blank" rel="noopener">Abrir</a></div>{% endfor %}</div>{% endif %}
-                  <form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}">
+                  {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.gerenciar_pedidos %}<form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}">
                     {% csrf_token %}
                     <div class="cp-field"><label>Arquivos <span class="cp-required">*</span></label><input class="cp-input cp-file-input" type="file" name="arquivos" multiple required></div>
                     <div class="cp-field"><label>Descrição</label><input class="cp-input" type="text" name="descricao" maxlength="255" placeholder="Opcional"></div>
                     <button class="cp-btn cp-btn--primary" type="submit">Anexar</button>
-                  </form>
+                  </form>{% endif %}
                 </div>
               </details>
 
+              {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.cancelar_pedidos %}
               <details class="cp-action-card">
                 <summary class="cp-danger-summary">Cancelar pedido</summary>
                 <div class="cp-action-card__body">
@@ -285,6 +306,7 @@
                   </form>
                 </div>
               </details>
+              {% endif %}
             {% elif pedido.status == 'ENTREGUE' %}
               <div class="cp-note cp-note--ok"><strong>Pedido entregue.</strong>{% if pedido.recebido_em %}<br>{{ pedido.recebido_em|date:"d/m/Y H:i" }}{% endif %}</div>
               {% if pedido.anexos.all %}

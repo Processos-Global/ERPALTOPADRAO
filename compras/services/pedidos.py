@@ -63,19 +63,11 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
 
     pedidos_resultado = []
     for fornecedor_id, grupo in grupos.items():
-        existente = (
-            PedidoCompra.objects
-            .filter(processo=p, fornecedor_id=fornecedor_id)
-            .exclude(status=PedidoCompra.Status.CANCELADO)
-            .first()
-        )
-        if existente:
-            pedidos_resultado.append(existente)
-            continue
-
         fornecedor = grupo[0].cotacao.fornecedor
         formalizacao = p.contratacoes.filter(fornecedor_id=fornecedor_id, cancelada=False).first()
 
+        # Todos os itens aprovados do mesmo fornecedor compõem um único pedido.
+        # Frete, condição e prazo também são calculados uma única vez por fornecedor.
         subtotal = quantizar_moeda(sum((a.valor_bruto for a in grupo), ZERO))
         descontos = quantizar_moeda(sum((a.desconto_final or ZERO for a in grupo), ZERO))
         frete = frete_final_fornecedor(p, fornecedor_id)
@@ -90,6 +82,74 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
         prazo = formalizacao.prazo_entrega_dias if formalizacao else prazo_final_fornecedor(p, fornecedor_id)
         previsao = formalizacao.previsao_entrega if formalizacao else _previsao_por_prazo(prazo)
         destino = ((formalizacao.local_entrega or "").strip() if formalizacao else "") or (local_entrega or "").strip()
+
+        existente = (
+            PedidoCompra.objects
+            .select_for_update()
+            .filter(processo=p, fornecedor_id=fornecedor_id)
+            .exclude(status=PedidoCompra.Status.CANCELADO)
+            .order_by("id")
+            .first()
+        )
+        if existente:
+            necessidades_existentes = set(
+                existente.itens.values_list("necessidade_id", flat=True)
+            )
+            faltantes = [
+                adjudicacao
+                for adjudicacao in grupo
+                if adjudicacao.necessidade_id not in necessidades_existentes
+            ]
+
+            # Se a rotina for executada novamente e houver novos itens aprovados
+            # para o MESMO fornecedor, eles entram no pedido já existente em vez
+            # de gerar um segundo pedido para esse fornecedor.
+            if faltantes:
+                if existente.recebimentos.exists():
+                    raise ValidationError(
+                        f"O pedido {existente.numero} já possui recebimentos e não pode "
+                        f"receber novos itens automaticamente. Revise o processo antes de continuar."
+                    )
+                PedidoCompraItem.objects.bulk_create([
+                    PedidoCompraItem(
+                        pedido=existente,
+                        necessidade=a.necessidade,
+                        descricao=a.necessidade.descricao,
+                        especificacao=a.necessidade.especificacao,
+                        unidade=a.necessidade.unidade,
+                        quantidade=a.quantidade,
+                        valor_unitario=a.valor_unitario_final,
+                        desconto=a.desconto_final or ZERO,
+                        valor_total=quantizar_moeda(a.valor_total),
+                    )
+                    for a in faltantes
+                ])
+
+                existente.subtotal = subtotal
+                existente.descontos = descontos
+                existente.frete = frete
+                existente.valor_total = total
+                existente.condicao_pagamento = condicao
+                if existente.previsao_entrega_original is None:
+                    existente.previsao_entrega_original = previsao
+                existente.previsao_entrega_atual = previsao
+                if destino:
+                    existente.local_entrega = destino
+                existente.save(update_fields=[
+                    "subtotal", "descontos", "frete", "valor_total",
+                    "condicao_pagamento", "previsao_entrega_original",
+                    "previsao_entrega_atual", "local_entrega", "atualizado_em",
+                ])
+                registrar_evento(
+                    p,
+                    "PEDIDO_ATUALIZADO",
+                    usuario,
+                    f"Pedido {existente.numero} atualizado com novos itens do fornecedor {fornecedor.nome}.",
+                    {"pedido_id": existente.pk, "itens_adicionados": len(faltantes)},
+                )
+
+            pedidos_resultado.append(existente)
+            continue
 
         pedido = PedidoCompra.objects.create(
             numero=gerar_numero("PEDIDO"),
@@ -287,11 +347,10 @@ def registrar_recebimento(
             raise ValidationError("Quantidade recebida não pode ser negativa.")
         if quantidade == ZERO:
             continue
-        if quantidade > item.saldo_receber:
-            raise ValidationError(
-                f"Recebimento de {item.descricao} excede o saldo de "
-                f"{item.saldo_receber} {item.unidade}."
-            )
+        # O recebimento físico pode ultrapassar a quantidade originalmente
+        # pedida. O pedido continua preservando a quantidade contratada e o
+        # excedente fica registrado no recebimento/NF para conferência e
+        # pagamento do que efetivamente foi entregue.
 
         valor_informado = valores_itens.get(item.pk)
         if valor_informado in (None, ""):
@@ -317,7 +376,9 @@ def registrar_recebimento(
         observacao=(observacao or "").strip(),
     )
 
+    excedentes = []
     for item, quantidade, valor_recebido in itens_receber:
+        quantidade_antes = item.quantidade_recebida
         item.quantidade_recebida += quantidade
         item.save(update_fields=["quantidade_recebida"])
         RecebimentoPedidoItem.objects.create(
@@ -326,6 +387,17 @@ def registrar_recebimento(
             quantidade=quantidade,
             valor_recebido=valor_recebido,
         )
+
+        excedente_antes = max(quantidade_antes - item.quantidade, ZERO)
+        excedente_depois = max(item.quantidade_recebida - item.quantidade, ZERO)
+        excedente_nesta_entrega = excedente_depois - excedente_antes
+        if excedente_nesta_entrega > ZERO:
+            excedentes.append({
+                "item_id": item.pk,
+                "descricao": item.descricao,
+                "quantidade": str(excedente_nesta_entrega),
+                "unidade": item.unidade,
+            })
 
     completo = not p.itens.filter(quantidade_recebida__lt=models.F("quantidade")).exists()
     if completo:
@@ -347,6 +419,7 @@ def registrar_recebimento(
             "recebimento_id": recebimento.pk,
             "numero_nota_fiscal": numero_nota_fiscal,
             "valor_total_nota": str(recebimento.valor_total_nota),
+            "excedentes": excedentes,
         },
     )
     return recebimento

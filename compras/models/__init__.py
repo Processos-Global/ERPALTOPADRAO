@@ -5,7 +5,7 @@ from .core import (
     ProcessoCompraAtividade,
     SequenciaDocumentoCompra,
 )
-from .cotacao import CotacaoFornecedor, CotacaoFornecedorItem
+from .cotacao import CotacaoFornecedor, CotacaoFornecedorItem, SolicitacaoCotacaoFornecedor
 from .fluxo import (
     AdjudicacaoCompra,
     AlcadaAprovacaoCompra,

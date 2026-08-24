@@ -2,7 +2,7 @@
 {% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
 {% block content %}
 <div class="cp-page">
-  <div class="cp-head"><div class="cp-head__copy"><div class="cp-eyebrow">Suprimentos</div><h1 class="cp-title">Processos de compra</h1><div class="cp-sub">Consulta geral com obra, responsável, etapa, status e volume do processo.</div></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Kanban</a><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a><a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a></div></div>
+  <div class="cp-head"><div class="cp-head__copy"><div class="cp-eyebrow">Suprimentos</div><h1 class="cp-title">Processos de compra</h1><div class="cp-sub">Consulta geral com obra, responsável, etapa, status e volume do processo.</div></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Kanban</a><a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a>{% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.solicitar_compra %}<a class="cp-btn cp-btn--primary" href="{% url 'compras:novo_processo' %}">Nova compra</a>{% endif %}</div></div>
   <form class="cp-filter" method="get">
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar processo, suprimento ou obra">
     <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
