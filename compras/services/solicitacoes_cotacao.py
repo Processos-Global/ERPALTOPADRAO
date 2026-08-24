@@ -19,7 +19,22 @@ def garantir_solicitacao(*, processo, fornecedor):
 def marcar_solicitacao_enviada(*, solicitacao, usuario, meio_envio="", observacao=""):
     processo = solicitacao.processo
 
-    if processo.status in {processo.Status.CANCELADO, processo.Status.REPROVADO, processo.Status.CONTRATADO}:
+    if processo.etapa_atual not in {
+        processo.Etapa.COTACAO,
+        processo.Etapa.COMPATIBILIZACAO,
+        processo.Etapa.NEGOCIACAO,
+    }:
+        raise ValidationError(
+            "O mapa comercial já foi fechado e não permite novos envios de solicitação de cotação."
+        )
+    if processo.status in {
+        processo.Status.CANCELADO,
+        processo.Status.REPROVADO,
+        processo.Status.AGUARDANDO_APROVACAO,
+        processo.Status.APROVADO,
+        processo.Status.EM_CONTRATACAO,
+        processo.Status.CONTRATADO,
+    }:
         raise ValidationError("Este processo não permite novos envios de solicitação de cotação.")
 
     if solicitacao.status == SolicitacaoCotacaoFornecedor.Status.RESPONDIDA:

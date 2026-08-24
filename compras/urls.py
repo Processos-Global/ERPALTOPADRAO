@@ -19,7 +19,6 @@ urlpatterns = [
     path("processos/<int:pk>/cotacoes/<int:cotacao_id>/enviar-compatibilizacao/", views.acao_enviar_cotacao_compatibilizacao, name="enviar_cotacao_compatibilizacao"),
     path("processos/<int:pk>/analise-tecnica/salvar/", views.acao_analise_tecnica_lote, name="analise_tecnica_lote"),
     path("processos/<int:pk>/decisao-comercial/salvar/", views.acao_decisao_comercial_lote, name="decisao_comercial_lote"),
-    path("processos/<int:pk>/cotacao/concluir/", views.acao_concluir_cotacao, name="concluir_cotacao"),
     path("processos/<int:pk>/compatibilizacao/registrar/", views.acao_compatibilizar, name="compatibilizar"),
     path("processos/<int:pk>/compatibilizacao/concluir/", views.acao_concluir_compatibilizacao, name="concluir_compatibilizacao"),
     path("processos/<int:pk>/negociacao/registrar/", views.acao_negociar, name="negociar"),

@@ -22,7 +22,7 @@ from .comercial import (
     prazo_final_fornecedor,
     quantizar_moeda,
 )
-from .integracao_planejamento import sincronizar_data_real
+from .integracao_planejamento import limpar_data_real, sincronizar_data_real
 from .numeracao import gerar_numero
 
 ZERO = Decimal("0")
@@ -32,6 +32,78 @@ def _previsao_por_prazo(prazo_dias):
     if prazo_dias is None:
         return None
     return timezone.localdate() + timedelta(days=int(prazo_dias))
+
+
+def _sincronizar_status_contratacao_processo(*, processo, usuario):
+    """Mantém o processo coerente com a confirmação/cancelamento dos pedidos."""
+    p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
+    if p.status in {p.Status.CANCELADO, p.Status.REPROVADO}:
+        return p
+
+    fornecedores_adjudicados = set(
+        p.adjudicacoes.filter(cancelada=False).values_list("cotacao__fornecedor_id", flat=True)
+    )
+    pedidos_ativos = list(
+        p.pedidos.exclude(status=PedidoCompra.Status.CANCELADO).only(
+            "id", "fornecedor_id", "status"
+        )
+    )
+    por_fornecedor = defaultdict(list)
+    for pedido in pedidos_ativos:
+        por_fornecedor[pedido.fornecedor_id].append(pedido)
+
+    status_confirmados = {
+        PedidoCompra.Status.CONFIRMADO,
+        PedidoCompra.Status.EM_PRODUCAO,
+        PedidoCompra.Status.PRONTO_EXPEDICAO,
+        PedidoCompra.Status.EM_TRANSPORTE,
+        PedidoCompra.Status.ENTREGA_PARCIAL,
+        PedidoCompra.Status.ENTREGUE,
+    }
+    todos_confirmados = bool(fornecedores_adjudicados) and all(
+        any(pedido.status in status_confirmados for pedido in por_fornecedor.get(fornecedor_id, []))
+        for fornecedor_id in fornecedores_adjudicados
+    )
+
+    if todos_confirmados:
+        mudou = p.status != p.Status.CONTRATADO or p.etapa_atual != p.Etapa.CONTRATADO
+        p.status = p.Status.CONTRATADO
+        p.etapa_atual = p.Etapa.CONTRATADO
+        if not p.data_contratacao_concluida:
+            p.data_contratacao_concluida = timezone.now()
+        p.save(update_fields=[
+            "status", "etapa_atual", "data_contratacao_concluida", "atualizado_em"
+        ])
+        if mudou:
+            sincronizar_data_real(p, "CONTRATACAO", usuario)
+            registrar_evento(
+                p,
+                "CONTRATACAO_CONCLUIDA",
+                usuario,
+                "Todos os pedidos ativos foram confirmados pelos fornecedores. Processo contratado.",
+            )
+        return p
+
+    estava_contratado = (
+        p.status == p.Status.CONTRATADO
+        or p.etapa_atual == p.Etapa.CONTRATADO
+        or p.data_contratacao_concluida is not None
+    )
+    p.status = p.Status.EM_CONTRATACAO
+    p.etapa_atual = p.Etapa.CONTRATACAO
+    p.data_contratacao_concluida = None
+    p.save(update_fields=[
+        "status", "etapa_atual", "data_contratacao_concluida", "atualizado_em"
+    ])
+    if estava_contratado:
+        limpar_data_real(p, "CONTRATACAO")
+        registrar_evento(
+            p,
+            "CONTRATACAO_REABERTA",
+            usuario,
+            "Processo retornou para Em contratação porque nem todos os fornecedores adjudicados possuem pedido ativo confirmado.",
+        )
+    return p
 
 
 @transaction.atomic
@@ -190,18 +262,9 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
             {"pedido_id": pedido.pk, "valor_total": str(total)},
         )
 
-    # Só encerra depois que todos os fornecedores possuem pedido ativo.
-    fornecedores_com_pedido = set(
-        p.pedidos.exclude(status=PedidoCompra.Status.CANCELADO).values_list("fornecedor_id", flat=True)
-    )
-    if set(grupos) <= fornecedores_com_pedido:
-        p.status = p.Status.CONTRATADO
-        p.etapa_atual = p.Etapa.CONTRATADO
-        if not p.data_contratacao_concluida:
-            p.data_contratacao_concluida = timezone.now()
-        p.save(update_fields=["status", "etapa_atual", "data_contratacao_concluida", "atualizado_em"])
-        sincronizar_data_real(p, "CONTRATACAO", usuario)
-        registrar_evento(p, "CONTRATACAO_CONCLUIDA", usuario, "Pedidos gerados e processo comercial concluído.")
+    # Emitir o pedido inicia a contratação. O aceite do fornecedor é o marco
+    # que conclui a contratação do processo.
+    _sincronizar_status_contratacao_processo(processo=p, usuario=usuario)
 
     return pedidos_resultado
 
@@ -272,6 +335,7 @@ def atualizar_status_pedido(*, pedido, novo_status, usuario, observacao=""):
     p.status = novo_status
     p.save(update_fields=["status", "atualizado_em"])
     registrar_evento(p.processo, "STATUS_PEDIDO", usuario, f"Pedido {p.numero}: {p.get_status_display()}.", {"pedido_id": p.pk})
+    _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
     return p
 
 

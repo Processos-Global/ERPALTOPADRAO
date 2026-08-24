@@ -35,7 +35,6 @@ from compras.services.contratacao import anexar_documento_fornecedor
 from compras.services.cotacoes import criar_fornecedor, excluir_cotacao, incluir_cotacao, incluir_item_cotacao
 from compras.services.etapas import (
     concluir_compatibilizacao,
-    concluir_cotacao,
     concluir_negociacao,
     decidir_aprovacao,
     enviar_cotacao_para_compatibilizacao,
@@ -479,18 +478,6 @@ def acao_decisao_comercial_lote(request, pk):
     return resposta
 
 
-@compras_acao_required(AcaoCompra.COTAR)
-def acao_concluir_cotacao(request, pk):
-    processo = _processo(pk)
-    if request.method == "POST":
-        try:
-            concluir_cotacao(processo, request.user)
-            messages.success(request, "Análise técnica iniciada. O mapa continua aberto para receber novas propostas.")
-        except ValidationError as exc:
-            _erro(request, exc)
-    return _voltar(processo)
-
-
 @compras_acao_required(AcaoCompra.COMPATIBILIZAR)
 def acao_compatibilizar(request, pk):
     processo = _processo(pk)
@@ -635,7 +622,7 @@ def acao_aprovar(request, pk):
 
                 messages.success(
                     request,
-                    "Proposta(s) aprovada(s). Os pedidos foram gerados automaticamente e o mapa foi finalizado.",
+                    "Proposta(s) aprovada(s). Os pedidos foram emitidos automaticamente e aguardam confirmação dos fornecedores.",
                 )
             except ValidationError as exc:
                 _erro(request, exc)
@@ -645,7 +632,7 @@ def acao_aprovar(request, pk):
                     messages.error(request, erro)
     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
     resposta = _voltar(processo_atualizado)
-    resposta["Location"] += "#pedido" if processo_atualizado.etapa_atual == ProcessoCompra.Etapa.CONTRATADO else "#aprovacao"
+    resposta["Location"] += "#pedido" if processo_atualizado.etapa_atual in {ProcessoCompra.Etapa.CONTRATACAO, ProcessoCompra.Etapa.CONTRATADO} else "#aprovacao"
     return resposta
 
 
@@ -676,7 +663,7 @@ def acao_gerar_pedidos(request, pk):
     if request.method == "POST":
         try:
             pedidos = gerar_pedidos(processo, request.user)
-            messages.success(request, f"{len(pedidos)} pedido(s) gerado(s) e contratação concluída.")
+            messages.success(request, f"{len(pedidos)} pedido(s) emitido(s). A contratação será concluída após a confirmação dos fornecedores.")
         except ValidationError as exc:
             _erro(request, exc)
     return _voltar(processo)

@@ -20,3 +20,25 @@ def sincronizar_data_real(processo, etapa, usuario=None, data=None):
     item.datas_editadas_por = None
     item.datas_editadas_em = None
     item.save(update_fields=[campo, "datas_editadas_manualmente", "datas_editadas_por", "datas_editadas_em"])
+
+@transaction.atomic
+def limpar_data_real(processo, etapa):
+    """Remove a data realizada quando uma etapa deixa de estar efetivamente concluída."""
+    campo = MAPA.get(etapa)
+    if not campo:
+        return
+    item = processo.item_cronograma.__class__.objects.select_for_update().get(
+        pk=processo.item_cronograma_id
+    )
+    setattr(item, campo, None)
+    item.datas_editadas_manualmente = False
+    item.datas_editadas_por = None
+    item.datas_editadas_em = None
+    item.save(
+        update_fields=[
+            campo,
+            "datas_editadas_manualmente",
+            "datas_editadas_por",
+            "datas_editadas_em",
+        ]
+    )

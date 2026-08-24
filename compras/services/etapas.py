@@ -68,35 +68,6 @@ def enviar_cotacao_para_compatibilizacao(cotacao, usuario):
 
 
 @transaction.atomic
-def concluir_cotacao(processo, usuario):
-    """Inicia a análise técnica sem fechar o mapa de cotação."""
-    p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
-    if p.etapa_atual != p.Etapa.COTACAO:
-        raise ValidationError("A análise técnica já foi iniciada para este mapa.")
-    if p.status in {p.Status.CANCELADO, p.Status.REPROVADO, p.Status.CONTRATADO}:
-        raise ValidationError("Este processo não pode mais ser alterado.")
-
-    necessidades = p.necessidades.filter(situacao="ATIVA")
-    if not necessidades.exists():
-        raise ValidationError("Inclua ao menos uma necessidade antes de iniciar a análise técnica.")
-    if not p.cotacoes.filter(itens__isnull=False).exists():
-        raise ValidationError("Inclua ao menos uma proposta com item cotado.")
-
-    p.data_cotacao_concluida = timezone.now()
-    p.etapa_atual = p.Etapa.COMPATIBILIZACAO
-    p.status = p.Status.EM_COMPATIBILIZACAO
-    p.save(update_fields=["data_cotacao_concluida", "etapa_atual", "status", "atualizado_em"])
-    sincronizar_data_real(p, "COTACAO", usuario)
-    registrar_evento(
-        p,
-        "ANALISE_TECNICA_INICIADA",
-        usuario,
-        "Análise técnica iniciada. O mapa comercial permanece aberto para novas propostas.",
-    )
-    return p
-
-
-@transaction.atomic
 def concluir_compatibilizacao(processo, usuario):
     """Libera negociação após a primeira oferta tecnicamente válida, sem fechar o mapa."""
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)

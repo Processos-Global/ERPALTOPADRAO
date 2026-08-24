@@ -528,6 +528,106 @@
   }
 
   .ps-order-current-status{margin-top:5px}.ps-muted-cell{color:var(--ps-subtle)}
+
+
+  /* 2026-08 · Redesign minimalista: menos ruído, maior leitura operacional */
+  .ps-page{gap:12px;max-width:1680px;margin:0 auto}
+  .ps-topbar{align-items:center;padding:2px 0 4px}
+  .ps-heading-icon{width:34px;height:34px;flex-basis:34px;border-radius:9px}
+  .ps-heading-icon svg{width:17px;height:17px}
+  .ps-heading h1{font-size:1.34rem;letter-spacing:-.02em}
+  .ps-heading p{margin-top:3px;font-size:.78rem}
+  .ps-actions{gap:6px}
+  .ps-btn{min-height:35px;padding:7px 10px;border-radius:8px;box-shadow:none}
+  .ps-btn:hover{transform:none}
+
+  .ps-toolbar{grid-template-columns:minmax(160px,1fr) minmax(145px,.8fr) minmax(145px,.8fr) minmax(220px,1.4fr) auto;padding:10px;border-radius:11px;gap:8px;box-shadow:none;background:#fff}
+  .ps-field label{margin-bottom:4px;font-size:.61rem}
+  .ps-field select,.ps-field input{min-height:36px;border-radius:8px;font-size:.78rem}
+
+  .ps-summary{border-radius:11px;box-shadow:none;background:#fff}
+  .ps-summary-item{min-height:62px;padding:10px 13px}
+  .ps-summary-label{font-size:.59rem}
+  .ps-summary-value{font-size:1.08rem}
+  .ps-summary-note{font-size:.61rem}
+  .ps-summary-item.is-accent,.ps-summary-item.is-success,.ps-summary-item.is-warning{box-shadow:none}
+  .ps-summary-item.is-accent .ps-summary-value{color:var(--ps-accent-strong)}
+  .ps-summary-item.is-success .ps-summary-value{color:var(--ps-success)}
+  .ps-summary-item.is-warning .ps-summary-value{color:var(--ps-warning)}
+
+  .ps-board{border-radius:11px;box-shadow:none}
+  .ps-board-head{padding:10px 12px}
+  .ps-board-title strong{font-size:.81rem}
+  .ps-board-title span{font-size:.66rem}
+  .ps-legend{font-size:.63rem}
+
+  .ps-table{min-width:1320px}
+  .ps-table th{padding:8px 10px;font-size:.59rem;background:#fafbfc}
+  .ps-table td{padding:10px;font-size:.75rem}
+  .ps-category td{top:33px;padding:7px 10px;font-size:.61rem;background:#f6f8f9!important}
+  .ps-category td::before{height:10px}
+  .ps-item-cell{min-width:230px}
+  .ps-item{gap:8px}
+  .ps-item-state{height:34px;width:3px;flex-basis:3px}
+  .ps-item-name{font-size:.79rem;max-width:250px}
+  .ps-item-local{margin-top:3px;font-size:.64rem}
+  .ps-item-suppliers{display:none!important}
+
+  /* Fornecedores visíveis na linha principal */
+  .ps-supplier-overview-cell{min-width:235px;max-width:275px}
+  .ps-supplier-overview{display:grid;gap:4px;min-width:0}
+  .ps-supplier-overview__head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:1px}
+  .ps-supplier-overview__label{color:var(--ps-subtle);font-size:.55rem;font-weight:800;text-transform:uppercase;letter-spacing:.035em}
+  .ps-supplier-overview__count{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:18px;padding:0 5px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:.54rem;font-weight:800}
+  .ps-supplier-overview__row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;min-height:23px;padding:3px 6px;border:1px solid #edf0f2;border-radius:7px;background:#fbfcfd}
+  .ps-supplier-overview__name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#344054;font-size:.63rem;font-weight:760}
+  .ps-supplier-overview__status{display:inline-flex;align-items:center;gap:4px;max-width:128px;min-width:0;color:#667085;font-size:.56rem;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ps-supplier-overview__status::before{content:"";width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:currentColor}
+  .ps-supplier-overview__status.success{color:#067647}
+  .ps-supplier-overview__status.info{color:#175cd3}
+  .ps-supplier-overview__status.warning{color:#b54708}
+  .ps-supplier-overview__status.danger{color:#b42318}
+  .ps-supplier-overview__status.muted{color:#667085}
+  .ps-supplier-overview__more{padding-left:2px;color:#526b75;font-size:.56rem;font-weight:760}
+  .ps-supplier-overview__empty{color:var(--ps-subtle);font-size:.61rem}
+
+  .ps-milestone{min-width:118px}
+  .ps-milestone-label{font-size:.56rem}
+  .ps-milestone-date{margin-top:2px}
+  .ps-milestone-date strong{font-size:.73rem}
+  .ps-milestone-real{margin-top:2px;font-size:.61rem}
+  .ps-delta{margin-top:3px;font-size:.56rem}
+  .ps-progress{min-width:110px}
+  .ps-progress-top strong{font-size:.76rem}
+  .ps-progress-track{height:5px;margin-top:5px}
+
+  .ps-detail-row>td{padding:0 10px 10px!important;background:#fafbfc!important}
+  .ps-detail-shell{border-radius:10px;box-shadow:none;border-color:#e2e7eb}
+  .ps-detail-head{padding:10px 12px;background:#fff}
+  .ps-context-pill,.ps-process-pill{min-height:24px;padding:3px 7px;border-radius:7px;font-size:.62rem}
+  .ps-detail-summary{grid-template-columns:repeat(6,minmax(100px,1fr));background:#fbfcfd}
+  .ps-detail-kpi{padding:9px 10px}
+  .ps-detail-kpi span{font-size:.55rem}
+  .ps-detail-kpi strong{font-size:.79rem}
+  .ps-supplier-wrap{padding:9px 10px}
+  .ps-supplier-table{min-width:1030px;border-radius:8px}
+  .ps-supplier-table th{padding:7px 8px!important;font-size:.56rem!important;background:#fafbfc!important}
+  .ps-supplier-table td{padding:8px!important;font-size:.67rem}
+  .ps-supplier-name{font-size:.7rem}
+  .ps-supplier-process{font-size:.56rem}
+  .ps-status{padding:3px 6px;font-size:.57rem;border-radius:999px}
+  .ps-order-block{min-width:180px}
+  .ps-detail-foot{padding:8px 10px;font-size:.6rem;background:#fbfcfd}
+
+  .ps-modal{width:min(660px,100%);border-radius:11px;box-shadow:0 18px 48px rgba(15,23,42,.20)}
+  .ps-modal-head{padding:13px 15px}
+  .ps-modal-body{padding:13px 15px}
+  .ps-modal-note{margin-bottom:10px;padding:8px 9px;font-size:.68rem}
+  .ps-edit-cell{min-height:50px;padding:8px 9px}
+  .ps-modal-foot{padding:10px 15px 12px}
+
+  @media(max-width:1200px){.ps-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.ps-detail-summary{grid-template-columns:repeat(3,minmax(110px,1fr))}}
+
 </style>
 
 <div class="ps-page">
@@ -652,6 +752,7 @@
         <thead>
           <tr>
             <th>Suprimento</th>
+            <th>Fornecedores</th>
             <th>Cotação</th>
             <th>Compatibilização</th>
             <th>Negociação</th>
@@ -663,7 +764,7 @@
         </thead>
         <tbody>
           {% for grupo in categorias %}
-          <tr class="ps-category"><td colspan="8">{{ grupo.nome }}</td></tr>
+          <tr class="ps-category"><td colspan="9">{{ grupo.nome }}</td></tr>
             {% for item in grupo.itens %}
             <tr class="ps-item-row" id="suprimento-{{ item.id }}">
               <td class="ps-item-cell">
@@ -675,21 +776,33 @@
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
                       {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
                     </div>
-                    {% if item.acompanhamento_fornecedores_resumo %}
-                    <div class="ps-item-suppliers" aria-label="Fornecedores e status">
-                      {% for fornecedor in item.acompanhamento_fornecedores_resumo %}
-                      <span class="ps-item-supplier" title="{{ fornecedor.fornecedor_nome }} · {{ fornecedor.status_atual.label }}">
-                        <span class="ps-item-supplier__name">{{ fornecedor.fornecedor_nome }}</span>
-                        <span class="ps-item-supplier__status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span>
-                      </span>
-                      {% endfor %}
-                      {% if item.acompanhamento_fornecedores_extras %}<span class="ps-item-supplier-more">+{{ item.acompanhamento_fornecedores_extras }}</span>{% endif %}
-                    </div>
-                    {% endif %}
                   </div>
                 </div>
               </td>
 
+              <td class="ps-supplier-overview-cell">
+                {% if item.acompanhamento_fornecedores %}
+                  <div class="ps-supplier-overview">
+                    <div class="ps-supplier-overview__head">
+                      <span class="ps-supplier-overview__label">Em processo</span>
+                      <span class="ps-supplier-overview__count">{{ item.acompanhamento_fornecedores|length }}</span>
+                    </div>
+                    {% for fornecedor in item.acompanhamento_fornecedores %}
+                      {% if forloop.counter <= 3 %}
+                        <div class="ps-supplier-overview__row" title="{{ fornecedor.fornecedor_nome }} · {{ fornecedor.status_atual.label }}">
+                          <span class="ps-supplier-overview__name">{{ fornecedor.fornecedor_nome }}</span>
+                          <span class="ps-supplier-overview__status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                    {% if item.acompanhamento_fornecedores|length > 3 %}
+                      <div class="ps-supplier-overview__more">+{{ item.acompanhamento_fornecedores|length|add:"-3" }} fornecedor{{ item.acompanhamento_fornecedores|length|add:"-3"|pluralize }}</div>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <span class="ps-supplier-overview__empty">Sem fornecedor no processo</span>
+                {% endif %}
+              </td>
 
               <td class="ps-milestone">
                 <div class="ps-milestone-label">Planejado</div>
@@ -794,7 +907,7 @@
             </tr>
 
             <tr id="detalhe-suprimento-{{ item.id }}" class="ps-detail-row">
-              <td colspan="8">
+              <td colspan="9">
                 <div class="ps-detail-shell">
                   <div class="ps-detail-head">
                     <div class="ps-detail-context">
@@ -814,7 +927,7 @@
                     <div class="ps-detail-kpi"><span>Fornecedores</span><strong>{{ item.acompanhamento_resumo.fornecedores }}</strong></div>
                     <div class="ps-detail-kpi"><span>Propostas</span><strong>{{ item.acompanhamento_resumo.propostas_recebidas }}</strong></div>
                     <div class="ps-detail-kpi"><span>Compatibilizados</span><strong>{{ item.acompanhamento_resumo.compatibilizados }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Aguardando</span><strong>{{ item.acompanhamento_resumo.aguardando_proposta }}</strong></div>
+                    <div class="ps-detail-kpi"><span>Solicitações enviadas</span><strong>{{ item.acompanhamento_resumo.solicitacoes_enviadas }}</strong></div>
                     <div class="ps-detail-kpi"><span>Menor cotado</span><strong class="money">{{ item.acompanhamento_resumo.menor_valor_formatado }}</strong></div>
                     <div class="ps-detail-kpi"><span>Menor negociado</span><strong class="money">{{ item.acompanhamento_resumo.menor_negociado_formatado }}</strong></div>
                   </div>
@@ -824,7 +937,7 @@
                       <thead>
                         <tr>
                           <th>Fornecedor</th>
-                          <th>Proposta</th>
+                          <th>Solicitação / proposta</th>
                           <th>Valor cotado</th>
                           <th>Compatibilização</th>
                           <th>Negociação</th>
@@ -839,7 +952,13 @@
                         {% for fornecedor in item.acompanhamento_fornecedores %}
                         <tr>
                           <td><span class="ps-supplier-name">{{ fornecedor.fornecedor_nome }}</span><span class="ps-supplier-process">{{ fornecedor.processo_numero }}</span></td>
-                          <td><span class="ps-status {{ fornecedor.proposta.classe }}">{{ fornecedor.proposta.label }}</span></td>
+                          <td>
+                            {% if fornecedor.solicitacao.codigo == 'RESPONDIDA' %}
+                              <span class="ps-status success">Proposta recebida</span>
+                            {% else %}
+                              <span class="ps-status {{ fornecedor.solicitacao.classe }}">{{ fornecedor.solicitacao.label }}</span>
+                            {% endif %}
+                          </td>
                           <td class="ps-money">{{ fornecedor.valor_cotado_formatado }}</td>
                           <td><span class="ps-status {{ fornecedor.compatibilizacao.classe }}">{{ fornecedor.compatibilizacao.label }}</span></td>
                           <td><span class="ps-status {{ fornecedor.negociacao.classe }}">{{ fornecedor.negociacao.label }}</span></td>
@@ -888,7 +1007,7 @@
             </tr>
             {% endfor %}
           {% empty %}
-          <tr><td colspan="8" class="ps-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
+          <tr><td colspan="9" class="ps-empty">Nenhum suprimento encontrado com os filtros atuais.</td></tr>
           {% endfor %}
         </tbody>
       </table>

@@ -680,18 +680,21 @@ def dashboard(request):
             "Retornou para cotação e novo ciclo",
         ),
         (
+            "CONTRATACAO",
+            "Em contratação",
+            [
+                ProcessoCompra.Status.APROVADO,
+                ProcessoCompra.Status.EM_CONTRATACAO,
+            ],
+            "Pedidos emitidos aguardando confirmação dos fornecedores",
+        ),
+        (
             "FINALIZADO",
             "Finalizado",
             [
-                # APROVADO e EM_CONTRATACAO permanecem aqui apenas por
-                # compatibilidade com registros antigos. No fluxo atual,
-                # a aprovação do gestor gera os pedidos automaticamente e
-                # o processo é gravado como CONTRATADO na mesma transação.
-                ProcessoCompra.Status.APROVADO,
-                ProcessoCompra.Status.EM_CONTRATACAO,
                 ProcessoCompra.Status.CONTRATADO,
             ],
-            "Aprovado pelo gestor e com pedido gerado automaticamente",
+            "Todos os fornecedores confirmaram os pedidos",
         ),
         (
             "ENCERRADOS",
