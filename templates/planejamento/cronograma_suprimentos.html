@@ -113,7 +113,7 @@
     box-shadow: 0 1px 2px rgba(16,24,40,.03), 0 7px 24px rgba(16,24,40,.035);
     padding: 13px;
     display: grid;
-    grid-template-columns: minmax(170px,1fr) minmax(150px,.9fr) minmax(150px,.9fr) minmax(240px,1.45fr) auto;
+    grid-template-columns: minmax(160px,.9fr) minmax(260px,1.35fr) minmax(150px,.8fr) minmax(150px,.8fr) auto;
     gap: 10px;
     align-items: end;
   }
@@ -142,6 +142,71 @@
   .ps-field input:focus {
     border-color: #76a7b3;
     box-shadow: 0 0 0 3px rgba(37,108,125,.10);
+  }
+
+  .ps-combobox {
+    position: relative;
+  }
+  .ps-combobox-control {
+    position: relative;
+  }
+  .ps-combobox-control input {
+    padding-right: 34px;
+  }
+  .ps-combobox-toggle {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    width: 26px;
+    height: 26px;
+    transform: translateY(-50%);
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #667085;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .ps-combobox-toggle:hover { background: #f2f4f7; }
+  .ps-combobox-menu {
+    position: absolute;
+    z-index: 80;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 5px;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 14px 30px rgba(16,24,40,.13);
+  }
+  .ps-combobox-menu[hidden] { display: none; }
+  .ps-combobox-option {
+    width: 100%;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #344054;
+    padding: 8px 9px;
+    text-align: left;
+    font: inherit;
+    font-size: .8rem;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+  .ps-combobox-option:hover,
+  .ps-combobox-option.is-active {
+    background: var(--ps-accent-soft);
+    color: var(--ps-accent-strong);
+  }
+  .ps-combobox-empty {
+    padding: 10px;
+    color: var(--ps-muted);
+    font-size: .78rem;
+    text-align: center;
   }
 
   .ps-summary {
@@ -672,10 +737,36 @@
     <div class="ps-field">
       <label for="f-obra">Obra</label>
       <select id="f-obra" name="obra">
+        <option value="">{% if filtros.suprimento %}Todas as obras{% else %}Selecione{% endif %}</option>
         {% for registro in obras %}
         <option value="{{ registro.obra_id }}" {% if cronograma_obra and registro.obra_id == cronograma_obra.obra_id %}selected{% endif %}>{{ registro.nome_aba }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="ps-field ps-combobox" data-suprimento-combobox>
+      <label for="f-suprimento-search">Suprimento em todas as obras</label>
+      <input type="hidden" id="f-suprimento" name="suprimento" value="{{ filtros.suprimento }}">
+      <div class="ps-combobox-control">
+        <input
+          id="f-suprimento-search"
+          type="search"
+          value="{{ filtros.suprimento }}"
+          placeholder="Digite para pesquisar um suprimento"
+          autocomplete="off"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="f-suprimento-options"
+          data-suprimento-search
+        >
+        <button class="ps-combobox-toggle" type="button" aria-label="Abrir lista de suprimentos" data-suprimento-toggle>⌄</button>
+      </div>
+      <div class="ps-combobox-menu" id="f-suprimento-options" role="listbox" hidden data-suprimento-menu>
+        <button type="button" class="ps-combobox-option" data-value="">Todos os suprimentos</button>
+        {% for valor in suprimentos_filtro %}
+          <button type="button" class="ps-combobox-option" data-value="{{ valor }}">{{ valor }}</button>
+        {% endfor %}
+        <div class="ps-combobox-empty" hidden data-suprimento-empty>Nenhum suprimento encontrado.</div>
+      </div>
     </div>
     <div class="ps-field">
       <label for="f-categoria">Categoria</label>
@@ -694,10 +785,6 @@
         <option value="{{ valor }}" {% if filtros.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>
         {% endfor %}
       </select>
-    </div>
-    <div class="ps-field">
-      <label for="f-busca">Pesquisar</label>
-      <input id="f-busca" type="search" name="busca" value="{{ filtros.busca }}" placeholder="Suprimento, fornecedor, processo ou responsável">
     </div>
     <button class="ps-btn ps-btn-primary" type="submit">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -772,6 +859,7 @@
                   <span class="ps-item-state {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}"></span>
                   <div>
                     <div class="ps-item-name">{{ item.item }}</div>
+                    {% if filtros.suprimento %}<div class="ps-item-local"><strong>{{ item.obra_exibicao }}</strong></div>{% endif %}
                     <div class="ps-item-local">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
                       {% if item.local %}{{ item.local }}{% else %}Sem local definido{% endif %}
@@ -818,15 +906,12 @@
               </td>
 
               <td class="ps-milestone">
-                <div class="ps-milestone-label">Planejado</div>
-                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_compatibilizacao %}done{% elif item.compatibilizacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_compatibilizacao|date:"d/m/Y"|default:"—" }}</strong></div>
-                {% if item.data_real_compatibilizacao %}
-                  <div class="ps-milestone-real done">Realizado {{ item.data_real_compatibilizacao|date:"d/m/Y" }}</div>
-                  {% if item.compatibilizacao_desvio_label %}<span class="ps-delta {{ item.compatibilizacao_desvio_classe }}">{{ item.compatibilizacao_desvio_label }}</span>{% endif %}
-                {% elif item.compatibilizacao_atrasada %}
-                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% if not item.exige_compatibilizacao %}
+                  <div class="ps-milestone-label">Não aplicável</div><div class="ps-milestone-real done">Etapa dispensada</div>
                 {% else %}
-                  <div class="ps-milestone-real">Pendente</div>
+                  <div class="ps-milestone-label">Planejado</div>
+                  <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_compatibilizacao %}done{% elif item.compatibilizacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_compatibilizacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                  {% if item.data_real_compatibilizacao %}<div class="ps-milestone-real done">Realizado {{ item.data_real_compatibilizacao|date:"d/m/Y" }}</div>{% if item.compatibilizacao_desvio_label %}<span class="ps-delta {{ item.compatibilizacao_desvio_classe }}">{{ item.compatibilizacao_desvio_label }}</span>{% endif %}{% elif item.compatibilizacao_atrasada %}<div class="ps-milestone-real late">Pendente · atrasado</div>{% else %}<div class="ps-milestone-real">Pendente</div>{% endif %}
                 {% endif %}
               </td>
 
@@ -1025,7 +1110,7 @@
       {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
       <input type="hidden" name="categoria" value="{{ filtros.categoria }}">
       <input type="hidden" name="etapa" value="{{ filtros.etapa }}">
-      <input type="hidden" name="busca" value="{{ filtros.busca }}">
+      <input type="hidden" name="suprimento" value="{{ filtros.suprimento }}">
 
       <div class="ps-modal-head">
         <div class="ps-modal-title-row">
@@ -1206,5 +1291,100 @@
     }
   } catch (error) {}
 })();
+
+
+(()=>{
+  const root = document.querySelector('[data-suprimento-combobox]');
+  if (!root) return;
+
+  const hidden = root.querySelector('#f-suprimento');
+  const search = root.querySelector('[data-suprimento-search]');
+  const toggle = root.querySelector('[data-suprimento-toggle]');
+  const menu = root.querySelector('[data-suprimento-menu]');
+  const empty = root.querySelector('[data-suprimento-empty]');
+  const options = [...root.querySelectorAll('.ps-combobox-option')];
+
+  const normalize = (value) => (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  const openMenu = () => {
+    menu.hidden = false;
+    search.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeMenu = () => {
+    menu.hidden = true;
+    search.setAttribute('aria-expanded', 'false');
+  };
+
+  const filter = () => {
+    const term = normalize(search.value);
+    let visible = 0;
+    options.forEach((option) => {
+      const isAll = option.dataset.value === '';
+      const show = isAll ? !term : normalize(option.textContent).includes(term);
+      option.hidden = !show;
+      option.classList.toggle('is-active', option.dataset.value === hidden.value);
+      if (show) visible += 1;
+    });
+    empty.hidden = visible > 0;
+    openMenu();
+  };
+
+  const choose = (option) => {
+    const value = option.dataset.value || '';
+    hidden.value = value;
+    search.value = value;
+    options.forEach((item) => item.classList.toggle('is-active', item === option));
+    closeMenu();
+    search.focus();
+  };
+
+  search.addEventListener('focus', filter);
+  search.addEventListener('input', () => {
+    hidden.value = '';
+    filter();
+  });
+  toggle.addEventListener('click', () => {
+    if (menu.hidden) {
+      filter();
+      search.focus();
+    } else {
+      closeMenu();
+    }
+  });
+  options.forEach((option) => option.addEventListener('click', () => choose(option)));
+
+  document.addEventListener('click', (event) => {
+    if (!root.contains(event.target)) closeMenu();
+  });
+
+  search.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeMenu();
+      return;
+    }
+    if (event.key === 'Enter') {
+      const first = options.find((option) => !option.hidden && option.dataset.value !== '');
+      if (first) {
+        event.preventDefault();
+        choose(first);
+      }
+    }
+  });
+
+  const form = root.closest('form');
+  form?.addEventListener('submit', () => {
+    const exact = options.find(
+      (option) => option.dataset.value && normalize(option.dataset.value) === normalize(search.value)
+    );
+    if (exact) hidden.value = exact.dataset.value;
+    if (!search.value.trim()) hidden.value = '';
+  });
+})();
+
 </script>
 {% endblock %}

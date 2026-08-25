@@ -13,6 +13,8 @@ def registrar_compatibilizacao(*, item_cotado, resultado, usuario, observacao=""
         raise ValidationError(
             "A análise técnica só pode ser registrada enquanto o mapa comercial estiver em análise ou negociação."
         )
+    if item_cotado.cotacao.enviada_aprovacao_em:
+        raise ValidationError("Esta proposta já foi enviada ao gestor. Devolva-a para análise antes de alterar a compatibilização.")
     if resultado not in CompatibilizacaoItem.Resultado.values:
         raise ValidationError("Resultado de compatibilização inválido.")
     if resultado == CompatibilizacaoItem.Resultado.APROVADO_COM_RESSALVA and not ressalva_motivo.strip():

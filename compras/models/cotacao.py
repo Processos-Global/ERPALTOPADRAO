@@ -84,6 +84,22 @@ class CotacaoFornecedor(models.Model):
         on_delete=models.SET_NULL,
         related_name="cotacoes_enviadas_compatibilizacao",
     )
+    enviada_negociacao_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    enviada_negociacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cotacoes_enviadas_negociacao",
+    )
+    enviada_aprovacao_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    enviada_aprovacao_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="cotacoes_enviadas_aprovacao",
+    )
     criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="cotacoes_fornecedor_criadas")
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -97,6 +113,16 @@ class CotacaoFornecedor(models.Model):
     @property
     def enviada_para_compatibilizacao(self):
         return self.enviada_compatibilizacao_em is not None
+
+    @property
+    def etapa_fluxo_fornecedor(self):
+        if self.enviada_aprovacao_em:
+            return "APROVACAO"
+        if self.enviada_negociacao_em:
+            return "NEGOCIACAO"
+        if self.enviada_compatibilizacao_em:
+            return "COMPATIBILIZACAO"
+        return "COTACAO"
 
 
 class CotacaoFornecedorItem(models.Model):

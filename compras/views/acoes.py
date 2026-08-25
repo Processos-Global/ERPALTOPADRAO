@@ -1,5 +1,6 @@
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
 
@@ -24,6 +25,7 @@ from compras.models import (
     AprovacaoCompra,
     CotacaoFornecedor,
     CotacaoFornecedorItem,
+    CompatibilizacaoItem,
     PedidoCompra,
     PedidoCompraAnexo,
     ProcessoCompra,
@@ -37,14 +39,19 @@ from compras.services.etapas import (
     concluir_compatibilizacao,
     concluir_negociacao,
     decidir_aprovacao,
+    devolver_cotacao_para_negociacao,
+    enviar_cotacao_para_aprovacao,
     enviar_cotacao_para_compatibilizacao,
+    enviar_cotacao_para_negociacao,
+    retornar_processo_etapa_anterior,
 )
 from compras.services.negociacao import registrar_negociacao
+from compras.services.comercial import processo_exige_compatibilizacao
 from compras.services.pedidos import (
     atualizar_previsao_entrega, atualizar_status_pedido, cancelar_pedido,
     gerar_pedidos, registrar_recebimento,
 )
-from compras.services.permissoes import compras_acao_required
+from compras.services.permissoes import compras_acao_required, possui_acao_compras
 from compras.services.processos import incluir_necessidade
 from compras.services.solicitacoes_cotacao import marcar_solicitacao_enviada
 
@@ -205,11 +212,8 @@ def acao_salvar_proposta_completa(request, pk):
             pk=cotacao_id,
             processo=processo,
         )
-        if cotacao.enviada_compatibilizacao_em:
-            messages.error(
-                request,
-                "Esta proposta já foi enviada para compatibilização e ficou congelada para preservar a análise técnica.",
-            )
+        if cotacao.enviada_compatibilizacao_em or cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em:
+            messages.error(request, "Esta proposta já avançou no fluxo e ficou congelada. Retorne a etapa antes de corrigir a proposta.")
             return redirect(f"{_voltar(processo).url}#cotacao")
 
     form = PropostaCompletaForm(
@@ -293,8 +297,8 @@ def acao_excluir_cotacao(request, pk, cotacao_id):
         processo=processo,
     )
 
-    if cotacao.enviada_compatibilizacao_em:
-        messages.error(request, "A proposta já enviada para compatibilização não pode ser excluída.")
+    if cotacao.enviada_compatibilizacao_em or cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em:
+        messages.error(request, "A proposta já avançou no fluxo e não pode ser excluída.")
         resposta = _voltar(processo)
         resposta["Location"] = resposta["Location"] + "#cotacao"
         return resposta
@@ -321,10 +325,8 @@ def acao_enviar_cotacao_compatibilizacao(request, pk, cotacao_id):
     if request.method == "POST":
         try:
             enviar_cotacao_para_compatibilizacao(cotacao, request.user)
-            messages.success(
-                request,
-                f"Proposta de {cotacao.fornecedor.nome} enviada para compatibilização.",
-            )
+            destino = "compatibilização" if processo_exige_compatibilizacao(processo) else "negociação"
+            messages.success(request, f"Proposta de {cotacao.fornecedor.nome} enviada para {destino}.")
         except ValidationError as exc:
             _erro(request, exc)
     resposta = _voltar(processo)
@@ -334,24 +336,41 @@ def acao_enviar_cotacao_compatibilizacao(request, pk, cotacao_id):
 
 @compras_acao_required(AcaoCompra.COMPATIBILIZAR)
 def acao_analise_tecnica_lote(request, pk):
-    """
-    Salva decisões técnicas individualmente.
-
-    A análise de uma oferta não encerra o mapa. Ao surgir a primeira oferta
-    aprovada, a negociação é liberada, mas novas propostas continuam podendo
-    entrar e ser analisadas posteriormente.
-    """
+    """Salva a compatibilização de um único fornecedor por vez."""
     processo = _processo(pk)
     if request.method != "POST":
         return _voltar(processo)
 
-    form = AnaliseTecnicaLoteForm(request.POST, processo=processo)
+    cotacao_id = (request.POST.get("cotacao_id") or "").strip()
+    if not cotacao_id:
+        messages.error(request, "Informe o fornecedor que está sendo compatibilizado.")
+        resposta = _voltar(processo)
+        resposta["Location"] += "#comparacao"
+        return resposta
+
+    cotacao = get_object_or_404(
+        CotacaoFornecedor.objects.select_related("fornecedor"),
+        pk=cotacao_id,
+        processo=processo,
+        enviada_compatibilizacao_em__isnull=False,
+    )
+    if cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em:
+        messages.error(request, "Esta proposta já avançou da compatibilização.")
+        resposta = _voltar(processo)
+        resposta["Location"] += "#comparacao"
+        return resposta
+
+    form = AnaliseTecnicaLoteForm(
+        request.POST,
+        processo=processo,
+        cotacao=cotacao,
+    )
     if not form.is_valid():
         for erros in form.errors.values():
             for erro in erros:
                 messages.error(request, erro)
         resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
+        resposta["Location"] += f"#compat-fornecedor-{cotacao.pk}"
         return resposta
 
     salvas = 0
@@ -380,29 +399,102 @@ def acao_analise_tecnica_lote(request, pk):
                 )
                 salvas += 1
 
-            # A primeira aprovação técnica libera a negociação. Não esperamos
-            # as demais ofertas e não fechamos a compatibilização global.
-            processo.refresh_from_db()
-            if processo.etapa_atual == processo.Etapa.COMPATIBILIZACAO:
-                try:
-                    processo = concluir_compatibilizacao(processo, request.user)
-                except ValidationError:
-                    # Nenhuma oferta aprovada ainda: a análise continua aberta.
-                    pass
+            # Avança somente esta proposta. O service valida se todos os itens
+            # deste fornecedor possuem resultado técnico aprovado/ressalva.
+            cotacao.refresh_from_db()
+            try:
+                enviar_cotacao_para_negociacao(cotacao, request.user)
+                avancou = True
+            except ValidationError:
+                avancou = False
 
-        if processo.etapa_atual == processo.Etapa.NEGOCIACAO:
+        if avancou:
             messages.success(
                 request,
                 (
-                    f"Análise técnica atualizada: {salvas} decisão(ões) registrada(s). "
-                    "Ofertas aprovadas já estão disponíveis para negociação e o mapa continua aberto para novas propostas."
+                    f"Compatibilização de {cotacao.fornecedor.nome} salva e "
+                    "fornecedor liberado individualmente para negociação."
                 ),
             )
         else:
             messages.success(
                 request,
-                f"Análise técnica atualizada: {salvas} decisão(ões) registrada(s).",
+                (
+                    f"Compatibilização de {cotacao.fornecedor.nome} salva: "
+                    f"{salvas} decisão(ões) registrada(s). "
+                    "Complete/aprove os itens deste fornecedor para avançá-lo."
+                ),
             )
+    except ValidationError as exc:
+        _erro(request, exc)
+
+    resposta = _voltar(processo)
+    resposta["Location"] += f"#compat-fornecedor-{cotacao.pk}"
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.COMPATIBILIZAR)
+def acao_aprovar_toda_compatibilizacao(request, pk):
+    """Aprova tecnicamente, de uma vez, todos os itens que aguardam compatibilização."""
+    processo = _processo(pk)
+    if request.method != "POST":
+        return _voltar(processo)
+
+    if not processo_exige_compatibilizacao(processo):
+        messages.error(request, "Este suprimento não passa por compatibilização técnica.")
+        resposta = _voltar(processo)
+        resposta["Location"] += "#comparacao"
+        return resposta
+
+    cotacoes = list(
+        CotacaoFornecedor.objects
+        .filter(
+            processo=processo,
+            enviada_compatibilizacao_em__isnull=False,
+            enviada_negociacao_em__isnull=True,
+            enviada_aprovacao_em__isnull=True,
+        )
+        .select_related("fornecedor")
+        .prefetch_related("itens__compatibilizacoes")
+    )
+    if not cotacoes:
+        messages.info(request, "Não há propostas aguardando compatibilização.")
+        resposta = _voltar(processo)
+        resposta["Location"] += "#comparacao"
+        return resposta
+
+    itens_aprovados = 0
+    fornecedores_liberados = 0
+    try:
+        with transaction.atomic():
+            for cotacao in cotacoes:
+                for item in cotacao.itens.all():
+                    atual = item.compatibilizacoes.order_by("-data", "-id").first()
+                    decisao_valida = (
+                        atual
+                        and atual.resultado == CompatibilizacaoItem.Resultado.APROVADO
+                        and (not processo.data_cotacao_concluida or atual.data >= processo.data_cotacao_concluida)
+                        and (not item.atualizado_em or atual.data >= item.atualizado_em)
+                    )
+                    if decisao_valida:
+                        continue
+                    registrar_compatibilizacao(
+                        item_cotado=item,
+                        resultado=CompatibilizacaoItem.Resultado.APROVADO,
+                        usuario=request.user,
+                        observacao="Aprovação técnica em lote.",
+                        ressalva_motivo="",
+                    )
+                    itens_aprovados += 1
+
+                cotacao.refresh_from_db()
+                enviar_cotacao_para_negociacao(cotacao, request.user)
+                fornecedores_liberados += 1
+
+        messages.success(
+            request,
+            f"Compatibilização aprovada em lote: {itens_aprovados} item(ns) e {fornecedores_liberados} fornecedor(es) liberado(s) para negociação.",
+        )
     except ValidationError as exc:
         _erro(request, exc)
 
@@ -460,13 +552,7 @@ def acao_decisao_comercial_lote(request, pk):
 
                 registrar_negociacao(item_cotado=item, usuario=request.user, **negociacao_nova)
 
-            if avancar:
-                concluir_negociacao(processo, request.user)
-
-        if avancar:
-            messages.success(request, "Negociações salvas. Todas as propostas tecnicamente aprovadas foram enviadas ao gestor para escolha.")
-        else:
-            messages.success(request, "Negociações salvas. O mapa continua aberto para novas propostas e análises.")
+        messages.success(request, "Negociações salvas. Envie cada fornecedor individualmente para aprovação quando estiver concluído.")
     except ValidationError as exc:
         _erro(request, exc)
         resposta = _voltar(processo)
@@ -474,8 +560,53 @@ def acao_decisao_comercial_lote(request, pk):
         return resposta
 
     resposta = _voltar(processo)
-    resposta["Location"] += "#aprovacao" if avancar else "#comparacao"
+    resposta["Location"] += "#comparacao"
     return resposta
+
+
+@compras_acao_required(AcaoCompra.NEGOCIAR)
+def acao_enviar_cotacao_aprovacao(request, pk, cotacao_id):
+    processo = _processo(pk)
+    cotacao = get_object_or_404(CotacaoFornecedor.objects.select_related("fornecedor"), pk=cotacao_id, processo=processo)
+    if request.method == "POST":
+        try:
+            enviar_cotacao_para_aprovacao(cotacao, request.user)
+            messages.success(request, f"Proposta de {cotacao.fornecedor.nome} enviada individualmente para aprovação.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    resposta = _voltar(processo); resposta["Location"] += "#comparacao"; return resposta
+
+
+@compras_acao_required(AcaoCompra.APROVAR)
+def acao_devolver_cotacao_negociacao(request, pk, cotacao_id):
+    processo = _processo(pk)
+    cotacao = get_object_or_404(CotacaoFornecedor.objects.select_related("fornecedor"), pk=cotacao_id, processo=processo)
+    if request.method == "POST":
+        try:
+            devolver_cotacao_para_negociacao(cotacao, request.user)
+            messages.warning(request, f"Proposta de {cotacao.fornecedor.nome} devolvida para negociação.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    resposta = _voltar(processo); resposta["Location"] += "#aprovacao"; return resposta
+
+
+@login_required
+def acao_retornar_etapa(request, pk):
+    processo = _processo(pk)
+    if request.method == "POST":
+        gestor = possui_acao_compras(request.user, AcaoCompra.APROVAR)
+        pode_operar = gestor or any(
+            possui_acao_compras(request.user, acao)
+            for acao in (AcaoCompra.COTAR, AcaoCompra.COMPATIBILIZAR, AcaoCompra.NEGOCIAR)
+        )
+        if not pode_operar:
+            raise PermissionDenied("Você não possui permissão para retornar etapas deste processo.")
+        try:
+            retornar_processo_etapa_anterior(processo, request.user, gestor=gestor)
+            messages.warning(request, "Processo retornado para a etapa anterior sem apagar os dados já preenchidos.")
+        except ValidationError as exc:
+            _erro(request, exc)
+    return _voltar(ProcessoCompra.objects.get(pk=processo.pk))
 
 
 @compras_acao_required(AcaoCompra.COMPATIBILIZAR)
@@ -603,11 +734,11 @@ def acao_aprovar(request, pk):
                 if decisao == AprovacaoCompra.Decisao.AJUSTE_SOLICITADO:
                     messages.warning(
                         request,
-                        "Ajuste solicitado. O processo retornou para Cotação para revisão do mapa comercial.",
+                        "Aprovado com ressalva. O processo retornou para Negociação para ajuste das condições comerciais.",
                     )
                     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
                     resposta = _voltar(processo_atualizado)
-                    resposta["Location"] += "#cotacao"
+                    resposta["Location"] += "#comparacao"
                     return resposta
 
                 if decisao == AprovacaoCompra.Decisao.REPROVADO:

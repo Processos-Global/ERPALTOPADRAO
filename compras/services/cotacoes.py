@@ -57,10 +57,8 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
         defaults={"criado_por": usuario, **dados},
     )
     if not criada:
-        if cotacao.enviada_compatibilizacao_em:
-            raise ValidationError(
-                "A proposta já foi enviada para compatibilização e não pode mais ser alterada."
-            )
+        if cotacao.enviada_compatibilizacao_em or cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em:
+            raise ValidationError("A proposta já avançou no fluxo e não pode mais ser alterada sem retorno de etapa.")
         for campo, valor in dados.items():
             setattr(cotacao, campo, valor)
         cotacao.save()
@@ -82,10 +80,8 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
 
 @transaction.atomic
 def incluir_item_cotacao(*, cotacao, necessidade, quantidade, valor_unitario, usuario, **dados):
-    if cotacao.enviada_compatibilizacao_em:
-        raise ValidationError(
-            "A proposta já foi enviada para compatibilização e não pode mais ser alterada."
-        )
+    if cotacao.enviada_compatibilizacao_em or cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em:
+        raise ValidationError("A proposta já avançou no fluxo e não pode mais ser alterada sem retorno de etapa.")
     if not processo_em_fase_comercial(cotacao.processo):
         raise ValidationError(
             "O mapa comercial já foi fechado. Itens da proposta não podem mais ser alterados."

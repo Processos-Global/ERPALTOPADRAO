@@ -255,6 +255,9 @@ def _valor_negociado(cotacao):
 
 def _status_compatibilizacao(cotacao):
     itens = list(cotacao.itens.all())
+    item_cronograma = getattr(cotacao.processo, "item_cronograma", None)
+    if item_cronograma is not None and not item_cronograma.exige_compatibilizacao:
+        return {"label": "Não aplicável", "classe": "muted", "estado": "NAO_APLICAVEL"}
 
     if itens and not cotacao.enviada_compatibilizacao_em:
         return {
@@ -331,32 +334,24 @@ def _status_compatibilizacao(cotacao):
 def _status_negociacao(cotacao, compat):
     itens = list(cotacao.itens.all())
 
-    if not itens or compat["estado"] in {
-        "SEM_PROPOSTA",
-        "NAO_ENVIADA",
-        "REPROVADO",
-        "PENDENTE",
-    }:
+    if not itens or compat["estado"] in {"SEM_PROPOSTA", "NAO_ENVIADA", "REPROVADO", "PENDENTE"}:
         return {
             "label": "—",
             "classe": "muted",
             "estado": "NAO_APLICAVEL",
         }
 
+    if not cotacao.enviada_negociacao_em:
+        return {"label": "Pendente", "classe": "warning", "estado": "PENDENTE"}
+
     elegiveis = []
-
-    for item in itens:
-        ultimo = _ultimo_resultado_compat(item)
-
-        if (
-            ultimo
-            and ultimo.resultado
-            in {
-                "APROVADO",
-                "APROVADO_COM_RESSALVA",
-            }
-        ):
-            elegiveis.append(item)
+    if compat["estado"] == "NAO_APLICAVEL":
+        elegiveis = itens
+    else:
+        for item in itens:
+            ultimo = _ultimo_resultado_compat(item)
+            if ultimo and ultimo.resultado in {"APROVADO", "APROVADO_COM_RESSALVA"}:
+                elegiveis.append(item)
 
     if not elegiveis:
         return {
@@ -441,8 +436,8 @@ def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
         }
 
     elif (
-        processo.status == "AGUARDANDO_APROVACAO"
-        and compat["estado"] == "APROVADO"
+        cotacao.enviada_aprovacao_em
+        and compat["estado"] in {"APROVADO", "NAO_APLICAVEL"}
     ):
         aprovacao = {
             "label": "Aguardando gestor",
@@ -595,10 +590,10 @@ def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
         }
 
     elif compat["estado"] == "NAO_ENVIADA":
-        status_atual = {
-            "label": "Cotação recebida",
-            "classe": "info",
-        }
+        status_atual = {"label": "Cotação recebida", "classe": "info"}
+
+    elif compat["estado"] == "NAO_APLICAVEL" and not cotacao.enviada_negociacao_em:
+        status_atual = {"label": "Cotação recebida", "classe": "info"}
 
     elif compat["estado"] in {
         "PENDENTE",
@@ -1313,6 +1308,7 @@ def montar_painel_cronograma_suprimentos(
     etapa: str = "",
     situacao: str = "",
     busca: str = "",
+    suprimento: str = "",
 ):
     etapa = etapa or situacao
 
@@ -1332,6 +1328,7 @@ def montar_painel_cronograma_suprimentos(
         "cronograma_obra": None,
         "categorias": [],
         "categorias_filtro": [],
+        "suprimentos_filtro": [],
         "etapas_filtro": ETAPAS_FILTRO,
         "resumo": {
             "total": 0,
@@ -1346,6 +1343,7 @@ def montar_painel_cronograma_suprimentos(
             "categoria": categoria,
             "etapa": etapa,
             "busca": busca,
+            "suprimento": suprimento,
         },
     }
 
@@ -1362,155 +1360,55 @@ def montar_painel_cronograma_suprimentos(
     )
 
     selecionado = None
-
     if obra_id:
-        selecionado = next(
-            (
-                x
-                for x in obras
-                if str(x.obra_id)
-                == str(obra_id)
-            ),
-            None,
-        )
-
-    if selecionado is None and obras:
+        selecionado = next((x for x in obras if str(x.obra_id) == str(obra_id)), None)
+    if selecionado is None and obras and not suprimento:
         selecionado = obras[0]
 
     grupos = []
     categorias_filtro = []
+    suprimentos_filtro = sorted({
+        nome for cron in obras
+        for nome in cron.itens.values_list("item", flat=True)
+        if nome
+    }, key=str.casefold)
     resumo = vazio["resumo"].copy()
+    hoje = timezone.localdate()
 
-    if selecionado:
-        hoje = timezone.localdate()
+    cronogramas_origem = obras if suprimento else ([selecionado] if selecionado else [])
+    todos_itens = []
+    for cron in cronogramas_origem:
+        qs = cron.itens.all().order_by("ordem", "id")
+        if suprimento:
+            qs = qs.filter(item=suprimento)
+        for item in qs:
+            item = _decorar_item(item, hoje)
+            item.obra_exibicao = cron.nome_aba
+            todos_itens.append(item)
 
-        todos_itens = [
-            _decorar_item(
-                item,
-                hoje,
-            )
-            for item
-            in selecionado.itens.all().order_by(
-                "ordem",
-                "id",
-            )
-        ]
-
-        # Consulta Compras uma única vez e anexa a visão comercial a cada item.
-        _anexar_acompanhamento_compras(
-            todos_itens
-        )
-
-        categorias_filtro = sorted(
-            {
-                x.categoria
-                for x in todos_itens
-                if x.categoria
-            },
-            key=str.casefold,
-        )
-
-        resumo["total"] = len(
-            todos_itens
-        )
-
-        resumo["concluidos"] = sum(
-            1
-            for x in todos_itens
-            if x.etapa_atual
-            == ItemCronogramaSuprimento.Etapa.CONCLUIDO
-        )
-
-        resumo["nao_iniciados"] = sum(
-            1
-            for x in todos_itens
-            if x.percentual_andamento == 0
-        )
-
-        resumo["em_andamento"] = sum(
-            1
-            for x in todos_itens
-            if 0 < x.percentual_andamento < 100
-        )
-
-        resumo["atrasados"] = sum(
-            1
-            for x in todos_itens
-            if x.atrasado_calculado
-        )
-
-        if todos_itens:
-            resumo["percentual_medio"] = round(
-                sum(
-                    x.percentual_andamento
-                    for x in todos_itens
-                )
-                / len(todos_itens)
-            )
-
+    if todos_itens:
+        _anexar_acompanhamento_compras(todos_itens)
+        categorias_filtro = sorted({x.categoria for x in todos_itens if x.categoria}, key=str.casefold)
+        resumo["total"] = len(todos_itens)
+        resumo["concluidos"] = sum(1 for x in todos_itens if x.etapa_atual == ItemCronogramaSuprimento.Etapa.CONCLUIDO)
+        resumo["nao_iniciados"] = sum(1 for x in todos_itens if x.percentual_andamento == 0)
+        resumo["em_andamento"] = sum(1 for x in todos_itens if 0 < x.percentual_andamento < 100)
+        resumo["atrasados"] = sum(1 for x in todos_itens if x.atrasado_calculado)
+        resumo["percentual_medio"] = round(sum(x.percentual_andamento for x in todos_itens) / len(todos_itens))
         itens = todos_itens
-
         if categoria:
-            itens = [
-                x
-                for x in itens
-                if x.categoria == categoria
-            ]
-
+            itens = [x for x in itens if x.categoria == categoria]
         if etapa:
-            itens = _filtrar_por_etapa(
-                itens,
-                etapa,
-            )
-
+            itens = _filtrar_por_etapa(itens, etapa)
         if busca:
             termo = busca.casefold()
-
-            itens = [
-                x
-                for x in itens
-                if termo
-                in (x.item or "").casefold()
-                or termo
-                in (x.local or "").casefold()
-                or termo
-                in (
-                    x.contratada_responsavel
-                    or ""
-                ).casefold()
-                or termo
-                in getattr(
-                    x,
-                    "acompanhamento_busca",
-                    "",
-                )
-            ]
-
-        resumo["filtrados"] = len(
-            itens
-        )
-
+            itens = [x for x in itens if termo in (x.item or "").casefold() or termo in (x.local or "").casefold() or termo in (x.contratada_responsavel or "").casefold() or termo in getattr(x, "acompanhamento_busca", "") or termo in getattr(x, "obra_exibicao", "").casefold()]
+        resumo["filtrados"] = len(itens)
         mapa = {}
-
         for item in itens:
-            nome_categoria = (
-                item.categoria
-                or "SEM CATEGORIA"
-            )
-
-            mapa.setdefault(
-                nome_categoria,
-                [],
-            ).append(item)
-
-        grupos = [
-            {
-                "nome": nome,
-                "itens": itens_categoria,
-            }
-            for nome, itens_categoria
-            in mapa.items()
-        ]
+            nome_categoria = item.categoria or "SEM CATEGORIA"
+            mapa.setdefault(nome_categoria, []).append(item)
+        grupos = [{"nome": nome, "itens": itens_categoria} for nome, itens_categoria in mapa.items()]
 
     return {
         "importacao_ativa": importacao,
@@ -1518,11 +1416,13 @@ def montar_painel_cronograma_suprimentos(
         "cronograma_obra": selecionado,
         "categorias": grupos,
         "categorias_filtro": categorias_filtro,
+        "suprimentos_filtro": suprimentos_filtro,
         "etapas_filtro": ETAPAS_FILTRO,
         "resumo": resumo,
         "filtros": {
             "categoria": categoria,
             "etapa": etapa,
             "busca": busca,
+            "suprimento": suprimento,
         },
     }

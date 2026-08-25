@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+import unicodedata
 
 
 class ImportacaoCronogramaSuprimentos(models.Model):
@@ -188,17 +189,17 @@ class ItemCronogramaSuprimento(models.Model):
         return f"{self.cronograma_obra.nome_aba} - {self.item}"
 
     @property
+    def exige_compatibilizacao(self) -> bool:
+        texto = unicodedata.normalize("NFKD", str(self.categoria or "")).encode("ascii", "ignore").decode("ascii").upper()
+        return not ("MATERIA" in texto and "VARIAD" in texto)
+
+    @property
     def percentual_andamento(self) -> int:
-        concluidas = sum(
-            bool(data)
-            for data in (
-                self.data_real_cotacao,
-                self.data_real_compatibilizacao,
-                self.data_real_negociacao,
-                self.data_real_contratacao,
-            )
-        )
-        return concluidas * 25
+        datas = [self.data_real_cotacao, self.data_real_negociacao, self.data_real_contratacao]
+        if self.exige_compatibilizacao:
+            datas.insert(1, self.data_real_compatibilizacao)
+        concluidas = sum(bool(data) for data in datas)
+        return round((concluidas / len(datas)) * 100) if datas else 0
 
 
     @staticmethod
@@ -241,7 +242,7 @@ class ItemCronogramaSuprimento(models.Model):
     def etapa_atual(self) -> str:
         if not self.data_real_cotacao:
             return self.Etapa.COTACAO
-        if not self.data_real_compatibilizacao:
+        if self.exige_compatibilizacao and not self.data_real_compatibilizacao:
             return self.Etapa.COMPATIBILIZACAO
         if not self.data_real_negociacao:
             return self.Etapa.NEGOCIACAO

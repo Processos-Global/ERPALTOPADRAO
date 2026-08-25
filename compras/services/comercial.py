@@ -1,4 +1,5 @@
 from decimal import Decimal, ROUND_HALF_UP
+import unicodedata
 
 from django.db.models import F, OuterRef, Q, Subquery
 
@@ -6,6 +7,30 @@ from compras.models import CompatibilizacaoItem
 
 CENTAVO = Decimal("0.01")
 ZERO = Decimal("0")
+
+
+def _normalizar_categoria(valor):
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return " ".join(texto.encode("ascii", "ignore").decode("ascii").upper().split())
+
+
+def processo_exige_compatibilizacao(processo):
+    """Materiais variados pulam a análise técnica; demais categorias mantêm a etapa."""
+    categoria = _normalizar_categoria(getattr(getattr(processo, "item_cronograma", None), "categoria", ""))
+    return not ("MATERIA" in categoria and "VARIAD" in categoria)
+
+
+def cotacao_elegivel_para_negociacao(cotacao):
+    if not processo_exige_compatibilizacao(cotacao.processo):
+        return cotacao.itens.exists()
+    itens = list(cotacao.itens.all())
+    return bool(itens) and all(item_tecnicamente_aprovado(item) for item in itens)
+
+
+def queryset_itens_elegiveis_comercial(queryset, processo):
+    if not processo_exige_compatibilizacao(processo):
+        return queryset
+    return queryset_itens_tecnicamente_aprovados(queryset)
 
 
 def processo_em_fase_comercial(processo):
@@ -21,6 +46,7 @@ def processo_em_fase_comercial(processo):
         processo.Etapa.COTACAO,
         processo.Etapa.COMPATIBILIZACAO,
         processo.Etapa.NEGOCIACAO,
+        processo.Etapa.APROVACAO,
     }
 
 
@@ -29,6 +55,7 @@ def processo_em_analise_ou_negociacao(processo):
     return processo.etapa_atual in {
         processo.Etapa.COMPATIBILIZACAO,
         processo.Etapa.NEGOCIACAO,
+        processo.Etapa.APROVACAO,
     }
 
 
@@ -45,7 +72,9 @@ def ultima_compatibilizacao(item_cotado):
 
 
 def item_tecnicamente_aprovado(item_cotado):
-    """Valida a última decisão técnica e respeita o ciclo comercial atual."""
+    """Valida a análise técnica; materiais variados são elegíveis sem compatibilização."""
+    if not processo_exige_compatibilizacao(item_cotado.cotacao.processo):
+        return True
     ultima = ultima_compatibilizacao(item_cotado)
     if not ultima:
         return False

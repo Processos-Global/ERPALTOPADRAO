@@ -3,6 +3,7 @@ from .processos import dashboard, detalhe_processo, lista_pedidos, lista_process
 from .acoes import (
     acao_adjudicar,
     acao_analise_tecnica_lote,
+    acao_aprovar_toda_compatibilizacao,
     acao_aprovar,
     acao_cancelar_adjudicacao,
     acao_compatibilizar,
@@ -13,6 +14,9 @@ from .acoes import (
     acao_decisao_comercial_lote,
     acao_excluir_cotacao,
     acao_enviar_cotacao_compatibilizacao,
+    acao_enviar_cotacao_aprovacao,
+    acao_devolver_cotacao_negociacao,
+    acao_retornar_etapa,
     acao_anexar_documento,
     acao_gerar_pedidos,
     acao_incluir_cotacao,

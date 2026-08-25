@@ -12,10 +12,10 @@ def registrar_negociacao(
     prazo_entrega_dias_negociado=None, condicao_pagamento_negociada="", observacoes=""
 ):
     processo = item_cotado.cotacao.processo
-    if not processo_em_analise_ou_negociacao(processo):
-        raise ValidationError(
-            "A negociação só pode ser alterada enquanto o mapa comercial estiver aberto para análise/negociação."
-        )
+    if processo.etapa_atual not in {processo.Etapa.COMPATIBILIZACAO, processo.Etapa.NEGOCIACAO, processo.Etapa.APROVACAO}:
+        raise ValidationError("A negociação só pode ser alterada enquanto o mapa comercial estiver aberto.")
+    if item_cotado.cotacao.enviada_aprovacao_em:
+        raise ValidationError("Esta proposta já foi enviada ao gestor. O gestor precisa devolvê-la para negociação antes de novas alterações.")
     if not item_tecnicamente_aprovado(item_cotado):
         raise ValidationError("A última análise técnica deste item não está aprovada.")
 

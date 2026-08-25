@@ -41,7 +41,7 @@ from compras.services.permissoes import (
     possui_permissao_compras,
 )
 from compras.services.processos import criar_processo
-from compras.services.comercial import item_tecnicamente_aprovado
+from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
 from compras.services.pedidos import transicoes_status_permitidas
 
 
@@ -217,7 +217,7 @@ def _montar_dados_comerciais(
                     else item.valor_unitario_cotado
                 )
                 total_final = valor_final * item.quantidade
-                elegivel_aprovacao = item_tecnicamente_aprovado(item)
+                elegivel_aprovacao = bool(cotacao.enviada_aprovacao_em) and item_tecnicamente_aprovado(item)
 
             ofertas.append(
                 {
@@ -938,6 +938,9 @@ def detalhe_processo(
         )
     )
 
+    exige_compatibilizacao = processo_exige_compatibilizacao(processo)
+    cotacoes_em_aprovacao = [c for c in cotacoes if c.enviada_aprovacao_em]
+
     adjudicacoes = list(
         processo
         .adjudicacoes
@@ -1065,16 +1068,15 @@ def detalhe_processo(
     form_proposta_nova = None
     pode_cadastrar_nova_proposta = False
     form_analise_lote = None
+    compatibilizacoes_forms = []
     form_decisao_lote = None
 
     fase_comercial_aberta = processo.etapa_atual in {
-        ProcessoCompra.Etapa.COTACAO,
-        ProcessoCompra.Etapa.COMPATIBILIZACAO,
-        ProcessoCompra.Etapa.NEGOCIACAO,
+        ProcessoCompra.Etapa.COTACAO, ProcessoCompra.Etapa.COMPATIBILIZACAO,
+        ProcessoCompra.Etapa.NEGOCIACAO, ProcessoCompra.Etapa.APROVACAO,
     }
     fase_analise_aberta = processo.etapa_atual in {
-        ProcessoCompra.Etapa.COMPATIBILIZACAO,
-        ProcessoCompra.Etapa.NEGOCIACAO,
+        ProcessoCompra.Etapa.COMPATIBILIZACAO, ProcessoCompra.Etapa.NEGOCIACAO, ProcessoCompra.Etapa.APROVACAO,
     }
 
     if pode_editar and fase_comercial_aberta:
@@ -1083,12 +1085,25 @@ def detalhe_processo(
         )
         pode_cadastrar_nova_proposta = form_proposta_nova.fields["fornecedor"].queryset.exists()
     if pode_editar and fase_analise_aberta:
-        form_analise_lote = AnaliseTecnicaLoteForm(
-            processo=processo,
-        )
-        form_decisao_lote = DecisaoComercialLoteForm(
-            processo=processo,
-        )
+        if exige_compatibilizacao:
+            cotacoes_para_compatibilizar = [
+                cotacao
+                for cotacao in cotacoes
+                if cotacao.enviada_compatibilizacao_em
+                and not cotacao.enviada_negociacao_em
+                and not cotacao.enviada_aprovacao_em
+            ]
+            compatibilizacoes_forms = [
+                {
+                    "cotacao": cotacao,
+                    "form": AnaliseTecnicaLoteForm(
+                        processo=processo,
+                        cotacao=cotacao,
+                    ),
+                }
+                for cotacao in cotacoes_para_compatibilizar
+            ]
+        form_decisao_lote = DecisaoComercialLoteForm(processo=processo)
 
     contexto = {
         "processo": processo,
@@ -1103,6 +1118,9 @@ def detalhe_processo(
         ),
         "fase_comercial_aberta": fase_comercial_aberta,
         "fase_analise_aberta": fase_analise_aberta,
+        "exige_compatibilizacao": exige_compatibilizacao,
+        "cotacoes_em_aprovacao": cotacoes_em_aprovacao,
+        "compatibilizacoes_forms": compatibilizacoes_forms,
 
         "aprovacoes": (
             processo
@@ -1207,7 +1225,7 @@ def detalhe_processo(
 
         "form_aprovacao": (
             AprovacaoForm(processo=processo)
-            if pode_aprovar and processo.etapa_atual == ProcessoCompra.Etapa.APROVACAO
+            if pode_aprovar and cotacoes_em_aprovacao
             else None
         ),
 

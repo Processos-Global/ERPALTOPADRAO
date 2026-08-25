@@ -26,6 +26,7 @@ def painel_cronograma_suprimentos(request):
         categoria=(request.GET.get("categoria") or "").strip(),
         etapa=(request.GET.get("etapa") or request.GET.get("situacao") or "").strip(),
         busca=(request.GET.get("busca") or "").strip(),
+        suprimento=(request.GET.get("suprimento") or "").strip(),
     )
 
     return render(
@@ -150,7 +151,7 @@ def salvar_datas_item_cronograma_suprimentos(request, item_id):
         )
 
     parametros = {}
-    for nome in ("obra", "categoria", "etapa", "busca"):
+    for nome in ("obra", "categoria", "etapa", "busca", "suprimento"):
         valor = (request.POST.get(nome) or "").strip()
         if valor:
             parametros[nome] = valor

@@ -14,7 +14,7 @@ from compras.models import (
     NecessidadeCompra,
     SolicitacaoCotacaoFornecedor,
 )
-from compras.services.comercial import queryset_itens_tecnicamente_aprovados
+from compras.services.comercial import queryset_itens_elegiveis_comercial, queryset_itens_tecnicamente_aprovados
 
 
 INPUT_CLASS = "cp-input"
@@ -456,14 +456,20 @@ class CompatibilizacaoForm(forms.Form):
 class AnaliseTecnicaLoteForm(forms.Form):
     """Decisões técnicas inline, agrupadas por necessidade."""
 
-    def __init__(self, *args, processo, **kwargs):
+    def __init__(self, *args, processo, cotacao=None, **kwargs):
         self.processo = processo
+        self.cotacao = cotacao
         super().__init__(*args, **kwargs)
+
+        filtro = {
+            "cotacao__processo": processo,
+            "cotacao__enviada_compatibilizacao_em__isnull": False,
+        }
+        if cotacao is not None:
+            filtro["cotacao"] = cotacao
+
         itens = list(
-            CotacaoFornecedorItem.objects.filter(
-                cotacao__processo=processo,
-                cotacao__enviada_compatibilizacao_em__isnull=False,
-            )
+            CotacaoFornecedorItem.objects.filter(**filtro)
             .select_related("cotacao__fornecedor", "necessidade")
             .prefetch_related("compatibilizacoes")
             .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
@@ -548,8 +554,9 @@ class NegociacaoForm(forms.Form):
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
         if processo:
-            self.fields["item_cotado"].queryset = queryset_itens_tecnicamente_aprovados(
-                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            self.fields["item_cotado"].queryset = queryset_itens_elegiveis_comercial(
+                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo, cotacao__enviada_negociacao_em__isnull=False, cotacao__enviada_aprovacao_em__isnull=True),
+                processo,
             ).select_related("cotacao__fornecedor", "necessidade")
         _aplicar_classe_campos(self)
 
@@ -561,8 +568,9 @@ class AdjudicacaoForm(forms.Form):
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
         if processo:
-            self.fields["item_cotado"].queryset = queryset_itens_tecnicamente_aprovados(
-                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            self.fields["item_cotado"].queryset = queryset_itens_elegiveis_comercial(
+                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo, cotacao__enviada_negociacao_em__isnull=False, cotacao__enviada_aprovacao_em__isnull=True),
+                processo,
             ).select_related("cotacao__fornecedor", "necessidade")
         _aplicar_classe_campos(self)
 
@@ -574,8 +582,9 @@ class DecisaoComercialLoteForm(forms.Form):
         self.processo = processo
         super().__init__(*args, **kwargs)
         itens = list(
-            queryset_itens_tecnicamente_aprovados(
-                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo)
+            queryset_itens_elegiveis_comercial(
+                CotacaoFornecedorItem.objects.filter(cotacao__processo=processo, cotacao__enviada_negociacao_em__isnull=False, cotacao__enviada_aprovacao_em__isnull=True),
+                processo,
             )
             .select_related("cotacao__fornecedor", "necessidade")
             .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
@@ -716,11 +725,13 @@ class AprovacaoForm(forms.Form):
 
         if processo:
             self.itens_elegiveis = list(
-                queryset_itens_tecnicamente_aprovados(
+                queryset_itens_elegiveis_comercial(
                     CotacaoFornecedorItem.objects.filter(
                         cotacao__processo=processo,
+                        cotacao__enviada_aprovacao_em__isnull=False,
                         necessidade__situacao="ATIVA",
-                    )
+                    ),
+                    processo,
                 )
                 .select_related("cotacao__fornecedor", "necessidade", "negociacao")
                 .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
