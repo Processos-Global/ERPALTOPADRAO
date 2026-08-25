@@ -460,6 +460,31 @@
   .ps-context-pill strong { margin-right: 4px; color: var(--ps-text); }
   .ps-processes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .ps-process-pill { border-radius: 999px; font-weight: 700; }
+  a.ps-process-pill {
+    text-decoration: none;
+    color: var(--ps-accent-strong);
+    border-color: #c9dde2;
+    background: var(--ps-accent-soft);
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  a.ps-process-pill:hover {
+    color: #174d59;
+    background: #e2f1f4;
+    border-color: #9fc5ce;
+  }
+  .ps-order-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--ps-accent-strong);
+    text-decoration: none;
+    font-weight: 800;
+  }
+  .ps-order-link:hover {
+    color: var(--ps-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
 
   .ps-detail-summary {
     display: grid;
@@ -1001,7 +1026,7 @@
                     {% if item.acompanhamento_processos %}
                     <div class="ps-processes">
                       {% for processo in item.acompanhamento_processos %}
-                      <span class="ps-process-pill">{{ processo.numero }} · {{ processo.get_status_display }}</span>
+                      <a class="ps-process-pill" href="{% url 'compras:detalhe_processo' processo.pk %}" title="Abrir processo {{ processo.numero }}">{{ processo.numero }} · {{ processo.get_status_display }}</a>
                       {% endfor %}
                     </div>
                     {% endif %}
@@ -1053,7 +1078,7 @@
                             {% if fornecedor.pedidos_detalhes %}
                               {% for pedido in fornecedor.pedidos_detalhes %}
                               <div class="ps-order-block">
-                                <span class="ps-order-number">{{ pedido.numero }}</span>
+                                <a class="ps-order-number ps-order-link" href="{% url 'compras:lista_pedidos' %}?q={{ pedido.numero|urlencode }}" title="Abrir pedido {{ pedido.numero }}">{{ pedido.numero }}</a>
                                 {% if pedido.previsao_entrega %}<span class="ps-order-meta">Previsão: {{ pedido.previsao_entrega|date:"d/m/Y" }}</span>{% endif %}
                                 {% for item_pedido in pedido.itens %}
                                 <div class="ps-order-item">
