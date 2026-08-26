@@ -1,6 +1,6 @@
 from django.urls import NoReverseMatch, reverse
 
-from usuarios.models import PermissaoModulo
+from usuarios.models import Notificacao, PermissaoModulo
 from usuarios.services.registro_permissoes import MODULOS_REGISTRY
 
 
@@ -46,7 +46,19 @@ def erp_layout(request):
             "desabilitado": not bool(url),
         })
 
+    notificacoes_recentes = list(
+        Notificacao.objects
+        .filter(usuario=request.user)
+        .order_by("-atualizada_em", "-id")[:6]
+    )
+    notificacoes_nao_lidas = Notificacao.objects.filter(
+        usuario=request.user,
+        lida=False,
+    ).count()
+
     return {
+        "notificacoes_recentes": notificacoes_recentes,
+        "notificacoes_nao_lidas": notificacoes_nao_lidas,
         "sidebar_dashboard": {
             "titulo": "Painel Geral",
             "icone": "grid",

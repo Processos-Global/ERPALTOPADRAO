@@ -16,6 +16,16 @@ from .comercial import (
     queryset_itens_elegiveis_comercial, total_aprovacao_processo,
 )
 from .integracao_planejamento import sincronizar_data_real
+from .notificacoes import (
+    notificar_ajuste_solicitado,
+    notificar_pedidos_gerados,
+    notificar_processo_reprovado,
+    notificar_retorno_etapa,
+    notificar_proposta_devolvida_negociacao,
+    notificar_proposta_para_aprovacao,
+    notificar_proposta_para_compatibilizacao,
+    notificar_proposta_para_negociacao,
+)
 
 
 def _processo_bloqueado(p):
@@ -50,6 +60,7 @@ def enviar_cotacao_para_negociacao(cotacao, usuario):
         if processo_exige_compatibilizacao(p):
             sincronizar_data_real(p, "COMPATIBILIZACAO", usuario)
     registrar_evento(p, "PROPOSTA_ENVIADA_NEGOCIACAO", usuario, f"Proposta de {c.fornecedor.nome} liberada individualmente para negociação.")
+    notificar_proposta_para_negociacao(c)
     return c
 
 
@@ -80,6 +91,7 @@ def enviar_cotacao_para_compatibilizacao(cotacao, usuario):
         p.save(update_fields=["data_cotacao_concluida", "etapa_atual", "status", "atualizado_em"])
         sincronizar_data_real(p, "COTACAO", usuario)
     registrar_evento(p, "PROPOSTA_ENVIADA_COMPATIBILIZACAO", usuario, f"Proposta de {c.fornecedor.nome} enviada individualmente para compatibilização técnica.")
+    notificar_proposta_para_compatibilizacao(c)
     return c
 
 
@@ -119,6 +131,7 @@ def enviar_cotacao_para_aprovacao(cotacao, usuario):
     p.save(update_fields=["data_negociacao_concluida", "etapa_atual", "status", "atualizado_em"])
     sincronizar_data_real(p, "NEGOCIACAO", usuario)
     registrar_evento(p, "PROPOSTA_ENVIADA_APROVACAO", usuario, f"Proposta de {c.fornecedor.nome} enviada individualmente ao gestor.")
+    notificar_proposta_para_aprovacao(c)
     return c
 
 
@@ -139,6 +152,7 @@ def devolver_cotacao_para_negociacao(cotacao, usuario):
         p.status = p.Status.EM_NEGOCIACAO
         p.save(update_fields=["etapa_atual", "status", "atualizado_em"])
     registrar_evento(p, "PROPOSTA_DEVOLVIDA_NEGOCIACAO", usuario, f"Gestor devolveu a proposta de {c.fornecedor.nome} para negociação.")
+    notificar_proposta_devolvida_negociacao(c)
     return c
 
 
@@ -173,6 +187,7 @@ def retornar_processo_etapa_anterior(processo, usuario, gestor=False):
         raise ValidationError("Não existe etapa anterior disponível para retorno neste momento.")
     p.save(update_fields=["etapa_atual", "status", "atualizado_em"])
     registrar_evento(p, "PROCESSO_RETORNOU_ETAPA", usuario, mensagem)
+    notificar_retorno_etapa(p)
     return p
 
 
@@ -326,6 +341,7 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
             "Gestor aprovou com ressalva/solicitou ajuste. Processo retornou para Negociação.",
             {"ciclo": ciclo, "observacao": observacao},
         )
+        notificar_ajuste_solicitado(p)
         return aprovacao
 
     if decisao == AprovacaoCompra.Decisao.REPROVADO:
@@ -357,6 +373,7 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
             "Compra reprovada pelo gestor e processo encerrado sem fornecedor aprovado.",
             {"ciclo": ciclo, "observacao": observacao},
         )
+        notificar_processo_reprovado(p)
         return aprovacao
 
     _criar_adjudicacoes_da_aprovacao(processo=p, usuario=usuario, selecoes=selecoes)
@@ -390,4 +407,5 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
         usuario,
         f"{len(pedidos)} pedido(s) gerado(s) automaticamente. Mapa finalizado.",
     )
+    notificar_pedidos_gerados(p, len(pedidos))
     return aprovacao

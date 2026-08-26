@@ -444,6 +444,187 @@
             padding-right: 0 !important;
         }
 
+
+        /* Central de notificações — adicionada sem alterar o layout existente. */
+        .notification-center {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            margin-right: .35rem;
+        }
+
+        .notification-center__button {
+            position: relative;
+            width: 2.15rem;
+            height: 2.15rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: .6rem;
+            background: transparent;
+            color: #526875;
+            cursor: pointer;
+            transition: background .16s ease, color .16s ease;
+        }
+
+        .notification-center__button:hover,
+        .notification-center.is-open .notification-center__button {
+            background: #F1F5F9;
+            color: var(--opal-blue-dark);
+        }
+
+        .notification-center__button svg {
+            width: 1.08rem;
+            height: 1.08rem;
+        }
+
+        .notification-center__badge {
+            position: absolute;
+            top: .1rem;
+            right: .05rem;
+            min-width: 1rem;
+            height: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 .2rem;
+            border-radius: 999px;
+            border: 2px solid #ffffff;
+            background: #DC2626;
+            color: #ffffff;
+            font-size: .57rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .notification-center__panel {
+            position: absolute;
+            top: calc(100% + .65rem);
+            right: 0;
+            z-index: 1200;
+            width: min(360px, calc(100vw - 24px));
+            overflow: hidden;
+            border: 1px solid #E2E8F0;
+            border-radius: .75rem;
+            background: #ffffff;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, .14);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+        }
+
+        .notification-center.is-open .notification-center__panel {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .notification-center__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            padding: .9rem 1rem;
+            border-bottom: 1px solid #EEF2F7;
+        }
+
+        .notification-center__header strong {
+            color: #10243E;
+            font-size: .84rem;
+        }
+
+        .notification-center__header span {
+            color: #64748B;
+            font-size: .69rem;
+        }
+
+        .notification-center__list {
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .notification-center__item {
+            display: grid;
+            grid-template-columns: 8px minmax(0, 1fr);
+            gap: .65rem;
+            padding: .8rem 1rem;
+            border-bottom: 1px solid #F1F5F9;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .notification-center__item:hover {
+            background: #F8FAFC;
+        }
+
+        .notification-center__dot {
+            width: 7px;
+            height: 7px;
+            margin-top: .34rem;
+            border-radius: 50%;
+            background: transparent;
+        }
+
+        .notification-center__item.is-unread .notification-center__dot {
+            background: var(--opal-blue);
+        }
+
+        .notification-center__content strong {
+            display: block;
+            margin-bottom: .18rem;
+            color: #10243E;
+            font-size: .76rem;
+            line-height: 1.35;
+        }
+
+        .notification-center__content span,
+        .notification-center__content small {
+            display: block;
+            color: #64748B;
+            font-size: .68rem;
+            line-height: 1.4;
+        }
+
+        .notification-center__content small {
+            margin-top: .3rem;
+            color: #94A3B8;
+        }
+
+        .notification-center__empty {
+            padding: 1.4rem 1rem;
+            text-align: center;
+            color: #64748B;
+            font-size: .74rem;
+        }
+
+        .notification-center__footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2.7rem;
+            padding: .35rem;
+            border-top: 1px solid #EEF2F7;
+        }
+
+        .notification-center__footer a {
+            color: var(--opal-blue-dark);
+            font-size: .72rem;
+            font-weight: 750;
+            text-decoration: none;
+        }
+
+        @media (max-width: 640px) {
+            .notification-center__panel {
+                position: fixed;
+                top: 4.3rem;
+                right: .75rem;
+                left: .75rem;
+                width: auto;
+            }
+        }
+
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -698,6 +879,61 @@
                 </div>
 
                 <div class="topbar__account">
+
+                    <div class="notification-center" data-notification-center>
+                        <button
+                            type="button"
+                            class="notification-center__button"
+                            data-notification-toggle
+                            aria-label="Abrir notificações"
+                            aria-expanded="false"
+                            title="Notificações"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+
+                            {% if notificacoes_nao_lidas %}
+                                <span class="notification-center__badge">
+                                    {% if notificacoes_nao_lidas > 99 %}99+{% else %}{{ notificacoes_nao_lidas }}{% endif %}
+                                </span>
+                            {% endif %}
+                        </button>
+
+                        <div class="notification-center__panel" data-notification-panel>
+                            <div class="notification-center__header">
+                                <strong>Notificações</strong>
+                                <span>{{ notificacoes_nao_lidas }} não lida{{ notificacoes_nao_lidas|pluralize:"s" }}</span>
+                            </div>
+
+                            <div class="notification-center__list">
+                                {% for notificacao in notificacoes_recentes %}
+                                    <a
+                                        href="{% url 'usuarios:abrir_notificacao' notificacao.pk %}"
+                                        class="notification-center__item {% if not notificacao.lida %}is-unread{% endif %}"
+                                        data-notification-link
+                                    >
+                                        <span class="notification-center__dot" aria-hidden="true"></span>
+                                        <span class="notification-center__content">
+                                            <strong>{{ notificacao.titulo }}</strong>
+                                            <span>{{ notificacao.mensagem }}</span>
+                                            <small>{{ notificacao.atualizada_em|timesince }} atrás</small>
+                                        </span>
+                                    </a>
+                                {% empty %}
+                                    <div class="notification-center__empty">
+                                        Nenhuma notificação por enquanto.
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="notification-center__footer">
+                                <a href="{% url 'usuarios:notificacoes' %}">Ver todas as notificações</a>
+                            </div>
+                        </div>
+                    </div>
+
                     <span class="topbar__status"></span>
 
                     <span class="topbar__account-text">
@@ -1084,6 +1320,43 @@
                         /* localStorage indisponível: submenu continua funcional. */
                     }
                 });
+            });
+        });
+    </script>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const center = document.querySelector('[data-notification-center]');
+            const toggle = document.querySelector('[data-notification-toggle]');
+
+            if (!center || !toggle) {
+                return;
+            }
+
+            function closeNotifications() {
+                center.classList.remove('is-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+
+            toggle.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const open = center.classList.toggle('is-open');
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+
+            center.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', closeNotifications);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeNotifications();
+                }
             });
         });
     </script>

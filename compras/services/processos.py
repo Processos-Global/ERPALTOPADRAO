@@ -7,6 +7,7 @@ from compras.models import NecessidadeCompra, ProcessoCompra, ProcessoCompraAtiv
 
 from .auditoria import registrar_evento
 from .numeracao import gerar_numero
+from .notificacoes import notificar_novo_processo_para_cotacao
 
 
 @transaction.atomic
@@ -129,6 +130,7 @@ def criar_processo(
             f"Solicitações de cotação preparadas para {len(fornecedores_sugeridos)} fornecedor(es): "
             f"{', '.join(f.nome for f in fornecedores_sugeridos)}. Aguardando registro do envio.",
         )
+        notificar_novo_processo_para_cotacao(processo)
     return processo
 
 
