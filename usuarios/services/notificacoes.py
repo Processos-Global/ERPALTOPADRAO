@@ -12,6 +12,7 @@ from usuarios.models import (
     PermissaoModulo,
     TipoNotificacao,
 )
+from usuarios.services.notificacoes_email import enviar_email_notificacao
 
 
 CAMPO_POR_ACAO_COMPRA = {
@@ -179,7 +180,21 @@ def notificar_usuarios_com_acao_compras(
     criadas = []
 
     for usuario in usuarios_com_acao_compras(acao):
-        notificacao, _ = criar_notificacao(
+        # Evita disparar e-mail repetido quando o mesmo evento é chamado
+        # novamente enquanto a pendência ainda está aberta.
+        notificacao_anterior = None
+        if chave_unica:
+            notificacao_anterior = (
+                Notificacao.objects
+                .filter(
+                    usuario=usuario,
+                    chave_unica=chave_unica,
+                )
+                .only("pk", "lida")
+                .first()
+            )
+
+        notificacao, criada = criar_notificacao(
             usuario=usuario,
             titulo=titulo,
             mensagem=mensagem,
@@ -191,6 +206,32 @@ def notificar_usuarios_com_acao_compras(
             dados=dados,
         )
         criadas.append(notificacao)
+
+        deve_enviar_email = (
+            criada
+            or chave_unica is None
+            or (
+                notificacao_anterior is not None
+                and notificacao_anterior.lida
+            )
+        )
+
+        if deve_enviar_email:
+            notificacao_id = notificacao.pk
+
+            def enviar_apos_commit(pk=notificacao_id):
+                try:
+                    notificacao_email = (
+                        Notificacao.objects
+                        .select_related("usuario")
+                        .get(pk=pk)
+                    )
+                except Notificacao.DoesNotExist:
+                    return
+
+                enviar_email_notificacao(notificacao_email)
+
+            transaction.on_commit(enviar_apos_commit)
 
     return criadas
 

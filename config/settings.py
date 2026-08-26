@@ -374,18 +374,52 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
 
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default="django.core.mail.backends.smtp.EmailBackend",
 )
 
-DEFAULT_FROM_EMAIL = env(
-    "DEFAULT_FROM_EMAIL",
-    default="sistema@erpaltopadrao.local",
+EMAIL_HOST = env(
+    "EMAIL_HOST",
+    default="smtp.gmail.com",
+)
+
+EMAIL_PORT = env.int(
+    "EMAIL_PORT",
+    default=587,
+)
+
+EMAIL_USE_TLS = env.bool(
+    "EMAIL_USE_TLS",
+    default=True,
+)
+
+EMAIL_USE_SSL = env.bool(
+    "EMAIL_USE_SSL",
+    default=False,
 )
 
 EMAIL_TIMEOUT = env.int(
     "EMAIL_TIMEOUT",
     default=30,
 )
+
+EMAIL_HOST_USER = env(
+    "EMAIL_HOST_USER",
+    default="processos@globalengenharia.eng.br",
+)
+
+EMAIL_HOST_PASSWORD = env(
+    "EMAIL_HOST_PASSWORD",
+    default="bixulfheiwfhohyj",
+)
+
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL",
+    default=EMAIL_HOST_USER,
+)
+
+EMAIL_FROM = DEFAULT_FROM_EMAIL
+
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 
 # ============================================================
