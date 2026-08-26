@@ -2531,6 +2531,209 @@
   border-color:#0b7b8a!important;
 }
 
+
+/* ==========================================================================\n   2026-08-26 · AJUSTE DE LEGIBILIDADE — APROVAÇÃO DO GESTOR\n   Mantém estrutura, ações e comportamento existentes.\n   ========================================================================== */
+#processo-compra .pc-approval-map-card>.pc-card-head{
+  padding:13px 15px!important;
+}
+#processo-compra .pc-approval-map-card>.pc-card-head h2{
+  font-size:14px!important;
+  line-height:1.3!important;
+}
+#processo-compra .pc-approval-map-card>.pc-card-head p{
+  font-size:10px!important;
+  line-height:1.4!important;
+}
+
+/* Cabeçalho da matriz */
+#processo-compra .pc-approval-matrix .pc-head-label{
+  padding:8px 9px!important;
+  font-size:9px!important;
+  line-height:1.2!important;
+  letter-spacing:.035em!important;
+}
+#processo-compra .pc-approval-supplier{
+  min-width:150px!important;
+  min-height:58px!important;
+  padding:8px 9px!important;
+  gap:7px!important;
+  align-items:center!important;
+}
+#processo-compra .pc-approval-supplier__name{
+  font-size:11px!important;
+  line-height:1.3!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+#processo-compra .pc-approval-supplier__return{
+  flex:0 0 auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:30px!important;
+  padding:6px 9px!important;
+  margin:0!important;
+  border:1px solid #dfc1c1!important;
+  border-radius:7px!important;
+  background:#fff!important;
+  color:#8d4a4a!important;
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:850!important;
+  text-decoration:none!important;
+  white-space:nowrap!important;
+}
+#processo-compra .pc-approval-supplier__return:hover{
+  border-color:#d29d9d!important;
+  background:#fff5f5!important;
+  color:#a44747!important;
+}
+
+/* Material e quantidade */
+#processo-compra .pc-approval-matrix thead .item-col{
+  width:205px!important;
+  min-width:205px!important;
+}
+#processo-compra .pc-approval-matrix thead .qty-col{
+  left:205px!important;
+  width:66px!important;
+  min-width:66px!important;
+}
+#processo-compra .pc-approval-matrix tbody .item-col{
+  left:0!important;
+  width:205px!important;
+  min-width:205px!important;
+  padding:9px 10px!important;
+}
+#processo-compra .pc-approval-matrix tbody .qty-col{
+  left:205px!important;
+  width:66px!important;
+  min-width:66px!important;
+  padding:9px 8px!important;
+}
+#processo-compra .pc-approval-matrix .item-col strong{
+  font-size:11px!important;
+  line-height:1.3!important;
+}
+#processo-compra .pc-approval-matrix .item-col small{
+  margin-top:3px!important;
+  font-size:8.5px!important;
+  line-height:1.35!important;
+}
+#processo-compra .pc-approval-matrix .qty-col strong{
+  font-size:11px!important;
+  line-height:1.2!important;
+}
+#processo-compra .pc-approval-matrix .qty-col small{
+  font-size:8px!important;
+}
+
+/* Ofertas selecionáveis */
+#processo-compra .pc-approval-matrix tbody td.pc-manager-choice,
+#processo-compra .pc-approval-quote-table tbody td.pc-manager-choice{
+  min-width:155px!important;
+  padding:6px!important;
+}
+#processo-compra .pc-approval-offer,
+#processo-compra .pc-approval-quote-table .pc-approval-offer{
+  min-height:62px!important;
+  padding:9px 37px 9px 10px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:center!important;
+  gap:3px!important;
+  border-radius:8px!important;
+}
+#processo-compra .pc-approval-offer__total,
+#processo-compra .pc-approval-quote-table .pc-approval-offer__total{
+  font-size:15px!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+#processo-compra .pc-approval-offer__unit,
+#processo-compra .pc-approval-quote-table .pc-approval-offer__unit{
+  font-size:8.5px!important;
+  line-height:1.25!important;
+  white-space:nowrap!important;
+}
+#processo-compra .pc-approval-offer__qty,
+#processo-compra .pc-approval-quote-table .pc-approval-offer__qty{
+  font-size:8.5px!important;
+  line-height:1.25!important;
+}
+#processo-compra .pc-approval-offer__best,
+#processo-compra .pc-approval-quote-table .pc-approval-offer__best{
+  position:static!important;
+  display:inline-flex!important;
+  margin-top:2px!important;
+  padding:2px 5px!important;
+  font-size:8px!important;
+  line-height:1.1!important;
+}
+#processo-compra .pc-approval-check,
+#processo-compra .pc-approval-quote-table .pc-approval-check{
+  top:50%!important;
+  right:8px!important;
+  transform:translateY(-50%)!important;
+  width:23px!important;
+  height:23px!important;
+  font-size:11px!important;
+}
+#processo-compra .pc-approval-empty{
+  min-height:62px!important;
+  font-size:9px!important;
+}
+
+/* Resumo comercial abaixo da matriz */
+#processo-compra .pc-approval-quote-table tfoot th,
+#processo-compra .pc-approval-quote-table tfoot td{
+  padding:7px 8px!important;
+  font-size:9px!important;
+  line-height:1.3!important;
+}
+#processo-compra .pc-approval-quote-table tfoot td strong{
+  font-size:10px!important;
+}
+
+/* Decisão final */
+#processo-compra .pc-approval-submit .pc-card-body{
+  padding:11px 12px!important;
+}
+#processo-compra .pc-approval-submit-grid{
+  grid-template-columns:180px minmax(260px,1fr) auto!important;
+  gap:10px!important;
+}
+#processo-compra .pc-approval-submit .pc-field label{
+  margin-bottom:5px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+#processo-compra .pc-approval-submit select.cp-input,
+#processo-compra .pc-approval-submit input.cp-input,
+#processo-compra .pc-approval-submit textarea.cp-input{
+  height:42px!important;
+  min-height:42px!important;
+  font-size:11px!important;
+  padding:9px 10px!important;
+}
+#processo-compra .pc-approval-submit textarea.cp-input{
+  max-height:70px!important;
+  line-height:22px!important;
+}
+#processo-compra .pc-approval-submit .pc-form-actions .cp-btn{
+  min-height:42px!important;
+  padding:10px 15px!important;
+  font-size:11px!important;
+  font-weight:850!important;
+}
+
+@media(max-width:980px){
+  #processo-compra .pc-approval-submit-grid{grid-template-columns:1fr!important}
+  #processo-compra .pc-approval-submit .pc-form-actions .cp-btn{width:100%!important}
+}
+
 </style>
 
 <script>
