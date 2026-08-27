@@ -1,4 +1,4 @@
-﻿
+
 """
 ConfiguraÃ§Ãµes do ERP Alto PadrÃ£o.
 
