@@ -5,37 +5,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
-class FornecedorCompra(models.Model):
-    nome = models.CharField(max_length=255, db_index=True)
-    documento = models.CharField(max_length=30, blank=True, db_index=True)
-    email = models.EmailField(blank=True)
-    telefone = models.CharField(max_length=40, blank=True)
-    avaliacao = models.DecimalField(
-        max_digits=3,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("5"))],
-        help_text="Avaliação comercial do fornecedor, de 0 a 5.",
-    )
-    ativo = models.BooleanField(default=True, db_index=True)
-    criado_em = models.DateTimeField(auto_now_add=True)
-    atualizado_em = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ("nome",)
-        constraints = [
-            models.UniqueConstraint(
-                fields=["documento"],
-                condition=~models.Q(documento=""),
-                name="comp_fornec_doc_uniq",
-            )
-        ]
-
-    def __str__(self):
-        return self.nome
-
-
 class ProcessoCompra(models.Model):
     class Etapa(models.TextChoices):
         COTACAO = "COTACAO", "Cotação"
@@ -79,7 +48,7 @@ class ProcessoCompra(models.Model):
         related_name="processos_compra_responsavel",
     )
     fornecedores_sugeridos = models.ManyToManyField(
-        FornecedorCompra,
+        "cadastros.Fornecedor",
         blank=True,
         related_name="processos_compra_sugeridos",
         help_text="Fornecedores indicados no pedido inicial para orientar o Suprimentos.",
@@ -175,6 +144,14 @@ class NecessidadeCompra(models.Model):
             "Opcional. Quando vazio, o item atende ao conjunto de atividades "
             "vinculadas ao processo de compra."
         ),
+    )
+    material = models.ForeignKey(
+        "cadastros.Material",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="necessidades_compra",
+        help_text="Material do catálogo central. Obrigatório para novas compras.",
     )
     descricao = models.CharField(max_length=500)
     especificacao = models.TextField(blank=True)

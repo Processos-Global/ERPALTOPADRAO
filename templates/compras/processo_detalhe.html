@@ -887,7 +887,7 @@
                 <tbody>
                   {% for n in necessidades %}
                     <tr>
-                      <td><strong>{{ n.descricao }}</strong></td>
+                      <td><strong>{{ n.descricao }}</strong>{% if n.material %}<small class="pc-muted" style="display:block">{{ n.material.codigo }} · {{ n.material.atividade.nome }} › {{ n.material.subatividade.nome }}</small>{% endif %}</td>
                       <td>{{ n.especificacao|default:"—" }}</td>
                       <td>{{ n.quantidade_necessaria|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}</td>
@@ -1213,7 +1213,7 @@
           <details class="pc-provider" {% if not cotacoes %}open{% endif %}>
             <summary>
              <div>
-  <div class="pc-provider-name">Adicionar proposta de fornecedor</div>
+  <div class="pc-provider-name">Adicionar proposta de fornecedor</div><div class="pc-subtitle">Fornecedores são carregados da Central de Cadastros. <a href="{% url 'cadastros:fornecedores_lista' %}" target="_blank" rel="noopener">Abrir fornecedores</a></div>
   <div class="pc-provider-meta">Nova proposta</div>
 </div>
 </summary>

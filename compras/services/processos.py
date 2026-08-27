@@ -98,13 +98,19 @@ def criar_processo(
         quantidade = Decimal(str(item["quantidade"]))
         if quantidade <= 0:
             raise ValidationError("A quantidade dos itens deve ser maior que zero.")
+        material = item.get("material")
+        if material is None:
+            raise ValidationError("Selecione um material válido do catálogo.")
+        if not material.ativo:
+            raise ValidationError(f"O material {material} está inativo no cadastro.")
         necessidades.append(
             NecessidadeCompra(
                 processo=processo,
                 atividade_origem=None,
-                descricao=item["descricao"].strip(),
-                especificacao=(item.get("especificacao") or "").strip(),
-                unidade=item["unidade"],
+                material=material,
+                descricao=material.nome,
+                especificacao=material.especificacao,
+                unidade=material.unidade.sigla,
                 quantidade_necessaria=quantidade,
                 quantidade_incluida=quantidade,
                 observacao=(item.get("observacao") or "").strip(),
@@ -138,14 +144,16 @@ def criar_processo(
 def incluir_necessidade(
     *,
     processo,
-    descricao,
-    unidade,
+    material,
     quantidade,
     usuario,
-    especificacao="",
     observacao="",
 ):
-    if processo.etapa_atual != processo.Etapa.COTACAO or processo.status in {processo.Status.CANCELADO, processo.Status.REPROVADO, processo.Status.CONTRATADO}:
+    if processo.etapa_atual != processo.Etapa.COTACAO or processo.status in {
+        processo.Status.CANCELADO,
+        processo.Status.REPROVADO,
+        processo.Status.CONTRATADO,
+    }:
         raise ValidationError("Itens só podem ser incluídos enquanto o processo estiver na etapa de cotação.")
 
     quantidade = Decimal(str(quantidade))
@@ -155,13 +163,16 @@ def incluir_necessidade(
         raise ValidationError(
             "O processo precisa possuir ao menos uma atividade relacionada antes de receber itens."
         )
+    if material is None or not material.ativo:
+        raise ValidationError("Selecione um material ativo do catálogo.")
 
     necessidade = NecessidadeCompra.objects.create(
         processo=processo,
         atividade_origem=None,
-        descricao=descricao.strip(),
-        especificacao=(especificacao or "").strip(),
-        unidade=unidade,
+        material=material,
+        descricao=material.nome,
+        especificacao=material.especificacao,
+        unidade=material.unidade.sigla,
         quantidade_necessaria=quantidade,
         quantidade_incluida=quantidade,
         observacao=(observacao or "").strip(),
@@ -170,7 +181,11 @@ def incluir_necessidade(
         processo,
         "NECESSIDADE_ADICIONADA",
         usuario,
-        f"Item adicionado: {necessidade.descricao}",
-        {"necessidade_id": necessidade.pk, "quantidade": str(quantidade)},
+        f"Item adicionado do catálogo: {material.codigo or material.nome} · {material.nome}",
+        {
+            "necessidade_id": necessidade.pk,
+            "material_id": material.pk,
+            "quantidade": str(quantidade),
+        },
     )
     return necessidade

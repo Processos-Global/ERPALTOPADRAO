@@ -23,6 +23,7 @@ from .comercial import (
     quantizar_moeda,
 )
 from .integracao_planejamento import limpar_data_real, sincronizar_data_real
+from .historico_suprimentos import remover_historico_processo, sincronizar_historico_processo
 from .numeracao import gerar_numero
 
 ZERO = Decimal("0")
@@ -82,6 +83,10 @@ def _sincronizar_status_contratacao_processo(*, processo, usuario):
                 usuario,
                 "Todos os pedidos ativos foram confirmados pelos fornecedores. Processo contratado.",
             )
+
+        # Sempre sincroniza para manter valor/fornecedor do histórico coerentes
+        # caso um pedido já contratado seja recalculado.
+        sincronizar_historico_processo(p)
         return p
 
     estava_contratado = (
@@ -97,6 +102,7 @@ def _sincronizar_status_contratacao_processo(*, processo, usuario):
     ])
     if estava_contratado:
         limpar_data_real(p, "CONTRATACAO")
+        remover_historico_processo(p)
         registrar_evento(
             p,
             "CONTRATACAO_REABERTA",

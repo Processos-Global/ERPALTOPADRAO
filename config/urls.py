@@ -22,6 +22,7 @@ urlpatterns = [
     path("pos-obra/", include("pos_obra.urls")),
     path("relatorios/", include("relatorios.urls")),
     path("integracoes/", include("integracoes.urls")),
+    path("cadastros/", include("cadastros.urls")),
 ]
 
 

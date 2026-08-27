@@ -1,0 +1,45 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<div class="cad-head">
+  <div class="cad-head__copy">
+    <div class="cad-eyebrow">Central de Cadastros</div>
+    <h1 class="cad-title">Materiais</h1>
+    <p class="cad-sub">Catálogo oficial utilizado pelos processos de suprimentos e compras.</p>
+  </div>
+  {% if cad_pode_criar %}<div class="cad-head__actions"><a class="cad-btn" href="{% url 'cadastros:material_novo' %}">+ Novo material</a></div>{% endif %}
+</div>
+
+<div class="cad-toolbar">
+  <form method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar código, material ou especificação">
+    <select name="unidade">
+      <option value="">Todas as unidades</option>
+      {% for u in unidades %}<option value="{{ u.id }}" {% if unidade_id == u.id|stringformat:'s' %}selected{% endif %}>{{ u.sigla }}</option>{% endfor %}
+    </select>
+    <select name="status">
+      <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+      <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativos</option>
+      <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
+    </select>
+    <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
+  </form>
+</div>
+
+<div class="cad-table-wrap">
+  <table class="cad-table">
+    <thead><tr><th>Código</th><th>Material</th><th>Especificação</th><th>Un.</th><th>Status</th>{% if cad_pode_editar %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+      {% for m in materiais %}
+      <tr>
+        <td class="cad-code">{{ m.codigo }}</td>
+        <td><strong>{{ m.nome }}</strong></td>
+        <td>{{ m.especificacao|default:"—" }}</td>
+        <td>{{ m.unidade.sigla }}</td>
+        <td><span class="cad-badge {% if not m.ativo %}off{% endif %}">{% if m.ativo %}Ativo{% else %}Inativo{% endif %}</span></td>
+        {% if cad_pode_editar %}<td><div class="cad-row-actions"><a class="cad-link" href="{% url 'cadastros:material_editar' m.pk %}">Editar</a></div></td>{% endif %}
+      </tr>
+      {% empty %}<tr><td class="cad-empty" colspan="6">Nenhum material encontrado.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

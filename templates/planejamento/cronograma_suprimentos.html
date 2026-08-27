@@ -716,6 +716,39 @@
   .ps-edit-cell{min-height:50px;padding:8px 9px}
   .ps-modal-foot{padding:10px 15px 12px}
 
+
+  /* Histórico de compras */
+  .ps-history-trigger { color: var(--ps-accent-strong); border-color: #c9dde2; background: #f7fbfc; }
+  .ps-history-trigger:hover { background: var(--ps-accent-soft); border-color: #9fc5ce; }
+  .ps-history-modal { width: min(900px, 100%); }
+  .ps-history-kpis { display: grid; grid-template-columns: repeat(4,minmax(120px,1fr)); border: 1px solid var(--ps-border); border-radius: 10px; overflow: hidden; margin-bottom: 13px; }
+  .ps-history-kpi { min-width: 0; padding: 11px 12px; border-right: 1px solid var(--ps-border-soft); background: #fcfdfd; }
+  .ps-history-kpi:last-child { border-right: 0; }
+  .ps-history-kpi span { display: block; color: var(--ps-muted); font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+  .ps-history-kpi strong { display: block; margin-top: 4px; color: var(--ps-text); font-size: .88rem; font-weight: 820; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ps-history-kpi strong.money { color: var(--ps-success); }
+  .ps-history-last { display: none; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 13px; padding: 10px 11px; border: 1px solid #d9e6e9; border-radius: 9px; background: #f7fbfc; }
+  .ps-history-last.open { display: flex; }
+  .ps-history-last-title { color: var(--ps-accent-strong); font-size: .66rem; font-weight: 820; text-transform: uppercase; letter-spacing: .035em; }
+  .ps-history-last-text { margin-top: 3px; color: #475467; font-size: .72rem; line-height: 1.4; }
+  .ps-history-last-value { color: var(--ps-success); font-size: .88rem; font-weight: 820; white-space: nowrap; }
+  .ps-history-table-wrap { overflow-x: auto; border: 1px solid var(--ps-border); border-radius: 10px; }
+  .ps-history-table { width: 100%; min-width: 690px; border-collapse: collapse; }
+  .ps-history-table th { padding: 8px 10px; background: #f8fafc; color: var(--ps-muted); font-size: .59rem; text-transform: uppercase; letter-spacing: .04em; text-align: left; border-bottom: 1px solid var(--ps-border); }
+  .ps-history-table td { padding: 9px 10px; color: #344054; font-size: .7rem; border-bottom: 1px solid var(--ps-border-soft); vertical-align: middle; }
+  .ps-history-table tbody tr:last-child td { border-bottom: 0; }
+  .ps-history-table .money { color: var(--ps-text); font-weight: 800; white-space: nowrap; }
+  .ps-history-item-name { color: var(--ps-text); font-weight: 760; line-height: 1.25; }\n  .ps-history-grouped { display: inline-flex; margin-top: 3px; padding: 2px 5px; border-radius: 999px; background: #fff7ed; color: #b54708; font-size: .54rem; font-weight: 780; white-space: nowrap; }\n  .ps-history-source { display: inline-flex; align-items: center; padding: 3px 6px; border-radius: 999px; background: #f2f4f7; color: #667085; font-size: .57rem; font-weight: 760; white-space: nowrap; }
+  .ps-history-empty, .ps-history-loading, .ps-history-error { padding: 28px 14px; text-align: center; color: var(--ps-muted); font-size: .75rem; }
+  .ps-history-error { color: var(--ps-danger); }
+  @media (max-width: 680px) {
+    .ps-history-kpis { grid-template-columns: repeat(2,1fr); }
+    .ps-history-kpi { border-bottom: 1px solid var(--ps-border-soft); }
+    .ps-history-kpi:nth-child(2n) { border-right: 0; }
+    .ps-history-kpi:nth-last-child(-n+2) { border-bottom: 0; }
+    .ps-history-last { flex-direction: column; }
+  }
+
   @media(max-width:1200px){.ps-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.ps-detail-summary{grid-template-columns:repeat(3,minmax(110px,1fr))}}
 
 </style>
@@ -993,6 +1026,15 @@
                     Detalhes
                     <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                   </button>
+
+                  <button type="button"
+                          class="ps-btn ps-btn-sm ps-history-trigger js-open-history"
+                          data-url="{% url 'planejamento:historico_item_cronograma_suprimentos' item.id %}"
+                          data-item="{{ item.item|escape }}"
+                          title="Ver histórico de compras deste suprimento">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+                    Histórico
+                  </button>
                   <a href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}" class="ps-btn ps-btn-sm ps-btn-icon" title="Iniciar processo de compra">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></svg>
                   </a>
@@ -1187,6 +1229,64 @@
   </div>
 </div>
 
+
+<div id="ps-history-modal" class="ps-modal-backdrop" aria-hidden="true">
+  <div class="ps-modal ps-history-modal" role="dialog" aria-modal="true" aria-labelledby="ps-history-title">
+    <div class="ps-modal-head">
+      <div class="ps-modal-title-row">
+        <div class="ps-modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+        </div>
+        <div>
+          <h2 id="ps-history-title" class="ps-modal-title">Histórico de compras</h2>
+          <p id="ps-history-subtitle" class="ps-modal-subtitle"></p>
+        </div>
+      </div>
+      <button type="button" class="ps-close js-close-history" aria-label="Fechar">×</button>
+    </div>
+
+    <div class="ps-modal-body">
+      <div class="ps-history-kpis">
+        <div class="ps-history-kpi"><span>Compras registradas</span><strong id="ps-history-total">—</strong></div>
+        <div class="ps-history-kpi"><span>Valor médio</span><strong id="ps-history-media" class="money">—</strong></div>
+        <div class="ps-history-kpi"><span>Menor valor</span><strong id="ps-history-menor" class="money">—</strong></div>
+        <div class="ps-history-kpi"><span>Maior valor</span><strong id="ps-history-maior" class="money">—</strong></div>
+      </div>
+
+      <div id="ps-history-last" class="ps-history-last">
+        <div>
+          <div class="ps-history-last-title">Última compra com data registrada</div>
+          <div id="ps-history-last-text" class="ps-history-last-text"></div>
+        </div>
+        <div id="ps-history-last-value" class="ps-history-last-value"></div>
+      </div>
+
+      <div class="ps-history-table-wrap">
+        <table class="ps-history-table">
+          <thead>
+            <tr>
+              <th>Compra histórica</th>
+              <th>Obra</th>
+              <th>Fornecedor</th>
+              <th>Valor</th>
+              <th>Fechamento</th>
+              <th>Origem</th>
+              <th>Referência</th>
+            </tr>
+          </thead>
+          <tbody id="ps-history-body">
+            <tr><td colspan="7" class="ps-history-loading">Selecione um suprimento para consultar o histórico.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="ps-modal-foot">
+      <button type="button" class="ps-btn js-close-history">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   const modal = document.getElementById('ps-modal');
@@ -1315,6 +1415,127 @@
       window.addEventListener('load', restore, { once: true });
     }
   } catch (error) {}
+})();
+
+
+(function () {
+  const modal = document.getElementById('ps-history-modal');
+  const subtitle = document.getElementById('ps-history-subtitle');
+  const tbody = document.getElementById('ps-history-body');
+  const total = document.getElementById('ps-history-total');
+  const media = document.getElementById('ps-history-media');
+  const menor = document.getElementById('ps-history-menor');
+  const maior = document.getElementById('ps-history-maior');
+  const last = document.getElementById('ps-history-last');
+  const lastText = document.getElementById('ps-history-last-text');
+  const lastValue = document.getElementById('ps-history-last-value');
+  if (!modal || !tbody) return;
+
+  if (modal.parentElement !== document.body) document.body.appendChild(modal);
+  let opener = null;
+  let controller = null;
+
+  const escapeHtml = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  function closeHistory() {
+    if (controller) controller.abort();
+    controller = null;
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('ps-modal-open');
+    if (opener) opener.focus({ preventScroll: true });
+  }
+
+  function renderLoading(item) {
+    subtitle.textContent = item || '';
+    total.textContent = '—';
+    media.textContent = '—';
+    menor.textContent = '—';
+    maior.textContent = '—';
+    last.classList.remove('open');
+    tbody.innerHTML = '<tr><td colspan="7" class="ps-history-loading">Carregando histórico...</td></tr>';
+  }
+
+  function renderData(data) {
+    subtitle.textContent = data.suprimento || '';
+    total.textContent = data.total ?? 0;
+    media.textContent = data.media || '—';
+    menor.textContent = data.menor || '—';
+    maior.textContent = data.maior || '—';
+
+    if (data.ultima) {
+      lastText.textContent = `${data.ultima.obra} · ${data.ultima.fornecedor} · ${data.ultima.data}`;
+      lastValue.textContent = data.ultima.valor || '—';
+      last.classList.add('open');
+    } else {
+      last.classList.remove('open');
+    }
+
+    const registros = Array.isArray(data.registros) ? data.registros : [];
+    if (!registros.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="ps-history-empty">Ainda não existem compras fechadas registradas para este suprimento.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = registros.map((registro) => {
+      const referencia = registro.pedido || registro.processo || '—';
+      return `
+        <tr>
+          <td>
+            <div class="ps-history-item-name">${escapeHtml(registro.suprimento_historico || '—')}</div>
+            ${registro.suprimento_agrupado ? '<span class="ps-history-grouped">Compra agrupada</span>' : ''}
+          </td>
+          <td>${escapeHtml(registro.obra || '—')}</td>
+          <td>${escapeHtml(registro.fornecedor || '—')}</td>
+          <td class="money">${escapeHtml(registro.valor_formatado || '—')}</td>
+          <td>${escapeHtml(registro.data_fechamento || '—')}</td>
+          <td><span class="ps-history-source">${escapeHtml(registro.origem || '—')}</span></td>
+          <td>${escapeHtml(referencia)}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function openHistory(button) {
+    opener = button;
+    renderLoading(button.dataset.item);
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('ps-modal-open');
+
+    if (controller) controller.abort();
+    controller = new AbortController();
+
+    try {
+      const response = await fetch(button.dataset.url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      renderData(data);
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      tbody.innerHTML = '<tr><td colspan="6" class="ps-history-error">Não foi possível carregar o histórico deste suprimento.</td></tr>';
+    }
+  }
+
+  document.querySelectorAll('.js-open-history').forEach((button) => {
+    button.addEventListener('click', () => openHistory(button));
+  });
+  document.querySelectorAll('.js-close-history').forEach((button) => {
+    button.addEventListener('click', closeHistory);
+  });
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) closeHistory();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && modal.classList.contains('open')) closeHistory();
+  });
 })();
 
 

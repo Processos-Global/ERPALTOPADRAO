@@ -2,7 +2,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
-from .core import FornecedorCompra, NecessidadeCompra, ProcessoCompra
+from .core import NecessidadeCompra, ProcessoCompra
 
 
 class SolicitacaoCotacaoFornecedor(models.Model):
@@ -25,7 +25,7 @@ class SolicitacaoCotacaoFornecedor(models.Model):
         related_name="solicitacoes_cotacao",
     )
     fornecedor = models.ForeignKey(
-        FornecedorCompra,
+        "cadastros.Fornecedor",
         on_delete=models.PROTECT,
         related_name="solicitacoes_cotacao",
     )
@@ -68,7 +68,7 @@ class SolicitacaoCotacaoFornecedor(models.Model):
 
 class CotacaoFornecedor(models.Model):
     processo = models.ForeignKey(ProcessoCompra, on_delete=models.CASCADE, related_name="cotacoes")
-    fornecedor = models.ForeignKey(FornecedorCompra, on_delete=models.PROTECT, related_name="cotacoes")
+    fornecedor = models.ForeignKey("cadastros.Fornecedor", on_delete=models.PROTECT, related_name="cotacoes")
     data_proposta = models.DateField(null=True, blank=True)
     prazo_entrega_dias = models.PositiveIntegerField(null=True, blank=True)
     condicao_pagamento = models.CharField(max_length=255, blank=True)

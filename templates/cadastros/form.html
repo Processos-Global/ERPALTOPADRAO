@@ -1,0 +1,33 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<div class="cad-head">
+  <div class="cad-head__copy"><div class="cad-eyebrow">Central de Cadastros</div><h1 class="cad-title">{{ titulo }}</h1><p class="cad-sub">{{ subtitulo|default:"Preencha os dados do cadastro mestre." }}</p></div>
+  <div class="cad-head__actions"><a class="cad-btn cad-btn--secondary" href="{% url voltar %}">Voltar</a></div>
+</div>
+<form method="post" class="cad-form-card">
+  {% csrf_token %}
+  <div class="cad-form-card__head"><strong>Informações do cadastro</strong></div>
+  <div class="cad-form-card__body">
+    <div class="cad-form-grid">
+      {% for field in form %}
+        <div class="cad-field {% if field.name == 'observacao' %}full{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="cad-muted">{{ field.help_text }}</div>{% endif %}
+          {% for error in field.errors %}<div class="cad-errors">{{ error }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+    {% if form.non_field_errors %}<div class="cad-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="cad-actions">
+      <div class="cad-actions__main"><button class="cad-btn" type="submit">Salvar alterações</button><a class="cad-btn cad-btn--secondary" href="{% url voltar %}">Cancelar</a></div>
+      {% if objeto and excluir_url and cad_pode_excluir %}
+        <button class="cad-btn cad-btn--danger" type="submit" form="cad-delete-form">Excluir</button>
+      {% endif %}
+    </div>
+  </div>
+</form>
+{% if objeto and excluir_url and cad_pode_excluir %}
+<form id="cad-delete-form" method="post" action="{% url excluir_url objeto.pk %}" onsubmit="return confirm('Excluir este cadastro definitivamente? Se já estiver em uso, o sistema bloqueará a exclusão.');">{% csrf_token %}</form>
+{% endif %}
+{% endblock %}

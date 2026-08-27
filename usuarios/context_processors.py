@@ -1,6 +1,6 @@
 from django.urls import NoReverseMatch, reverse
 
-from usuarios.models import Notificacao, PermissaoModulo
+from usuarios.models import ModuloSistema, Notificacao, PermissaoModulo
 from usuarios.services.registro_permissoes import MODULOS_REGISTRY
 
 
@@ -56,8 +56,11 @@ def erp_layout(request):
         lida=False,
     ).count()
 
+    cadastros_acesso = bool(permissoes.get(ModuloSistema.CADASTROS))
+
     return {
         "notificacoes_recentes": notificacoes_recentes,
+        "cadastros_acesso": cadastros_acesso,
         "notificacoes_nao_lidas": notificacoes_nao_lidas,
         "sidebar_dashboard": {
             "titulo": "Painel Geral",

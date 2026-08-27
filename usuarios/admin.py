@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 
 from usuarios.models import (
     PerfilUsuario,
+    PermissaoCadastros,
     PermissaoCompras,
     PermissaoModulo,
 )
@@ -126,6 +127,17 @@ class PermissaoComprasInline(admin.StackedInline):
 
     verbose_name = "Permissões específicas de Compras"
     verbose_name_plural = "Permissões específicas de Compras"
+
+
+class PermissaoCadastrosInline(admin.StackedInline):
+    model = PermissaoCadastros
+    fk_name = "usuario"
+    extra = 1
+    max_num = 1
+    can_delete = False
+    fields = ("ativo", "visualizar", "criar", "editar", "excluir", "administrar")
+    verbose_name = "Permissões específicas de Cadastros"
+    verbose_name_plural = "Permissões específicas de Cadastros"
 
 
 class PermissaoModuloInline(admin.TabularInline):
@@ -391,6 +403,16 @@ class PermissaoComprasAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(PermissaoCadastros)
+class PermissaoCadastrosAdmin(admin.ModelAdmin):
+    list_display = ["usuario", "visualizar", "criar", "editar", "excluir", "administrar", "ativo"]
+    list_editable = ["visualizar", "criar", "editar", "excluir", "administrar", "ativo"]
+    list_filter = ["ativo", "visualizar", "criar", "editar", "excluir", "administrar"]
+    search_fields = ["usuario__username", "usuario__first_name", "usuario__last_name", "usuario__email"]
+    autocomplete_fields = ["usuario"]
+
+
+
 class ERPUserAdmin(DjangoUserAdmin):
     """
     Mantém toda a tela padrão de usuários do Django e acrescenta, no final,
@@ -401,6 +423,7 @@ class ERPUserAdmin(DjangoUserAdmin):
     inlines = [
         PerfilUsuarioInline,
         PermissaoComprasInline,
+        PermissaoCadastrosInline,
         PermissaoModuloInline,
     ]
 

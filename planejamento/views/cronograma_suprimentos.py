@@ -5,6 +5,8 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.http import JsonResponse
+from django.db.models import Avg, Count, Max, Min, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -160,6 +162,91 @@ def salvar_datas_item_cronograma_suprimentos(request, item_id):
     if parametros:
         destino = f"{destino}?{urlencode(parametros)}"
     return redirect(destino)
+
+
+def _formatar_moeda(valor):
+    if valor is None:
+        return "—"
+    texto = f"{valor:,.2f}"
+    texto = texto.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"R$ {texto}"
+
+
+@login_required
+def historico_item_cronograma_suprimentos(request, item_id):
+    item = get_object_or_404(
+        ItemCronogramaSuprimento.objects.select_related(
+            "cronograma_obra",
+            "cronograma_obra__importacao",
+            "cronograma_obra__obra",
+        ),
+        pk=item_id,
+        cronograma_obra__importacao__ativa=True,
+        cronograma_obra__importacao__status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
+    )
+
+    from compras.models import HistoricoCompraSuprimento
+    from compras.services.historico_suprimentos import normalizar_suprimento
+
+    chave = normalizar_suprimento(item.item)
+
+    historico = (
+        HistoricoCompraSuprimento.objects
+        .filter(
+            Q(suprimentos_referencia__chave=chave)
+            | Q(suprimento_chave=chave)
+        )
+        .select_related("obra", "fornecedor", "processo", "pedido")
+        .prefetch_related("suprimentos_referencia")
+        .distinct()
+        .order_by("-data_fechamento", "-id")
+    )
+
+    resumo = historico.aggregate(
+        total=Count("id"),
+        media=Avg("valor"),
+        menor=Min("valor"),
+        maior=Max("valor"),
+    )
+
+    registros = []
+    for registro in historico:
+        registros.append({
+            "id": registro.pk,
+            "suprimento_historico": registro.suprimento,
+            "suprimento_agrupado": registro.suprimentos_referencia.count() > 1,
+            "obra": registro.obra_nome or (str(registro.obra) if registro.obra_id else registro.obra_codigo) or "—",
+            "obra_codigo": registro.obra_codigo or "",
+            "fornecedor": registro.fornecedor_nome or "—",
+            "valor": str(registro.valor),
+            "valor_formatado": _formatar_moeda(registro.valor),
+            "data_fechamento": registro.data_fechamento.strftime("%d/%m/%Y") if registro.data_fechamento else "—",
+            "origem": registro.get_origem_display(),
+            "processo": registro.processo.numero if registro.processo_id else "",
+            "pedido": registro.pedido.numero if registro.pedido_id else "",
+        })
+
+    ultima = (
+        historico
+        .filter(data_fechamento__isnull=False)
+        .order_by("-data_fechamento", "-id")
+        .first()
+    )
+
+    return JsonResponse({
+        "suprimento": item.item,
+        "total": resumo["total"] or 0,
+        "media": _formatar_moeda(resumo["media"]),
+        "menor": _formatar_moeda(resumo["menor"]),
+        "maior": _formatar_moeda(resumo["maior"]),
+        "ultima": {
+            "valor": _formatar_moeda(ultima.valor),
+            "data": ultima.data_fechamento.strftime("%d/%m/%Y"),
+            "obra": ultima.obra_nome or (str(ultima.obra) if ultima.obra_id else ultima.obra_codigo) or "—",
+            "fornecedor": ultima.fornecedor_nome or "—",
+        } if ultima else None,
+        "registros": registros,
+    })
 
 
 @login_required

@@ -16,6 +16,7 @@ class ModuloSistema(models.TextChoices):
     POS_OBRA = "POS_OBRA", "Pós-obra"
     RELATORIOS = "RELATORIOS", "Relatórios"
     INTEGRACOES = "INTEGRACOES", "Integrações"
+    CADASTROS = "CADASTROS", "Cadastros"
     USUARIOS = "USUARIOS", "Usuários e permissões"
 
 

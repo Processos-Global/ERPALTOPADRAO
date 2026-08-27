@@ -3,25 +3,10 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from compras.models import CotacaoFornecedor, CotacaoFornecedorItem, FornecedorCompra, SolicitacaoCotacaoFornecedor
+from compras.models import CotacaoFornecedor, CotacaoFornecedorItem, SolicitacaoCotacaoFornecedor
 from .auditoria import registrar_evento
 from .comercial import processo_em_fase_comercial
 from .solicitacoes_cotacao import marcar_solicitacao_respondida, restaurar_solicitacao_apos_exclusao_proposta
-
-
-@transaction.atomic
-def criar_fornecedor(*, nome, documento="", email="", telefone="", avaliacao=None):
-    nome = (nome or "").strip()
-    documento = (documento or "").strip()
-    if not nome:
-        raise ValidationError("Informe o nome do fornecedor.")
-    if documento:
-        fornecedor, _ = FornecedorCompra.objects.get_or_create(
-            documento=documento,
-            defaults={"nome": nome, "email": email, "telefone": telefone, "avaliacao": avaliacao},
-        )
-        return fornecedor
-    return FornecedorCompra.objects.create(nome=nome, email=email, telefone=telefone, avaliacao=avaliacao)
 
 
 @transaction.atomic

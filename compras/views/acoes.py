@@ -15,7 +15,6 @@ from compras.forms import (
     CotacaoFornecedorForm,
     CotacaoItemForm,
     DecisaoComercialLoteForm,
-    FornecedorCompraForm,
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,
@@ -34,7 +33,7 @@ from compras.models import (
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
 from compras.services.compatibilizacao import registrar_compatibilizacao
 from compras.services.contratacao import anexar_documento_fornecedor
-from compras.services.cotacoes import criar_fornecedor, excluir_cotacao, incluir_cotacao, incluir_item_cotacao
+from compras.services.cotacoes import excluir_cotacao, incluir_cotacao, incluir_item_cotacao
 from compras.services.etapas import (
     concluir_compatibilizacao,
     concluir_negociacao,
@@ -81,9 +80,7 @@ def acao_incluir_necessidade(request, pk):
             try:
                 incluir_necessidade(
                     processo=processo,
-                    descricao=form.cleaned_data["descricao"],
-                    especificacao=form.cleaned_data["especificacao"],
-                    unidade=form.cleaned_data["unidade"],
+                    material=form.cleaned_data["material"],
                     quantidade=form.cleaned_data["quantidade"],
                     observacao=form.cleaned_data["observacao"],
                     usuario=request.user,
@@ -123,22 +120,6 @@ def acao_marcar_solicitacao_enviada(request, pk, solicitacao_id):
     resposta = _voltar(processo)
     resposta["Location"] = resposta["Location"] + "#cotacao"
     return resposta
-
-
-@compras_acao_required(AcaoCompra.COTAR)
-def acao_criar_fornecedor(request, pk):
-    processo = _processo(pk)
-    if request.method == "POST":
-        form = FornecedorCompraForm(request.POST)
-        if form.is_valid():
-            try:
-                fornecedor = criar_fornecedor(**form.cleaned_data)
-                messages.success(request, f"Fornecedor {fornecedor.nome} cadastrado.")
-            except ValidationError as exc:
-                _erro(request, exc)
-        else:
-            messages.error(request, "Revise os dados do fornecedor.")
-    return _voltar(processo)
 
 
 @compras_acao_required(AcaoCompra.COTAR)

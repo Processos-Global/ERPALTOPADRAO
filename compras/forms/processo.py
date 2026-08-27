@@ -1,7 +1,8 @@
 from django import forms
 from django.forms import formset_factory
 
-from compras.models import FornecedorCompra, NecessidadeCompra, ProcessoCompra
+from compras.models import NecessidadeCompra, ProcessoCompra
+from cadastros.models import Fornecedor, Material
 from planejamento.models import (
     AtividadePlanejamento,
     ImportacaoCronograma,
@@ -529,7 +530,7 @@ class ProcessoCompraForm(
         # ----------------------------------------------------
 
         self.fields["fornecedores_sugeridos"].queryset = (
-            FornecedorCompra.objects
+            Fornecedor.objects
             .filter(ativo=True)
             .order_by("nome")
         )
@@ -752,44 +753,27 @@ class ProcessoCompraForm(
 # ============================================================
 
 
+class MaterialCompraChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        partes = [obj.codigo or "MAT", obj.nome]
+        if obj.especificacao:
+            partes.append(obj.especificacao)
+        partes.append(obj.unidade.sigla)
+        return " · ".join(partes)
+
+
 class ItemCompraAberturaForm(forms.Form):
-    """
-    Item material/serviço informado na abertura da compra.
+    """Item selecionado exclusivamente do catálogo central de materiais."""
 
-    A atividade NÃO é escolhida novamente aqui. As atividades
-    relacionadas pertencem ao processo e são selecionadas uma
-    única vez no campo ``ProcessoCompraForm.atividades``.
-    """
-
-    descricao = forms.CharField(
-        max_length=500,
-        label="Item",
-        widget=forms.TextInput(
+    material = MaterialCompraChoiceField(
+        queryset=Material.objects.none(),
+        label="Material",
+        empty_label="Selecione um material",
+        widget=forms.Select(
             attrs={
-                "placeholder": "Ex.: Interruptor simples 10A",
+                "data-material-select": "1",
             }
         ),
-    )
-
-    especificacao = forms.CharField(
-        required=False,
-        label="Especificação",
-        widget=forms.Textarea(
-            attrs={
-                "rows": 2,
-                "placeholder": (
-                    "Marca, modelo, dimensão, cor ou requisito técnico"
-                ),
-            }
-        ),
-    )
-
-    unidade = forms.ChoiceField(
-        choices=[
-            ("", "Selecione"),
-            *NecessidadeCompra.UnidadeMedida.choices,
-        ],
-        label="Unidade",
     )
 
     quantidade = forms.DecimalField(
@@ -805,19 +789,21 @@ class ItemCompraAberturaForm(forms.Form):
         widget=forms.Textarea(
             attrs={
                 "rows": 2,
-                "placeholder": "Informações adicionais",
+                "placeholder": "Informações específicas desta compra",
             }
         ),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        self.fields["material"].queryset = (
+            Material.objects.filter(ativo=True)
+            .select_related("unidade")
+            .order_by("nome", "especificacao", "codigo")
+        )
         for field in self.fields.values():
             classe_atual = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (
-                f"{classe_atual} cp-input"
-            ).strip()
+            field.widget.attrs["class"] = f"{classe_atual} cp-input".strip()
 
 
 # ============================================================

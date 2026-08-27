@@ -8,7 +8,6 @@ from .fluxo import (
     CotacaoFornecedorForm,
     CotacaoItemForm,
     DecisaoComercialLoteForm,
-    FornecedorCompraForm,
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,

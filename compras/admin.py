@@ -2,7 +2,7 @@ from django.contrib import admin
 from compras.models import *
 
 MODELOS = [
-    FornecedorCompra, ProcessoCompra, ProcessoCompraAtividade, NecessidadeCompra,
+    ProcessoCompra, ProcessoCompraAtividade, NecessidadeCompra,
     CotacaoFornecedor, CotacaoFornecedorItem, CompatibilizacaoItem, NegociacaoItem,
     HistoricoNegociacaoItem, AdjudicacaoCompra, AlcadaAprovacaoCompra, AprovacaoCompra,
     ContratacaoCompra, PedidoCompra, PedidoCompraItem, ParcelaPrevistaPedido,

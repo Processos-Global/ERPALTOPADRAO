@@ -1,3 +1,4 @@
+from .permissoes_cadastros import pode_acao_cadastros
 from .registro_permissoes import (
     obter_configuracao_modulos_usuario,
     salvar_configuracao_modulos_usuario,
@@ -16,6 +17,7 @@ from .notificacoes_email import (
 
 
 __all__ = [
+    "pode_acao_cadastros",
     "obter_configuracao_modulos_usuario",
     "salvar_configuracao_modulos_usuario",
     "criar_notificacao",

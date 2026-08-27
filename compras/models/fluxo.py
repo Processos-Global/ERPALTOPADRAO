@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from .core import FornecedorCompra, NecessidadeCompra, ProcessoCompra
+from .core import NecessidadeCompra, ProcessoCompra
 from .cotacao import CotacaoFornecedor, CotacaoFornecedorItem
 
 
@@ -221,7 +221,7 @@ class ContratacaoCompra(models.Model):
         related_name="contratacoes",
     )
     fornecedor = models.ForeignKey(
-        FornecedorCompra,
+        "cadastros.Fornecedor",
         on_delete=models.PROTECT,
         related_name="contratacoes",
     )

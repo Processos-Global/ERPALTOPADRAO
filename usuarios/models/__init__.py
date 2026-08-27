@@ -1,3 +1,4 @@
+from .permissao_cadastros import PermissaoCadastros
 from .perfil import PerfilUsuario
 from .permissao import (
     ModuloSistema,
@@ -23,6 +24,7 @@ __all__ = [
     "Notificacao",
     "PerfilUsuario",
     "PermissaoCompras",
+    "PermissaoCadastros",
     "PermissaoModulo",
     "TipoNotificacao",
 ]

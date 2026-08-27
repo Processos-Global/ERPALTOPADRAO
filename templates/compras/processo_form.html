@@ -199,6 +199,23 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   .purchase-item{display:grid;grid-template-columns:20px 24px 1fr 34px;align-items:end}.purchase-item>.purchase-field{grid-column:3/4!important;grid-row:auto!important}.purchase-delete{grid-column:4;grid-row:1;margin-bottom:4px}
   .purchase-side-grid{grid-template-columns:1fr}.purchase-side-grid .purchase-field--full{grid-column:auto}.purchase-actionbar{flex-direction:column;align-items:stretch}.purchase-actionbar__spacer{display:none}.purchase-action{width:100%}.purchase-action--primary{min-width:0}
 }
+
+  .purchase-item{grid-template-columns:28px 34px minmax(360px,1fr) 150px minmax(220px,.55fr) 36px!important}
+  .purchase-field--material select{width:100%}
+  .purchase-field-help{display:block;margin-top:5px;color:#64748b;font-size:11px;line-height:1.35}
+  @media(max-width:1100px){.purchase-item{grid-template-columns:28px 34px 1fr 140px 36px!important}.purchase-field--material{grid-column:3/5}.purchase-item .purchase-field:nth-of-type(3){grid-column:3/5}}
+
+  .purchase-material-combobox{position:relative}
+  .purchase-material-search{margin-bottom:0;padding-right:34px!important}
+  .purchase-material-hidden-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+  .purchase-material-results{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:180;display:none;max-height:260px;overflow:auto;border:1px solid var(--purchase-border-2);border-radius:7px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.13)}
+  .purchase-material-results.is-open{display:block}
+  .purchase-material-option{width:100%;display:block;padding:9px 11px;border:0;border-bottom:1px solid #EEF2F6;background:#fff;color:#334155;text-align:left;cursor:pointer}
+  .purchase-material-option:last-child{border-bottom:0}
+  .purchase-material-option:hover{background:#F1F8F8}
+  .purchase-material-option__title{display:block;font-size:10px;font-weight:700;color:#1E293B;line-height:1.35}
+  .purchase-material-option__meta{display:block;margin-top:3px;font-size:8px;color:#64748B;line-height:1.35}
+  .purchase-material-empty{padding:12px;text-align:center;color:#94A3B8;font-size:9px}
 </style>
 {% endblock %}
 
@@ -233,10 +250,8 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
               {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
               <div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div>
               <div class="purchase-item__number" data-row-number>{{ forloop.counter }}</div>
-              <div class="purchase-field"><label>{{ item_form.descricao.label }}{% if item_form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.descricao }}{% for error in item_form.descricao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
-              <div class="purchase-field"><label>{{ item_form.unidade.label }}{% if item_form.unidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.unidade }}{% for error in item_form.unidade.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
-              <div class="purchase-field"><label>{{ item_form.quantidade.label }}{% if item_form.quantidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
-              <div class="purchase-field"><label>{{ item_form.especificacao.label }}{% if item_form.especificacao.field.required %} <span class="req">*</span>{% endif %}</label>{{ item_form.especificacao }}{% for error in item_form.especificacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
+              <div class="purchase-field purchase-field--material"><label>{{ item_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ item_form.material }}</div><div class="purchase-material-results" data-material-results></div></div>{% for error in item_form.material.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}<small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div>
+              <div class="purchase-field"><label>{{ item_form.quantidade.label }} <span class="req">*</span></label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
               <div class="purchase-field"><label>Observações (opcional)</label>{{ item_form.observacao }}{% for error in item_form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
               <div>{% if item_form.DELETE %}<div style="display:none">{{ item_form.DELETE }}</div>{% endif %}<button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div>
             </div>
@@ -265,7 +280,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div><button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button><button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>Enviar para Suprimentos</button></div>
       </form>
 
-      <template id="empty-form-template"><div class="purchase-item" data-form-row>{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div><div class="purchase-item__number" data-row-number></div><div class="purchase-field"><label>{{ formset.empty_form.descricao.label }}{% if formset.empty_form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.descricao }}</div><div class="purchase-field"><label>{{ formset.empty_form.unidade.label }}{% if formset.empty_form.unidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.unidade }}</div><div class="purchase-field"><label>{{ formset.empty_form.quantidade.label }}{% if formset.empty_form.quantidade.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.quantidade }}</div><div class="purchase-field"><label>{{ formset.empty_form.especificacao.label }}{% if formset.empty_form.especificacao.field.required %} <span class="req">*</span>{% endif %}</label>{{ formset.empty_form.especificacao }}</div><div class="purchase-field"><label>Observações (opcional)</label>{{ formset.empty_form.observacao }}</div><div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div></div></template>
+      <template id="empty-form-template"><div class="purchase-item" data-form-row>{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div><div class="purchase-item__number" data-row-number></div><div class="purchase-field purchase-field--material"><label>{{ formset.empty_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ formset.empty_form.material }}</div><div class="purchase-material-results" data-material-results></div></div><small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div><div class="purchase-field"><label>{{ formset.empty_form.quantidade.label }} <span class="req">*</span></label>{{ formset.empty_form.quantidade }}</div><div class="purchase-field"><label>Observações (opcional)</label>{{ formset.empty_form.observacao }}</div><div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div></div></template>
     </main>
   </div>
 </div>
@@ -542,7 +557,100 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   const items=qs('#items-container'),addItem=qs('#add-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),template=qs('#empty-form-template');
   function rowDeleted(row){const d=qs('input[type="checkbox"][name$="-DELETE"]',row);return row.classList.contains('purchase-row-hidden')||(d&&d.checked)}
   function updateRows(){let n=0;qsa('[data-form-row]',items).forEach(row=>{if(!rowDeleted(row)){n++;const num=qs('[data-row-number]',row);if(num)num.textContent=n}})}
-  function bindRow(row){qs('[data-remove]',row)?.addEventListener('click',()=>{const d=qs('input[type="checkbox"][name$="-DELETE"]',row),active=qsa('[data-form-row]',items).filter(r=>!rowDeleted(r));if(active.length<=1){qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');return}if(d){d.checked=true;row.classList.add('purchase-row-hidden')}else row.remove();updateRows()})}
+  function bindMaterialSearch(row){
+    const normalize=v=>(v||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    const input=qs('[data-material-search]',row);
+    const combo=qs('[data-material-combobox]',row);
+    const select=combo?qs('select',combo):null;
+    const results=qs('[data-material-results]',row);
+    if(!input||!select||!results||input.dataset.bound==='1')return;
+
+    input.dataset.bound='1';
+
+    const options=[...select.options]
+      .filter(o=>o.value&&!o.disabled)
+      .map(o=>({value:o.value,text:(o.textContent||'').trim()}));
+
+    const selected=select.options[select.selectedIndex];
+    if(selected&&selected.value){
+      input.value=(selected.textContent||'').trim();
+    }
+
+    function closeMaterialResults(){
+      results.classList.remove('is-open');
+      results.innerHTML='';
+    }
+
+    function renderMaterialResults(){
+      const term=normalize(input.value.trim());
+
+      if(!term){
+        closeMaterialResults();
+        return;
+      }
+
+      const matches=[];
+      for(const opt of options){
+        if(normalize(opt.text).includes(term)){
+          matches.push(opt);
+          if(matches.length>=40)break;
+        }
+      }
+
+      if(!matches.length){
+        results.innerHTML='<div class="purchase-material-empty">Nenhum material encontrado.</div>';
+        results.classList.add('is-open');
+        return;
+      }
+
+      results.innerHTML=matches.map(opt=>{
+        const parts=opt.text.split(' | ').map(v=>v.trim()).filter(Boolean);
+        const title=parts[0]||opt.text;
+        const meta=parts.slice(1).join(' · ');
+        return `<button type="button" class="purchase-material-option" data-material-value="${esc(opt.value)}">
+          <span class="purchase-material-option__title">${esc(title)}</span>
+          ${meta?`<span class="purchase-material-option__meta">${esc(meta)}</span>`:''}
+        </button>`;
+      }).join('');
+
+      results.classList.add('is-open');
+    }
+
+    input.addEventListener('input',()=>{
+      if(select.value){
+        select.value='';
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+      renderMaterialResults();
+    });
+
+    input.addEventListener('focus',()=>{
+      if(input.value.trim()&&!select.value)renderMaterialResults();
+    });
+
+    results.addEventListener('click',e=>{
+      const optionButton=e.target.closest('[data-material-value]');
+      if(!optionButton)return;
+
+      const value=String(optionButton.dataset.materialValue);
+      const option=[...select.options].find(o=>String(o.value)===value);
+      if(!option)return;
+
+      select.value=value;
+      input.value=(option.textContent||'').trim();
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+      closeMaterialResults();
+    });
+
+    document.addEventListener('click',e=>{
+      if(combo&&!combo.contains(e.target))closeMaterialResults();
+    });
+
+    input.addEventListener('keydown',e=>{
+      if(e.key==='Escape')closeMaterialResults();
+    });
+  }
+  function bindRow(row){bindMaterialSearch(row);qs('[data-remove]',row)?.addEventListener('click',()=>{const d=qs('input[type="checkbox"][name$="-DELETE"]',row),active=qsa('[data-form-row]',items).filter(r=>!rowDeleted(r));if(active.length<=1){qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');return}if(d){d.checked=true;row.classList.add('purchase-row-hidden')}else row.remove();updateRows()})}
   qsa('[data-form-row]',items).forEach(bindRow);addItem?.addEventListener('click',()=>{if(!template||!totalForms)return;const i=Number(totalForms.value||0),markup=template.innerHTML.replace(/__prefix__/g,String(i)),holder=document.createElement('div');holder.innerHTML=markup.trim();const row=holder.firstElementChild;items.appendChild(row);totalForms.value=String(i+1);bindRow(row);updateRows();qs('input,select,textarea',row)?.focus()});
 
   updateRows();renderActivities();renderSupplierSummary();

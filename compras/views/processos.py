@@ -21,7 +21,6 @@ from compras.forms import (
     CotacaoFornecedorForm,
     CotacaoItemForm,
     DecisaoComercialLoteForm,
-    FornecedorCompraForm,
     ItemCompraAberturaFormSet,
     NecessidadeCompraForm,
     NegociacaoForm,
@@ -1173,12 +1172,6 @@ def detalhe_processo(
             NecessidadeCompraForm(
                 processo=processo
             )
-            if pode_editar
-            else None
-        ),
-
-        "form_fornecedor": (
-            FornecedorCompraForm()
             if pode_editar
             else None
         ),

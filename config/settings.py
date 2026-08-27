@@ -1,6 +1,6 @@
-
+﻿
 """
-Configurações do ERP Alto Padrão.
+ConfiguraÃ§Ãµes do ERP Alto PadrÃ£o.
 
 Projeto desenvolvido com Django.
 """
@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # ============================================================
-# VARIÁVEIS DE AMBIENTE
+# VARIÃVEIS DE AMBIENTE
 # ============================================================
 
 env = environ.Env(
@@ -29,7 +29,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 
 # ============================================================
-# SEGURANÇA
+# SEGURANÃ‡A
 # ============================================================
 
 SECRET_KEY = env(
@@ -57,10 +57,11 @@ CSRF_TRUSTED_ORIGINS = env.list(
 
 
 # ============================================================
-# APLICAÇÕES
+# APLICAÃ‡Ã•ES
 # ============================================================
 
 INSTALLED_APPS = [
+    "cadastros.apps.CadastrosConfig",
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -69,7 +70,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # ERP Alto Padrão
+    # ERP Alto PadrÃ£o
     "core",
     "usuarios.apps.UsuariosConfig",
     "obras",
@@ -105,7 +106,7 @@ MIDDLEWARE = [
 
 
 # ============================================================
-# URLS E EXECUÇÃO
+# URLS E EXECUÃ‡ÃƒO
 # ============================================================
 
 ROOT_URLCONF = "config.urls"
@@ -182,7 +183,7 @@ DATABASES = {
 
 
 # ============================================================
-# VALIDAÇÃO DE SENHAS
+# VALIDAÃ‡ÃƒO DE SENHAS
 # ============================================================
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -214,7 +215,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ============================================================
-# INTERNACIONALIZAÇÃO
+# INTERNACIONALIZAÃ‡ÃƒO
 # ============================================================
 
 LANGUAGE_CODE = "pt-br"
@@ -230,7 +231,7 @@ USE_TZ = True
 
 
 # ============================================================
-# FORMATOS DE DATA E NÚMEROS
+# FORMATOS DE DATA E NÃšMEROS
 # ============================================================
 
 DATE_FORMAT = "d/m/Y"
@@ -247,7 +248,7 @@ USE_THOUSAND_SEPARATOR = True
 
 
 # ============================================================
-# ARQUIVOS ESTÁTICOS
+# ARQUIVOS ESTÃTICOS
 # ============================================================
 
 STATIC_URL = "/static/"
@@ -260,7 +261,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # ============================================================
-# ARQUIVOS DE MÍDIA
+# ARQUIVOS DE MÃDIA
 # ============================================================
 
 MEDIA_URL = "/media/"
@@ -272,15 +273,15 @@ MEDIA_ROOT = BASE_DIR / "media"
 # GOOGLE DRIVE
 # ============================================================
 
-# Caminho do arquivo JSON da conta de serviço.
+# Caminho do arquivo JSON da conta de serviÃ§o.
 # Pode ser absoluto ou relativo ao BASE_DIR.
 GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE = env(
     "GOOGLE_DRIVE_SERVICE_ACCOUNT_FILE",
     default="credenciais/google-drive.json",
 )
 
-# Pasta que contém os arquivos CSV do cronograma de obras.
-# O sistema buscará automaticamente o CSV modificado mais recentemente.
+# Pasta que contÃ©m os arquivos CSV do cronograma de obras.
+# O sistema buscarÃ¡ automaticamente o CSV modificado mais recentemente.
 CRONOGRAMA_ALTO_PADRAO_FOLDER_ID = env(
     "CRONOGRAMA_ALTO_PADRAO_FOLDER_ID",
     default="",
@@ -294,7 +295,7 @@ GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = env(
 
 
 # ============================================================
-# IMPORTAÇÃO DO CRONOGRAMA
+# IMPORTAÃ‡ÃƒO DO CRONOGRAMA
 # ============================================================
 
 # Quantidade de linhas lidas por bloco pelo Pandas.
@@ -311,7 +312,7 @@ CRONOGRAMA_TAMANHO_LOTE_BANCO = env.int(
 
 
 # ============================================================
-# SESSÃO E AUTENTICAÇÃO
+# SESSÃƒO E AUTENTICAÃ‡ÃƒO
 # ============================================================
 
 LOGIN_URL = "/usuarios/login/"
@@ -500,7 +501,7 @@ LOGGING = {
 
 
 # ============================================================
-# CONFIGURAÇÕES PADRÃO
+# CONFIGURAÃ‡Ã•ES PADRÃƒO
 # ============================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

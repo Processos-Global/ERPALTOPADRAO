@@ -9,6 +9,7 @@ from django.db import transaction
 from usuarios.models import (
     ModuloSistema,
     NivelPermissao,
+    PermissaoCadastros,
     PermissaoCompras,
     PermissaoModulo,
 )
@@ -50,6 +51,36 @@ def _carregar_compras(usuario: User) -> dict:
         "administrar": permissao.administrar,
     }
 
+
+
+def _carregar_cadastros(usuario: User) -> dict:
+    permissao, _ = PermissaoCadastros.objects.get_or_create(usuario=usuario)
+    return {
+        "visualizar": permissao.visualizar,
+        "criar": permissao.criar,
+        "editar": permissao.editar,
+        "excluir": permissao.excluir,
+        "administrar": permissao.administrar,
+    }
+
+
+def _resolver_nivel_cadastros(valores: dict) -> str:
+    if valores.get("administrar"):
+        return NivelPermissao.ADMINISTRADOR
+    if any(valores.get(campo) for campo in ("criar", "editar", "excluir")):
+        return NivelPermissao.EDICAO
+    return NivelPermissao.LEITURA
+
+
+def _salvar_cadastros(usuario: User, valores: dict, modulo_ativo: bool) -> None:
+    permissao, _ = PermissaoCadastros.objects.get_or_create(usuario=usuario)
+    permissao.visualizar = modulo_ativo and bool(valores.get("visualizar", True))
+    permissao.criar = modulo_ativo and bool(valores.get("criar", False))
+    permissao.editar = modulo_ativo and bool(valores.get("editar", False))
+    permissao.excluir = modulo_ativo and bool(valores.get("excluir", False))
+    permissao.administrar = modulo_ativo and bool(valores.get("administrar", False))
+    permissao.ativo = modulo_ativo
+    permissao.save()
 
 
 def _resolver_nivel_compras(valores: dict) -> str:
@@ -103,6 +134,24 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         icone="building",
         ordem=10,
         url_name="",
+    ),
+    ModuloDef(
+        codigo=ModuloSistema.CADASTROS,
+        titulo="Cadastros",
+        descricao="Central de materiais, fornecedores e mão de obra do ERP.",
+        icone="file",
+        ordem=15,
+        url_name="cadastros:index",
+        permissoes=(
+            PermissaoEspecificaDef("visualizar", "Visualizar cadastros", "Pode consultar materiais, fornecedores e mão de obra."),
+            PermissaoEspecificaDef("criar", "Criar cadastros", "Pode cadastrar novos materiais, fornecedores e mão de obra."),
+            PermissaoEspecificaDef("editar", "Editar cadastros", "Pode alterar registros existentes da central de cadastros."),
+            PermissaoEspecificaDef("excluir", "Excluir cadastros", "Pode excluir registros quando não houver vínculos protegidos.", "danger"),
+            PermissaoEspecificaDef("administrar", "Administrar Cadastros", "Concede acesso total às ações do módulo.", "admin"),
+        ),
+        carregar_especificas=_carregar_cadastros,
+        salvar_especificas=_salvar_cadastros,
+        resolver_nivel=_resolver_nivel_cadastros,
     ),
     ModuloDef(
         codigo=ModuloSistema.PLANEJAMENTO,

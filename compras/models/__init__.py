@@ -1,5 +1,4 @@
 from .core import (
-    FornecedorCompra,
     NecessidadeCompra,
     ProcessoCompra,
     ProcessoCompraAtividade,
@@ -25,5 +24,6 @@ from .pedido import (
     RecebimentoPedidoItem,
 )
 from .historico import HistoricoProcessoCompra
+from .historico_suprimentos import HistoricoCompraSuprimento, SuprimentoReferencia
 
 __all__ = [name for name in globals() if not name.startswith("_")]

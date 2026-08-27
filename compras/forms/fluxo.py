@@ -10,10 +10,10 @@ from compras.models import (
     ContratacaoCompra,
     CotacaoFornecedor,
     CotacaoFornecedorItem,
-    FornecedorCompra,
     NecessidadeCompra,
     SolicitacaoCotacaoFornecedor,
 )
+from cadastros.models import Fornecedor, Material
 from compras.services.comercial import queryset_itens_elegiveis_comercial, queryset_itens_tecnicamente_aprovados
 
 
@@ -69,37 +69,40 @@ def _aplicar_classe_campos(form):
         field.widget.attrs["class"] = " ".join(filter(None, classes))
 
 
-class NecessidadeCompraForm(forms.Form):
-    """Inclusão eventual de item durante a etapa de cotação."""
+class MaterialNecessidadeChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        partes = [obj.codigo or "MAT", obj.nome]
+        if obj.especificacao:
+            partes.append(obj.especificacao)
+        partes.append(obj.unidade.sigla)
+        return " · ".join(partes)
 
-    descricao = forms.CharField(max_length=500, label="Item")
-    especificacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
-    unidade = forms.ChoiceField(choices=NecessidadeCompra.UnidadeMedida.choices)
+
+class NecessidadeCompraForm(forms.Form):
+    """Inclusão eventual de material do catálogo durante a etapa de cotação."""
+
+    material = MaterialNecessidadeChoiceField(
+        queryset=Material.objects.none(),
+        label="Material",
+        empty_label="Selecione um material",
+    )
     quantidade = forms.DecimalField(min_value=0.0001, decimal_places=4, max_digits=18)
     observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
 
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.processo = processo
+        self.fields["material"].queryset = (
+            Material.objects.filter(ativo=True)
+            .select_related("unidade")
+            .order_by("nome", "especificacao", "codigo")
+        )
         _aplicar_classe_campos(self)
-
-
-class FornecedorCompraForm(forms.ModelForm):
-    class Meta:
-        model = FornecedorCompra
-        fields = ["nome", "documento", "email", "telefone", "avaliacao"]
-        widgets = {
-            "nome": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "documento": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "email": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "telefone": forms.TextInput(attrs={"class": INPUT_CLASS}),
-            "avaliacao": forms.NumberInput(attrs={"class": INPUT_CLASS, "min": "0", "max": "5", "step": "0.1"}),
-        }
 
 
 class CotacaoFornecedorForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
-        queryset=FornecedorCompra.objects.filter(ativo=True).order_by("nome")
+        queryset=Fornecedor.objects.filter(ativo=True).order_by("nome")
     )
     data_proposta = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
     prazo_entrega_dias = forms.IntegerField(
@@ -186,7 +189,7 @@ class PropostaCompletaForm(forms.Form):
     """
 
     fornecedor = forms.ModelChoiceField(
-        queryset=FornecedorCompra.objects.none(),
+        queryset=Fornecedor.objects.none(),
         label="Fornecedor",
     )
     data_proposta = forms.DateField(
@@ -237,9 +240,9 @@ class PropostaCompletaForm(forms.Form):
         self.cotacao = cotacao
         super().__init__(*args, **kwargs)
 
-        fornecedores = FornecedorCompra.objects.filter(ativo=True).order_by("nome")
+        fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome")
         if cotacao:
-            fornecedores = FornecedorCompra.objects.filter(pk=cotacao.fornecedor_id)
+            fornecedores = Fornecedor.objects.filter(pk=cotacao.fornecedor_id)
             self.fields["fornecedor"].initial = cotacao.fornecedor
             self.fields["fornecedor"].disabled = True
             self.fields["condicao_pagamento"].choices = _choices_com_valor_atual(
@@ -784,7 +787,7 @@ class AprovacaoForm(forms.Form):
 
 class DocumentoContratacaoForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
-        queryset=FornecedorCompra.objects.none(),
+        queryset=Fornecedor.objects.none(),
         label="Fornecedor",
     )
     documento = forms.FileField(
@@ -800,7 +803,7 @@ class DocumentoContratacaoForm(forms.Form):
                 "cotacao__fornecedor_id", flat=True
             )
             self.fields["fornecedor"].queryset = (
-                FornecedorCompra.objects.filter(id__in=fornecedor_ids)
+                Fornecedor.objects.filter(id__in=fornecedor_ids)
                 .distinct()
                 .order_by("nome")
             )

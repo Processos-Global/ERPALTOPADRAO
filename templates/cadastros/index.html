@@ -1,0 +1,28 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<div class="cad-head">
+  <div class="cad-head__copy">
+    <div class="cad-eyebrow">Dados mestres</div>
+    <h1 class="cad-title">Central de Cadastros</h1>
+    <p class="cad-sub">Base única de materiais, fornecedores e mão de obra utilizada pelos módulos do ERP.</p>
+  </div>
+</div>
+
+<div class="cad-grid">
+  <a class="cad-card" href="{% url 'cadastros:materiais_lista' %}">
+    <div class="cad-card__top"><span class="cad-card__icon">MA</span><strong class="cad-card__count">{{ total_materiais }}</strong></div>
+    <h3>Materiais</h3><p>Catálogo oficial com atividade, subatividade, especificação e unidade.</p>
+    <div class="cad-card__footer"><span>Acessar materiais</span><span>→</span></div>
+  </a>
+  <a class="cad-card" href="{% url 'cadastros:fornecedores_lista' %}">
+    <div class="cad-card__top"><span class="cad-card__icon">FO</span><strong class="cad-card__count">{{ total_fornecedores }}</strong></div>
+    <h3>Fornecedores</h3><p>Base central para cotações, propostas, pedidos e futuras integrações.</p>
+    <div class="cad-card__footer"><span>Acessar fornecedores</span><span>→</span></div>
+  </a>
+  <a class="cad-card" href="{% url 'cadastros:mao_obra_lista' %}">
+    <div class="cad-card__top"><span class="cad-card__icon">MO</span><strong class="cad-card__count">{{ total_mao_obra }}</strong></div>
+    <h3>Mão de obra</h3><p>Serviços e recursos de mão de obra com unidade e classificação centralizadas.</p>
+    <div class="cad-card__footer"><span>Acessar mão de obra</span><span>→</span></div>
+  </a>
+</div>
+{% endblock %}

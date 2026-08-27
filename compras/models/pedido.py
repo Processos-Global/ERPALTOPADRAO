@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from .core import FornecedorCompra, NecessidadeCompra, ProcessoCompra
+from .core import NecessidadeCompra, ProcessoCompra
 
 
 class PedidoCompra(models.Model):
@@ -21,7 +21,7 @@ class PedidoCompra(models.Model):
     numero = models.CharField(max_length=20, unique=True, db_index=True)
     processo = models.ForeignKey(ProcessoCompra, on_delete=models.PROTECT, related_name="pedidos")
     obra = models.ForeignKey("obras.Obra", on_delete=models.PROTECT, related_name="pedidos_compra")
-    fornecedor = models.ForeignKey(FornecedorCompra, on_delete=models.PROTECT, related_name="pedidos")
+    fornecedor = models.ForeignKey("cadastros.Fornecedor", on_delete=models.PROTECT, related_name="pedidos")
     data = models.DateField(auto_now_add=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.PEDIDO_EMITIDO, db_index=True)
     subtotal = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"))

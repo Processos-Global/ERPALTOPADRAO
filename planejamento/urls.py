@@ -5,6 +5,7 @@ from planejamento.views import (
     atualizar_cronograma_suprimentos,
     historico_importacoes_cronograma,
     historico_importacoes_cronograma_suprimentos,
+    historico_item_cronograma_suprimentos,
     kanban_cronograma_suprimentos,
     menu_planejamento,
     painel_cronograma,
@@ -23,6 +24,11 @@ urlpatterns = [
     path("suprimentos/kanban/", kanban_cronograma_suprimentos, name="kanban_cronograma_suprimentos"),
     path("suprimentos/atualizar/", atualizar_cronograma_suprimentos, name="atualizar_cronograma_suprimentos"),
     path("suprimentos/importacoes/", historico_importacoes_cronograma_suprimentos, name="historico_importacoes_cronograma_suprimentos"),
+    path(
+        "suprimentos/itens/<int:item_id>/historico/",
+        historico_item_cronograma_suprimentos,
+        name="historico_item_cronograma_suprimentos",
+    ),
     path(
         "suprimentos/itens/<int:item_id>/datas/salvar/",
         salvar_datas_item_cronograma_suprimentos,

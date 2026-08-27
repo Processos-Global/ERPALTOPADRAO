@@ -9,7 +9,6 @@ from .acoes import (
     acao_compatibilizar,
     acao_concluir_compatibilizacao,
     acao_concluir_negociacao,
-    acao_criar_fornecedor,
     acao_marcar_solicitacao_enviada,
     acao_decisao_comercial_lote,
     acao_excluir_cotacao,

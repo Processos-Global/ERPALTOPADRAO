@@ -10,7 +10,6 @@ urlpatterns = [
     path("processos/novo/", views.novo_processo, name="novo_processo"),
     path("processos/<int:pk>/", views.detalhe_processo, name="detalhe_processo"),
     path("processos/<int:pk>/necessidades/incluir/", views.acao_incluir_necessidade, name="incluir_necessidade"),
-    path("processos/<int:pk>/fornecedores/criar/", views.acao_criar_fornecedor, name="criar_fornecedor"),
     path("processos/<int:pk>/solicitacoes/<int:solicitacao_id>/enviada/", views.acao_marcar_solicitacao_enviada, name="marcar_solicitacao_enviada"),
     path("processos/<int:pk>/cotacoes/incluir/", views.acao_incluir_cotacao, name="incluir_cotacao"),
     path("processos/<int:pk>/cotacoes/item/incluir/", views.acao_incluir_item_cotacao, name="incluir_item_cotacao"),

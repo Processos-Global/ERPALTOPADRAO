@@ -190,6 +190,34 @@
                     <span class="module-card__accent"></span>
                 </a>
 
+
+                {% if cadastros_acesso %}
+                    <a
+                        href="{% url 'cadastros:index' %}"
+                        class="module-card"
+                        data-transition-link
+                    >
+                        <header class="module-card__header">
+                            <span class="module-card__number">03</span>
+                            <span class="module-card__permission">Dados mestres</span>
+                        </header>
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon"><use href="#icon-file"></use></svg>
+                            </span>
+                            <div class="module-card__content">
+                                <h3>Cadastros</h3>
+                                <p>Centralize materiais, fornecedores e mão de obra utilizados pelos módulos do ERP.</p>
+                            </div>
+                        </div>
+                        <footer class="module-card__footer">
+                            <span>Acessar</span>
+                            <svg class="icon"><use href="#icon-arrow"></use></svg>
+                        </footer>
+                        <span class="module-card__accent"></span>
+                    </a>
+                {% endif %}
+
                 {% if request.user.is_superuser %}
                     <a
                         href="{% url 'usuarios:lista_usuarios' %}"
@@ -198,7 +226,7 @@
                     >
                         <header class="module-card__header">
                             <span class="module-card__number">
-                                03
+                                04
                             </span>
 
                             <span class="module-card__permission">

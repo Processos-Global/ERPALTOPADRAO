@@ -743,6 +743,8 @@
                     </span>
 
                     {% if request.user.is_superuser %}
+                        <small>4</small>
+                    {% elif cadastros_acesso %}
                         <small>3</small>
                     {% else %}
                         <small>2</small>
@@ -783,6 +785,21 @@
                             Suprimentos
                         </span>
                     </a>
+
+
+                    {% if cadastros_acesso %}
+                        <a
+                            href="{% url 'cadastros:index' %}"
+                            class="sidebar-link {% if request.resolver_match.namespace == 'cadastros' %}sidebar-link--active{% endif %}"
+                            data-transition-link
+                            title="Cadastros"
+                        >
+                            <span class="sidebar-link__icon">
+                                <svg class="icon"><use href="#icon-file"></use></svg>
+                            </span>
+                            <span class="sidebar-link__text">Cadastros</span>
+                        </a>
+                    {% endif %}
 
                     {% if request.user.is_superuser %}
                         <a
