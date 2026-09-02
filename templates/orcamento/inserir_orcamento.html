@@ -1,0 +1,71 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Inserir Orçamento | ERP Alto Padrão{% endblock %}
+{% block page_name %}Orçamento{% endblock %}
+
+{% block extra_css %}
+<style>
+.cad-page{max-width:900px;margin:0 auto;padding:24px 28px 36px;color:#10243e;font-family:Inter,"Segoe UI",sans-serif}
+.cad-head{margin-bottom:18px}.cad-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#2F6F7E;margin-bottom:5px}.cad-title{font-size:27px;line-height:1.1;font-weight:760;letter-spacing:-.035em;margin:0}.cad-sub{margin:7px 0 0;color:#64748b;font-size:13px;max-width:720px}
+.cad-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;max-width:640px;overflow:hidden}.cad-form-card__head{padding:15px 18px;border-bottom:1px solid #e2e8f0;background:#fbfcfd}.cad-form-card__head strong{font-size:13px}.cad-form-card__body{padding:18px}
+.cad-field{margin-bottom:16px}.cad-field label{display:block;font-size:11.5px;font-weight:750;margin-bottom:6px;color:#334155}.cad-field input[type=file],.cad-field select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px 10px;font-size:13px;color:#10243e;background:#fff}.cad-field select:focus,.cad-field input[type=file]:focus{outline:none;border-color:#2F6F7E;box-shadow:0 0 0 3px rgba(47,111,126,.08)}
+.cad-hint{margin:8px 0 0;color:#64748b;font-size:11.5px}
+.cad-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:9px 13px;min-height:38px;border:1px solid #2F6F7E;background:#2F6F7E;color:white;text-decoration:none;font-weight:700;font-size:12.5px;cursor:pointer}.cad-btn:hover{filter:brightness(.97)}
+.cad-actions{margin-top:18px;padding-top:16px;border-top:1px solid #eef2f7}
+.cad-alert{margin-top:16px;padding:10px 12px;border-radius:8px;font-size:12.5px;border:1px solid #a7f3d0;background:#ecfdf5;color:#065f46}
+.cad-errors{margin-top:16px;padding:10px 12px;border-radius:8px;font-size:12.5px;border:1px solid #f3c7c2;background:#fff1f0;color:#912018}
+.cad-errors ul{margin:0;padding-left:18px}
+@media(max-width:900px){.cad-page{padding:18px}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cad-page">
+  <div class="cad-head">
+    <div class="cad-eyebrow">Orçamento</div>
+    <h1 class="cad-title">Inserir Orçamento</h1>
+    <p class="cad-sub">Importe um orçamento a partir de um arquivo CSV.</p>
+  </div>
+
+  <div class="cad-form-card">
+    <div class="cad-form-card__head"><strong>Arquivo CSV</strong></div>
+    <div class="cad-form-card__body">
+      {% if erros %}
+        <div class="cad-errors">
+          <ul>
+            {% for erro in erros %}<li>{{ erro }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="cad-field">
+          <label for="obra">Obra</label>
+          <select id="obra" name="obra" required>
+            <option value="">Selecione uma obra</option>
+            {% for obra in obras %}
+              <option value="{{ obra.pk }}" {% if obra_id == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.codigo }} — {{ obra.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="cad-field">
+          <label for="arquivo_csv">Selecione o arquivo</label>
+          <input type="file" id="arquivo_csv" name="arquivo_csv" accept=".csv" required>
+          <p class="cad-hint">A leitura do conteúdo do arquivo ainda não foi implementada.</p>
+        </div>
+
+        <div class="cad-actions">
+          <button class="cad-btn" type="submit">Enviar</button>
+        </div>
+      </form>
+
+      {% if arquivo_recebido %}
+        <div class="cad-alert">Orçamento de "{{ obra_selecionada.nome }}" recebido: {{ arquivo_recebido }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

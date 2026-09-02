@@ -1,0 +1,53 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Obras | Orçamento | ERP Alto Padrão{% endblock %}
+{% block page_name %}Orçamento{% endblock %}
+
+{% block extra_css %}
+<style>
+.cad-page{max-width:1480px;margin:0 auto;padding:24px 28px 36px;color:#10243e;font-family:Inter,"Segoe UI",sans-serif}
+.cad-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}.cad-head__copy{min-width:0}.cad-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#2F6F7E;margin-bottom:5px}.cad-title{font-size:27px;line-height:1.1;font-weight:760;letter-spacing:-.035em;margin:0}.cad-sub{margin:7px 0 0;color:#64748b;font-size:13px;max-width:720px}
+.cad-table-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto}.cad-table{width:100%;border-collapse:collapse;min-width:880px}.cad-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;background:#f8fafc;text-align:left;padding:10px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap}.cad-table td{padding:11px 12px;border-bottom:1px solid #eef2f7;font-size:12.5px;vertical-align:middle}.cad-table tbody tr:hover{background:#fbfdfd}.cad-table tr:last-child td{border-bottom:0}.cad-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#475569}.cad-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10.5px;font-weight:750;background:#EAF4F6;color:#1F4F5B}.cad-badge.off{background:#f1f5f9;color:#64748b}.cad-empty{padding:28px;text-align:center;color:#64748b}
+@media(max-width:900px){.cad-page{padding:18px}.cad-head{align-items:flex-start;flex-direction:column}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cad-page">
+  <div class="cad-head">
+    <div class="cad-head__copy">
+      <div class="cad-eyebrow">Orçamento</div>
+      <h1 class="cad-title">Obras</h1>
+      <p class="cad-sub">Todas as obras cadastradas no sistema.</p>
+    </div>
+  </div>
+
+  <div class="cad-table-wrap">
+    <table class="cad-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Obra</th>
+          <th>Tipo</th>
+          <th>Cidade/UF</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for obra in obras %}
+        <tr>
+          <td class="cad-code">{{ obra.codigo }}</td>
+          <td><strong>{{ obra.nome }}</strong></td>
+          <td>{{ obra.get_tipo_obra_display }}</td>
+          <td>{{ obra.cidade|default:"—" }}{% if obra.estado %}/{{ obra.estado }}{% endif %}</td>
+          <td><span class="cad-badge {% if not obra.ativa %}off{% endif %}">{{ obra.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td class="cad-empty" colspan="5">Nenhuma obra cadastrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

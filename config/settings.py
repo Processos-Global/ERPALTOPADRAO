@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     "core",
     "usuarios.apps.UsuariosConfig",
     "obras",
+    "orcamento",
     "planejamento",
     "suprimentos",
     "compras",

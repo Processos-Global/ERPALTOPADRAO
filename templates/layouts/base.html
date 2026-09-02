@@ -743,11 +743,11 @@
                     </span>
 
                     {% if request.user.is_superuser %}
-                        <small>4</small>
+                        <small>5</small>
                     {% elif cadastros_acesso %}
-                        <small>3</small>
+                        <small>4</small>
                     {% else %}
-                        <small>2</small>
+                        <small>3</small>
                     {% endif %}
                 </header>
 
@@ -783,6 +783,24 @@
 
                         <span class="sidebar-link__text">
                             Suprimentos
+                        </span>
+                    </a>
+
+
+                    <a
+                        href="{% url 'orcamento:menu' %}"
+                        class="sidebar-link {% if request.resolver_match.namespace == 'orcamento' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Orçamento"
+                    >
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-wallet"></use>
+                            </svg>
+                        </span>
+
+                        <span class="sidebar-link__text">
+                            Orçamento
                         </span>
                     </a>
 

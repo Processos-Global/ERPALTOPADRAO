@@ -10,6 +10,7 @@ urlpatterns = [
     path("", include("core.urls")),
     path("usuarios/", include("usuarios.urls")),
     path("obras/", include("obras.urls")),
+    path("orcamento/", include("orcamento.urls")),
     path("planejamento/", include("planejamento.urls")),
     path("suprimentos/", include("suprimentos.urls")),
     path("compras/", include("compras.urls")),
