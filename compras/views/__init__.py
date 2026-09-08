@@ -1,5 +1,5 @@
 from .menu import menu_suprimentos
-from .processos import dashboard, detalhe_processo, lista_pedidos, lista_processos, novo_processo
+from .processos import dashboard, detalhe_processo, lista_pedidos, lista_processos, novo_processo, pdf_solicitacao_aprovada
 from .acoes import (
     acao_adjudicar,
     acao_analise_tecnica_lote,
@@ -9,6 +9,7 @@ from .acoes import (
     acao_compatibilizar,
     acao_concluir_compatibilizacao,
     acao_concluir_negociacao,
+    acao_enviar_solicitacao_fornecedor,
     acao_marcar_solicitacao_enviada,
     acao_decisao_comercial_lote,
     acao_excluir_cotacao,

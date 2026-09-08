@@ -84,7 +84,13 @@
         .dashboard-home .module-card:hover {
             border-color: var(--opal-blue);
         }
-    </style>
+    
+/* 2026 refresh: card de boas-vindas como ancora visual da pagina */
+.dashboard-home .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:28px 30px;border:1px solid #d7e6ea;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fbfefe 62%,#eef9fa 100%);box-shadow:0 14px 38px rgba(28,67,80,.07)}
+.dashboard-home .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#1d91a6,#0a4054)}.dashboard-home .dashboard-heading::after{content:"";position:absolute;right:-90px;top:-125px;width:220px;height:220px;border-radius:50%;background:rgba(29,145,166,.06);pointer-events:none}.dashboard-home .dashboard-heading__content{position:relative;z-index:1}.dashboard-home .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.65rem);line-height:1.03}
+@media(max-width:720px){.dashboard-home .dashboard-heading{padding:22px 20px 22px 24px;border-radius:15px}.dashboard-home .dashboard-heading::after{display:none}.dashboard-home .dashboard-heading__content h1{font-size:2.15rem}}
+
+</style>
 {% endblock %}
 
 {% block content %}

@@ -100,6 +100,37 @@ class NecessidadeCompraForm(forms.Form):
         _aplicar_classe_campos(self)
 
 
+class SolicitacaoCotacaoEnvioForm(forms.Form):
+    """Fornecedor escolhido pelo comprador no momento em que o envio é confirmado."""
+
+    fornecedor = forms.ModelChoiceField(
+        queryset=Fornecedor.objects.none(),
+        label="Fornecedor",
+        empty_label="Selecione um fornecedor",
+    )
+    meio_envio = forms.ChoiceField(
+        required=False,
+        label="Forma de envio",
+        choices=[("", "Não informar"), *SolicitacaoCotacaoFornecedor.MeioEnvio.choices],
+    )
+    observacao_envio = forms.CharField(
+        required=False,
+        label="Observação",
+        widget=forms.TextInput(attrs={"placeholder": "Opcional"}),
+    )
+
+    def __init__(self, *args, processo=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome")
+        if processo is not None:
+            ja_vinculados = processo.solicitacoes_cotacao.exclude(
+                status=SolicitacaoCotacaoFornecedor.Status.CANCELADA
+            ).values_list("fornecedor_id", flat=True)
+            fornecedores = fornecedores.exclude(pk__in=ja_vinculados)
+        self.fields["fornecedor"].queryset = fornecedores
+        _aplicar_classe_campos(self)
+
+
 class CotacaoFornecedorForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
         queryset=Fornecedor.objects.filter(ativo=True).order_by("nome")

@@ -5,6 +5,11 @@
 {% block content %}
 <style>
   .csi-page{max-width:1400px;margin:0 auto;padding:24px}.csi-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.csi-title{margin:0;font-size:26px;color:#0f172a}.csi-btn{border:1px solid #cbd5e1;border-radius:9px;padding:9px 13px;background:#fff;color:#334155;text-decoration:none;font-weight:650}.csi-box{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}.csi-table-wrap{overflow-x:auto}.csi-table{width:100%;border-collapse:collapse;min-width:980px}.csi-table th{padding:11px 12px;text-align:left;background:#f8fafc;color:#64748b;font-size:11px;text-transform:uppercase;border-bottom:1px solid #e5e7eb}.csi-table td{padding:12px;color:#334155;font-size:13px;border-bottom:1px solid #eef2f7;vertical-align:top}.csi-badge{display:inline-flex;border-radius:999px;padding:4px 8px;background:#f1f5f9;font-size:11px;font-weight:700}.csi-active{background:#dcfce7;color:#166534}.csi-fail{background:#fee2e2;color:#991b1b}.csi-empty{text-align:center;padding:40px;color:#64748b}
+
+/* 2026 refresh: cabecalho destacado das importacoes de suprimentos */
+.csi-head{position:relative;overflow:hidden;align-items:center;padding:21px 23px;border:1px solid #d7e6ea;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fbfefe 63%,#eef9fa 100%);box-shadow:0 12px 34px rgba(28,67,80,.065)}.csi-head::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#1d91a6,#0a4054)}.csi-head>*{position:relative;z-index:1}.csi-title{font-size:30px;letter-spacing:-.035em;color:#183746}
+@media(max-width:720px){.csi-head{align-items:flex-start;padding:18px 17px 18px 20px;border-radius:14px}.csi-title{font-size:25px}}
+
 </style>
 <div class="csi-page">
   <div class="csi-head">

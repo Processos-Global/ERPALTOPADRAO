@@ -29,4 +29,13 @@
 .fin-mobile-label{display:none}
 @media(max-width:1100px){.fin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.fin-grid-2,.fin-settings-grid{grid-template-columns:1fr}.fin-sticky{position:static}.fin-form-grid--3{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.fin-shell{padding:18px 14px 36px}.fin-page-head,.fin-detail-hero{flex-direction:column}.fin-detail-hero__amount{text-align:left}.fin-kpis{grid-template-columns:1fr}.fin-form-grid,.fin-form-grid--3{grid-template-columns:1fr}.fin-field--full{grid-column:auto}.fin-approval__facts{grid-template-columns:1fr}.fin-title{font-size:24px}}
+
+/* 2026 refresh: cabecalho financeiro com maior hierarquia */
+.fin-page-head{position:relative;overflow:hidden;align-items:center;margin-bottom:22px;padding:22px 24px;border:1px solid #dbe3eb;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fbfcfe 63%,#f1f7fb 100%);box-shadow:0 12px 34px rgba(20,54,80,.065)}
+.fin-page-head::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,var(--fin-primary),#0a4054)}
+.fin-page-head::after{content:"";position:absolute;right:-75px;top:-105px;width:175px;height:175px;border-radius:50%;background:rgba(29,145,166,.055);pointer-events:none}
+.fin-page-head>*,.fin-head-actions{position:relative;z-index:1}.fin-eyebrow{margin-bottom:7px;font-size:10px;letter-spacing:.13em}.fin-title{font-size:31px;font-weight:800;letter-spacing:-.04em;color:#183747}.fin-subtitle{margin-top:8px;font-size:12px;line-height:1.55;color:#6b7d89}.fin-head-actions{align-items:center}
+.fin-detail-hero{position:relative;overflow:hidden;padding:22px 24px;border-radius:16px;box-shadow:0 12px 34px rgba(20,54,80,.065);background:linear-gradient(135deg,#fff 0%,#fbfcfe 65%,#f3f9fb 100%)}.fin-detail-hero::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,var(--fin-primary),#0a4054)}.fin-detail-hero>*{position:relative;z-index:1}.fin-detail-hero h1{font-size:25px;letter-spacing:-.035em}
+@media(max-width:720px){.fin-page-head,.fin-detail-hero{align-items:flex-start;padding:18px 17px 18px 20px;border-radius:14px}.fin-title{font-size:26px}.fin-page-head::after{display:none}}
+
 </style>

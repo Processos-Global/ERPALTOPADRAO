@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -26,10 +27,12 @@ from compras.forms import (
     NegociacaoForm,
     ProcessoCompraForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )
 from compras.models import (
     CotacaoFornecedor,
     CotacaoFornecedorItem,
+    AprovacaoCompra,
     PedidoCompra,
     ProcessoCompra,
     SolicitacaoCotacaoFornecedor,
@@ -42,6 +45,7 @@ from compras.services.permissoes import (
 from compras.services.processos import criar_processo
 from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
 from compras.services.pedidos import transicoes_status_permitidas
+from compras.services.pdf_solicitacao import gerar_pdf_solicitacao_aprovada
 
 
 # ============================================================
@@ -923,6 +927,8 @@ def detalhe_processo(
         .order_by("fornecedor__nome")
     )
 
+    form_envio_fornecedor = SolicitacaoCotacaoEnvioForm(processo=processo)
+
     cotacoes = list(
         processo
         .cotacoes
@@ -1104,13 +1110,22 @@ def detalhe_processo(
             ]
         form_decisao_lote = DecisaoComercialLoteForm(processo=processo)
 
+    aprovacao_aprovada = (
+        processo.aprovacoes.filter(decisao=AprovacaoCompra.Decisao.APROVADO)
+        .select_related("usuario", "alcada")
+        .order_by("-criado_em", "-id")
+        .first()
+    )
+
     contexto = {
         "processo": processo,
+        "aprovacao_aprovada": aprovacao_aprovada,
         "vinculos": vinculos,
         "necessidades": necessidades,
         "cotacoes": cotacoes,
         "solicitacoes_cotacao": solicitacoes_cotacao,
         "meios_envio_cotacao": SolicitacaoCotacaoFornecedor.MeioEnvio.choices,
+        "form_envio_fornecedor": form_envio_fornecedor,
         "adjudicacoes": adjudicacoes,
         "possui_saldo_pendente": (
             possui_saldo_pendente
@@ -1339,12 +1354,6 @@ def novo_processo(request):
                     ]
                 ),
 
-                fornecedores_sugeridos=(
-                    form.cleaned_data[
-                        "fornecedores_sugeridos"
-                    ]
-                ),
-
                 atividades=(
                     form.cleaned_data[
                         "atividades"
@@ -1403,6 +1412,23 @@ def novo_processo(request):
             ),
         },
     )
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def pdf_solicitacao_aprovada(request, pk):
+    processo = get_object_or_404(
+        ProcessoCompra.objects.select_related("obra", "item_cronograma", "criado_por", "comprador"),
+        pk=pk,
+    )
+    try:
+        conteudo = gerar_pdf_solicitacao_aprovada(processo)
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("compras:detalhe_processo", pk=processo.pk)
+
+    resposta = HttpResponse(conteudo, content_type="application/pdf")
+    resposta["Content-Disposition"] = f'inline; filename="solicitacao-{processo.numero}-aprovada.pdf"'
+    return resposta
 
 
 # ============================================================

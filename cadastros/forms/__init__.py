@@ -1,3 +1,3 @@
-from .cadastros import FornecedorForm, MaoObraForm, MaterialForm
+from .cadastros import FornecedorForm, MaoObraForm, MaterialForm, UnidadeMedidaForm
 
-__all__ = ["MaterialForm", "FornecedorForm", "MaoObraForm"]
+__all__ = ["MaterialForm", "FornecedorForm", "MaoObraForm", "UnidadeMedidaForm"]

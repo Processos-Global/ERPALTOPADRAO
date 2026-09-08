@@ -12,6 +12,10 @@ from .cadastros import (
     material_excluir,
     material_novo,
     materiais_lista,
+    unidade_editar,
+    unidade_excluir,
+    unidade_nova,
+    unidades_lista,
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]

@@ -6,6 +6,10 @@ app_name = "cadastros"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("unidades/", views.unidades_lista, name="unidades_lista"),
+    path("unidades/nova/", views.unidade_nova, name="unidade_nova"),
+    path("unidades/<int:pk>/editar/", views.unidade_editar, name="unidade_editar"),
+    path("unidades/<int:pk>/excluir/", views.unidade_excluir, name="unidade_excluir"),
     path("materiais/", views.materiais_lista, name="materiais_lista"),
     path("materiais/novo/", views.material_novo, name="material_novo"),
     path("materiais/<int:pk>/editar/", views.material_editar, name="material_editar"),

@@ -895,7 +895,6 @@ def _anexar_acompanhamento_compras(itens):
                 queryset=solicitacao_qs,
             ),
             "vinculos_atividades__atividade",
-            "fornecedores_sugeridos",
         )
         .order_by("criado_em", "id")
     )
@@ -952,7 +951,10 @@ def _anexar_acompanhamento_compras(itens):
             item.status_compras_classe = classe
 
         item.fornecedor_pedido_nome = (
-            ", ".join(f.nome for f in processo_referencia.fornecedores_sugeridos.all())
+            ", ".join(
+                solicitacao.fornecedor.nome
+                for solicitacao in processo_referencia.solicitacoes_cotacao.all()
+            )
             if processo_referencia
             else ""
         )
@@ -1054,20 +1056,6 @@ def _anexar_acompanhamento_compras(itens):
                         solicitacao.fornecedor,
                         processo,
                         solicitacao,
-                    )
-                )
-
-            # Fallback para processos antigos que ainda não possuam registros
-            # individualizados de solicitação.
-            for fornecedor in processo.fornecedores_sugeridos.all():
-                chave = (processo.id, fornecedor.id)
-                if chave in vistos:
-                    continue
-                vistos.add(chave)
-                linhas.append(
-                    _montar_linha_fornecedor_indicado(
-                        fornecedor,
-                        processo,
                     )
                 )
 

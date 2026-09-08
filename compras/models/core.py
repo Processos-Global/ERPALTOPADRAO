@@ -47,12 +47,6 @@ class ProcessoCompra(models.Model):
         on_delete=models.SET_NULL,
         related_name="processos_compra_responsavel",
     )
-    fornecedores_sugeridos = models.ManyToManyField(
-        "cadastros.Fornecedor",
-        blank=True,
-        related_name="processos_compra_sugeridos",
-        help_text="Fornecedores indicados no pedido inicial para orientar o Suprimentos.",
-    )
     etapa_atual = models.CharField(max_length=30, choices=Etapa.choices, default=Etapa.COTACAO, db_index=True)
     status = models.CharField(max_length=40, choices=Status.choices, default=Status.RASCUNHO, db_index=True)
     data_abertura = models.DateField(auto_now_add=True)

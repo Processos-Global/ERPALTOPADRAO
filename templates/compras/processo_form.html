@@ -216,6 +216,12 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   .purchase-material-option__title{display:block;font-size:10px;font-weight:700;color:#1E293B;line-height:1.35}
   .purchase-material-option__meta{display:block;margin-top:3px;font-size:8px;color:#64748B;line-height:1.35}
   .purchase-material-empty{padding:12px;text-align:center;color:#94A3B8;font-size:9px}
+
+/* 2026 refresh: destaque do titulo do formulario */
+.purchase-heading{position:relative;overflow:hidden;margin-bottom:20px;padding:22px 24px;border:1px solid #d7e6ea;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fbfefe 64%,#eef9fa 100%);box-shadow:0 12px 34px rgba(28,67,80,.065)}
+.purchase-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#078fa5,#0a4054)}.purchase-heading h1{margin:0 0 6px;font-size:31px;line-height:1.1;letter-spacing:-.04em;color:#183746}.purchase-heading p{margin:0;color:#6f848d;font-size:12px;line-height:1.55}
+@media(max-width:680px){.purchase-heading{padding:18px 17px 18px 20px;border-radius:14px}.purchase-heading h1{font-size:26px}}
+
 </style>
 {% endblock %}
 
@@ -271,8 +277,6 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
           </section>
 
           <aside class="purchase-card purchase-side">
-            <section class="purchase-side-section"><h2 class="purchase-section-title">Fornecedores</h2><div class="purchase-field"><label>Selecionar fornecedores <span class="req">*</span></label><div class="purchase-native-suppliers">{{ form.fornecedores_sugeridos }}</div>{% for error in form.fornecedores_sugeridos.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}<div class="purchase-dropdown" id="supplier-dropdown"><button type="button" class="purchase-dropdown__toggle" id="supplier-toggle" aria-expanded="false"><span id="supplier-toggle-text">Buscar e selecionar fornecedores...</span><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6"/></svg></button><div class="purchase-dropdown__panel" id="supplier-panel"><div class="purchase-search" style="width:100%"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="supplier-search" placeholder="Buscar fornecedor..." autocomplete="off"><button type="button" class="purchase-search__clear" id="supplier-search-clear">×</button></div><div class="purchase-dropdown__meta"><span><strong id="supplier-selected-count">0</strong> selecionado(s)</span><button type="button" class="purchase-mini-btn" id="clear-suppliers">Limpar</button></div><div class="purchase-dropdown__list" id="supplier-list"></div><div class="purchase-empty" id="supplier-empty" hidden>Nenhum fornecedor encontrado.</div></div></div><div class="purchase-supplier-chips" id="selected-suppliers"></div></div></section>
-
             <section class="purchase-side-section"><h2 class="purchase-section-title">Dados do comprador</h2><div class="purchase-side-grid"><div class="purchase-field"><label for="{{ form.comprador.id_for_label }}">Comprador responsável{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field"><label>Data necessária <span class="req">*</span></label><div class="purchase-readonly">{% if item_inicial.prazo_limite_contratacao %}{{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% else %}—{% endif %}</div></div><div class="purchase-field purchase-field--full"><label for="{{ form.descricao.id_for_label }}">Descrição{% if form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.descricao }}<div class="purchase-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field purchase-field--full"><label for="{{ form.observacao.id_for_label }}">Observação geral (máx. 200 caracteres)</label>{{ form.observacao }}<div class="purchase-counter"><span id="observation-count">0</span>/200</div>{% for error in form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div></div></section>
           </aside>
         </div>
@@ -415,142 +419,6 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
     activityOptions().forEach(o=>o.selected=false);
     activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));
     renderActivities();
-  });
-
-  /* FORNECEDORES — lista renderizada somente quando o dropdown está aberto */
-  const supplier=document.getElementById('{{ form.fornecedores_sugeridos.id_for_label }}'),
-        supplierDropdown=qs('#supplier-dropdown'),
-        supplierToggle=qs('#supplier-toggle'),
-        supplierPanel=qs('#supplier-panel'),
-        supplierToggleText=qs('#supplier-toggle-text'),
-        supplierSearch=qs('#supplier-search'),
-        supplierClear=qs('#supplier-search-clear'),
-        supplierList=qs('#supplier-list'),
-        supplierEmpty=qs('#supplier-empty'),
-        supplierCount=qs('#supplier-selected-count'),
-        supplierChips=qs('#selected-suppliers');
-
-  function supplierOptions(){
-    return supplier
-      ? Array.from(supplier.options).filter(o=>o.value&&!o.disabled)
-      : [];
-  }
-
-  function renderSupplierSummary(){
-    if(!supplier)return;
-    const opts=supplierOptions();
-    const sel=opts.filter(o=>o.selected);
-
-    if(supplierCount)supplierCount.textContent=sel.length;
-    if(supplierToggleText){
-      supplierToggleText.textContent=sel.length
-        ? `${sel.length} fornecedor(es) selecionado(s)`
-        : 'Buscar e selecionar fornecedores...';
-    }
-
-    if(supplierChips){
-      supplierChips.innerHTML=sel.map(o=>`
-        <span class="purchase-supplier-chip">
-          <span>${esc(o.text.trim())}</span>
-          <button type="button" data-remove-supplier="${esc(o.value)}" aria-label="Remover">×</button>
-        </span>
-      `).join('');
-    }
-  }
-
-  function renderSupplierList(){
-    if(!supplier||!supplierList)return;
-
-    const term=(supplierSearch?.value||'').trim().toLocaleLowerCase('pt-BR');
-    const opts=supplierOptions();
-    const vis=opts.filter(o=>!term||o.text.toLocaleLowerCase('pt-BR').includes(term));
-
-    if(supplierClear)supplierClear.style.display=term?'block':'none';
-    if(supplierEmpty)supplierEmpty.hidden=vis.length>0;
-
-    supplierList.innerHTML=vis.map(o=>`
-      <button type="button" class="purchase-dropdown__option ${o.selected?'is-selected':''}" data-supplier="${esc(o.value)}">
-        <span class="purchase-dropdown__box">${o.selected?'✓':''}</span>
-        <span>${esc(o.text.trim())}</span>
-      </button>
-    `).join('');
-  }
-
-  function openSup(){
-    supplierDropdown?.classList.add('is-open');
-    supplierToggle?.classList.add('is-open');
-    supplierToggle?.setAttribute('aria-expanded','true');
-    renderSupplierList();
-    setTimeout(()=>supplierSearch?.focus(),0);
-  }
-
-  function closeSup(){
-    supplierDropdown?.classList.remove('is-open');
-    supplierToggle?.classList.remove('is-open');
-    supplierToggle?.setAttribute('aria-expanded','false');
-    if(supplierList)supplierList.innerHTML='';
-  }
-
-  supplierToggle?.addEventListener('click',e=>{
-    e.stopPropagation();
-    supplierDropdown?.classList.contains('is-open')?closeSup():openSup();
-  });
-
-  supplierPanel?.addEventListener('click',e=>e.stopPropagation());
-
-  supplierList?.addEventListener('click',e=>{
-    const button=e.target.closest('[data-supplier]');
-    if(!button)return;
-
-    const option=supplierOptions().find(
-      o=>String(o.value)===String(button.dataset.supplier)
-    );
-
-    if(option){
-      option.selected=!option.selected;
-      supplier.dispatchEvent(new Event('change',{bubbles:true}));
-      renderSupplierSummary();
-      renderSupplierList();
-    }
-  });
-
-  supplierChips?.addEventListener('click',e=>{
-    const button=e.target.closest('[data-remove-supplier]');
-    if(!button)return;
-
-    const option=supplierOptions().find(
-      o=>String(o.value)===String(button.dataset.removeSupplier)
-    );
-
-    if(option){
-      option.selected=false;
-      supplier.dispatchEvent(new Event('change',{bubbles:true}));
-      renderSupplierSummary();
-      if(supplierDropdown?.classList.contains('is-open'))renderSupplierList();
-    }
-  });
-
-  supplierSearch?.addEventListener('input',renderSupplierList);
-
-  supplierClear?.addEventListener('click',()=>{
-    supplierSearch.value='';
-    supplierSearch.focus();
-    renderSupplierList();
-  });
-
-  qs('#clear-suppliers')?.addEventListener('click',()=>{
-    supplierOptions().forEach(o=>o.selected=false);
-    supplier?.dispatchEvent(new Event('change',{bubbles:true}));
-    renderSupplierSummary();
-    renderSupplierList();
-  });
-
-  document.addEventListener('click',e=>{
-    if(supplierDropdown&&!supplierDropdown.contains(e.target))closeSup();
-  });
-
-  document.addEventListener('keydown',e=>{
-    if(e.key==='Escape')closeSup();
   });
 
   /* ITENS / FORMSET */

@@ -844,6 +844,9 @@
     </div>
 
     <div class="pc-hero-actions">
+      {% if aprovacao_aprovada %}
+        <a class="cp-btn" href="{% url 'compras:pdf_solicitacao_aprovada' processo.pk %}" target="_blank" rel="noopener">PDF da solicitação aprovada</a>
+      {% endif %}
       {% if processo.status != 'REPROVADO' %}
         <button type="button" class="cp-btn cp-btn--primary pc-current-step-btn" data-open-tab="{% if processo.etapa_atual == 'COTACAO' %}cotacao{% elif processo.etapa_atual == 'COMPATIBILIZACAO' or processo.etapa_atual == 'NEGOCIACAO' %}comparacao{% elif processo.etapa_atual == 'APROVACAO' %}aprovacao{% else %}pedido{% endif %}">Ir para etapa atual</button>
       {% endif %}
@@ -887,7 +890,7 @@
                 <tbody>
                   {% for n in necessidades %}
                     <tr>
-                      <td><strong>{{ n.descricao }}</strong>{% if n.material %}<small class="pc-muted" style="display:block">{{ n.material.codigo }} · {{ n.material.atividade.nome }} › {{ n.material.subatividade.nome }}</small>{% endif %}</td>
+                      <td><strong>{{ n.descricao }}</strong>{% if n.material %}<small class="pc-muted" style="display:block">{{ n.material.codigo }} · {{ n.material.unidade.sigla }}</small>{% endif %}</td>
                       <td>{{ n.especificacao|default:"—" }}</td>
                       <td>{{ n.quantidade_necessaria|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}</td>
@@ -908,6 +911,39 @@
   <section class="pc-tab-panel" data-panel="cotacao">
     <div class="pc-workspace">
       <main class="pc-main">
+        {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_envio_fornecedor %}
+          <section class="pc-card">
+            <div class="pc-card-head">
+              <div>
+                <h2>Registrar envio para fornecedor</h2>
+                <p>O fornecedor é definido pelo comprador somente nesta etapa. Após confirmar o envio, ele ficará disponível para preenchimento da proposta.</p>
+              </div>
+            </div>
+            <div class="pc-card-body">
+              <form method="post" action="{% url 'compras:enviar_solicitacao_fornecedor' processo.pk %}">
+                {% csrf_token %}
+                <div class="pc-form-grid">
+                  <div class="pc-field wide">
+                    <label>{{ form_envio_fornecedor.fornecedor.label }} <span class="req">*</span></label>
+                    {{ form_envio_fornecedor.fornecedor }}
+                  </div>
+                  <div class="pc-field">
+                    <label>{{ form_envio_fornecedor.meio_envio.label }}</label>
+                    {{ form_envio_fornecedor.meio_envio }}
+                  </div>
+                  <div class="pc-field wide">
+                    <label>{{ form_envio_fornecedor.observacao_envio.label }}</label>
+                    {{ form_envio_fornecedor.observacao_envio }}
+                  </div>
+                </div>
+                <div class="pc-form-actions" style="margin-top:12px">
+                  <button type="submit" class="cp-btn cp-btn--primary">Confirmar envio ao fornecedor</button>
+                </div>
+              </form>
+            </div>
+          </section>
+        {% endif %}
+
         {% if solicitacoes_cotacao %}
           <section class="pc-card">
             <div class="pc-card-head">
@@ -2733,6 +2769,11 @@
   #processo-compra .pc-approval-submit-grid{grid-template-columns:1fr!important}
   #processo-compra .pc-approval-submit .pc-form-actions .cp-btn{width:100%!important}
 }
+
+
+/* 2026 refresh: reforco visual do contexto principal do processo */
+#processo-compra .pc-hero{position:relative;overflow:hidden;align-items:center;padding:24px 26px;border-radius:17px;background:linear-gradient(135deg,#fff 0%,#fbfefe 63%,#eef9fa 100%);box-shadow:0 14px 38px rgba(31,69,82,.07)}#processo-compra .pc-hero::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,var(--pc-brand),#0a4054)}#processo-compra .pc-hero::after{content:"";position:absolute;right:-82px;top:-115px;width:190px;height:190px;border-radius:50%;background:rgba(7,143,165,.055);pointer-events:none}#processo-compra .pc-hero>*{position:relative;z-index:1}#processo-compra .pc-title{font-size:32px;letter-spacing:-.038em}#processo-compra .pc-eyebrow{letter-spacing:.13em}
+@media(max-width:720px){#processo-compra .pc-hero{align-items:flex-start;padding:19px 18px 19px 21px;border-radius:14px}#processo-compra .pc-title{font-size:26px}#processo-compra .pc-hero::after{display:none}}
 
 </style>
 

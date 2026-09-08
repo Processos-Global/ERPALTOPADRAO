@@ -1,0 +1,42 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<div class="cad-head">
+  <div class="cad-head__copy">
+    <div class="cad-eyebrow">Dados mestres</div>
+    <h1 class="cad-title">Unidades de medida</h1>
+    <p class="cad-sub">Cadastre e mantenha as unidades utilizadas em materiais, mão de obra e processos de compra.</p>
+  </div>
+  <div class="cad-head__actions">
+    <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:index' %}">Voltar</a>
+    {% if cad_pode_criar %}<a class="cad-btn" href="{% url 'cadastros:unidade_nova' %}">Nova unidade</a>{% endif %}
+  </div>
+</div>
+
+<div class="cad-toolbar">
+  <form method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por sigla ou descrição">
+    <select name="status">
+      <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativas</option>
+      <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativas</option>
+      <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todas</option>
+    </select>
+    <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
+  </form>
+</div>
+
+<div class="cad-table-wrap">
+  <table class="cad-table">
+    <thead><tr><th>Sigla</th><th>Descrição</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody>
+      {% for unidade in unidades %}
+      <tr>
+        <td><strong class="cad-code">{{ unidade.sigla }}</strong></td>
+        <td>{{ unidade.descricao }}</td>
+        <td><span class="cad-badge {% if not unidade.ativo %}off{% endif %}">{% if unidade.ativo %}Ativa{% else %}Inativa{% endif %}</span></td>
+        <td><div class="cad-row-actions">{% if cad_pode_editar %}<a class="cad-link" href="{% url 'cadastros:unidade_editar' unidade.pk %}">Editar</a>{% endif %}</div></td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="cad-empty">Nenhuma unidade encontrada.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

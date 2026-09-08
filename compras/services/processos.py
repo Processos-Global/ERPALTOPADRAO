@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from compras.models import NecessidadeCompra, ProcessoCompra, ProcessoCompraAtividade, SolicitacaoCotacaoFornecedor
+from compras.models import NecessidadeCompra, ProcessoCompra, ProcessoCompraAtividade
 
 from .auditoria import registrar_evento
 from .numeracao import gerar_numero
@@ -19,7 +19,6 @@ def criar_processo(
     atividades,
     itens,
     comprador=None,
-    fornecedores_sugeridos=None,
     descricao="",
     observacao="",
     iniciar_cotacao=True,
@@ -60,23 +59,6 @@ def criar_processo(
         status=(ProcessoCompra.Status.SOLICITACAO_COTACAO if iniciar_cotacao else ProcessoCompra.Status.RASCUNHO),
         criado_por=usuario,
     )
-
-    fornecedores_sugeridos = list(fornecedores_sugeridos or [])
-    if iniciar_cotacao and not fornecedores_sugeridos:
-        raise ValidationError("Selecione pelo menos um fornecedor para solicitar cotação.")
-    if fornecedores_sugeridos:
-        processo.fornecedores_sugeridos.set(fornecedores_sugeridos)
-        SolicitacaoCotacaoFornecedor.objects.bulk_create(
-            [
-                SolicitacaoCotacaoFornecedor(
-                    processo=processo,
-                    fornecedor=fornecedor,
-                    status=SolicitacaoCotacaoFornecedor.Status.PENDENTE_ENVIO,
-                )
-                for fornecedor in fornecedores_sugeridos
-            ],
-            ignore_conflicts=True,
-        )
 
     # As atividades são vínculo do PROCESSO, não de cada linha de item.
     # O usuário seleciona esse conjunto uma única vez na abertura.
@@ -124,7 +106,7 @@ def criar_processo(
         usuario,
         (
             f"Compra criada com {len(atividades_por_id)} atividade(s) e {len(necessidades)} item(ns). "
-            f"Fornecedores indicados: {', '.join(f.nome for f in fornecedores_sugeridos) if fornecedores_sugeridos else 'não informado'}."
+            "Os fornecedores serão definidos pelo comprador na etapa de cotação."
         ),
     )
     if iniciar_cotacao:
@@ -133,8 +115,7 @@ def criar_processo(
             processo,
             "SOLICITACAO_COTACAO_CRIADA",
             usuario,
-            f"Solicitações de cotação preparadas para {len(fornecedores_sugeridos)} fornecedor(es): "
-            f"{', '.join(f.nome for f in fornecedores_sugeridos)}. Aguardando registro do envio.",
+            "Processo liberado para cotação. Aguardando o comprador selecionar fornecedores e registrar os envios.",
         )
         notificar_novo_processo_para_cotacao(processo)
     return processo

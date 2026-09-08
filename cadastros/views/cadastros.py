@@ -8,7 +8,7 @@ from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from cadastros.forms import FornecedorForm, MaoObraForm, MaterialForm
+from cadastros.forms import FornecedorForm, MaoObraForm, MaterialForm, UnidadeMedidaForm
 from cadastros.models import Fornecedor, MaoObra, Material, UnidadeMedida
 from usuarios.services import pode_acao_cadastros
 
@@ -40,6 +40,7 @@ def index(request):
         "total_materiais": Material.objects.filter(ativo=True).count(),
         "total_fornecedores": Fornecedor.objects.filter(ativo=True).count(),
         "total_mao_obra": MaoObra.objects.filter(ativo=True).count(),
+        "total_unidades": UnidadeMedida.objects.filter(ativo=True).count(),
         **_permissoes_contexto(request.user),
     }
     return render(request, "cadastros/index.html", contexto)
@@ -258,3 +259,70 @@ def mao_obra_excluir(request, pk):
     except ProtectedError:
         messages.error(request, "Este item possui vínculos protegidos e não pode ser excluído. Inative-o para preservar o histórico.")
     return redirect("cadastros:mao_obra_lista")
+
+
+@cadastros_permissao_required("visualizar")
+def unidades_lista(request):
+    qs = UnidadeMedida.objects.all()
+    q = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "ativos").strip()
+    if q:
+        qs = qs.filter(Q(sigla__icontains=q) | Q(descricao__icontains=q))
+    if status == "ativos":
+        qs = qs.filter(ativo=True)
+    elif status == "inativos":
+        qs = qs.filter(ativo=False)
+    return render(request, "cadastros/unidades/lista.html", {
+        "unidades": qs.order_by("sigla")[:1000],
+        "q": q,
+        "status": status,
+        **_permissoes_contexto(request.user),
+    })
+
+
+@cadastros_permissao_required("criar")
+def unidade_nova(request):
+    form = UnidadeMedidaForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        unidade = form.save()
+        messages.success(request, f"Unidade {unidade.sigla} cadastrada com sucesso.")
+        return redirect("cadastros:unidades_lista")
+    return render(request, "cadastros/form.html", {
+        "form": form,
+        "titulo": "Nova unidade de medida",
+        "subtitulo": "Cadastre uma unidade para uso em materiais, mão de obra e processos do ERP.",
+        "voltar": "cadastros:unidades_lista",
+        **_permissoes_contexto(request.user),
+    })
+
+
+@cadastros_permissao_required("editar")
+def unidade_editar(request, pk):
+    unidade = get_object_or_404(UnidadeMedida, pk=pk)
+    form = UnidadeMedidaForm(request.POST or None, instance=unidade)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Unidade de medida atualizada com sucesso.")
+        return redirect("cadastros:unidades_lista")
+    return render(request, "cadastros/form.html", {
+        "form": form,
+        "titulo": f"Editar {unidade.sigla}",
+        "subtitulo": "Atualize a sigla, descrição ou situação da unidade de medida.",
+        "voltar": "cadastros:unidades_lista",
+        "objeto": unidade,
+        "excluir_url": "cadastros:unidade_excluir",
+        **_permissoes_contexto(request.user),
+    })
+
+
+@cadastros_permissao_required("excluir")
+@require_POST
+def unidade_excluir(request, pk):
+    unidade = get_object_or_404(UnidadeMedida, pk=pk)
+    sigla = unidade.sigla
+    try:
+        unidade.delete()
+        messages.success(request, f"Unidade {sigla} excluída com sucesso.")
+    except ProtectedError:
+        messages.error(request, "Esta unidade já está sendo utilizada e não pode ser excluída. Inative-a para preservar o histórico.")
+    return redirect("cadastros:unidades_lista")

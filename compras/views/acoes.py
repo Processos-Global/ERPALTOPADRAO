@@ -18,6 +18,7 @@ from compras.forms import (
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )
 from compras.models import (
     AdjudicacaoCompra,
@@ -52,7 +53,7 @@ from compras.services.pedidos import (
 )
 from compras.services.permissoes import compras_acao_required, possui_acao_compras
 from compras.services.processos import incluir_necessidade
-from compras.services.solicitacoes_cotacao import marcar_solicitacao_enviada
+from compras.services.solicitacoes_cotacao import criar_e_marcar_solicitacao_enviada, marcar_solicitacao_enviada
 
 
 def _processo(pk):
@@ -91,6 +92,35 @@ def acao_incluir_necessidade(request, pk):
         else:
             messages.error(request, "Revise os dados da necessidade.")
     return _voltar(processo)
+
+
+@compras_acao_required(AcaoCompra.COTAR)
+def acao_enviar_solicitacao_fornecedor(request, pk):
+    processo = _processo(pk)
+    if request.method == "POST":
+        form = SolicitacaoCotacaoEnvioForm(request.POST, processo=processo)
+        if form.is_valid():
+            try:
+                solicitacao = criar_e_marcar_solicitacao_enviada(
+                    processo=processo,
+                    fornecedor=form.cleaned_data["fornecedor"],
+                    usuario=request.user,
+                    meio_envio=form.cleaned_data.get("meio_envio", ""),
+                    observacao=form.cleaned_data.get("observacao_envio", ""),
+                )
+                messages.success(
+                    request,
+                    f"Envio para {solicitacao.fornecedor.nome} registrado. A proposta desse fornecedor já pode ser preenchida.",
+                )
+            except ValidationError as exc:
+                _erro(request, exc)
+        else:
+            for erros in form.errors.values():
+                for erro in erros:
+                    messages.error(request, erro)
+    resposta = _voltar(processo)
+    resposta["Location"] += "#cotacao"
+    return resposta
 
 
 @compras_acao_required(AcaoCompra.COTAR)

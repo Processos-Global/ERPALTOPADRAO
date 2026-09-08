@@ -94,3 +94,34 @@ def restaurar_solicitacao_apos_exclusao_proposta(*, processo, fornecedor):
     )
     solicitacao.save(update_fields=["status", "respondida_em", "atualizado_em"])
     return solicitacao
+
+
+@transaction.atomic
+def criar_e_marcar_solicitacao_enviada(*, processo, fornecedor, usuario, meio_envio="", observacao=""):
+    """Cria o vínculo com o fornecedor somente quando o comprador confirma o envio."""
+    existente = SolicitacaoCotacaoFornecedor.objects.filter(
+        processo=processo, fornecedor=fornecedor
+    ).first()
+    if existente and existente.status != SolicitacaoCotacaoFornecedor.Status.CANCELADA:
+        raise ValidationError("Este fornecedor já foi incluído neste processo de cotação.")
+
+    if existente:
+        solicitacao = existente
+        solicitacao.status = SolicitacaoCotacaoFornecedor.Status.PENDENTE_ENVIO
+        solicitacao.enviada_em = None
+        solicitacao.enviada_por = None
+        solicitacao.respondida_em = None
+        solicitacao.save(update_fields=["status", "enviada_em", "enviada_por", "respondida_em", "atualizado_em"])
+    else:
+        solicitacao = SolicitacaoCotacaoFornecedor.objects.create(
+            processo=processo,
+            fornecedor=fornecedor,
+            status=SolicitacaoCotacaoFornecedor.Status.PENDENTE_ENVIO,
+        )
+
+    return marcar_solicitacao_enviada(
+        solicitacao=solicitacao,
+        usuario=usuario,
+        meio_envio=meio_envio,
+        observacao=observacao,
+    )

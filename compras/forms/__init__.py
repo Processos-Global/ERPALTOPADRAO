@@ -11,4 +11,5 @@ from .fluxo import (
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )

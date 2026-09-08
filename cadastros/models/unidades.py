@@ -13,7 +13,7 @@ class UnidadeMedida(ModeloAtivoTimestamp):
         verbose_name_plural = "Unidades de medida"
 
     def save(self, *args, **kwargs):
-        self.sigla = (self.sigla or "").strip()
+        self.sigla = (self.sigla or "").strip().upper()
         self.descricao = (self.descricao or self.sigla).strip()
         super().save(*args, **kwargs)
 
