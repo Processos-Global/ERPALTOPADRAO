@@ -1,0 +1,40 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Contas a pagar{% endblock %}
+{% block financeiro_content %}
+<header class="fin-page-head">
+  <div><div class="fin-eyebrow">Operação financeira</div><h1 class="fin-title">Contas a pagar</h1><p class="fin-subtitle">Veja o que precisa ser conferido, aprovado e pago sem esconder as ações principais.</p></div>
+  {% if pode_lancar %}<a class="fin-btn fin-btn--primary" href="{% url 'financeiro:titulo_novo' %}">+ Novo título</a>{% endif %}
+</header>
+<div class="fin-kpis">
+  <a class="fin-kpi fin-kpi--danger" href="?atalho=vencidos&periodo=0"><div class="fin-kpi__label">Vencidos</div><div class="fin-kpi__value">{{ kpi_vencidos|moeda_br }}</div><div class="fin-kpi__meta">Clique para filtrar</div></a>
+  <a class="fin-kpi fin-kpi--warning" href="?atalho=7&periodo=0"><div class="fin-kpi__label">Próximos 7 dias</div><div class="fin-kpi__value">{{ kpi_7|moeda_br }}</div><div class="fin-kpi__meta">Obrigações imediatas</div></a>
+  <a class="fin-kpi" href="?atalho=30&periodo=0"><div class="fin-kpi__label">Próximos 30 dias</div><div class="fin-kpi__value">{{ kpi_30|moeda_br }}</div><div class="fin-kpi__meta">Contas conhecidas</div></a>
+  <a class="fin-kpi fin-kpi--warning" href="?atalho=aprovacao&periodo=0"><div class="fin-kpi__label">Aguardando aprovação</div><div class="fin-kpi__value">{{ kpi_aprovacao|moeda_br }}</div><div class="fin-kpi__meta">Fila de decisão</div></a>
+</div>
+<form class="fin-toolbar" method="get"><div class="fin-toolbar__row">
+  <div class="fin-search"><input class="fin-control" type="search" name="q" value="{{ filtros.q }}" placeholder="Buscar fornecedor, título ou NF..."></div>
+  <select class="fin-control fin-filter" name="obra"><option value="">Todas as obras</option>{% for item in obras %}<option value="{{ item.pk }}" {% if filtros.obra == item.pk|stringformat:'s' %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+  <select class="fin-control fin-filter" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
+  <select class="fin-control fin-filter" name="fornecedor"><option value="">Todos os fornecedores</option>{% for item in fornecedores %}<option value="{{ item.pk }}" {% if filtros.fornecedor == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.nome_exibicao }}</option>{% endfor %}</select>
+  <select class="fin-control fin-filter" name="periodo"><option value="0" {% if filtros.periodo == '0' %}selected{% endif %}>Qualquer período</option><option value="7" {% if filtros.periodo == '7' %}selected{% endif %}>7 dias</option><option value="30" {% if filtros.periodo == '30' %}selected{% endif %}>30 dias</option><option value="90" {% if filtros.periodo == '90' %}selected{% endif %}>90 dias</option></select>
+  <button class="fin-btn fin-btn--primary" type="submit">Aplicar</button><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Limpar</a>
+</div></form>
+<section class="fin-card"><div class="fin-card__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Vencimento</th><th>Fornecedor / título</th><th>Obra</th><th>Documento</th><th>Status</th><th>Conferência</th><th style="text-align:right">Valor</th><th>Ação</th></tr></thead><tbody>
+{% for titulo in page_obj %}
+<tr>
+  <td class="fin-date">{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>
+  <td class="fin-main-cell"><a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}"><strong>{{ titulo.fornecedor.nome_exibicao|default:titulo.descricao }}</strong><small>{{ titulo.numero }} · {{ titulo.get_origem_display }}</small></a></td>
+  <td>{{ titulo.obra|default:"—" }}</td>
+  <td>{{ titulo.documento_numero|default:"—" }}</td>
+  <td><span class="fin-badge fin-badge--{% if titulo.esta_vencido %}danger{% else %}{{ titulo.status|status_fin_classe }}{% endif %}">{% if titulo.esta_vencido %}Vencido{% else %}{{ titulo.get_status_display }}{% endif %}</span></td>
+  <td><span class="fin-badge fin-badge--{{ titulo.conferencia|status_fin_classe }}">{{ titulo.get_conferencia_display }}</span></td>
+  <td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
+  <td>
+    {% if titulo.status == 'PAGO' %}<span class="fin-badge fin-badge--success">Pago</span>
+    {% elif pode_pagar and titulo.status == 'APROVADO' %}<a class="fin-btn fin-btn--primary fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Registrar pagamento</a>
+    {% else %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Ver</a>{% endif %}
+  </td>
+</tr>
+{% empty %}<tr><td colspan="8" class="fin-empty"><strong>Nenhum título encontrado</strong>Ajuste os filtros ou crie um novo título.</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

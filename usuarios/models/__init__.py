@@ -9,6 +9,10 @@ from .permissao_compras import (
     AcaoCompra,
     PermissaoCompras,
 )
+from .permissao_financeiro import (
+    AcaoFinanceiro,
+    PermissaoFinanceiro,
+)
 from .notificacao import (
     ModuloNotificacao,
     Notificacao,
@@ -18,12 +22,14 @@ from .notificacao import (
 
 __all__ = [
     "AcaoCompra",
+    "AcaoFinanceiro",
     "ModuloNotificacao",
     "ModuloSistema",
     "NivelPermissao",
     "Notificacao",
     "PerfilUsuario",
     "PermissaoCompras",
+    "PermissaoFinanceiro",
     "PermissaoCadastros",
     "PermissaoModulo",
     "TipoNotificacao",

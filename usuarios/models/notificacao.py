@@ -7,6 +7,7 @@ class ModuloNotificacao(models.TextChoices):
     SISTEMA = "SISTEMA", "Sistema"
     COMPRAS = "COMPRAS", "Compras"
     PLANEJAMENTO = "PLANEJAMENTO", "Planejamento"
+    FINANCEIRO = "FINANCEIRO", "Financeiro"
 
 
 class TipoNotificacao(models.TextChoices):

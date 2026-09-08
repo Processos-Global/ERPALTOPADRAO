@@ -1,0 +1,15 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Registrar pagamento{% endblock %}
+{% block financeiro_content %}
+<header class="fin-page-head"><div><div class="fin-eyebrow">Confirmação de pagamento</div><h1 class="fin-title">Registrar pagamento</h1><p class="fin-subtitle">{{ titulo.numero }} · {{ titulo.fornecedor.nome_exibicao|default:titulo.descricao }}</p></div><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Voltar</a></header>
+<div class="fin-grid-2">
+<section class="fin-card"><div class="fin-card__body">
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="fin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="fin-form-grid">{% for field in form %}<div class="fin-field {% if field.name == 'observacao' or field.name == 'comprovante' %}fin-field--full{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for e in field.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>{% endfor %}</div>
+    <div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="fin-btn fin-btn--primary">Confirmar como pago</button></div>
+  </form>
+</div></section>
+<aside><section class="fin-card fin-sticky"><div class="fin-card__head"><h2>Resumo</h2></div><div class="fin-card__body"><div class="fin-summary-list"><div class="fin-summary-row"><span>Fornecedor</span><strong>{{ titulo.fornecedor.nome_exibicao|default:"—" }}</strong></div><div class="fin-summary-row"><span>Obra</span><strong>{{ titulo.obra|default:"—" }}</strong></div><div class="fin-summary-row"><span>Vencimento</span><strong>{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</strong></div></div><div class="fin-summary-total"><span>Valor do pagamento</span><strong>{{ titulo.valor_liquido|moeda_br }}</strong></div><p class="fin-subtitle" style="margin-top:12px">O valor não é digitado novamente: o pagamento quita integralmente o título aprovado.</p></div></section></aside>
+</div>
+{% endblock %}

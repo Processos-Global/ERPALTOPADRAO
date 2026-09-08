@@ -57,10 +57,12 @@ def erp_layout(request):
     ).count()
 
     cadastros_acesso = bool(permissoes.get(ModuloSistema.CADASTROS))
+    financeiro_acesso = bool(permissoes.get(ModuloSistema.FINANCEIRO))
 
     return {
         "notificacoes_recentes": notificacoes_recentes,
         "cadastros_acesso": cadastros_acesso,
+        "financeiro_acesso": financeiro_acesso,
         "notificacoes_nao_lidas": notificacoes_nao_lidas,
         "sidebar_dashboard": {
             "titulo": "Painel Geral",

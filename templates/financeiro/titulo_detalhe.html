@@ -1,0 +1,36 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}{{ titulo.numero }}{% endblock %}
+{% block financeiro_content %}
+<header class="fin-page-head">
+  <div><a href="{% url 'financeiro:titulos' %}" style="text-decoration:none;color:var(--fin-muted);font-size:12px">← Contas a pagar</a></div>
+  <div class="fin-head-actions">
+    {% if pode_editar and titulo.status != 'PAGO' and titulo.status != 'CANCELADO' %}<a class="fin-btn" href="{% url 'financeiro:titulo_editar' titulo.pk %}">Editar</a>{% endif %}
+    {% if pode_pagar and titulo.status == 'APROVADO' %}<a class="fin-btn fin-btn--primary" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Registrar pagamento</a>{% endif %}
+  </div>
+</header>
+<section class="fin-detail-hero">
+  <div><div class="fin-detail-hero__id">{{ titulo.numero }} · {{ titulo.get_origem_display }}</div><h1>{{ titulo.fornecedor.nome_exibicao|default:titulo.descricao }}</h1><div class="fin-detail-hero__doc">{% if titulo.documento_numero %}{{ titulo.documento_numero }} · {% endif %}Vencimento {{ titulo.vencimento|date:"d/m/Y"|default:"não informado" }}</div><div style="margin-top:10px"><span class="fin-badge fin-badge--{% if titulo.esta_vencido %}danger{% else %}{{ titulo.status|status_fin_classe }}{% endif %}">{% if titulo.esta_vencido %}Vencido{% else %}{{ titulo.get_status_display }}{% endif %}</span> <span class="fin-badge fin-badge--{{ titulo.conferencia|status_fin_classe }}">{{ titulo.get_conferencia_display }}</span></div></div>
+  <div class="fin-detail-hero__amount"><small>Valor do título</small><strong>{{ titulo.valor_liquido|moeda_br }}</strong>{% if titulo.status == 'PAGO' %}<small>Pagamento confirmado</small>{% else %}<small>Em aberto {{ titulo.saldo_aberto|moeda_br }}</small>{% endif %}</div>
+</section>
+<div class="fin-grid-2">
+<main>
+<section class="fin-card"><div class="fin-card__head"><div><h2>Visão geral</h2><p>Origem, obra, classificação e documento.</p></div></div><div class="fin-card__body"><div class="fin-form-grid fin-form-grid--3">
+<div class="fin-readonly"><div class="fin-readonly__label">Origem</div><div class="fin-readonly__value">{{ titulo.get_origem_display }}</div>{% if titulo.pedido %}<div class="fin-readonly__meta">Pedido {{ titulo.pedido.numero }}</div>{% endif %}</div>
+<div class="fin-readonly"><div class="fin-readonly__label">Obra</div><div class="fin-readonly__value">{{ titulo.obra|default:"—" }}</div></div>
+<div class="fin-readonly"><div class="fin-readonly__label">Classificação</div><div class="fin-readonly__value">{{ titulo.plano_financeiro.caminho|default:"Não classificado" }}</div></div>
+<div class="fin-readonly"><div class="fin-readonly__label">Documento</div><div class="fin-readonly__value">{{ titulo.documento_numero|default:"—" }}</div><div class="fin-readonly__meta">Emissão {{ titulo.data_emissao|date:"d/m/Y"|default:"—" }}</div></div>
+<div class="fin-readonly"><div class="fin-readonly__label">Conferência</div><div class="fin-readonly__value">{{ titulo.get_conferencia_display }}</div></div>
+<div class="fin-readonly"><div class="fin-readonly__label">Vencimento</div><div class="fin-readonly__value">{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</div></div>
+</div></div></section>
+<section class="fin-card"><div class="fin-card__head"><div><h2>Histórico</h2><p>Registro das principais ações do título.</p></div></div><div class="fin-card__body"><div class="fin-summary-list">{% for h in titulo.historico.all %}<div class="fin-summary-row"><span><strong>{{ h.evento }}</strong><br><small>{{ h.descricao }} · {{ h.criado_em|date:"d/m/Y H:i" }}{% if h.usuario %} · {{ h.usuario.username }}{% endif %}</small></span></div>{% empty %}<div class="fin-empty">Sem histórico.</div>{% endfor %}</div></div></section>
+</main>
+<aside>
+<section class="fin-card fin-sticky"><div class="fin-card__head"><h2>Resumo financeiro</h2></div><div class="fin-card__body"><div class="fin-summary-list"><div class="fin-summary-row"><span>Valor original</span><strong>{{ titulo.valor_original|moeda_br }}</strong></div><div class="fin-summary-row"><span>Desconto</span><strong>- {{ titulo.desconto|moeda_br }}</strong></div><div class="fin-summary-row"><span>Acréscimos</span><strong>{{ titulo.acrescimos|moeda_br }}</strong></div></div><div class="fin-summary-total"><span>Valor líquido</span><strong>{{ titulo.valor_liquido|moeda_br }}</strong></div>
+{% if titulo.status == 'AGUARDANDO_APROVACAO' and pode_aprovar %}<form method="post" action="{% url 'financeiro:titulo_decidir' titulo.pk %}" style="margin-top:16px">{% csrf_token %}<div class="fin-field"><label>Observação</label><textarea class="fin-control" name="observacao" rows="2"></textarea></div><div style="display:flex;gap:8px;margin-top:10px"><button class="fin-btn fin-btn--danger" name="decisao" value="REJEITADO">Rejeitar</button><button class="fin-btn fin-btn--primary" name="decisao" value="APROVADO">Aprovar</button></div></form>{% endif %}
+{% if titulo.status != 'AGUARDANDO_APROVACAO' and titulo.status != 'APROVADO' and titulo.status != 'PAGO' and titulo.status != 'CANCELADO' and pode_editar %}<form method="post" action="{% url 'financeiro:titulo_enviar_aprovacao' titulo.pk %}" style="margin-top:16px">{% csrf_token %}<button class="fin-btn fin-btn--primary" style="width:100%">Enviar para aprovação</button></form>{% endif %}
+{% if titulo.status == 'APROVADO' and pode_pagar %}<a class="fin-btn fin-btn--primary" style="width:100%;margin-top:16px;text-align:center" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Registrar pagamento</a>{% endif %}
+{% if titulo.status == 'PAGO' %}<div style="margin-top:16px"><span class="fin-badge fin-badge--success">Pagamento confirmado</span>{% if titulo.pagamento %}<div class="fin-readonly" style="margin-top:10px"><div class="fin-readonly__label">Pago em</div><div class="fin-readonly__value">{{ titulo.pagamento.data_pagamento|date:"d/m/Y" }}</div><div class="fin-readonly__meta">{{ titulo.pagamento.get_forma_display }} · {{ titulo.pagamento.valor|moeda_br }}</div></div>{% endif %}</div>{% endif %}
+</div></section>
+</aside>
+</div>
+{% endblock %}

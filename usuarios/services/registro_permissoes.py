@@ -11,6 +11,7 @@ from usuarios.models import (
     NivelPermissao,
     PermissaoCadastros,
     PermissaoCompras,
+    PermissaoFinanceiro,
     PermissaoModulo,
 )
 
@@ -63,6 +64,41 @@ def _carregar_cadastros(usuario: User) -> dict:
         "administrar": permissao.administrar,
     }
 
+
+def _carregar_financeiro(usuario: User) -> dict:
+    permissao, _ = PermissaoFinanceiro.objects.get_or_create(usuario=usuario)
+    return {
+        "visualizar": permissao.visualizar,
+        "lancar_titulos": permissao.lancar_titulos,
+        "editar_titulos": permissao.editar_titulos,
+        "aprovar_pagamentos": permissao.aprovar_pagamentos,
+        "registrar_pagamentos": permissao.registrar_pagamentos,
+        "administrar": permissao.administrar,
+    }
+
+
+def _resolver_nivel_financeiro(valores: dict) -> str:
+    if valores.get("administrar"):
+        return NivelPermissao.ADMINISTRADOR
+    if valores.get("aprovar_pagamentos"):
+        return NivelPermissao.APROVACAO
+    if any(valores.get(campo) for campo in (
+        "lancar_titulos", "editar_titulos", "registrar_pagamentos",
+    )):
+        return NivelPermissao.EDICAO
+    return NivelPermissao.LEITURA
+
+
+def _salvar_financeiro(usuario: User, valores: dict, modulo_ativo: bool) -> None:
+    permissao, _ = PermissaoFinanceiro.objects.get_or_create(usuario=usuario)
+    permissao.visualizar = modulo_ativo and bool(valores.get("visualizar", True))
+    for campo in (
+        "lancar_titulos", "editar_titulos", "aprovar_pagamentos",
+        "registrar_pagamentos", "administrar",
+    ):
+        setattr(permissao, campo, modulo_ativo and bool(valores.get(campo, False)))
+    permissao.ativo = modulo_ativo
+    permissao.save()
 
 def _resolver_nivel_cadastros(valores: dict) -> str:
     if valores.get("administrar"):
@@ -192,7 +228,25 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         resolver_nivel=_resolver_nivel_compras,
     ),
     ModuloDef(ModuloSistema.CONTRATOS, "Contratos", "Gestão de contratos e documentos contratuais.", "file", 50, ""),
-    ModuloDef(ModuloSistema.FINANCEIRO, "Financeiro", "Lançamentos, aprovações e acompanhamento financeiro.", "wallet", 60, ""),
+    ModuloDef(
+        codigo=ModuloSistema.FINANCEIRO,
+        titulo="Financeiro",
+        descricao="Contas a pagar, aprovações, pagamentos, previsões e análise de gastos.",
+        icone="wallet",
+        ordem=60,
+        url_name="financeiro:dashboard",
+        permissoes=(
+            PermissaoEspecificaDef("visualizar", "Visualizar Financeiro", "Pode consultar dashboard, contas a pagar, previsões, pagamentos e gastos."),
+            PermissaoEspecificaDef("lancar_titulos", "Lançar títulos", "Pode criar contas a pagar manuais e previsões de gastos."),
+            PermissaoEspecificaDef("editar_titulos", "Editar títulos", "Pode corrigir dados financeiros antes do pagamento."),
+            PermissaoEspecificaDef("aprovar_pagamentos", "Aprovar pagamentos", "Pode aprovar ou rejeitar títulos enviados para aprovação."),
+            PermissaoEspecificaDef("registrar_pagamentos", "Registrar pagamentos", "Pode confirmar pagamento e estornar quando necessário."),
+            PermissaoEspecificaDef("administrar", "Administrar Financeiro", "Concede acesso total às ações e configurações do Financeiro.", "admin"),
+        ),
+        carregar_especificas=_carregar_financeiro,
+        salvar_especificas=_salvar_financeiro,
+        resolver_nivel=_resolver_nivel_financeiro,
+    ),
     ModuloDef(ModuloSistema.ALMOXARIFADO, "Almoxarifado", "Entradas, saídas, estoque e transferências.", "warehouse", 70, ""),
     ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, ""),
     ModuloDef(ModuloSistema.VISTORIAS, "Vistorias", "Inspeções, vistorias e registros de campo.", "check", 90, ""),

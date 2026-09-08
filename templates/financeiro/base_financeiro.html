@@ -1,0 +1,19 @@
+{% extends "layouts/base.html" %}
+{% load financeiro_extras %}
+{% block title %}{% block financeiro_title %}Financeiro{% endblock %} | ERP Alto Padrão{% endblock %}
+{% block page_name %}Financeiro{% endblock %}
+{% block extra_css %}{% include "financeiro/_styles.html" %}{% block financeiro_extra_css %}{% endblock %}{% endblock %}
+{% block content %}
+<div class="fin-shell">
+  <nav class="fin-subnav" aria-label="Navegação do Financeiro">
+    <a href="{% url 'financeiro:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">Dashboard</a>
+    <a href="{% url 'financeiro:titulos' %}" class="{% if 'titulo' in request.resolver_match.url_name or request.resolver_match.url_name == 'titulos' %}is-active{% endif %}">Contas a pagar</a>
+    <a href="{% url 'financeiro:aprovacoes' %}" class="{% if request.resolver_match.url_name == 'aprovacoes' %}is-active{% endif %}">Aprovações</a>
+    <a href="{% url 'financeiro:pagamentos' %}" class="{% if 'pagamento' in request.resolver_match.url_name %}is-active{% endif %}">Pagamentos</a>
+    <a href="{% url 'financeiro:previsoes' %}" class="{% if 'previs' in request.resolver_match.url_name %}is-active{% endif %}">Previsão de gastos</a>
+    <a href="{% url 'financeiro:gastos' %}" class="{% if request.resolver_match.url_name == 'gastos' %}is-active{% endif %}">Gastos</a>
+    {% if request.user.is_superuser %}<a href="{% url 'financeiro:plano_financeiro' %}" class="{% if 'plano_financeiro' in request.resolver_match.url_name or 'despesas_recorrentes' in request.resolver_match.url_name %}is-active{% endif %}">Configurações</a>{% endif %}
+  </nav>
+  {% block financeiro_content %}{% endblock %}
+</div>
+{% endblock %}
