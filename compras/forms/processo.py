@@ -11,6 +11,12 @@ from planejamento.models import (
 )
 
 
+def _rotulo_usuario(usuario):
+    """Exibe somente o nome da pessoa nos campos de seleção de usuário."""
+    nome = (usuario.get_full_name() or "").strip()
+    return nome or "Nome não cadastrado"
+
+
 # ============================================================
 # NOMES ESTRUTURAIS DO CRONOGRAMA
 # ============================================================
@@ -514,6 +520,15 @@ class ProcessoCompraForm(
             *args,
             **kwargs,
         )
+
+        comprador_field = self.fields.get("comprador")
+        if comprador_field is not None:
+            comprador_field.queryset = (
+                comprador_field.queryset
+                .filter(is_active=True)
+                .order_by("first_name", "last_name")
+            )
+            comprador_field.label_from_instance = _rotulo_usuario
 
         self.fields[
             "item_cronograma"
