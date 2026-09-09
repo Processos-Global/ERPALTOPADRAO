@@ -825,6 +825,18 @@
 
 </style>
 
+
+/* Compatibilização com múltiplos fornecedores: renderiza um fornecedor por vez. */
+#processo-compra .pc-compat-supplier-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--pc-line);border-radius:10px;background:#f8fbfc}
+#processo-compra .pc-compat-supplier-tab{appearance:none;display:flex;align-items:center;gap:7px;min-height:36px;padding:7px 10px;border:1px solid #dce6e9;border-radius:8px;background:#fff;color:#55707b;font:inherit;cursor:pointer}
+#processo-compra .pc-compat-supplier-tab strong{font-size:10px;color:#31515f}
+#processo-compra .pc-compat-supplier-tab span{padding:3px 6px;border-radius:999px;background:#edf3f5;color:#71858d;font-size:8px;font-weight:850}
+#processo-compra .pc-compat-supplier-tab.is-active{border-color:#244653;background:#244653;color:#fff}
+#processo-compra .pc-compat-supplier-tab.is-active strong{color:#fff}
+#processo-compra .pc-compat-supplier-tab.is-active span{background:rgba(255,255,255,.16);color:#fff}
+#processo-compra .pc-tech-supplier-form{display:none!important;margin:0}
+#processo-compra .pc-tech-supplier-form.is-active{display:block!important}
+@media(max-width:720px){#processo-compra .pc-compat-supplier-tabs{display:grid;grid-template-columns:1fr}#processo-compra .pc-compat-supplier-tab{justify-content:space-between}}
 {% endblock %}
 
 {% block content %}
@@ -1464,6 +1476,24 @@
             </div>
             <div class="pc-card-body">
               {% if permissoes_compras.pode_compatibilizar %}
+                {% if compatibilizacoes_forms %}
+                  <div class="pc-compat-supplier-tabs" data-compat-supplier-tabs role="tablist" aria-label="Fornecedores em compatibilização">
+                    {% for bloco in compatibilizacoes_forms %}
+                      <button
+                        type="button"
+                        class="pc-compat-supplier-tab{% if forloop.first %} is-active{% endif %}"
+                        data-compat-supplier-tab="{{ bloco.cotacao.pk }}"
+                        aria-controls="compat-fornecedor-{{ bloco.cotacao.pk }}"
+                        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                        role="tab"
+                      >
+                        <strong>{{ bloco.cotacao.fornecedor.nome }}</strong>
+                        <span>{{ bloco.form.linhas|length }} itens</span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
                 <div class="pc-tech-suppliers">
                   {% for bloco in compatibilizacoes_forms %}
                     <form
@@ -1471,7 +1501,9 @@
                       method="post"
                       action="{% url 'compras:analise_tecnica_lote' processo.pk %}"
                       data-tech-analysis-form
-                      class="pc-tech-supplier-form"
+                      data-compat-supplier-form="{{ bloco.cotacao.pk }}"
+                      class="pc-tech-supplier-form{% if forloop.first %} is-active{% endif %}"
+                      role="tabpanel"
                     >
                       {% csrf_token %}
                       <input type="hidden" name="cotacao_id" value="{{ bloco.cotacao.pk }}">
@@ -3226,6 +3258,61 @@
   });
 
   applyFilter();
+})();
+</script>
+
+
+<script>
+(() => {
+  const root = document.getElementById('processo-compra');
+  if (!root || root.dataset.compatSupplierTabsReady === '1') return;
+
+  const tabsWrap = root.querySelector('[data-compat-supplier-tabs]');
+  if (!tabsWrap) return;
+
+  root.dataset.compatSupplierTabsReady = '1';
+  const tabs = [...tabsWrap.querySelectorAll('[data-compat-supplier-tab]')];
+  const forms = [...root.querySelectorAll('[data-compat-supplier-form]')];
+  if (!tabs.length || !forms.length) return;
+
+  const storageKey = 'compras:compat-fornecedor:{{ processo.pk }}';
+
+  const activateSupplier = supplierId => {
+    const id = String(supplierId || '');
+    let found = false;
+
+    tabs.forEach(tab => {
+      const active = String(tab.dataset.compatSupplierTab || '') === id;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      if (active) found = true;
+    });
+
+    forms.forEach(form => {
+      const active = String(form.dataset.compatSupplierForm || '') === id;
+      form.classList.toggle('is-active', active);
+      form.setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+
+    if (found) {
+      try { sessionStorage.setItem(storageKey, id); } catch (_) {}
+    }
+    return found;
+  };
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      activateSupplier(tab.dataset.compatSupplierTab);
+    });
+  });
+
+  let initialId = tabs.find(tab => tab.classList.contains('is-active'))?.dataset.compatSupplierTab || tabs[0]?.dataset.compatSupplierTab;
+  try {
+    const savedId = sessionStorage.getItem(storageKey);
+    if (savedId && tabs.some(tab => String(tab.dataset.compatSupplierTab) === String(savedId))) initialId = savedId;
+  } catch (_) {}
+
+  activateSupplier(initialId);
 })();
 </script>
 {% endblock %}
