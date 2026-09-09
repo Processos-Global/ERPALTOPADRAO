@@ -1298,7 +1298,7 @@
                   </thead>
                   <tbody>
                     {% for linha in matriz_cotacao %}
-                      <tr data-approval-row>
+                      <tr data-approval-row data-approval-row-index="{{ forloop.counter0 }}"{% if not forloop.first %} class="pc-heavy-section-hidden"{% endif %}>
                         <td class="sticky-col item-col">
                           <strong>{{ linha.necessidade.descricao }}</strong>
                           {% if linha.necessidade.especificacao %}<small>{{ linha.necessidade.especificacao }}</small>{% endif %}
@@ -1735,9 +1735,25 @@
                     </div>
                   </div>
 
+                  <div class="pc-step-switcher" data-neg-item-switcher>
+                    <div class="pc-step-switcher__info">
+                      <strong>Item em negociação</strong>
+                      <span><b data-neg-current>1</b> de <b data-neg-total>{{ form_decisao_lote.grupos|length }}</b></span>
+                    </div>
+                    <div class="pc-step-switcher__controls">
+                      <button class="cp-btn cp-btn--sm" type="button" data-neg-prev>Anterior</button>
+                      <select class="pc-step-switcher__select" data-neg-select aria-label="Selecionar item da negociação">
+                        {% for grupo in form_decisao_lote.grupos %}
+                          <option value="{{ forloop.counter0 }}">{{ forloop.counter }}. {{ grupo.necessidade.descricao }}</option>
+                        {% endfor %}
+                      </select>
+                      <button class="cp-btn cp-btn--sm" type="button" data-neg-next>Próximo</button>
+                    </div>
+                  </div>
+
                   <div class="pc-neg-list">
                     {% for grupo in form_decisao_lote.grupos %}
-                      <section class="pc-neg-group" data-need-block data-need-max="{{ grupo.necessidade.quantidade_incluida }}">
+                      <section class="pc-neg-group{% if not forloop.first %} pc-heavy-section-hidden{% endif %}" data-neg-group-index="{{ forloop.counter0 }}" data-need-block data-need-max="{{ grupo.necessidade.quantidade_incluida }}">
                         <div class="pc-neg-group-head">
                           <div>
                             <strong>{{ forloop.counter }}. {{ grupo.necessidade.descricao }}</strong>
@@ -1897,6 +1913,22 @@
                     <strong data-approval-difference>—</strong>
                     <small data-approval-difference-note>Comparação com o melhor fornecedor único.</small>
                   </div>
+                </div>
+              </div>
+
+              <div class="pc-step-switcher" data-approval-item-switcher>
+                <div class="pc-step-switcher__info">
+                  <strong>Item para aprovação</strong>
+                  <span><b data-approval-current>1</b> de <b data-approval-total>{{ matriz_cotacao|length }}</b></span>
+                </div>
+                <div class="pc-step-switcher__controls">
+                  <button class="cp-btn cp-btn--sm" type="button" data-approval-prev>Anterior</button>
+                  <select class="pc-step-switcher__select" data-approval-select aria-label="Selecionar item da aprovação">
+                    {% for linha in matriz_cotacao %}
+                      <option value="{{ forloop.counter0 }}">{{ forloop.counter }}. {{ linha.necessidade.descricao }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="cp-btn cp-btn--sm" type="button" data-approval-next>Próximo</button>
                 </div>
               </div>
 
@@ -2895,6 +2927,61 @@
 #processo-compra .pc-hero{position:relative;overflow:hidden;align-items:center;padding:24px 26px;border-radius:17px;background:linear-gradient(135deg,#fff 0%,#fbfefe 63%,#eef9fa 100%);box-shadow:0 14px 38px rgba(31,69,82,.07)}#processo-compra .pc-hero::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,var(--pc-brand),#0a4054)}#processo-compra .pc-hero::after{content:"";position:absolute;right:-82px;top:-115px;width:190px;height:190px;border-radius:50%;background:rgba(7,143,165,.055);pointer-events:none}#processo-compra .pc-hero>*{position:relative;z-index:1}#processo-compra .pc-title{font-size:32px;letter-spacing:-.038em}#processo-compra .pc-eyebrow{letter-spacing:.13em}
 @media(max-width:720px){#processo-compra .pc-hero{align-items:flex-start;padding:19px 18px 19px 21px;border-radius:14px}#processo-compra .pc-title{font-size:26px}#processo-compra .pc-hero::after{display:none}}
 
+
+/* Proteção contra telas brancas em etapas pesadas */
+#processo-compra .pc-heavy-section-hidden{display:none!important}
+
+#processo-compra .pc-step-switcher{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:0 0 10px;
+  padding:8px 10px;
+  border:1px solid var(--pc-line);
+  border-radius:9px;
+  background:#f8fbfc
+}
+#processo-compra .pc-step-switcher__info{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0
+}
+#processo-compra .pc-step-switcher__info strong{
+  color:#294a57;
+  font-size:10px;
+  white-space:nowrap
+}
+#processo-compra .pc-step-switcher__info span{
+  color:var(--pc-muted);
+  font-size:9px;
+  white-space:nowrap
+}
+#processo-compra .pc-step-switcher__controls{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap
+}
+#processo-compra .pc-step-switcher__select{
+  min-width:220px;
+  max-width:420px;
+  min-height:34px;
+  padding:6px 9px;
+  border:1px solid #d9e4e7;
+  border-radius:7px;
+  background:#fff;
+  color:#355663;
+  font-size:10px
+}
+@media(max-width:720px){
+  #processo-compra .pc-step-switcher{align-items:stretch;flex-direction:column}
+  #processo-compra .pc-step-switcher__controls{display:grid;grid-template-columns:auto 1fr auto}
+  #processo-compra .pc-step-switcher__select{min-width:0;width:100%}
+}
+
 </style>
 
 <script>
@@ -3391,4 +3478,91 @@
   activateSupplier(initialId);
 })();
 </script>
+
+<script>
+/* Navegação progressiva das etapas pesadas */
+(() => {
+  const root = document.getElementById('processo-compra');
+  if (!root || root.dataset.heavyStageNavigationReady === '1') return;
+  root.dataset.heavyStageNavigationReady = '1';
+
+  const setupSwitcher = ({
+    switcherSelector,
+    itemSelector,
+    indexAttribute,
+    selectSelector,
+    prevSelector,
+    nextSelector,
+    currentSelector
+  }) => {
+    const switcher = root.querySelector(switcherSelector);
+    if (!switcher) return;
+
+    const items = [...root.querySelectorAll(itemSelector)];
+    const select = switcher.querySelector(selectSelector);
+    const prev = switcher.querySelector(prevSelector);
+    const next = switcher.querySelector(nextSelector);
+    const current = switcher.querySelector(currentSelector);
+
+    if (!items.length || !select) {
+      switcher.style.display = 'none';
+      return;
+    }
+
+    let activeIndex = 0;
+
+    const show = (requestedIndex, scroll = false) => {
+      const maxIndex = items.length - 1;
+      activeIndex = Math.max(0, Math.min(Number(requestedIndex) || 0, maxIndex));
+
+      items.forEach((item, position) => {
+        const declared = Number(item.getAttribute(indexAttribute));
+        const index = Number.isFinite(declared) ? declared : position;
+        item.classList.toggle('pc-heavy-section-hidden', index !== activeIndex);
+      });
+
+      select.value = String(activeIndex);
+      if (current) current.textContent = String(activeIndex + 1);
+      if (prev) prev.disabled = activeIndex <= 0;
+      if (next) next.disabled = activeIndex >= maxIndex;
+
+      if (scroll) {
+        const active = items.find((item, position) => {
+          const declared = Number(item.getAttribute(indexAttribute));
+          const index = Number.isFinite(declared) ? declared : position;
+          return index === activeIndex;
+        });
+        active?.scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    };
+
+    select.addEventListener('change', () => show(select.value, true));
+    prev?.addEventListener('click', () => show(activeIndex - 1, true));
+    next?.addEventListener('click', () => show(activeIndex + 1, true));
+
+    show(0, false);
+  };
+
+  setupSwitcher({
+    switcherSelector: '[data-neg-item-switcher]',
+    itemSelector: '[data-neg-group-index]',
+    indexAttribute: 'data-neg-group-index',
+    selectSelector: '[data-neg-select]',
+    prevSelector: '[data-neg-prev]',
+    nextSelector: '[data-neg-next]',
+    currentSelector: '[data-neg-current]'
+  });
+
+  setupSwitcher({
+    switcherSelector: '[data-approval-item-switcher]',
+    itemSelector: '[data-approval-row-index]',
+    indexAttribute: 'data-approval-row-index',
+    selectSelector: '[data-approval-select]',
+    prevSelector: '[data-approval-prev]',
+    nextSelector: '[data-approval-next]',
+    currentSelector: '[data-approval-current]'
+  });
+})();
+</script>
+
 {% endblock %}
