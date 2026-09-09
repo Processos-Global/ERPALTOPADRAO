@@ -911,6 +911,18 @@
   <section class="pc-tab-panel" data-panel="cotacao">
     <div class="pc-workspace">
       <main class="pc-main">
+        <section class="pc-card">
+          <div class="pc-card-head">
+            <div>
+              <h2>Solicitação de cotação em PDF</h2>
+              <p>Documento sem preços e sem fornecedor definido, com a relação dos materiais solicitados pelo engenheiro. Use este arquivo para encaminhar a mesma solicitação aos fornecedores antes de lançar as propostas.</p>
+            </div>
+            <div class="pc-card-head-actions">
+              <a class="cp-btn cp-btn--primary" href="{% url 'compras:pdf_solicitacao_cotacao' processo.pk %}" target="_blank" rel="noopener">Gerar PDF para cotação</a>
+            </div>
+          </div>
+        </section>
+
         {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_envio_fornecedor %}
           <section class="pc-card">
             <div class="pc-card-head">

@@ -1,5 +1,13 @@
 from .menu import menu_suprimentos
-from .processos import dashboard, detalhe_processo, lista_pedidos, lista_processos, novo_processo, pdf_solicitacao_aprovada
+from .processos import (
+    dashboard,
+    detalhe_processo,
+    lista_pedidos,
+    lista_processos,
+    novo_processo,
+    pdf_solicitacao_aprovada,
+    pdf_solicitacao_cotacao,
+)
 from .acoes import (
     acao_adjudicar,
     acao_analise_tecnica_lote,

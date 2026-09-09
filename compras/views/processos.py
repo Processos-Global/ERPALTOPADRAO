@@ -46,6 +46,7 @@ from compras.services.processos import criar_processo
 from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
 from compras.services.pedidos import transicoes_status_permitidas
 from compras.services.pdf_solicitacao import gerar_pdf_solicitacao_aprovada
+from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
 
 
 # ============================================================
@@ -1428,6 +1429,23 @@ def pdf_solicitacao_aprovada(request, pk):
 
     resposta = HttpResponse(conteudo, content_type="application/pdf")
     resposta["Content-Disposition"] = f'inline; filename="solicitacao-{processo.numero}-aprovada.pdf"'
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def pdf_solicitacao_cotacao(request, pk):
+    processo = get_object_or_404(
+        ProcessoCompra.objects.select_related("obra", "item_cronograma", "criado_por", "comprador"),
+        pk=pk,
+    )
+    try:
+        conteudo = gerar_pdf_solicitacao_cotacao(processo)
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("compras:detalhe_processo", pk=processo.pk)
+
+    resposta = HttpResponse(conteudo, content_type="application/pdf")
+    resposta["Content-Disposition"] = f'inline; filename="cotacao-materiais-{processo.numero}.pdf"'
     return resposta
 
 
