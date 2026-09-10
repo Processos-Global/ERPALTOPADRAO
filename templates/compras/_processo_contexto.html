@@ -1,43 +1,41 @@
-<aside class="pc-aside">
+<aside class="pc-aside" aria-label="Contexto do processo">
   <details class="pc-context-panel" open>
     <summary>
       <div>
-        <strong>Informações da compra</strong>
-        <span>Contexto rápido durante o preenchimento</span>
+        <strong>Contexto</strong>
+        <span>Dados principais do processo</span>
       </div>
       <span class="pc-context-toggle">⌄</span>
     </summary>
     <div class="pc-context-body">
       <div class="pc-context-row"><span>Obra</span><strong>{{ processo.obra.nome }}</strong></div>
-      <div class="pc-context-row"><span>Suprimento</span><strong>{% if processo.item_cronograma %}{{ processo.item_cronograma.item }}{% else %}—{% endif %}</strong></div>
-      <div class="pc-context-row"><span>Comprador</span><strong>{{ processo.comprador|default:"Não definido" }}</strong></div>
+      <div class="pc-context-row"><span>Processo</span><strong>{{ processo.numero }}</strong></div>
+      <div class="pc-context-row"><span>Etapa</span><strong>{{ processo.get_etapa_atual_display }}</strong></div>
       <div class="pc-context-row"><span>Status</span><strong>{{ processo.get_status_display }}</strong></div>
-      <div class="pc-context-row"><span>Abertura</span><strong>{{ processo.data_abertura|date:"d/m/Y" }}</strong></div>
-      {% if processo.item_cronograma.prazo_limite_contratacao %}
-        <div class="pc-context-row"><span>Contratar até</span><strong>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y" }}</strong></div>
-      {% endif %}
+      <div class="pc-context-row"><span>Comprador</span><strong>{% if processo.comprador %}{{ processo.comprador.get_full_name|default:processo.comprador.username }}{% else %}—{% endif %}</strong></div>
+      {% if processo.item_cronograma %}<div class="pc-context-row"><span>Suprimento</span><strong>{{ processo.item_cronograma.item }}</strong></div>{% endif %}
     </div>
   </details>
 
-  <details class="pc-context-panel">
-    <summary>
-      <div>
-        <strong>Itens solicitados</strong>
-        <span>{{ necessidades|length }} item(ns)</span>
+  {% if vinculos %}
+    <details class="pc-context-panel">
+      <summary>
+        <div>
+          <strong>Atividades vinculadas</strong>
+          <span>{{ vinculos|length }} vínculo{{ vinculos|length|pluralize }}</span>
+        </div>
+        <span class="pc-context-toggle">⌄</span>
+      </summary>
+      <div class="pc-context-body">
+        <div class="pc-context-activities">
+          {% for vinculo in vinculos %}
+            <div class="pc-context-activity">
+              <strong>{{ vinculo.atividade.nome_tarefa }}</strong>
+              {% if vinculo.atividade.disciplina %}<small>{{ vinculo.atividade.disciplina }}</small>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
       </div>
-      <span class="pc-context-toggle">⌄</span>
-    </summary>
-    <div class="pc-context-body">
-      <div class="pc-context-list">
-        {% for n in necessidades %}
-          <div class="pc-context-item">
-            <strong>{{ n.descricao }}</strong>
-            <small>{{ n.quantidade_incluida|floatformat:4 }} {{ n.unidade }}{% if n.especificacao %} · {{ n.especificacao|truncatechars:75 }}{% endif %}</small>
-          </div>
-        {% empty %}
-          <div class="pc-empty">Nenhum item informado.</div>
-        {% endfor %}
-      </div>
-    </div>
-  </details>
+    </details>
+  {% endif %}
 </aside>

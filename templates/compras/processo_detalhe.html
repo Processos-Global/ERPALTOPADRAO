@@ -914,6 +914,272 @@
   #processo-compra .pc-tech-supplier-card__head .cp-btn{align-self:flex-start}
 }
 </style>
+
+<style>
+/* ================================================================
+   NOVA CAMADA VISUAL — lógica original preservada integralmente
+   ================================================================ */
+#processo-compra{
+  --nv-ink:#153743;
+  --nv-text:#405c66;
+  --nv-muted:#7c9098;
+  --nv-line:#e3eaed;
+  --nv-soft:#f7f9fa;
+  --nv-brand:#1D91A6;
+  --nv-brand-dark:#0E5268;
+  --nv-brand-soft:#edf8fa;
+  --nv-ok:#327257;
+  --nv-ok-soft:#eef8f2;
+  --nv-warn:#9a6a22;
+  --nv-warn-soft:#fff7e8;
+  --nv-danger:#a44747;
+  --nv-danger-soft:#fff2f2;
+  max-width:1720px;
+  margin:0 auto;
+  padding:20px 24px 72px;
+  background:transparent;
+  color:var(--nv-text);
+}
+#processo-compra *{box-sizing:border-box}
+
+/* cabeçalho */
+#processo-compra .pc-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:center;
+  margin:0 0 12px;
+  padding:18px 20px;
+  border:1px solid var(--nv-line);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:none;
+}
+#processo-compra .pc-eyebrow{margin-bottom:4px;color:var(--nv-brand);font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+#processo-compra .pc-title{margin:0;color:var(--nv-ink);font-size:23px;line-height:1.18;letter-spacing:-.02em}
+#processo-compra .pc-subtitle{margin:4px 0 0;color:var(--nv-muted);font-size:10px;line-height:1.45}
+#processo-compra .pc-hero-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+#processo-compra .pc-hero-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid var(--nv-line);border-radius:7px;background:#fafcfc;color:#647b85;font-size:8px;font-weight:800}
+#processo-compra .pc-hero-chip strong{color:var(--nv-ink)}
+#processo-compra .pc-hero-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+#processo-compra .pc-status{display:inline-flex;align-items:center;min-height:32px;padding:6px 9px;border:1px solid #cde6ea;border-radius:8px;background:var(--nv-brand-soft);color:var(--nv-brand-dark);font-size:9px;font-weight:900}
+
+/* progresso */
+#processo-compra .pc-progress{
+  position:relative;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:0;
+  margin:0 0 10px;
+  padding:4px;
+  border:1px solid var(--nv-line);
+  border-radius:11px;
+  background:#fff;
+}
+#processo-compra .pc-progress-step{position:relative;min-height:40px;padding:8px 10px 8px 34px;border:0!important;border-radius:8px;background:transparent!important;box-shadow:none!important}
+#processo-compra .pc-progress-step:before{content:attr(data-step);position:absolute;left:9px;top:50%;transform:translateY(-50%);width:18px;height:18px;display:grid;place-items:center;border-radius:6px;background:#edf2f4;color:#6d8189;font-size:8px;font-weight:900}
+#processo-compra .pc-progress-step span{display:none!important}
+#processo-compra .pc-progress-step strong{display:block;margin:0;color:#5d737c;font-size:9px;font-weight:850}
+#processo-compra .pc-progress-step.is-current{background:var(--nv-brand-soft)!important}
+#processo-compra .pc-progress-step.is-current:before{background:var(--nv-brand);color:#fff}
+#processo-compra .pc-progress-step.is-current strong{color:var(--nv-brand-dark)}
+#processo-compra .pc-progress-step.is-done{background:#f4f8f6!important}
+#processo-compra .pc-progress-step.is-done:before{content:'✓';background:var(--nv-ok);color:#fff}
+#processo-compra .pc-progress-step.is-done strong{color:var(--nv-ok)}
+
+/* próxima ação */
+#processo-compra .pc-next{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 12px;border:1px solid #d6e6e9;border-radius:9px;background:#fbfdfd;box-shadow:none}
+#processo-compra .pc-next span{font-size:7.5px;color:#8a9aa1}
+#processo-compra .pc-next strong{margin-top:1px;color:#294d5b;font-size:11px}
+#processo-compra .pc-next small{display:none}
+#processo-compra .pc-next-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* navegação secundária */
+#processo-compra .pc-tabs-shell{position:sticky;top:8px;z-index:24;margin:0 0 12px;padding:4px;border:1px solid var(--nv-line);border-radius:10px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px);box-shadow:none}
+#processo-compra .pc-tabs{display:flex;gap:2px;overflow:auto}
+#processo-compra .pc-tab{min-height:34px;padding:7px 11px;border:0;border-radius:7px;background:transparent;color:#6d818a;font:inherit;font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer}
+#processo-compra .pc-tab.is-active{background:var(--nv-brand-dark);color:#fff;box-shadow:none}
+#processo-compra .pc-count{min-width:17px;height:17px;margin-left:3px;padding:0 4px;border-radius:999px;background:#edf2f4;color:#607681;font-size:7px}
+#processo-compra .pc-tab.is-active .pc-count{background:rgba(255,255,255,.16);color:#fff}
+
+/* área de trabalho */
+#processo-compra .pc-workspace{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:12px;align-items:start}
+#processo-compra .pc-main{min-width:0;display:grid;gap:10px}
+#processo-compra .pc-aside{position:sticky;top:62px;display:grid;gap:8px}
+
+/* cards */
+#processo-compra .pc-card,
+#processo-compra .pc-provider,
+#processo-compra .pc-context-panel,
+#processo-compra .pc-quote-map,
+#processo-compra .pc-tech-supplier-card,
+#processo-compra .pc-neg-group,
+#processo-compra .pc-compare-item{
+  border:1px solid var(--nv-line)!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+#processo-compra .pc-card-head{padding:11px 13px;border-bottom:1px solid #edf1f3;background:#fbfcfd!important}
+#processo-compra .pc-card-head h2,#processo-compra .pc-card-head h3{margin:0;color:var(--nv-ink);font-size:12px;letter-spacing:0}
+#processo-compra .pc-card-head p{display:none!important}
+#processo-compra .pc-card-body{padding:12px}
+#processo-compra .pc-card-body--flush{padding:0}
+
+/* reduzir textos auxiliares */
+#processo-compra .pc-help{font-size:7.5px;color:#8a9ba2}
+#processo-compra .pc-note{padding:8px 10px;border-radius:8px;font-size:8.5px;line-height:1.4}
+#processo-compra .pc-note strong{font-size:8.5px}
+#processo-compra .pc-stage-intro span,
+#processo-compra .pc-tech-guide span,
+#processo-compra .pc-approval-submit-copy span{display:none!important}
+
+/* KPIs */
+#processo-compra .pc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+#processo-compra .pc-kpi{padding:10px 11px;border:1px solid var(--nv-line);border-radius:9px;background:#fff;box-shadow:none}
+#processo-compra .pc-kpi span{font-size:7px;color:#80929a}
+#processo-compra .pc-kpi strong{margin-top:3px;color:var(--nv-ink);font-size:16px}
+#processo-compra .pc-kpi small{display:none}
+
+/* tabelas */
+#processo-compra .cp-table-wrap,
+#processo-compra .pc-approval-matrix-wrap{border:0;border-radius:0;overflow:auto;background:#fff}
+#processo-compra .cp-table,
+#processo-compra .pc-items-table,
+#processo-compra .pc-approval-matrix{font-size:9px}
+#processo-compra .cp-table th,
+#processo-compra .pc-items-table th,
+#processo-compra .pc-approval-matrix thead th{padding:8px 9px;background:#f7f9fa!important;color:#71858e;font-size:7px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--nv-line)}
+#processo-compra .cp-table td,
+#processo-compra .pc-items-table td{padding:8px 9px;border-bottom:1px solid #edf2f3;vertical-align:middle}
+#processo-compra .cp-table tbody tr:hover td{background:#fbfdfd}
+#processo-compra .pc-item-name strong{font-size:9px}
+#processo-compra .pc-item-name small{font-size:7px}
+
+/* fornecedores/cotação */
+#processo-compra .pc-provider+.pc-provider{margin-top:7px}
+#processo-compra .pc-provider summary,
+#processo-compra .pc-provider-static-head{padding:10px 12px;background:#fbfcfd}
+#processo-compra .pc-provider-name{font-size:10px}
+#processo-compra .pc-provider-meta{margin-top:2px;font-size:7.5px}
+#processo-compra .pc-provider-total{font-size:12px}
+#processo-compra .pc-edit-proposal>summary{padding:8px 10px!important;font-size:8px!important}
+#processo-compra .pc-edit-proposal-body{padding:10px}
+
+/* formulários */
+#processo-compra .pc-form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
+#processo-compra .pc-field label,#processo-compra .pc-inline-field label{margin-bottom:4px;color:#58717b;font-size:8px;font-weight:850;text-transform:none}
+#processo-compra .pc-field .cp-input,
+#processo-compra .pc-inline-field .cp-input,
+#processo-compra .pc-field select,
+#processo-compra .pc-inline-field select{min-height:36px!important;padding:7px 8px!important;border-radius:7px!important;font-size:9px!important}
+#processo-compra .pc-field textarea.cp-input{min-height:60px!important}
+#processo-compra .pc-form-footer{position:static;margin-top:8px;padding:8px 9px;border:1px solid #dce8eb;border-radius:8px;background:#fbfdfd;box-shadow:none;backdrop-filter:none}
+#processo-compra .pc-form-total span{font-size:7px}
+#processo-compra .pc-form-total strong{font-size:13px}
+
+/* compatibilização */
+#processo-compra .pc-compat-supplier-tabs{gap:5px;margin-bottom:8px;padding:0;border:0;background:transparent}
+#processo-compra .pc-compat-supplier-tab{min-height:31px;padding:6px 9px;border:1px solid var(--nv-line);border-radius:7px;background:#fff;font-size:8px}
+#processo-compra .pc-compat-supplier-tab.is-active{border-color:#a8d8df;background:var(--nv-brand-soft);color:var(--nv-brand-dark)}
+#processo-compra .pc-tech-supplier-card__head{padding:9px 10px;background:#fbfcfd}
+#processo-compra .pc-tech-progress{position:static!important;margin:8px!important;padding:7px 8px!important;border-radius:7px!important;box-shadow:none!important;background:#fff!important}
+#processo-compra .pc-tech-progress__main span{font-size:7px}
+#processo-compra .pc-tech-stat{min-width:60px;padding:4px 6px}
+#processo-compra .pc-tech-group{margin:0!important;border-radius:8px!important}
+#processo-compra .pc-tech-group__head{padding:7px 9px!important;background:#f8fafb!important}
+#processo-compra .pc-tech-group__title strong{font-size:9px!important}
+#processo-compra .pc-tech-group__title p{display:block!important;margin:4px 0 0!important;font-size:11px!important;line-height:1.4!important;color:#5f7680!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:none!important}
+#processo-compra .pc-tech-chip,#processo-compra .pc-tech-group-state{min-height:22px;padding:4px 6px;font-size:7px}
+#processo-compra .pc-tech-offer__main{min-height:44px;padding:6px 8px!important;grid-template-columns:minmax(180px,1.25fr) 100px minmax(150px,.7fr) 72px auto!important}
+#processo-compra .pc-tech-supplier strong{font-size:9px!important}
+#processo-compra .pc-tech-supplier small{font-size:7px!important}
+#processo-compra .pc-tech-price strong{font-size:9px!important}
+#processo-compra .pc-tech-status{min-height:25px!important;font-size:6.5px!important}
+
+/* negociação */
+#processo-compra .pc-neg-toolbar{padding:8px 10px;border:1px solid var(--nv-line);border-radius:8px;background:#fbfcfd}
+#processo-compra .pc-neg-toolbar__copy strong{font-size:9px}
+#processo-compra .pc-neg-provider-action{padding:7px 8px;border-radius:7px}
+#processo-compra .pc-neg-provider-action strong{font-size:8.5px}
+#processo-compra .pc-neg-provider-action small{display:none}
+#processo-compra .pc-step-switcher{padding:7px 9px;border-radius:8px}
+#processo-compra .pc-neg-group-head{padding:8px 10px}
+#processo-compra .pc-neg-group-head strong{font-size:9px}
+#processo-compra .pc-neg-group-head small{display:none}
+#processo-compra .pc-neg-cols{font-size:6.5px}
+#processo-compra .pc-decision-row{padding:8px 9px;gap:8px}
+#processo-compra .pc-offer strong{font-size:9px}
+#processo-compra .pc-offer small{font-size:7px}
+
+/* aprovação — somente visual; lógica e inputs originais permanecem */
+#processo-compra .pc-approval-map-card{overflow:hidden!important}
+#processo-compra .pc-approval-matrix{min-width:900px!important}
+#processo-compra .pc-approval-matrix thead .item-col{width:210px!important;min-width:210px!important}
+#processo-compra .pc-approval-matrix thead .qty-col{left:210px!important;width:70px!important;min-width:70px!important}
+#processo-compra .pc-approval-matrix tbody .item-col{left:0!important;width:210px!important;min-width:210px!important;padding:10px!important}
+#processo-compra .pc-approval-matrix tbody .qty-col{left:210px!important;width:70px!important;min-width:70px!important;padding:10px 8px!important}
+#processo-compra .pc-approval-supplier{min-height:88px!important;padding:9px 10px!important}
+#processo-compra .pc-approval-supplier__name{font-size:9px!important}
+#processo-compra .pc-approval-supplier__facts{display:none!important}
+#processo-compra .pc-approval-supplier__tags{margin-top:4px!important}
+#processo-compra .pc-approval-matrix tbody td.pc-manager-choice{padding:6px!important}
+#processo-compra .pc-approval-offer{min-height:78px!important;padding:9px 30px 8px 9px!important;border-radius:7px!important}
+#processo-compra .pc-approval-offer__total{font-size:14px!important}
+#processo-compra .pc-approval-offer__unit{font-size:7px!important}
+#processo-compra .pc-approval-check{top:7px!important;right:7px!important;width:18px!important;height:18px!important}
+#processo-compra .pc-approval-submit{position:static!important;margin-top:8px!important;box-shadow:none!important}
+#processo-compra .pc-approval-submit .pc-card-body{padding:9px!important}
+#processo-compra .pc-approval-submit-grid{grid-template-columns:180px minmax(220px,1fr) auto!important}
+
+/* pedidos/histórico/contexto */
+#processo-compra .pc-order{padding:9px 11px;gap:9px}
+#processo-compra .pc-order span{font-size:7px}
+#processo-compra .pc-order strong{font-size:9px}
+#processo-compra .pc-order .value{font-size:11px}
+#processo-compra .pc-order-files{padding:0 10px 9px}
+#processo-compra .pc-file-chips a{font-size:8px}
+#processo-compra .pc-upload-inline{gap:6px}
+#processo-compra .pc-context-panel>summary{padding:9px 10px}
+#processo-compra .pc-context-panel>summary strong{font-size:9px}
+#processo-compra .pc-context-panel>summary span{display:none}
+#processo-compra .pc-context-body{padding:8px 10px}
+#processo-compra .pc-context-row{padding:6px 0;font-size:8px}
+#processo-compra .pc-context-item{padding:7px 8px}
+#processo-compra .pc-context-item strong{font-size:8px}
+#processo-compra .pc-context-item small{font-size:7px}
+#processo-compra .pc-event{padding-bottom:12px}
+#processo-compra .pc-event strong{font-size:9px}
+#processo-compra .pc-event p{font-size:8px}
+#processo-compra .pc-event time{font-size:7px}
+
+/* botões */
+#processo-compra .cp-btn{min-height:32px!important;padding:6px 9px!important;border-radius:7px!important;font-size:8.5px!important;box-shadow:none!important}
+#processo-compra .cp-btn--primary{background:var(--nv-brand)!important;border-color:var(--nv-brand)!important;color:#fff!important}
+#processo-compra .cp-btn--primary:hover{background:var(--nv-brand-dark)!important;border-color:var(--nv-brand-dark)!important}
+
+/* responsividade */
+@media(max-width:1180px){
+  #processo-compra .pc-workspace{grid-template-columns:1fr}
+  #processo-compra .pc-aside{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  #processo-compra{padding:14px 12px 64px}
+  #processo-compra .pc-hero{grid-template-columns:1fr}
+  #processo-compra .pc-hero-actions{justify-content:flex-start}
+  #processo-compra .pc-progress{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #processo-compra .pc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #processo-compra .pc-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #processo-compra .pc-approval-submit-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:640px){
+  #processo-compra .pc-title{font-size:19px}
+  #processo-compra .pc-aside,#processo-compra .pc-kpis,#processo-compra .pc-form-grid{grid-template-columns:1fr!important}
+  #processo-compra .pc-tech-offer__main{grid-template-columns:1fr!important}
+  #processo-compra .pc-next{align-items:flex-start;flex-direction:column}
+  #processo-compra .pc-next-actions{margin-left:0;width:100%}
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -937,7 +1203,7 @@
         <a class="cp-btn" href="{% url 'compras:pdf_solicitacao_aprovada' processo.pk %}" target="_blank" rel="noopener">PDF da solicitação aprovada</a>
       {% endif %}
       {% if processo.status != 'REPROVADO' %}
-        <button type="button" class="cp-btn cp-btn--primary pc-current-step-btn" data-open-tab="{% if processo.etapa_atual == 'COTACAO' %}cotacao{% elif processo.etapa_atual == 'COMPATIBILIZACAO' or processo.etapa_atual == 'NEGOCIACAO' %}comparacao{% elif processo.etapa_atual == 'APROVACAO' %}aprovacao{% else %}pedido{% endif %}">Ir para etapa atual</button>
+        <button type="button" class="cp-btn cp-btn--primary pc-current-step-btn" data-open-tab="{% if processo.etapa_atual == 'COTACAO' %}cotacao{% elif processo.etapa_atual == 'COMPATIBILIZACAO' %}comparacao{% elif processo.etapa_atual == 'NEGOCIACAO' %}negociacao{% elif processo.etapa_atual == 'APROVACAO' %}aprovacao{% else %}pedido{% endif %}">Ir para etapa atual</button>
       {% endif %}
       <span class="pc-status">{{ processo.get_status_display }}</span>
       {% if processo.status != 'REPROVADO' %}
@@ -953,6 +1219,7 @@
       <button class="pc-tab is-active" type="button" data-tab="resumo">Visão geral</button>
       <button class="pc-tab" type="button" data-tab="cotacao">Cotação <span class="pc-count">{{ cotacoes|length }}</span></button>
       <button class="pc-tab" type="button" data-tab="comparacao">Compatibilização</button>
+      <button class="pc-tab" type="button" data-tab="negociacao">Negociação</button>
       <button class="pc-tab" type="button" data-tab="aprovacao">Aprovação</button>
       <button class="pc-tab" type="button" data-tab="pedido">Pedidos <span class="pc-count">{{ pedidos|length }}</span></button>
       <button class="pc-tab" type="button" data-tab="historico">Histórico</button>
@@ -1000,17 +1267,18 @@
   <section class="pc-tab-panel" data-panel="cotacao">
     <div class="pc-workspace">
       <main class="pc-main">
-        <section class="pc-card">
-          <div class="pc-card-head">
-            <div>
-              <h2>Solicitação de cotação em PDF</h2>
-              <p>Documento sem preços e sem fornecedor definido, com a relação dos materiais solicitados pelo engenheiro. Use este arquivo para encaminhar a mesma solicitação aos fornecedores antes de lançar as propostas.</p>
-            </div>
-            <div class="pc-card-head-actions">
-              <a class="cp-btn cp-btn--primary" href="{% url 'compras:pdf_solicitacao_cotacao' processo.pk %}" target="_blank" rel="noopener">Gerar PDF para cotação</a>
-            </div>
+        <div class="pc-cotacao-toolbar">
+          <div>
+            <strong>Cotação</strong>
+            <span>{{ necessidades|length }} item{{ necessidades|length|pluralize }} · {{ cotacoes|length }} proposta{{ cotacoes|length|pluralize }}</span>
           </div>
-        </section>
+          <div class="pc-cotacao-toolbar__actions">
+            <a class="cp-btn" href="{% url 'compras:pdf_solicitacao_cotacao' processo.pk %}" target="_blank" rel="noopener">PDF para cotação</a>
+            {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_proposta_nova and pode_cadastrar_nova_proposta %}
+              <button class="cp-btn cp-btn--primary" type="button" data-open-new-proposal>+ Nova proposta</button>
+            {% endif %}
+          </div>
+        </div>
 
         {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_envio_fornecedor %}
           <section class="pc-card">
@@ -1226,7 +1494,7 @@
                         <div class="pc-field" data-parcelas-field><label>{{ bloco.form.parcelas_pagamento.label }}</label>{{ bloco.form.parcelas_pagamento }}</div>
                         <div class="pc-field"><label>{{ bloco.form.prazo_entrega_dias.label }} <span class="req">*</span></label>{{ bloco.form.prazo_entrega_dias }}</div>
                         <div class="pc-field"><label>{{ bloco.form.frete.label }} <span class="req">*</span></label><div class="pc-money-input"><span>R$</span>{{ bloco.form.frete }}</div></div>
-                        <div class="pc-field"><label>{{ bloco.form.documento.label }}</label>{{ bloco.form.documento }}{% if bloco.cotacao.documento %}<div class="pc-help">O arquivo salvo permanece se você não selecionar outro.</div>{% endif %}</div>
+                        <div class="pc-field"><label>{{ bloco.form.documento.label }}{% if not bloco.cotacao.documento %} <span class="req">*</span>{% endif %}</label>{{ bloco.form.documento }}{% for e in bloco.form.documento.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}{% if bloco.cotacao.documento %}<div class="pc-help">O arquivo salvo permanece se você não selecionar outro.</div>{% endif %}</div>
                         <div class="pc-field full"><label>{{ bloco.form.observacoes.label }}</label>{{ bloco.form.observacoes }}</div>
                       </div>
 
@@ -1298,7 +1566,7 @@
                   </thead>
                   <tbody>
                     {% for linha in matriz_cotacao %}
-                      <tr data-approval-row data-approval-row-index="{{ forloop.counter0 }}"{% if not forloop.first %} class="pc-heavy-section-hidden"{% endif %}>
+                      <tr data-quote-row data-quote-row-index="{{ forloop.counter0 }}">
                         <td class="sticky-col item-col">
                           <strong>{{ linha.necessidade.descricao }}</strong>
                           {% if linha.necessidade.especificacao %}<small>{{ linha.necessidade.especificacao }}</small>{% endif %}
@@ -1347,7 +1615,7 @@
         {% endif %}
 
         {% if fase_comercial_aberta and permissoes_compras.pode_cotar and form_proposta_nova and pode_cadastrar_nova_proposta %}
-          <details class="pc-provider" {% if not cotacoes %}open{% endif %}>
+          <details class="pc-provider pc-new-proposal" id="nova-proposta" {% if not cotacoes %}open{% endif %}>
             <summary>
              <div>
   <div class="pc-provider-name">Adicionar proposta de fornecedor</div><div class="pc-subtitle">Fornecedores são carregados da Central de Cadastros. <a href="{% url 'cadastros:fornecedores_lista' %}" target="_blank" rel="noopener">Abrir fornecedores</a></div>
@@ -1436,8 +1704,9 @@
       </div>
 
       <div class="pc-field">
-        <label>{{ form_proposta_nova.documento.label }}</label>
+        <label>{{ form_proposta_nova.documento.label }} <span class="req">*</span></label>
         {{ form_proposta_nova.documento }}
+        {% for e in form_proposta_nova.documento.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}
       </div>
 
       <div class="pc-field full">
@@ -1532,7 +1801,7 @@
     </div>
   </section>
 
-  <!-- COMPARAÇÃO E ESCOLHA -->
+  <!-- COMPATIBILIZAÇÃO -->
   <section class="pc-tab-panel" data-panel="comparacao">
     <div class="pc-workspace">
       <main class="pc-main">
@@ -1591,7 +1860,6 @@
                             <strong>{{ bloco.cotacao.fornecedor.nome }}</strong>
                             <small>{{ bloco.form.linhas|length }} itens</small>
                           </div>
-                          <button class="cp-btn cp-btn--primary cp-btn--sm" type="submit">Salvar fornecedor</button>
                         </div>
 
                         <div class="pc-tech-progress" data-tech-progress>
@@ -1702,6 +1970,16 @@
 
         {% endif %}
 
+
+      </main>
+      {% include "compras/_processo_contexto.html" %}
+    </div>
+  </section>
+
+  <!-- NEGOCIAÇÃO -->
+  <section class="pc-tab-panel" data-panel="negociacao">
+    <div class="pc-workspace">
+      <main class="pc-main">
         {% if fase_analise_aberta %}
           <section class="pc-card pc-comparison-card">
             <div class="pc-card-head">
@@ -1744,7 +2022,7 @@
                       <button class="cp-btn cp-btn--sm" type="button" data-neg-prev>Anterior</button>
                       <select class="pc-step-switcher__select" data-neg-select aria-label="Selecionar item da negociação">
                         {% for grupo in form_decisao_lote.grupos %}
-                          <option value="{{ forloop.counter0 }}">{{ forloop.counter }}. {{ grupo.necessidade.descricao }}</option>
+                          <option value="{{ forloop.counter0 }}">{{ forloop.counter }}. {{ grupo.necessidade.descricao }}{% if grupo.necessidade.especificacao %} — {{ grupo.necessidade.especificacao|truncatechars:55 }}{% endif %}</option>
                         {% endfor %}
                       </select>
                       <button class="cp-btn cp-btn--sm" type="button" data-neg-next>Próximo</button>
@@ -1837,7 +2115,6 @@
           </section>
 
         {% endif %}
-
         {% if not fase_analise_aberta %}
           <section class="pc-card">
             <div class="pc-card-head"><div><h2>Histórico da negociação</h2><p>Resumo das propostas, resultado técnico e condição comercial final registrada.</p></div></div>
@@ -1849,7 +2126,7 @@
                     {% for linha in mapa_itens %}
                       <tr>
                         <td>{{ linha.item.cotacao.fornecedor.nome }}</td>
-                        <td><strong>{{ linha.item.necessidade.descricao }}</strong><div class="cp-muted">{{ linha.item.marca }} {{ linha.item.modelo }}</div></td>
+                        <td><strong>{{ linha.item.necessidade.descricao }}</strong>{% if linha.item.necessidade.especificacao %}<small class="pc-item-spec">{{ linha.item.necessidade.especificacao }}</small>{% endif %}<div class="cp-muted">{{ linha.item.marca }} {{ linha.item.modelo }}</div></td>
                         <td>R$ {{ linha.item.valor_unitario_cotado|floatformat:2 }}</td>
                         <td>{% if linha.compat %}<span class="cp-badge {% if linha.compat.resultado == 'REPROVADO' %}cp-badge--danger{% elif linha.compat.resultado == 'APROVADO_COM_RESSALVA' %}cp-badge--warn{% else %}cp-badge--ok{% endif %}">{{ linha.compat.get_resultado_display }}</span>{% else %}<span class="cp-badge">Pendente</span>{% endif %}</td>
                         <td>R$ {{ linha.valor_final|floatformat:2 }}</td>
@@ -1962,7 +2239,7 @@
                           <small>{{ linha.necessidade.unidade }}</small>
                         </td>
                         {% for oferta in linha.ofertas %}
-                          <td class="pc-manager-choice {% if not oferta.elegivel_aprovacao %}is-disabled{% endif %}">
+                          <td class="pc-manager-choice {% if not oferta.item %}is-not-quoted{% elif not oferta.elegivel_aprovacao %}is-disabled{% elif oferta.menor_valor_final %}is-best-cell{% else %}is-eligible{% endif %}">
                             {% if oferta.item %}
                               {% if oferta.elegivel_aprovacao %}
                                 <label class="pc-approval-offer{% if oferta.menor_valor_final %} is-best-price{% endif %}">
@@ -2982,6 +3259,42 @@
   #processo-compra .pc-step-switcher__select{min-width:0;width:100%}
 }
 
+/* 10/09/2026 · Ajustes operacionais finais */
+#processo-compra{font-size:13px}
+#processo-compra .pc-subtitle,#processo-compra .pc-card-head p,#processo-compra .pc-provider-meta,#processo-compra .pc-help,#processo-compra .pc-note,#processo-compra .pc-context-row,#processo-compra .pc-context-item small{font-size:12px;line-height:1.5}
+#processo-compra .pc-card-head h2,#processo-compra .pc-card-head h3{font-size:17px}
+#processo-compra .pc-field label,#processo-compra .pc-inline-field label{font-size:12px}
+#processo-compra .pc-field .cp-input,#processo-compra .pc-inline-field .cp-input,#processo-compra select.cp-input,#processo-compra textarea.cp-input{font-size:13px;min-height:42px}
+#processo-compra .cp-table,#processo-compra .pc-items-table,#processo-compra .pc-map-table{font-size:12px}
+#processo-compra .cp-table thead th,#processo-compra .pc-items-table th,#processo-compra .pc-map-table th{font-size:10px}
+#processo-compra .pc-item-name strong,#processo-compra .pc-tech-supplier strong,#processo-compra .pc-neg-supplier strong{font-size:13px}
+#processo-compra .pc-item-name small,#processo-compra .pc-item-spec,#processo-compra .pc-neg-group-head small{display:block;margin-top:4px;font-size:11px;line-height:1.4;color:var(--pc-muted)}
+#processo-compra .pc-tab{font-size:12px}
+#processo-compra .pc-cotacao-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 12px;border:1px solid var(--pc-line);border-radius:10px;background:#fff}
+#processo-compra .pc-cotacao-toolbar>div:first-child strong{display:block;color:var(--pc-ink);font-size:15px}
+#processo-compra .pc-cotacao-toolbar>div:first-child span{display:block;margin-top:2px;color:var(--pc-muted);font-size:11px}
+#processo-compra .pc-cotacao-toolbar__actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#processo-compra .pc-new-proposal{scroll-margin-top:70px;border:2px solid #cfe3e7}
+#processo-compra .pc-new-proposal>summary{background:#f2fafb}
+#processo-compra .pc-money-input{display:block}
+#processo-compra .pc-money-input>span{left:12px;font-size:12px}
+#processo-compra .pc-money-input .cp-input{width:100%;padding-left:38px!important}
+#processo-compra .pc-compat-supplier-tab{border:1px solid #bdd7dc!important;background:#f7fbfc!important;color:#31515f!important}
+#processo-compra .pc-compat-supplier-tab strong{color:#31515f!important}
+#processo-compra .pc-compat-supplier-tab.is-active{border-color:#14798a!important;background:#14798a!important;color:#fff!important;box-shadow:0 5px 14px rgba(20,121,138,.18)}
+#processo-compra .pc-compat-supplier-tab.is-active strong,#processo-compra .pc-compat-supplier-tab.is-active span{color:#fff!important}
+#processo-compra .pc-tech-status,#processo-compra .pc-tech-group-state,#processo-compra .pc-tech-chip{font-size:10px}
+#processo-compra .pc-neg-cols{font-size:10px;font-weight:900}
+#processo-compra .pc-neg-row{font-size:12px}
+#processo-compra .pc-manager-choice{border-left:1px solid #e2e8ea;border-bottom:1px solid #e2e8ea;background:#fff}
+#processo-compra .pc-manager-choice.is-eligible{background:#f8fbfc}
+#processo-compra .pc-manager-choice.is-best-cell{background:#edf8f2;border-color:#c7dfd1}
+#processo-compra .pc-manager-choice.is-disabled{background:#fff7e8!important}
+#processo-compra .pc-manager-choice.is-not-quoted{background:#f3f5f6!important}
+#processo-compra .pc-approval-table tbody tr:nth-child(even) td.item-col,#processo-compra .pc-approval-table tbody tr:nth-child(even) td.qty-col{background:#f8fafb}
+#processo-compra .pc-approval-table td,#processo-compra .pc-approval-table th{border-right:1px solid #e2e8ea;border-bottom:1px solid #e2e8ea}
+@media(max-width:720px){#processo-compra .pc-cotacao-toolbar{align-items:stretch;flex-direction:column}.pc-cotacao-toolbar__actions{width:100%}.pc-cotacao-toolbar__actions .cp-btn{flex:1}}
+
 </style>
 
 <script>
@@ -2999,7 +3312,23 @@
   tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.dataset.tab)));
   root.querySelectorAll('[data-open-tab]').forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.openTab,true)));
   const hash=location.hash.replace('#','');
-  if(hash&&panels.some(p=>p.dataset.panel===hash))openTab(hash);
+  if(hash&&panels.some(p=>p.dataset.panel===hash)){
+    openTab(hash);
+  }else if(hash.startsWith('compat-fornecedor-')){
+    openTab('comparacao');
+  }else if(hash.startsWith('negociacao')){
+    openTab('negociacao');
+  }
+
+  root.querySelectorAll('[data-open-new-proposal]').forEach(button=>{
+    button.addEventListener('click',()=>{
+      const box=root.querySelector('#nova-proposta');
+      if(!box)return;
+      box.open=true;
+      box.scrollIntoView({behavior:'smooth',block:'start'});
+      setTimeout(()=>box.querySelector('input,select,textarea')?.focus(),250);
+    });
+  });
 
   const parseNumber=v=>{
     if(v===null||v===undefined||String(v).trim()==='')return 0;

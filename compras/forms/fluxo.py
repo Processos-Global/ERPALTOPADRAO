@@ -306,6 +306,11 @@ class PropostaCompletaForm(forms.Form):
 
         self.fields["fornecedor"].queryset = fornecedores
 
+        # O navegador também sinaliza a obrigatoriedade na criação; a validação
+        # server-side no clean() continua sendo a regra definitiva.
+        if not cotacao or not cotacao.documento:
+            self.fields["documento"].widget.attrs["required"] = "required"
+
         itens_existentes = {}
         if cotacao:
             itens_existentes = {
@@ -421,6 +426,11 @@ class PropostaCompletaForm(forms.Form):
         validade = cleaned.get("validade")
         if data_proposta and validade and validade < data_proposta:
             self.add_error("validade", "A validade não pode ser anterior à data da proposta.")
+
+        # O anexo é obrigatório na criação. Em edição, o documento já salvo
+        # continua válido caso o usuário não selecione um novo arquivo.
+        if not cleaned.get("documento") and not (self.cotacao and self.cotacao.documento):
+            self.add_error("documento", "Anexe o arquivo da proposta do fornecedor.")
 
         if not self.processo.necessidades.filter(situacao="ATIVA").exists():
             raise forms.ValidationError("Inclua ao menos um item na compra antes de registrar propostas.")

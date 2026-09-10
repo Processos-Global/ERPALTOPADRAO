@@ -528,7 +528,7 @@ def acao_decisao_comercial_lote(request, pk):
             for erro in erros:
                 messages.error(request, erro)
         resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
+        resposta["Location"] += "#negociacao"
         return resposta
 
     try:
@@ -567,11 +567,11 @@ def acao_decisao_comercial_lote(request, pk):
     except ValidationError as exc:
         _erro(request, exc)
         resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
+        resposta["Location"] += "#negociacao"
         return resposta
 
     resposta = _voltar(processo)
-    resposta["Location"] += "#comparacao"
+    resposta["Location"] += "#negociacao"
     return resposta
 
 
@@ -585,7 +585,7 @@ def acao_enviar_cotacao_aprovacao(request, pk, cotacao_id):
             messages.success(request, f"Proposta de {cotacao.fornecedor.nome} enviada individualmente para aprovação.")
         except ValidationError as exc:
             _erro(request, exc)
-    resposta = _voltar(processo); resposta["Location"] += "#comparacao"; return resposta
+    resposta = _voltar(processo); resposta["Location"] += "#negociacao"; return resposta
 
 
 @compras_acao_required(AcaoCompra.APROVAR)
@@ -749,7 +749,7 @@ def acao_aprovar(request, pk):
                     )
                     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
                     resposta = _voltar(processo_atualizado)
-                    resposta["Location"] += "#comparacao"
+                    resposta["Location"] += "#negociacao"
                     return resposta
 
                 if decisao == AprovacaoCompra.Decisao.REPROVADO:
