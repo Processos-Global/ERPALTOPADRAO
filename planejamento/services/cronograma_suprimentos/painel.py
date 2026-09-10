@@ -344,6 +344,18 @@ def _status_negociacao(cotacao, compat):
     if not cotacao.enviada_negociacao_em:
         return {"label": "Pendente", "classe": "warning", "estado": "PENDENTE"}
 
+    # Se a proposta já foi enviada ao gestor, a etapa comercial de negociação
+    # já foi concluída para este fornecedor. Os campos de negociação registram
+    # alterações comerciais, mas uma negociação também pode ser concluída sem
+    # mudança de preço/prazo/frete. Portanto, enviada_aprovacao_em prevalece
+    # sobre a leitura dos campos alterados abaixo.
+    if cotacao.enviada_aprovacao_em:
+        return {
+            "label": "Negociado",
+            "classe": "success",
+            "estado": "CONCLUIDO",
+        }
+
     elegiveis = []
     if compat["estado"] == "NAO_APLICAVEL":
         elegiveis = itens
@@ -436,16 +448,6 @@ def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
         }
 
     elif (
-        cotacao.enviada_aprovacao_em
-        and compat["estado"] in {"APROVADO", "NAO_APLICAVEL"}
-    ):
-        aprovacao = {
-            "label": "Aguardando gestor",
-            "classe": "warning",
-            "estado": "AGUARDANDO",
-        }
-
-    elif (
         processo.status
         in {
             "APROVADO",
@@ -454,10 +456,23 @@ def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
         }
         and proposta_recebida
     ):
+        # O processo já teve decisão do gestor e este fornecedor não possui
+        # adjudicação ativa. Portanto ele não está mais aguardando aprovação:
+        # foi uma proposta considerada, mas não selecionada.
         aprovacao = {
             "label": "Não selecionado",
             "classe": "muted",
             "estado": "NAO_SELECIONADO",
+        }
+
+    elif (
+        cotacao.enviada_aprovacao_em
+        and compat["estado"] in {"APROVADO", "NAO_APLICAVEL"}
+    ):
+        aprovacao = {
+            "label": "Aguardando gestor",
+            "classe": "warning",
+            "estado": "AGUARDANDO",
         }
 
     else:
