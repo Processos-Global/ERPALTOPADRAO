@@ -40,3 +40,10 @@ from .acoes import (
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]
+
+from .downloads import (
+    baixar_anexo_pedido,
+    baixar_documento_contratacao,
+    baixar_documento_cotacao,
+    baixar_nota_fiscal_recebimento,
+)

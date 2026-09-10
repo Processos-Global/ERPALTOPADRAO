@@ -5,6 +5,8 @@ from financeiro import views
 app_name = "financeiro"
 
 urlpatterns = [
+    path("arquivos/titulos/<int:pk>/", views.baixar_documento_titulo, name="baixar_documento_titulo"),
+    path("arquivos/pagamentos/<int:pk>/", views.baixar_comprovante_pagamento, name="baixar_comprovante_pagamento"),
     path("", views.dashboard, name="dashboard"),
     path("contas-a-pagar/", views.titulos_lista, name="titulos"),
     path("contas-a-pagar/novo/", views.titulo_novo, name="titulo_novo"),

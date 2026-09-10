@@ -15,3 +15,5 @@ from .titulos import (
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]
+
+from .downloads import baixar_comprovante_pagamento, baixar_documento_titulo

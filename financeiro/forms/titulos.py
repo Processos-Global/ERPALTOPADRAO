@@ -1,5 +1,7 @@
 from django import forms
 
+from core.validators import validar_documento_upload
+
 from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
 from .cadastros import ERPModelForm
 
@@ -29,6 +31,9 @@ class TituloPagarForm(ERPModelForm):
         if titulo_integrado and titulo_integrado.pedido_id:
             for campo in ("origem", "fornecedor", "obra"):
                 self.fields[campo].disabled = True
+
+    def clean_arquivo_documento(self):
+        return validar_documento_upload(self.cleaned_data.get("arquivo_documento"))
 
 
 class PrevisaoFinanceiraForm(ERPModelForm):
@@ -61,3 +66,6 @@ class PagamentoForm(ERPModelForm):
             "data_pagamento": forms.DateInput(attrs={"type": "date"}),
             "observacao": forms.Textarea(attrs={"rows": 3}),
         }
+
+    def clean_comprovante(self):
+        return validar_documento_upload(self.cleaned_data.get("comprovante"))

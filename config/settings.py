@@ -32,10 +32,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 # SEGURANÃ‡A
 # ============================================================
 
-SECRET_KEY = env(
-    "SECRET_KEY",
-    default="chave-local-de-desenvolvimento-erp-alto-padrao",
-)
+SECRET_KEY = env("SECRET_KEY")
 
 DEBUG = env.bool(
     "DEBUG",
@@ -54,6 +51,17 @@ CSRF_TRUSTED_ORIGINS = env.list(
     "CSRF_TRUSTED_ORIGINS",
     default=[],
 )
+
+
+# Hardening HTTP/HTTPS. Em produção, configure os valores correspondentes no .env.
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
+SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
 
 
 # ============================================================
@@ -268,6 +276,14 @@ MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Documentos confidenciais nunca devem possuir URL pública direta.
+_PRIVATE_MEDIA_ROOT_ENV = env("PRIVATE_MEDIA_ROOT", default="").strip()
+PRIVATE_MEDIA_ROOT = (
+    Path(_PRIVATE_MEDIA_ROOT_ENV)
+    if _PRIVATE_MEDIA_ROOT_ENV
+    else BASE_DIR.parent / "private_media"
+)
+
 
 # ============================================================
 # GOOGLE DRIVE
@@ -351,6 +367,14 @@ CSRF_COOKIE_SECURE = env.bool(
 )
 
 
+LOGIN_MAX_ATTEMPTS = env.int("LOGIN_MAX_ATTEMPTS", default=5)
+LOGIN_LOCKOUT_SECONDS = env.int("LOGIN_LOCKOUT_SECONDS", default=900)
+
+PASSWORD_RESET_TIMEOUT = env.int("PASSWORD_RESET_TIMEOUT", default=1800)
+PASSWORD_RESET_MAX_ATTEMPTS = env.int("PASSWORD_RESET_MAX_ATTEMPTS", default=3)
+PASSWORD_RESET_LOCKOUT_SECONDS = env.int("PASSWORD_RESET_LOCKOUT_SECONDS", default=900)
+
+
 # ============================================================
 # MENSAGENS
 # ============================================================
@@ -364,9 +388,9 @@ MESSAGE_STORAGE = (
 # UPLOADS
 # ============================================================
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
-FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
 
 # ============================================================
@@ -408,10 +432,7 @@ EMAIL_HOST_USER = env(
     default="processos@globalengenharia.eng.br",
 )
 
-EMAIL_HOST_PASSWORD = env(
-    "EMAIL_HOST_PASSWORD",
-    default="bixulfheiwfhohyj",
-)
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",

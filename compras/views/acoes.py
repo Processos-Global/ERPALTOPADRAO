@@ -1,3 +1,4 @@
+from core.validators import validar_documento_upload
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -820,14 +821,20 @@ def acao_anexar_arquivo_pedido(request, pedido_id):
         if not arquivos:
             messages.error(request, "Selecione ao menos um arquivo para anexar.")
         else:
-            for arquivo in arquivos:
-                PedidoCompraAnexo.objects.create(
-                    pedido=pedido,
-                    arquivo=arquivo,
-                    descricao=descricao,
-                    enviado_por=request.user,
-                )
-            messages.success(request, f"{len(arquivos)} arquivo(s) anexado(s) ao pedido {pedido.numero}.")
+            try:
+                for arquivo in arquivos:
+                    validar_documento_upload(arquivo)
+            except ValidationError as exc:
+                _erro(request, exc)
+            else:
+                for arquivo in arquivos:
+                    PedidoCompraAnexo.objects.create(
+                        pedido=pedido,
+                        arquivo=arquivo,
+                        descricao=descricao,
+                        enviado_por=request.user,
+                    )
+                messages.success(request, f"{len(arquivos)} arquivo(s) anexado(s) ao pedido {pedido.numero}.")
     origem = request.POST.get("origem")
     if origem == "processo":
         resposta = _voltar(pedido.processo)
@@ -883,6 +890,8 @@ def acao_receber_pedido(request, pedido_id):
             if valor_item not in (None, ""):
                 valores_itens[item.pk] = valor_item
         try:
+            arquivo_nota_fiscal = request.FILES.get("arquivo_nota_fiscal")
+            validar_documento_upload(arquivo_nota_fiscal)
             recebimento = registrar_recebimento(
                 pedido=pedido,
                 quantidades=quantidades,
@@ -890,7 +899,7 @@ def acao_receber_pedido(request, pedido_id):
                 usuario=request.user,
                 numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
                 valor_total_nota=request.POST.get("valor_total_nota", ""),
-                arquivo_nota_fiscal=request.FILES.get("arquivo_nota_fiscal"),
+                arquivo_nota_fiscal=arquivo_nota_fiscal,
                 observacao=request.POST.get("observacao", ""),
             )
             messages.success(

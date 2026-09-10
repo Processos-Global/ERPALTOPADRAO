@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.storage import private_media_storage
+
 from .titulos import TituloPagar
 
 
@@ -36,7 +38,7 @@ class Pagamento(models.Model):
     )
     forma = models.CharField(max_length=20, choices=Forma.choices, default=Forma.PIX)
     referencia_bancaria = models.CharField(max_length=120, blank=True)
-    comprovante = models.FileField(upload_to="financeiro/comprovantes/%Y/%m/", blank=True)
+    comprovante = models.FileField(storage=private_media_storage, upload_to="financeiro/comprovantes/%Y/%m/", blank=True)
     observacao = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.EFETIVADO, db_index=True)
     registrado_por = models.ForeignKey(

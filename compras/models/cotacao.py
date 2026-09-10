@@ -2,6 +2,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from core.storage import private_media_storage
 from .core import NecessidadeCompra, ProcessoCompra
 
 
@@ -75,7 +77,7 @@ class CotacaoFornecedor(models.Model):
     frete = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"), validators=[MinValueValidator(Decimal("0"))])
     validade = models.DateField(null=True, blank=True)
     observacoes = models.TextField(blank=True)
-    documento = models.FileField(upload_to="compras/cotacoes/%Y/%m/", null=True, blank=True)
+    documento = models.FileField(storage=private_media_storage, upload_to="compras/cotacoes/%Y/%m/", null=True, blank=True)
     enviada_compatibilizacao_em = models.DateTimeField(null=True, blank=True, db_index=True)
     enviada_compatibilizacao_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django import forms
 
+from core.validators import validar_documento_upload
+
 from compras.models import (
     AdjudicacaoCompra,
     AprovacaoCompra,
@@ -157,7 +159,7 @@ class CotacaoFornecedorForm(forms.Form):
     frete = forms.DecimalField(required=True, min_value=0, decimal_places=2, initial=0, label="Frete (R$)")
     validade = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
-    documento = forms.FileField(required=False)
+    documento = forms.FileField(required=False, validators=[validar_documento_upload])
 
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -259,7 +261,7 @@ class PropostaCompletaForm(forms.Form):
         label="Validade",
         widget=forms.DateInput(attrs={"type": "date"}),
     )
-    documento = forms.FileField(required=False, label="Proposta / anexo")
+    documento = forms.FileField(required=False, label="Proposta / anexo", validators=[validar_documento_upload])
     observacoes = forms.CharField(
         required=False,
         label="Observações comerciais",
@@ -835,6 +837,7 @@ class DocumentoContratacaoForm(forms.Form):
         required=True,
         label="Documento anexo",
         help_text="Anexe contrato, pedido assinado ou outro documento complementar relacionado ao fornecedor.",
+        validators=[validar_documento_upload],
     )
 
     def __init__(self, *args, processo=None, **kwargs):

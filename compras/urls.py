@@ -4,6 +4,10 @@ from compras import views
 app_name = "compras"
 
 urlpatterns = [
+    path("arquivos/cotacoes/<int:pk>/", views.baixar_documento_cotacao, name="baixar_documento_cotacao"),
+    path("arquivos/contratacoes/<int:pk>/", views.baixar_documento_contratacao, name="baixar_documento_contratacao"),
+    path("arquivos/pedidos/<int:pk>/", views.baixar_anexo_pedido, name="baixar_anexo_pedido"),
+    path("arquivos/notas-fiscais/<int:pk>/", views.baixar_nota_fiscal_recebimento, name="baixar_nota_fiscal_recebimento"),
     path("", views.menu_suprimentos, name="menu"),
     path("painel/", views.dashboard, name="dashboard"),
     path("processos/", views.lista_processos, name="lista_processos"),

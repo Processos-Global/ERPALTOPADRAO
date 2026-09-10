@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.storage import private_media_storage
+
 from .core import NecessidadeCompra, ProcessoCompra
 from .cotacao import CotacaoFornecedor, CotacaoFornecedorItem
 
@@ -235,7 +237,7 @@ class ContratacaoCompra(models.Model):
     previsao_entrega = models.DateField(null=True, blank=True)
     local_entrega = models.CharField(max_length=500, blank=True)
     referencia_contrato = models.CharField(max_length=120, blank=True)
-    documento = models.FileField(upload_to="compras/contratacoes/%Y/%m/", null=True, blank=True)
+    documento = models.FileField(storage=private_media_storage, upload_to="compras/contratacoes/%Y/%m/", null=True, blank=True)
     observacoes = models.TextField(blank=True)
     formalizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

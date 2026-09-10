@@ -308,7 +308,7 @@
                   </div>
 
                   {% if recebimento.observacao %}<div class="cp-muted" style="margin-top:8px">{{ recebimento.observacao }}</div>{% endif %}
-                  {% if recebimento.arquivo_nota_fiscal %}<div style="margin-top:9px"><a class="cp-btn cp-btn--sm" href="{{ recebimento.arquivo_nota_fiscal.url }}" target="_blank" rel="noopener">Abrir nota fiscal</a></div>{% endif %}
+                  {% if recebimento.arquivo_nota_fiscal %}<div style="margin-top:9px"><a class="cp-btn cp-btn--sm" href="{% url 'compras:baixar_nota_fiscal_recebimento' recebimento.pk %}" target="_blank" rel="noopener">Abrir nota fiscal</a></div>{% endif %}
                 </div>
                 {% endfor %}
               </div>
@@ -429,7 +429,7 @@
                         {% if anexo.descricao %}<span>{{ anexo.descricao }}</span>{% endif %}
                         <small>{{ anexo.criado_em|date:"d/m/Y H:i" }} · {{ anexo.enviado_por|default:"—" }}</small>
                       </div>
-                      <a class="cp-btn cp-btn--sm" href="{{ anexo.arquivo.url }}" target="_blank" rel="noopener">Abrir</a>
+                      <a class="cp-btn cp-btn--sm" href="{% url 'compras:baixar_anexo_pedido' anexo.pk %}" target="_blank" rel="noopener">Abrir</a>
                     </div>
                     {% endfor %}
                   </div>
@@ -469,7 +469,7 @@
                     {% for anexo in pedido.anexos.all %}
                     <div class="cp-order-file">
                       <div><strong>{{ anexo.nome_arquivo }}</strong>{% if anexo.descricao %}<span>{{ anexo.descricao }}</span>{% endif %}<small>{{ anexo.criado_em|date:"d/m/Y H:i" }}</small></div>
-                      <a class="cp-btn cp-btn--sm" href="{{ anexo.arquivo.url }}" target="_blank" rel="noopener">Abrir</a>
+                      <a class="cp-btn cp-btn--sm" href="{% url 'compras:baixar_anexo_pedido' anexo.pk %}" target="_blank" rel="noopener">Abrir</a>
                     </div>
                     {% endfor %}
                   </div>

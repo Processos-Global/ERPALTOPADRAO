@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from core.storage import private_media_storage
 from django.utils import timezone
 
 from financeiro.services.regras import calcular_saldo_titulo
@@ -50,7 +52,7 @@ class TituloPagar(models.Model):
     previsao_origem = models.ForeignKey(PrevisaoFinanceira, null=True, blank=True, on_delete=models.SET_NULL, related_name="titulos_gerados")
     descricao = models.CharField(max_length=300)
     documento_numero = models.CharField(max_length=100, blank=True, db_index=True)
-    arquivo_documento = models.FileField(upload_to="financeiro/documentos/%Y/%m/", blank=True)
+    arquivo_documento = models.FileField(storage=private_media_storage, upload_to="financeiro/documentos/%Y/%m/", blank=True)
     data_emissao = models.DateField(null=True, blank=True)
     competencia = models.DateField(null=True, blank=True)
     vencimento = models.DateField(null=True, blank=True, db_index=True)

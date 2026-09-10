@@ -1453,7 +1453,7 @@
               {% endif %}
 
               {% if bloco.cotacao.documento %}
-                <div class="pc-saved-note"><strong>Proposta / anexo:</strong> <a href="{{ bloco.cotacao.documento.url }}" target="_blank" rel="noopener">Abrir documento salvo</a></div>
+                <div class="pc-saved-note"><strong>Proposta / anexo:</strong> <a href="{% url 'compras:baixar_documento_cotacao' bloco.cotacao.pk %}" target="_blank" rel="noopener">Abrir documento salvo</a></div>
               {% endif %}
 
               <div class="pc-saved-items-title">Itens desta proposta</div>
@@ -2392,7 +2392,7 @@
                 </div>
                 <div class="pc-order-files">
                   {% if pedido.anexos.all %}
-                    <div class="pc-file-chips">{% for anexo in pedido.anexos.all %}<a href="{{ anexo.arquivo.url }}" target="_blank" rel="noopener">{{ anexo.nome_arquivo }}</a>{% endfor %}</div>
+                    <div class="pc-file-chips">{% for anexo in pedido.anexos.all %}<a href="{% url 'compras:baixar_anexo_pedido' anexo.pk %}" target="_blank" rel="noopener">{{ anexo.nome_arquivo }}</a>{% endfor %}</div>
                   {% endif %}
                   {% if permissoes_compras.pode_gerenciar_pedidos %}
                     <form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}" class="pc-upload-inline">
@@ -2442,7 +2442,7 @@
                         </td>
                         <td>{{ doc.responsavel|default:"—" }}</td>
                         <td>{{ doc.data|date:"d/m/Y H:i"|default:"—" }}</td>
-                        <td><a class="cp-btn cp-btn--sm" href="{{ doc.documento.url }}" target="_blank" rel="noopener">Abrir arquivo</a></td>
+                        <td><a class="cp-btn cp-btn--sm" href="{% url doc.rota_download doc.pk %}" target="_blank" rel="noopener">Abrir arquivo</a></td>
                       </tr>
                     {% endfor %}
                   </tbody>

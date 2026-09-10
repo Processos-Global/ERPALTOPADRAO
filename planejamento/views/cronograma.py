@@ -1,9 +1,10 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from planejamento.models import ImportacaoCronograma
+from usuarios.decorators import modulo_required
+from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma import (
     ImportacaoCronogramaError,
     importar_cronograma,
@@ -12,7 +13,7 @@ from planejamento.services.cronograma import (
 from planejamento.services.cronograma.consultas import CronogramaBaseError
 
 
-@login_required
+@modulo_required(ModuloSistema.PLANEJAMENTO, NivelPermissao.LEITURA)
 def painel_cronograma(request):
     projeto = (request.GET.get("projeto") or "").strip()
     semana_texto = (request.GET.get("semana") or "").strip()
@@ -55,7 +56,7 @@ def painel_cronograma(request):
     return render(request, "planejamento/painel_cronograma.html", contexto)
 
 
-@login_required
+@modulo_required(ModuloSistema.PLANEJAMENTO, NivelPermissao.LEITURA)
 def historico_importacoes_cronograma(request):
     importacoes = (
         ImportacaoCronograma.objects
@@ -69,13 +70,9 @@ def historico_importacoes_cronograma(request):
     )
 
 
-@login_required
+@modulo_required(ModuloSistema.PLANEJAMENTO, NivelPermissao.ADMINISTRADOR)
 @require_POST
 def atualizar_cronograma(request):
-    if not request.user.is_superuser:
-        messages.error(request, "Você não tem permissão para atualizar o cronograma.")
-        return redirect("planejamento:painel_cronograma")
-
     try:
         resultado = importar_cronograma(
             executado_por=request.user,

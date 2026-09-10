@@ -1022,6 +1022,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Cotação",
+                    "pk": cotacao.pk,
+                    "rota_download": "compras:baixar_documento_cotacao",
                     "fornecedor": cotacao.fornecedor,
                     "documento": cotacao.documento,
                     "nome": cotacao.documento.name.rsplit("/", 1)[-1],
@@ -1035,6 +1037,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Formalização",
+                    "pk": contratacao.pk,
+                    "rota_download": "compras:baixar_documento_contratacao",
                     "fornecedor": contratacao.fornecedor,
                     "documento": contratacao.documento,
                     "nome": contratacao.documento.name.rsplit("/", 1)[-1],
@@ -1048,6 +1052,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Pedido",
+                    "pk": anexo.pk,
+                    "rota_download": "compras:baixar_anexo_pedido",
                     "fornecedor": pedido.fornecedor,
                     "documento": anexo.arquivo,
                     "nome": anexo.nome_arquivo,

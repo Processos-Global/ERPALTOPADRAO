@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
+from core.storage import private_media_storage
+
 from .core import NecessidadeCompra, ProcessoCompra
 
 
@@ -176,7 +178,7 @@ class HistoricoPrevisaoPedido(models.Model):
 class RecebimentoPedido(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="recebimentos")
     numero_nota_fiscal = models.CharField(max_length=80, null=True, blank=True)
-    arquivo_nota_fiscal = models.FileField(upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
+    arquivo_nota_fiscal = models.FileField(storage=private_media_storage, upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
     valor_total_nota = models.DecimalField(
         max_digits=18,
         decimal_places=2,
@@ -238,7 +240,7 @@ class RecebimentoPedidoItem(models.Model):
 
 class PedidoCompraAnexo(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.CASCADE, related_name="anexos")
-    arquivo = models.FileField(upload_to="compras/pedidos/%Y/%m/")
+    arquivo = models.FileField(storage=private_media_storage, upload_to="compras/pedidos/%Y/%m/")
     descricao = models.CharField(max_length=255, blank=True)
     enviado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

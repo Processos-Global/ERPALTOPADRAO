@@ -302,6 +302,26 @@
             display: block;
         }
 
+
+        .login-body .login-recovery {
+            margin-top: -4px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .login-body .login-recovery a {
+            color: var(--opal-blue-dark);
+            font-size: 11px;
+            font-weight: 750;
+            text-decoration: none;
+            transition: color .18s ease;
+        }
+
+        .login-body .login-recovery a:hover {
+            color: var(--opal-blue);
+            text-decoration: underline;
+        }
+
         .login-body .login-submit {
             width: 100% !important;
             height: 52px !important;
@@ -543,6 +563,11 @@
                     {% for error in form.password.errors %}
                         <small class="field-error">{{ error }}</small>
                     {% endfor %}
+                </div>
+
+
+                <div class="login-recovery">
+                    <a href="{% url 'usuarios:password_reset' %}">Esqueci minha senha</a>
                 </div>
 
                 <button type="submit" class="login-submit" data-login-submit>
