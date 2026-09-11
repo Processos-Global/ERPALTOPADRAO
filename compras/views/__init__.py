@@ -5,7 +5,7 @@ from .processos import (
     lista_pedidos,
     lista_processos,
     novo_processo,
-    pdf_solicitacao_aprovada,
+    pdf_pedido_compra,
     pdf_solicitacao_cotacao,
 )
 from .acoes import (

@@ -18,6 +18,8 @@
   .cp-order__supplier{color:var(--cp-ink);font-size:15px;font-weight:900;line-height:1.25;overflow-wrap:anywhere}
   .cp-order__meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;color:var(--cp-muted);font-size:9px}
   .cp-order__meta a{font-weight:800}
+  .cp-order__pdf{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid #cfe0e5;border-radius:7px;background:#f5fafb;color:var(--cp-primary-dark);text-decoration:none}
+  .cp-order__pdf:hover{background:#eaf5f7;border-color:#afcdd5}
   .cp-order__dot{width:3px;height:3px;border-radius:50%;background:#aac0c8}
   .cp-order__label{display:block;margin-bottom:5px;color:#71838d;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
   .cp-order__data strong{display:block;color:var(--cp-ink);font-size:11px;line-height:1.35}
@@ -196,6 +198,8 @@
           <span>{{ pedido.obra.nome }}</span>
           <span class="cp-order__dot"></span>
           <a href="{% url 'compras:detalhe_processo' pedido.processo.pk %}">{{ pedido.processo.numero }}</a>
+          <span class="cp-order__dot"></span>
+          <a class="cp-order__pdf" href="{% url 'compras:pdf_pedido_compra' pedido.pk %}" target="_blank" rel="noopener">PDF do pedido</a>
         </div>
       </div>
 
@@ -320,6 +324,9 @@
             <div class="cp-actions-header">
               <h2 class="cp-actions-title">Ações do pedido</h2>
               <div class="cp-actions-sub">Atualize somente o que precisa neste pedido.</div>
+              <div style="margin-top:10px">
+                <a class="cp-btn cp-btn--primary" href="{% url 'compras:pdf_pedido_compra' pedido.pk %}" target="_blank" rel="noopener">Abrir PDF do pedido</a>
+              </div>
             </div>
 
             {% if pedido.status != 'ENTREGUE' and pedido.status != 'CANCELADO' %}

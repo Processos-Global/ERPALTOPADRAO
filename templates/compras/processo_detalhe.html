@@ -1199,9 +1199,6 @@
     </div>
 
     <div class="pc-hero-actions">
-      {% if aprovacao_aprovada %}
-        <a class="cp-btn" href="{% url 'compras:pdf_solicitacao_aprovada' processo.pk %}" target="_blank" rel="noopener">PDF da solicitação aprovada</a>
-      {% endif %}
       {% if processo.status != 'REPROVADO' %}
         <button type="button" class="cp-btn cp-btn--primary pc-current-step-btn" data-open-tab="{% if processo.etapa_atual == 'COTACAO' %}cotacao{% elif processo.etapa_atual == 'COMPATIBILIZACAO' %}comparacao{% elif processo.etapa_atual == 'NEGOCIACAO' %}negociacao{% elif processo.etapa_atual == 'APROVACAO' %}aprovacao{% else %}pedido{% endif %}">Ir para etapa atual</button>
       {% endif %}

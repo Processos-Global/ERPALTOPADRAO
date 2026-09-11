@@ -45,7 +45,7 @@ from compras.services.permissoes import (
 from compras.services.processos import criar_processo
 from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
 from compras.services.pedidos import transicoes_status_permitidas
-from compras.services.pdf_solicitacao import gerar_pdf_solicitacao_aprovada
+from compras.services.pdf_solicitacao import gerar_pdf_pedido_compra
 from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
 
 
@@ -1422,19 +1422,21 @@ def novo_processo(request):
 
 
 @compras_acao_required(AcaoCompra.VISUALIZAR)
-def pdf_solicitacao_aprovada(request, pk):
-    processo = get_object_or_404(
-        ProcessoCompra.objects.select_related("obra", "item_cronograma", "criado_por", "comprador"),
-        pk=pk,
+def pdf_pedido_compra(request, pedido_id):
+    pedido = get_object_or_404(
+        PedidoCompra.objects
+        .select_related("obra", "fornecedor", "processo", "responsavel")
+        .prefetch_related("itens"),
+        pk=pedido_id,
     )
     try:
-        conteudo = gerar_pdf_solicitacao_aprovada(processo)
+        conteudo = gerar_pdf_pedido_compra(pedido)
     except ValidationError as exc:
         messages.error(request, str(exc))
-        return redirect("compras:detalhe_processo", pk=processo.pk)
+        return redirect("compras:lista_pedidos")
 
     resposta = HttpResponse(conteudo, content_type="application/pdf")
-    resposta["Content-Disposition"] = f'inline; filename="solicitacao-{processo.numero}-aprovada.pdf"'
+    resposta["Content-Disposition"] = f'inline; filename="pedido-{pedido.numero}.pdf"'
     return resposta
 
 
