@@ -12,7 +12,7 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from planejamento.models import ImportacaoCronogramaSuprimentos, ItemCronogramaSuprimento
-from usuarios.decorators import modulo_required
+from usuarios.decorators import algum_modulo_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma_suprimentos import (
     ImportacaoCronogramaSuprimentosError,
@@ -22,7 +22,7 @@ from planejamento.services.cronograma_suprimentos import (
 )
 
 
-@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.LEITURA)
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def painel_cronograma_suprimentos(request):
     contexto = montar_painel_cronograma_suprimentos(
         obra_id=request.GET.get("obra") or None,
@@ -39,7 +39,7 @@ def painel_cronograma_suprimentos(request):
     )
 
 
-@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.LEITURA)
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def kanban_cronograma_suprimentos(request):
     contexto = montar_kanban_cronograma_suprimentos(
         obra_id=request.GET.get("obra") or None,
@@ -166,7 +166,7 @@ def _formatar_moeda(valor):
     return f"R$ {texto}"
 
 
-@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.LEITURA)
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def historico_item_cronograma_suprimentos(request, item_id):
     item = get_object_or_404(
         ItemCronogramaSuprimento.objects.select_related(
@@ -243,7 +243,7 @@ def historico_item_cronograma_suprimentos(request, item_id):
     })
 
 
-@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.LEITURA)
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def historico_importacoes_cronograma_suprimentos(request):
     importacoes = (
         ImportacaoCronogramaSuprimentos.objects
