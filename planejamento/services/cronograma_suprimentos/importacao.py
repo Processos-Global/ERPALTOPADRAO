@@ -3,10 +3,12 @@ from __future__ import annotations
 import io
 import re
 import traceback
+from collections import defaultdict, deque
 from dataclasses import dataclass
 
 import pandas as pd
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from planejamento.models.cronograma_suprimentos import (
@@ -17,6 +19,7 @@ from planejamento.models.cronograma_suprimentos import (
 
 from .configuracoes import obter_configuracao_cronograma_suprimentos
 from .google_drive import obter_dados_planilha
+from .identidade import chave_estavel_item
 from .normalizacao import (
     converter_data,
     converter_inteiro,
@@ -32,6 +35,88 @@ CAMPOS_DATAS_REALIZADAS = (
     "data_real_negociacao",
     "data_real_contratacao",
 )
+
+
+CAMPOS_PLANEJADOS = (
+    "categoria",
+    "situacao",
+    "tipo_fluxo_compra",
+    "data_cotacao",
+    "duracao_cotacao",
+    "data_compatibilizacao",
+    "duracao_compatibilizacao",
+    "data_negociacao",
+    "duracao_negociacao",
+    "prazo_limite_contratacao",
+    "item",
+    "local",
+    "contratada_responsavel",
+    "dias_apos_inicio",
+    "mes_referencia",
+    "linha_origem",
+    "ordem",
+)
+
+
+def _carregar_itens_ativos_para_reuso():
+    """Indexa a base ativa sem alterar a identidade operacional dos itens.
+
+    Primeiro reconciliamos por obra + item + local. Se a descrição/local foi
+    corrigida na planilha, usamos a linha de origem como fallback. O PK só pode
+    ser reutilizado uma vez por importação.
+    """
+    por_chave = defaultdict(deque)
+    por_linha = defaultdict(deque)
+    qs = (
+        ItemCronogramaSuprimento.objects
+        .filter(
+            cronograma_obra__importacao__ativa=True,
+            cronograma_obra__importacao__status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
+        )
+        .select_related("cronograma_obra")
+        .order_by("cronograma_obra__obra_id", "ordem", "linha_origem", "id")
+    )
+    for item in qs:
+        obra_id = item.cronograma_obra.obra_id
+        por_chave[chave_estavel_item(obra_id, item.item, item.local)].append(item)
+        por_linha[(obra_id, int(item.linha_origem or 0))].append(item)
+    return {"por_chave": por_chave, "por_linha": por_linha, "usados": set()}
+
+
+def _retirar_reutilizavel(mapa, *, obra_id, dados_item):
+    usados = mapa["usados"]
+
+    def retirar(fila):
+        while fila and fila[0].pk in usados:
+            fila.popleft()
+        if not fila:
+            return None
+        item = fila.popleft()
+        usados.add(item.pk)
+        return item
+
+    chave = chave_estavel_item(obra_id, dados_item.get("item"), dados_item.get("local"))
+    existente = retirar(mapa["por_chave"].get(chave, deque()))
+    if existente is not None:
+        return existente
+
+    chave_linha = (int(obra_id), int(dados_item.get("linha_origem") or 0))
+    return retirar(mapa["por_linha"].get(chave_linha, deque()))
+
+
+def _tipo_fluxo_por_categoria(categoria):
+    """Resolve a classificação comercial a partir da categoria da planilha.
+
+    Sem categoria e Materiais Variados seguem o fluxo normal. As demais
+    categorias são tratadas como Grandes Fornecedores, reproduzindo a regra
+    histórica do cronograma sem carregar o valor NORMAL legado da migration.
+    """
+    texto = normalizar_texto(categoria or "")
+    if not texto:
+        return ItemCronogramaSuprimento.TipoFluxoCompra.NORMAL
+    if "MATERIA" in texto and "VARIAD" in texto:
+        return ItemCronogramaSuprimento.TipoFluxoCompra.NORMAL
+    return ItemCronogramaSuprimento.TipoFluxoCompra.GRANDE_FORNECEDOR
 
 
 def _chave_item_manual(*, obra_id, item, local, linha_origem=None):
@@ -53,21 +138,26 @@ def _carregar_ajustes_manuais_ativos():
         .filter(
             cronograma_obra__importacao__ativa=True,
             cronograma_obra__importacao__status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
-            datas_editadas_manualmente=True,
         )
+        # Preserva a classificação comercial de TODOS os itens já existentes.
+        # Assim, itens já classificados mantêm o fluxo escolhido nas próximas
+        # importações. Itens realmente novos/sem classificação entram no fluxo
+        # NORMAL principal.
         .select_related("cronograma_obra")
         .order_by("cronograma_obra_id", "ordem", "id")
     )
 
     for item in qs:
-        dados = {campo: getattr(item, campo) for campo in CAMPOS_DATAS_REALIZADAS}
-        dados.update(
-            {
-                "datas_editadas_manualmente": True,
-                "datas_editadas_por_id": item.datas_editadas_por_id,
-                "datas_editadas_em": item.datas_editadas_em,
-            }
-        )
+        dados = {}
+        if item.datas_editadas_manualmente:
+            dados.update({campo: getattr(item, campo) for campo in CAMPOS_DATAS_REALIZADAS})
+            dados.update(
+                {
+                    "datas_editadas_manualmente": True,
+                    "datas_editadas_por_id": item.datas_editadas_por_id,
+                    "datas_editadas_em": item.datas_editadas_em,
+                }
+            )
         chave_exata = _chave_item_manual(
             obra_id=item.cronograma_obra.obra_id,
             item=item.item,
@@ -335,6 +425,9 @@ def _ler_aba(df: pd.DataFrame, *, nome_aba: str = "") -> tuple[object, list[dict
             {
                 "categoria": categoria_atual,
                 "situacao": situacao,
+                # A categoria da planilha é a fonte de verdade da classificação:
+                # Materiais Variados/sem categoria -> normal; demais -> Grande Fornecedor.
+                "tipo_fluxo_compra": _tipo_fluxo_por_categoria(categoria_atual),
                 "data_cotacao": converter_data(_valor(row, colunas["data_cotacao"])),
                 "duracao_cotacao": converter_inteiro(_valor(row, colunas["duracao_cotacao"])),
                 "data_compatibilizacao": converter_data(_valor(row, colunas["data_compatibilizacao"])),
@@ -363,7 +456,7 @@ def _ler_aba(df: pd.DataFrame, *, nome_aba: str = "") -> tuple[object, list[dict
 
 def importar_cronograma_suprimentos(*, usuario=None, forcar: bool = False):
     config = obter_configuracao_cronograma_suprimentos()
-    ajustes_manuais_exatos, ajustes_manuais_fallback = _carregar_ajustes_manuais_ativos()
+    itens_ativos_por_chave = _carregar_itens_ativos_para_reuso()
 
     try:
         dados = obter_dados_planilha(
@@ -448,12 +541,6 @@ def importar_cronograma_suprimentos(*, usuario=None, forcar: bool = False):
                 dtype=object,
             )
             inicio_obra, itens = _ler_aba(df, nome_aba=nome_aba)
-            _aplicar_ajustes_manuais(
-                itens,
-                obra_id=obra.pk,
-                exatos=ajustes_manuais_exatos,
-                fallback=ajustes_manuais_fallback,
-            )
             total_itens += len(itens)
             abas_preparadas.append(
                 {
@@ -482,16 +569,42 @@ def importar_cronograma_suprimentos(*, usuario=None, forcar: bool = False):
                     quantidade_itens=len(aba["itens"]),
                     ordem_aba=aba["ordem_aba"],
                 )
-                ItemCronogramaSuprimento.objects.bulk_create(
-                    [
-                        ItemCronogramaSuprimento(
-                            cronograma_obra=cronograma_obra,
-                            **item,
+                novos = []
+                for dados_item in aba["itens"]:
+                    existente = _retirar_reutilizavel(
+                        itens_ativos_por_chave,
+                        obra_id=aba["obra"].pk,
+                        dados_item=dados_item,
+                    )
+
+                    if existente is None:
+                        novos.append(
+                            ItemCronogramaSuprimento(
+                                cronograma_obra=cronograma_obra,
+                                **dados_item,
+                            )
                         )
-                        for item in aba["itens"]
-                    ],
-                    batch_size=1000,
-                )
+                        continue
+
+                    existente.cronograma_obra = cronograma_obra
+                    for campo in CAMPOS_PLANEJADOS:
+                        setattr(existente, campo, dados_item.get(campo))
+
+                    # A coluna de contratação realizada da planilha pode
+                    # preencher uma base ainda sem marco operacional, mas nunca
+                    # apaga/substitui uma data já registrada pelo sistema.
+                    if (
+                        existente.data_real_contratacao is None
+                        and dados_item.get("data_real_contratacao") is not None
+                    ):
+                        existente.data_real_contratacao = dados_item["data_real_contratacao"]
+                        campos_update = ["cronograma_obra", *CAMPOS_PLANEJADOS, "data_real_contratacao"]
+                    else:
+                        campos_update = ["cronograma_obra", *CAMPOS_PLANEJADOS]
+                    existente.save(update_fields=campos_update)
+
+                if novos:
+                    ItemCronogramaSuprimento.objects.bulk_create(novos, batch_size=1000)
 
             ImportacaoCronogramaSuprimentos.objects.filter(ativa=True).exclude(
                 pk=importacao.pk

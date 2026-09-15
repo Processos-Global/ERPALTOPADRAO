@@ -37,10 +37,21 @@ def criar_processo(
     atividades = list(atividades)
     itens = list(itens)
 
+    # Somente GRANDE_FORNECEDOR usa o fluxo paralelo.
+    # Ausente, legado ou não reconhecido permanece no fluxo normal principal.
+    fluxo_grande_fornecedor = bool(item_cronograma.usa_fluxo_grande_fornecedor)
+
+    # A atividade continua sendo obrigatória também para Grande Fornecedor.
+    # O que muda no fluxo especial é somente o detalhamento dos itens: os
+    # micro itens nascem depois, dentro da matriz de compatibilização.
     if not atividades:
         raise ValidationError("Selecione pelo menos uma atividade relacionada à compra.")
-    if not itens:
+    if not itens and not fluxo_grande_fornecedor:
         raise ValidationError("Inclua pelo menos um item para iniciar a compra.")
+    if fluxo_grande_fornecedor:
+        # No fluxo especial o cronograma representa somente o suprimento macro.
+        # Os itens reais nascem exclusivamente na matriz de compatibilização.
+        itens = []
 
     for atividade in atividades:
         if atividade.obra_id != obra_id:
@@ -53,10 +64,12 @@ def criar_processo(
         obra_id=obra_id,
         item_cronograma=item_cronograma,
         titulo=titulo or item_cronograma.item,
+        fluxo_grande_fornecedor=fluxo_grande_fornecedor,
         descricao=descricao,
         comprador=comprador or usuario,
         observacao=observacao,
-        status=(ProcessoCompra.Status.SOLICITACAO_COTACAO if iniciar_cotacao else ProcessoCompra.Status.RASCUNHO),
+        etapa_atual=(ProcessoCompra.Etapa.COMPATIBILIZACAO if fluxo_grande_fornecedor else ProcessoCompra.Etapa.COTACAO),
+        status=(ProcessoCompra.Status.EM_COMPATIBILIZACAO if fluxo_grande_fornecedor else (ProcessoCompra.Status.SOLICITACAO_COTACAO if iniciar_cotacao else ProcessoCompra.Status.RASCUNHO)),
         criado_por=usuario,
     )
 
@@ -106,10 +119,21 @@ def criar_processo(
         usuario,
         (
             f"Compra criada com {len(atividades_por_id)} atividade(s) e {len(necessidades)} item(ns). "
-            "Os fornecedores serão definidos pelo comprador na etapa de cotação."
+            + (
+                "Os micro itens e fornecedores serão definidos na matriz de Grande Fornecedor."
+                if fluxo_grande_fornecedor
+                else "Os fornecedores serão definidos pelo comprador na etapa de cotação."
+            )
         ),
     )
-    if iniciar_cotacao:
+    if fluxo_grande_fornecedor:
+        registrar_evento(
+            processo,
+            "FLUXO_GRANDE_FORNECEDOR",
+            usuario,
+            "Processo aberto como Grande Fornecedor e direcionado para a matriz de compatibilização.",
+        )
+    elif iniciar_cotacao:
         registrar_evento(processo, "PEDIDO_ENVIADO", usuario, "Pedido de compra enviado ao Suprimentos.")
         registrar_evento(
             processo,

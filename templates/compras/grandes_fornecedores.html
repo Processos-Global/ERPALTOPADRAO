@@ -1,0 +1,1047 @@
+{% extends "layouts/base.html" %}
+{% block title %}Grandes Fornecedores | Compras{% endblock %}
+
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+<style>
+.gfa-page{
+    display:grid;
+    gap:16px;
+}
+
+/* Tipografia geral maior para este painel */
+.gfa-page .cp-input{
+    font-size:13px;
+    min-height:38px;
+}
+
+.gfa-page .cp-btn{
+    font-size:12px;
+    min-height:34px;
+}
+
+.gfa-page .cp-label{
+    font-size:11px;
+    font-weight:800;
+}
+
+.gfa-page .cp-kpi span{
+    font-size:11px;
+}
+
+.gfa-page .cp-kpi strong{
+    font-size:24px;
+}
+
+.gfa-kpis{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+}
+
+.gfa-filter{
+    display:grid;
+    grid-template-columns:minmax(340px,2fr) minmax(190px,1fr) minmax(200px,1fr) auto;
+    gap:10px;
+    align-items:end;
+}
+
+/* Lista de pedidos */
+.gfa-orders{
+    display:grid;
+    gap:12px;
+}
+
+.gfa-order{
+    border:1px solid #aebfc6;
+    border-radius:12px;
+    background:#fff;
+    overflow:hidden;
+    box-shadow:0 3px 12px rgba(38,57,65,.06);
+}
+
+.gfa-order__head{
+    display:grid;
+    grid-template-columns:
+        minmax(300px,1.35fr)
+        minmax(180px,.72fr)
+        minmax(220px,.88fr)
+        minmax(340px,1.15fr)
+        250px;
+    gap:0;
+    align-items:stretch;
+    padding:0;
+    background:#f4f7f8;
+    border-bottom:1px solid transparent;
+}
+
+.gfa-order.is-open .gfa-order__head{
+    border-bottom-color:#aebfc6;
+}
+
+.gfa-order__cell{
+    min-width:0;
+    min-height:112px;
+    padding:17px 18px;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    align-items:flex-start;
+    border-right:1px solid #d4dfe3;
+}
+
+.gfa-order__cell:last-child{
+    border-right:0;
+}
+
+.gfa-order__cell--actions{
+    justify-content:center;
+    align-items:flex-end;
+}
+
+
+.gfa-order__label{
+    display:block;
+    color:#6b8088;
+    font-size:11px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.045em;
+    line-height:1;
+    margin:0 0 9px 0;
+}
+
+.gfa-order__value{
+    display:block;
+    color:#263f49;
+    font-size:15px;
+    font-weight:900;
+    line-height:1.3;
+}
+
+.gfa-order__value--primary{
+    font-size:17px;
+}
+
+.gfa-order__sub{
+    display:block;
+    margin-top:7px;
+    color:#74878e;
+    font-size:12px;
+    line-height:1.35;
+}
+
+.gfa-order__summary{
+    display:flex;
+    gap:7px;
+    flex-wrap:wrap;
+    margin-top:8px;
+    min-height:27px;
+}
+
+.gfa-count{
+    display:inline-flex;
+    align-items:center;
+    min-height:27px;
+    padding:4px 9px;
+    border:1px solid #c5d3d8;
+    border-radius:999px;
+    background:#fff;
+    color:#49616a;
+    font-size:11px;
+    font-weight:900;
+    line-height:1;
+}
+
+.gfa-status-main{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:116px;
+    min-height:32px;
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.gfa-status-main--ok{
+    background:#e6f5ec;
+    color:#246842;
+    border:1px solid #b7dec6;
+}
+
+.gfa-status-main--warn{
+    background:#fff4dc;
+    color:#8b5c04;
+    border:1px solid #ead19a;
+}
+
+.gfa-status-main--active{
+    background:#e8f4f6;
+    color:#087f82;
+    border:1px solid #bddde1;
+}
+
+.gfa-status-main--muted{
+    background:#f0f2f3;
+    color:#66787f;
+    border:1px solid #d4dcdf;
+}
+
+.gfa-progress{
+    width:100%;
+    max-width:300px;
+    height:8px;
+    margin-top:9px;
+    background:#dce5e8;
+    border-radius:999px;
+    overflow:hidden;
+}
+
+.gfa-progress__bar{
+    height:100%;
+    background:#168da0;
+    border-radius:999px;
+}
+
+.gfa-order__actions{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    flex-wrap:nowrap;
+    width:100%;
+}
+
+.gfa-toggle{
+    min-width:108px;
+}
+
+.gfa-order__actions .cp-btn{
+    min-height:38px;
+    padding-left:12px;
+    padding-right:12px;
+    white-space:nowrap;
+    font-size:12px;
+}
+
+.gfa-order__actions .cp-btn--primary{
+    min-width:74px;
+}
+
+.gfa-toggle__icon{
+    display:inline-block;
+    margin-right:5px;
+    transition:transform .18s ease;
+}
+
+.gfa-order.is-open .gfa-toggle__icon{
+    transform:rotate(90deg);
+}
+
+/* Conteúdo expandido */
+.gfa-order__body{
+    display:none;
+    padding:0;
+}
+
+.gfa-order.is-open .gfa-order__body{
+    display:block;
+}
+
+.gfa-table-wrap{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    overflow-y:visible;
+}
+
+.gfa-table{
+    width:max-content;
+    min-width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+}
+
+.gfa-table th,
+.gfa-table td{
+    padding:12px 11px;
+    border-right:1px solid #aebfc6;
+    border-bottom:1px solid #aebfc6;
+    vertical-align:middle;
+    background:#fff;
+    color:#334d57;
+    font-size:12px;
+    line-height:1.4;
+}
+
+.gfa-table th{
+    background:#eaf0f2;
+    color:#3d5660;
+    font-size:10px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.035em;
+    white-space:nowrap;
+    text-align:left;
+    border-bottom:1px solid #869fa9;
+}
+
+.gfa-table th:last-child,
+.gfa-table td:last-child{
+    border-right:0;
+}
+
+.gfa-table tbody tr:last-child td{
+    border-bottom:0;
+}
+
+.gfa-table tbody tr:hover td{
+    background:#f8fbfb;
+}
+
+.gfa-material{
+    width:285px;
+    min-width:285px;
+}
+
+.gfa-material strong{
+    display:block;
+    color:#243f49;
+    font-size:13px;
+    line-height:1.35;
+}
+
+.gfa-sub{
+    display:block;
+    color:#7a8d94;
+    font-size:10.5px;
+    margin-top:3px;
+    line-height:1.35;
+}
+
+.gfa-pav{
+    width:105px;
+    min-width:105px;
+    white-space:nowrap;
+}
+
+.gfa-local{
+    width:125px;
+    min-width:125px;
+    white-space:nowrap;
+}
+
+.gfa-qtd{
+    width:105px;
+    min-width:105px;
+    white-space:nowrap;
+}
+
+.gfa-previsao{
+    width:155px;
+    min-width:155px;
+}
+
+.gfa-status-col{
+    width:175px;
+    min-width:175px;
+}
+
+.gfa-inline{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.gfa-date{
+    width:138px;
+    min-width:138px !important;
+}
+
+.gfa-status{
+    width:160px;
+    min-width:160px !important;
+}
+
+.gfa-save-state{
+    display:block;
+    min-height:14px;
+    margin-top:3px;
+    color:#087f82;
+    font-size:10px;
+    font-weight:900;
+}
+
+.gfa-save-state.is-error{
+    color:#b42318;
+}
+
+.gfa-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:105px;
+    min-height:28px;
+    font-size:10.5px;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.gfa-empty{
+    padding:36px;
+    border:1px dashed #bdcbd0;
+    border-radius:12px;
+    background:#fff;
+    text-align:center;
+    color:#74878e;
+    font-size:13px;
+}
+
+/* Modal de recebimento */
+.gfa-modal{
+    border:0;
+    padding:0;
+    border-radius:14px;
+    box-shadow:0 24px 65px rgba(15,23,42,.25);
+    width:min(1000px,96vw);
+    max-height:90vh;
+    overflow:hidden;
+}
+
+.gfa-modal::backdrop{
+    background:rgba(25,40,48,.42);
+    backdrop-filter:blur(2px);
+}
+
+.gfa-modal__head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:17px 19px;
+    border-bottom:1px solid #cbd8dc;
+    background:#f6f9fa;
+}
+
+.gfa-modal__head strong{
+    font-size:16px;
+    color:#203943;
+}
+
+.gfa-modal__body{
+    padding:19px;
+    max-height:calc(90vh - 76px);
+    overflow:auto;
+    font-size:12px;
+}
+
+.gfa-rec-grid{
+    display:grid;
+    grid-template-columns:minmax(180px,.8fr) minmax(180px,.8fr) minmax(260px,1.3fr);
+    gap:11px;
+    padding:13px;
+    border:1px solid #cbd8dc;
+    border-radius:10px;
+    background:#fbfcfc;
+}
+
+.gfa-rec-items{
+    margin-top:14px;
+    display:grid;
+    gap:9px;
+}
+
+.gfa-rec-row{
+    display:grid;
+    grid-template-columns:minmax(320px,1fr) 155px 175px;
+    gap:11px;
+    align-items:end;
+    padding:12px 13px;
+    border:1px solid #c7d5da;
+    border-radius:10px;
+    background:#fff;
+}
+
+.gfa-rec-row strong{
+    color:#294650;
+    font-size:13px;
+}
+
+.gfa-observacao{
+    margin-top:13px;
+}
+
+.gfa-modal__foot{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:16px;
+    padding-top:14px;
+    border-top:1px solid #d9e2e5;
+}
+
+@media(max-width:1350px){
+    .gfa-order__head{
+        grid-template-columns:minmax(260px,1.2fr) minmax(170px,.8fr) minmax(190px,.9fr) minmax(300px,1.1fr);
+    }
+
+    .gfa-order__cell--actions{
+        grid-column:1 / -1;
+        min-height:auto;
+        border-top:1px solid #d4dfe3;
+        border-right:0;
+        align-items:flex-end;
+        padding-top:11px;
+        padding-bottom:11px;
+    }
+}
+
+@media(max-width:900px){
+    .gfa-kpis,
+    .gfa-filter,
+    .gfa-rec-grid,
+    .gfa-rec-row{
+        grid-template-columns:1fr;
+    }
+
+    .gfa-order__head{
+        grid-template-columns:1fr;
+    }
+
+    .gfa-order__cell{
+        min-height:auto;
+        border-right:0;
+        border-bottom:1px solid #d4dfe3;
+    }
+
+    .gfa-order__cell:last-child{
+        border-bottom:0;
+    }
+
+    .gfa-order__cell--actions{
+        grid-column:auto;
+        align-items:flex-start;
+    }
+
+    .gfa-order__actions{
+        justify-content:flex-start;
+        flex-wrap:wrap;
+    }
+
+    .gfa-modal{
+        width:96vw;
+    }
+}
+
+    .gfa-modal{
+        width:96vw;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cp-page gfa-page">
+
+    <header class="cp-head">
+        <div class="cp-head__copy">
+            <div class="cp-eyebrow">Compras</div>
+            <h1 class="cp-title">Grandes Fornecedores</h1>
+            <div class="cp-sub">Acompanhamento operacional condensado por pedido.</div>
+        </div>
+
+        <div class="cp-actions">
+            <a class="cp-btn" href="{% url 'compras:dashboard' %}">Painel</a>
+            <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Processos</a>
+        </div>
+    </header>
+
+    <div class="gfa-kpis">
+        <div class="cp-kpi">
+            <span>Itens acompanhados</span>
+            <strong>{{ total_itens }}</strong>
+        </div>
+        <div class="cp-kpi">
+            <span>Itens entregues</span>
+            <strong>{{ total_recebidos }}</strong>
+        </div>
+        <div class="cp-kpi">
+            <span>Pendentes</span>
+            <strong>{{ total_pendentes }}</strong>
+        </div>
+    </div>
+
+    <form class="cp-filter gfa-filter" method="get">
+        <input
+            class="cp-input"
+            name="q"
+            value="{{ filtros.q }}"
+            placeholder="Buscar obra, pedido, processo, material, pavimento, local ou fornecedor"
+        >
+
+        <select class="cp-input" name="obra">
+            <option value="">Todas as obras</option>
+            {% for obra in obras %}
+                <option value="{{ obra.pk }}" {% if filtros.obra == obra.pk|stringformat:'s' %}selected{% endif %}>
+                    {{ obra.nome }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select class="cp-input" name="status">
+            <option value="">Todos os status</option>
+            {% for v,l in status_choices %}
+                <option value="{{ v }}" {% if filtros.status == v %}selected{% endif %}>
+                    {{ l }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <button class="cp-btn cp-btn--primary" type="submit">Filtrar</button>
+    </form>
+
+    {% if rows %}
+    {% regroup rows by processo as processos_agrupados %}
+    <div class="gfa-orders">
+        {% for grupo_processo in processos_agrupados %}
+            {% regroup grupo_processo.list by pedido as pedidos_do_processo %}
+            {% for grupo in pedidos_do_processo %}
+                {% with primeira=grupo.list.0 %}
+                <section
+                    class="gfa-order js-order-group"
+                    id="grupo-{% if grupo.grouper %}pedido-{{ grupo.grouper.pk }}{% else %}aguardando-{{ primeira.processo.pk }}-{{ forloop.counter }}{% endif %}"
+                >
+                    <div class="gfa-order__head">
+                        <div class="gfa-order__cell">
+                            <span class="gfa-order__label">Obra</span>
+                            <span class="gfa-order__value gfa-order__value--primary">{{ primeira.processo.obra }}</span>
+                            <span class="gfa-order__sub">
+                                Processo
+                                <a href="{% url 'compras:grande_fornecedor_matriz' primeira.processo.pk %}">
+                                    {{ primeira.processo.numero }}
+                                </a>
+                            </span>
+                        </div>
+
+                        <div class="gfa-order__cell">
+                            <span class="gfa-order__label">Pedido</span>
+                            <span class="gfa-order__value">
+                                {% if primeira.pedido %}
+                                    {{ primeira.pedido.numero }}
+                                {% else %}
+                                    Aguardando geração
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="gfa-order__cell">
+                            <span class="gfa-order__label">Fornecedor</span>
+                            <span class="gfa-order__value">
+                                {% if primeira.fornecedor %}
+                                    {{ primeira.fornecedor.nome_exibicao }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="gfa-order__cell">
+                            <span class="gfa-order__label">Andamento</span>
+
+                            <span class="gfa-status-main gfa-status-main--active js-group-status">
+                                Calculando…
+                            </span>
+
+                            <div class="gfa-order__summary">
+                                <span class="gfa-count js-count-total">{{ grupo.list|length }} item{{ grupo.list|length|pluralize:"s" }}</span>
+                                <span class="gfa-count js-count-entregues">0 entregues</span>
+                                <span class="gfa-count js-count-parciais" hidden>0 parciais</span>
+                                <span class="gfa-count js-count-pendentes" hidden>0 pendentes</span>
+                            </div>
+
+                            <div class="gfa-progress" title="0% entregue">
+                                <div class="gfa-progress__bar js-progress-bar" style="width:0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="gfa-order__cell gfa-order__cell--actions">
+                            <div class="gfa-order__actions">
+                            {% if primeira.pedido %}
+                                <a
+                                    class="cp-btn cp-btn--sm"
+                                    href="{% url 'compras:pdf_pedido_compra' primeira.pedido.pk %}"
+                                    target="_blank"
+                                >
+                                    PDF
+                                </a>
+
+                                {% if pode_receber %}
+                                    <button
+                                        class="cp-btn cp-btn--sm cp-btn--primary js-receive-btn"
+                                        type="button"
+                                        data-open-receive="{{ primeira.pedido.pk }}"
+                                    >
+                                        Receber
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+
+                            <button
+                                class="cp-btn cp-btn--sm gfa-toggle"
+                                type="button"
+                                data-toggle-group="{% if grupo.grouper %}pedido-{{ grupo.grouper.pk }}{% else %}aguardando-{{ primeira.processo.pk }}-{{ forloop.counter }}{% endif %}"
+                                aria-expanded="false"
+                            >
+                                <span class="gfa-toggle__icon">▶</span>
+                                <span data-toggle-label>Ver itens</span>
+                            </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="gfa-order__body">
+                        <div class="gfa-table-wrap">
+                            <table class="gfa-table">
+                                <thead>
+                                    <tr>
+                                        <th>Material</th>
+                                        <th>Pavimento</th>
+                                        <th>Local</th>
+                                        <th>Qtd. total</th>
+                                        <th>Qtd. recebida</th>
+                                        <th>Previsão</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {% for row in grupo.list %}
+                                    <tr class="js-status-row" data-status="{{ row.status_codigo }}">
+                                        <td class="gfa-material">
+                                            <strong>
+                                                {% if row.material %}
+                                                    {{ row.material.descricao_completa }}
+                                                {% else %}
+                                                    {{ row.item.item }}
+                                                {% endif %}
+                                            </strong>
+                                            <span class="gfa-sub">
+                                                {% if row.material %}{{ row.material.codigo|default:"MAT" }}{% endif %}
+                                                · {{ row.item.unidade }}
+                                            </span>
+                                        </td>
+
+                                        <td class="gfa-pav">{{ row.item.pavimento|default:"—" }}</td>
+                                        <td class="gfa-local">{{ row.item.local|default:"—" }}</td>
+                                        <td class="gfa-qtd">{{ row.quantidade|floatformat:2 }} {{ row.item.unidade }}</td>
+                                        <td class="gfa-qtd">{{ row.quantidade_recebida|floatformat:2 }} {{ row.item.unidade }}</td>
+
+                                        <td class="gfa-previsao">
+                                            {% if pode_status and row.pedido_item and row.status_codigo != 'ENTREGUE' and row.status_codigo != 'CANCELADO' %}
+                                                <form
+                                                    class="js-previsao-form"
+                                                    method="post"
+                                                    action="{% url 'compras:gf_atualizar_previsao_item' row.item.pk %}"
+                                                >
+                                                    {% csrf_token %}
+                                                    <input
+                                                        class="cp-input gfa-date js-previsao-input"
+                                                        type="date"
+                                                        name="previsao_entrega"
+                                                        value="{{ row.previsao|date:'Y-m-d' }}"
+                                                        required
+                                                    >
+                                                    <span class="gfa-save-state js-previsao-state"></span>
+                                                </form>
+                                            {% else %}
+                                                {{ row.previsao|date:"d/m/Y"|default:"—" }}
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="gfa-status-col">
+                                            {% if pode_status and row.pedido_item and row.transicoes %}
+                                                <form method="post" action="{% url 'compras:gf_atualizar_status_item' row.item.pk %}">
+                                                    {% csrf_token %}
+                                                    <select class="cp-input gfa-status" name="status" onchange="this.form.submit()">
+                                                        <option value="">{{ row.status_label }}</option>
+                                                        {% for v,l in row.transicoes %}
+                                                            <option value="{{ v }}">{{ l }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </form>
+                                            {% else %}
+                                                <span class="cp-badge gfa-badge
+                                                    {% if row.status_codigo == 'ENTREGUE' %}cp-badge--ok
+                                                    {% elif row.status_codigo == 'PARCIAL' %}cp-badge--warn
+                                                    {% else %}cp-badge--active
+                                                    {% endif %}
+                                                ">
+                                                    {{ row.status_label }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                {% endwith %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="gfa-empty">Nenhum item encontrado.</div>
+    {% endif %}
+
+    {% for grupo in pedidos_recebimento %}
+    <dialog class="gfa-modal" id="receive-{{ grupo.pedido.pk }}">
+        <div class="gfa-modal__head">
+            <div>
+                <strong>Registrar recebimento · {{ grupo.pedido.numero }}</strong>
+                <div class="gfa-sub">{{ grupo.pedido.fornecedor.nome_exibicao }}</div>
+            </div>
+            <button class="cp-btn cp-btn--sm" type="button" data-close>Fechar</button>
+        </div>
+
+        <div class="gfa-modal__body">
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="{% url 'compras:gf_receber_pedido' grupo.pedido.pk %}"
+            >
+                {% csrf_token %}
+
+                <div class="gfa-rec-grid">
+                    <div>
+                        <label class="cp-label">Número da NF</label>
+                        <input class="cp-input" name="numero_nota_fiscal" required>
+                    </div>
+
+                    <div>
+                        <label class="cp-label">Valor total da NF</label>
+                        <input class="cp-input" name="valor_total_nota" inputmode="decimal" required>
+                    </div>
+
+                    <div>
+                        <label class="cp-label">Arquivo da NF</label>
+                        <input class="cp-input" type="file" name="arquivo_nota_fiscal" required>
+                    </div>
+                </div>
+
+                <div class="gfa-rec-items">
+                    {% for row in grupo.rows %}
+                        {% if row.pedido_item %}
+                        <div class="gfa-rec-row">
+                            <div>
+                                <strong>{{ row.item.item }}</strong>
+                                <span class="gfa-sub">
+                                    {{ row.item.pavimento|default:"—" }}
+                                    · {{ row.item.local|default:"—" }}
+                                    · saldo {{ row.pedido_item.saldo_receber|floatformat:2 }} {{ row.item.unidade }}
+                                </span>
+                            </div>
+
+                            <div>
+                                <label class="cp-label">Qtd. recebida</label>
+                                <input
+                                    class="cp-input"
+                                    name="item_{{ row.pedido_item.pk }}"
+                                    inputmode="decimal"
+                                    placeholder="0"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="cp-label">Valor na NF</label>
+                                <input
+                                    class="cp-input"
+                                    name="valor_item_{{ row.pedido_item.pk }}"
+                                    inputmode="decimal"
+                                    placeholder="0,00"
+                                >
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="gfa-observacao">
+                    <label class="cp-label">Observação</label>
+                    <textarea class="cp-input" name="observacao" rows="3"></textarea>
+                </div>
+
+                <div class="gfa-modal__foot">
+                    <button class="cp-btn" type="button" data-close>Cancelar</button>
+                    <button class="cp-btn cp-btn--primary" type="submit">Registrar recebimento</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+    {% endfor %}
+
+</div>
+
+<script>
+document.querySelectorAll('.js-order-group').forEach((group) => {
+    const rows = [...group.querySelectorAll('.js-status-row')];
+    const total = rows.length;
+
+    let entregues = 0;
+    let parciais = 0;
+    let cancelados = 0;
+    let pendentes = 0;
+
+    rows.forEach((row) => {
+        const status = (row.dataset.status || '').toUpperCase();
+
+        if (status === 'ENTREGUE') {
+            entregues += 1;
+        } else if (status === 'PARCIAL') {
+            parciais += 1;
+        } else if (status === 'CANCELADO') {
+            cancelados += 1;
+        } else {
+            pendentes += 1;
+        }
+    });
+
+    const validos = Math.max(total - cancelados, 0);
+    const progresso = validos ? Math.round((entregues / validos) * 100) : 0;
+
+    const entreguesEl = group.querySelector('.js-count-entregues');
+    const parciaisEl = group.querySelector('.js-count-parciais');
+    const pendentesEl = group.querySelector('.js-count-pendentes');
+    const progress = group.querySelector('.js-progress-bar');
+    const progressWrap = group.querySelector('.gfa-progress');
+    const statusEl = group.querySelector('.js-group-status');
+    const receiveBtn = group.querySelector('.js-receive-btn');
+
+    if (entreguesEl) entreguesEl.textContent = `${entregues} entregue${entregues === 1 ? '' : 's'}`;
+
+    if (parciaisEl) {
+        parciaisEl.textContent = `${parciais} parcial${parciais === 1 ? '' : 'is'}`;
+        parciaisEl.hidden = parciais === 0;
+    }
+
+    if (pendentesEl) {
+        pendentesEl.textContent = `${pendentes} pendente${pendentes === 1 ? '' : 's'}`;
+        pendentesEl.hidden = pendentes === 0;
+    }
+
+    if (progress) progress.style.width = `${progresso}%`;
+    if (progressWrap) progressWrap.title = `${progresso}% entregue`;
+
+    let geral = 'Pendente';
+    let statusClass = 'gfa-status-main--active';
+
+    if (total > 0 && cancelados === total) {
+        geral = 'Cancelado';
+        statusClass = 'gfa-status-main--muted';
+    } else if (validos > 0 && entregues === validos) {
+        geral = 'Entregue';
+        statusClass = 'gfa-status-main--ok';
+    } else if (entregues > 0 || parciais > 0) {
+        geral = 'Parcial';
+        statusClass = 'gfa-status-main--warn';
+    }
+
+    if (statusEl) {
+        statusEl.textContent = geral;
+        statusEl.classList.remove(
+            'gfa-status-main--ok',
+            'gfa-status-main--warn',
+            'gfa-status-main--active',
+            'gfa-status-main--muted'
+        );
+        statusEl.classList.add(statusClass);
+    }
+
+    if (receiveBtn && (geral === 'Entregue' || geral === 'Cancelado')) {
+        receiveBtn.hidden = true;
+    }
+});
+
+document.querySelectorAll('[data-toggle-group]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const section = document.getElementById('grupo-' + button.dataset.toggleGroup);
+        if (!section) return;
+
+        const open = section.classList.toggle('is-open');
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        const label = button.querySelector('[data-toggle-label]');
+        if (label) {
+            label.textContent = open ? 'Recolher' : 'Ver itens';
+        }
+    });
+});
+
+document.querySelectorAll('[data-open-receive]').forEach((button) => {
+    button.addEventListener('click', () => {
+        document.getElementById('receive-' + button.dataset.openReceive)?.showModal();
+    });
+});
+
+document.querySelectorAll('[data-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+        button.closest('dialog')?.close();
+    });
+});
+
+document.querySelectorAll('.gfa-modal').forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+});
+
+document.querySelectorAll('.js-previsao-form').forEach((form) => {
+    const input = form.querySelector('.js-previsao-input');
+    const state = form.querySelector('.js-previsao-state');
+
+    if (!input || !state) return;
+
+    input.addEventListener('change', async () => {
+        if (!input.value) return;
+
+        state.textContent = 'Salvando…';
+        state.classList.remove('is-error');
+        input.disabled = true;
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao salvar');
+            }
+
+            state.textContent = 'Salvo ✓';
+
+            window.setTimeout(() => {
+                if (state.textContent === 'Salvo ✓') {
+                    state.textContent = '';
+                }
+            }, 1800);
+        } catch (error) {
+            state.textContent = 'Erro ao salvar';
+            state.classList.add('is-error');
+        } finally {
+            input.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

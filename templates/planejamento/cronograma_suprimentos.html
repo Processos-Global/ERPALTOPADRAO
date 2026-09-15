@@ -775,6 +775,7 @@
     </div>
 
     <div class="ps-actions">
+      <a class="ps-btn" href="{% url 'compras:grandes_fornecedores' %}">Grandes Fornecedores</a>
       <a class="ps-btn ps-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id }}{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>
         Kanban
@@ -957,15 +958,15 @@
               </td>
 
               <td class="ps-milestone">
-                <div class="ps-milestone-label">Planejado</div>
-                <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_cotacao %}done{% elif item.cotacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_cotacao|date:"d/m/Y"|default:"—" }}</strong></div>
-                {% if item.data_real_cotacao %}
-                  <div class="ps-milestone-real done">Realizado {{ item.data_real_cotacao|date:"d/m/Y" }}</div>
-                  {% if item.cotacao_desvio_label %}<span class="ps-delta {{ item.cotacao_desvio_classe }}">{{ item.cotacao_desvio_label }}</span>{% endif %}
-                {% elif item.cotacao_atrasada %}
-                  <div class="ps-milestone-real late">Pendente · atrasado</div>
+                {% if item.usa_fluxo_grande_fornecedor %}
+                  <div class="ps-milestone-label">Não aplicável</div><div class="ps-milestone-real done">Fluxo inicia na compatibilização</div>
                 {% else %}
-                  <div class="ps-milestone-real">Pendente</div>
+                  <div class="ps-milestone-label">Planejado</div>
+                  <div class="ps-milestone-date"><span class="ps-milestone-status {% if item.data_real_cotacao %}done{% elif item.cotacao_atrasada %}late{% endif %}"></span><strong>{{ item.data_cotacao|date:"d/m/Y"|default:"—" }}</strong></div>
+                  {% if item.data_real_cotacao %}
+                    <div class="ps-milestone-real done">Realizado {{ item.data_real_cotacao|date:"d/m/Y" }}</div>
+                    {% if item.cotacao_desvio_label %}<span class="ps-delta {{ item.cotacao_desvio_classe }}">{{ item.cotacao_desvio_label }}</span>{% endif %}
+                  {% elif item.cotacao_atrasada %}<div class="ps-milestone-real late">Pendente · atrasado</div>{% else %}<div class="ps-milestone-real">Pendente</div>{% endif %}
                 {% endif %}
               </td>
 
@@ -1053,6 +1054,7 @@
                           data-base-compat="{{ item.data_compatibilizacao|date:'d/m/Y'|default:'—' }}"
                           data-base-negociacao="{{ item.data_negociacao|date:'d/m/Y'|default:'—' }}"
                           data-base-contratacao="{{ item.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}"
+                          data-grande-fornecedor="{% if item.usa_fluxo_grande_fornecedor %}1{% else %}0{% endif %}"
                           data-real-cotacao="{{ item.data_real_cotacao|date:'Y-m-d' }}"
                           data-real-compat="{{ item.data_real_compatibilizacao|date:'Y-m-d' }}"
                           data-real-negociacao="{{ item.data_real_negociacao|date:'Y-m-d' }}"
@@ -1358,7 +1360,10 @@
     fields.baseCompat.textContent = button.dataset.baseCompat || '—';
     fields.baseNegociacao.textContent = button.dataset.baseNegociacao || '—';
     fields.baseContratacao.textContent = button.dataset.baseContratacao || '—';
-    fields.realCotacao.value = button.dataset.realCotacao || '';
+    const grandeFornecedor = button.dataset.grandeFornecedor === '1';
+    fields.realCotacao.value = grandeFornecedor ? '' : (button.dataset.realCotacao || '');
+    fields.realCotacao.disabled = grandeFornecedor;
+    fields.baseCotacao.textContent = grandeFornecedor ? 'Não aplicável' : (button.dataset.baseCotacao || '—');
     fields.realCompat.value = button.dataset.realCompat || '';
     fields.realNegociacao.value = button.dataset.realNegociacao || '';
     fields.realContratacao.value = button.dataset.realContratacao || '';
@@ -1366,7 +1371,7 @@
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ps-modal-open');
     requestAnimationFrame(() => {
-      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao].find((input) => !input.value);
+      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao].find((input) => !input.disabled && !input.value);
       (firstEmpty || fields.realContratacao).focus({ preventScroll: true });
     });
   }

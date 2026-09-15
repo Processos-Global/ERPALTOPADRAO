@@ -39,6 +39,11 @@ class ProcessoCompra(models.Model):
         related_name="processos_compra",
     )
     titulo = models.CharField(max_length=255)
+    fluxo_grande_fornecedor = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Congela a classificação do suprimento no momento da abertura do processo.",
+    )
     descricao = models.TextField(blank=True)
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL,

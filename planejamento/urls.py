@@ -11,6 +11,10 @@ from planejamento.views import (
     painel_cronograma,
     painel_cronograma_suprimentos,
     salvar_datas_item_cronograma_suprimentos,
+    painel_grandes_fornecedores,
+    atualizar_status_item_grande_fornecedor,
+    atualizar_previsao_item_grande_fornecedor,
+    receber_pedido_grande_fornecedor,
 )
 
 app_name = "planejamento"
@@ -21,6 +25,10 @@ urlpatterns = [
     path("cronograma/atualizar/", atualizar_cronograma, name="atualizar_cronograma"),
     path("cronograma/importacoes/", historico_importacoes_cronograma, name="historico_importacoes_cronograma"),
     path("suprimentos/", painel_cronograma_suprimentos, name="painel_cronograma_suprimentos"),
+    path("suprimentos/grandes-fornecedores/", painel_grandes_fornecedores, name="painel_grandes_fornecedores"),
+    path("suprimentos/grandes-fornecedores/itens/<int:item_id>/status/", atualizar_status_item_grande_fornecedor, name="atualizar_status_item_grande_fornecedor"),
+    path("suprimentos/grandes-fornecedores/itens/<int:item_id>/previsao/", atualizar_previsao_item_grande_fornecedor, name="atualizar_previsao_item_grande_fornecedor"),
+    path("suprimentos/grandes-fornecedores/pedidos/<int:pedido_id>/receber/", receber_pedido_grande_fornecedor, name="receber_pedido_grande_fornecedor"),
     path("suprimentos/kanban/", kanban_cronograma_suprimentos, name="kanban_cronograma_suprimentos"),
     path("suprimentos/atualizar/", atualizar_cronograma_suprimentos, name="atualizar_cronograma_suprimentos"),
     path("suprimentos/importacoes/", historico_importacoes_cronograma_suprimentos, name="historico_importacoes_cronograma_suprimentos"),

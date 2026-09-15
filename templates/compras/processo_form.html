@@ -231,7 +231,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
     <main class="purchase-main">
 
-      <header class="purchase-heading"><h1>Nova compra</h1><p>Preencha os dados para iniciar o processo de compra</p></header>
+      <header class="purchase-heading"><h1>{% if eh_grande_fornecedor %}Novo processo de Grande Fornecedor{% else %}Nova compra{% endif %}</h1><p>{% if eh_grande_fornecedor %}Selecione as atividades e o comprador responsável antes de abrir a matriz{% else %}Preencha os dados para iniciar o processo de compra{% endif %}</p></header>
 
       <section class="purchase-card purchase-hero">
         <div class="purchase-hero__block">
@@ -248,7 +248,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         {% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
         {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
 
-        <section class="purchase-card purchase-items-card">
+        <section class="purchase-card purchase-items-card{% if eh_grande_fornecedor %} purchase-row-hidden{% endif %}">
           <h2 class="purchase-section-title">Itens da compra</h2>
           <div class="purchase-items" id="items-container">
             {% for item_form in formset %}
@@ -281,7 +281,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
           </aside>
         </div>
 
-        <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div><button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button><button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>Enviar para Suprimentos</button></div>
+        <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div>{% if not eh_grande_fornecedor %}<button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button>{% endif %}<button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>{% if eh_grande_fornecedor %}Criar processo e abrir matriz{% else %}Enviar para Suprimentos{% endif %}</button></div>
       </form>
 
       <template id="empty-form-template"><div class="purchase-item" data-form-row>{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div><div class="purchase-item__number" data-row-number></div><div class="purchase-field purchase-field--material"><label>{{ formset.empty_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ formset.empty_form.material }}</div><div class="purchase-material-results" data-material-results></div></div><small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div><div class="purchase-field"><label>{{ formset.empty_form.quantidade.label }} <span class="req">*</span></label>{{ formset.empty_form.quantidade }}</div><div class="purchase-field"><label>Observações (opcional)</label>{{ formset.empty_form.observacao }}</div><div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div></div></template>

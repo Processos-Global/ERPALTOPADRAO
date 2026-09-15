@@ -10,14 +10,14 @@
     <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
     <button class="cp-btn" type="submit">Filtrar</button>
   </form>
-  <section class="cp-section"><div class="cp-section__body" style="padding:0"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Processo</th><th>Obra / suprimento</th><th>Responsável</th><th>Etapa</th><th>Status</th><th>Itens</th><th>Fornecedores</th><th>Prazo contratação</th></tr></thead><tbody>
+  <section class="cp-section"><div class="cp-section__body" style="padding:0"><div class="cp-table-wrap"><table class="cp-table"><thead><tr><th>Processo</th><th>Tipo</th><th>Obra / suprimento</th><th>Responsável</th><th>Etapa</th><th>Status</th><th>Itens</th><th>Fornecedores</th><th>Prazo contratação</th></tr></thead><tbody>
     {% for processo in processos %}<tr>
-      <td><a class="cp-btn cp-btn--sm" href="{% url 'compras:detalhe_processo' processo.pk %}">{{ processo.numero }}</a><div style="margin-top:6px"><strong>{{ processo.titulo }}</strong></div></td>
+      <td><a class="cp-btn cp-btn--sm" href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}">{{ processo.numero }}</a><div style="margin-top:6px"><strong>{{ processo.titulo }}</strong></div></td><td>{% if processo.fluxo_grande_fornecedor %}<span class="cp-badge cp-badge--active">Grande Fornecedor</span>{% else %}<span class="cp-badge">Fluxo normal</span>{% endif %}</td>
       <td><strong>{{ processo.obra.nome }}</strong><div class="cp-muted">{{ processo.item_cronograma.item }}</div></td>
       <td>{{ processo.comprador|default:"—" }}</td><td>{{ processo.get_etapa_atual_display }}</td>
       <td>{% if processo.status == 'CONTRATADO' %}<span class="cp-badge cp-badge--ok">{{ processo.get_status_display }}</span>{% elif processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}<span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>{% elif processo.status == 'AGUARDANDO_APROVACAO' or processo.status == 'AJUSTE_SOLICITADO' %}<span class="cp-badge cp-badge--warn">{{ processo.get_status_display }}</span>{% else %}<span class="cp-badge cp-badge--active">{{ processo.get_status_display }}</span>{% endif %}</td>
-      <td>{{ processo.qtd_itens }}</td><td>{{ processo.qtd_fornecedores }}</td><td>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</td>
-    </tr>{% empty %}<tr><td colspan="8" class="cp-empty">Nenhum processo encontrado com os filtros atuais.</td></tr>{% endfor %}
+      <td>{% if processo.fluxo_grande_fornecedor %}{{ processo.qtd_itens_grande_fornecedor }}{% else %}{{ processo.qtd_itens }}{% endif %}</td><td>{% if processo.fluxo_grande_fornecedor %}{{ processo.qtd_fornecedores_grande_fornecedor }}{% else %}{{ processo.qtd_fornecedores }}{% endif %}</td><td>{{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m/Y"|default:"—" }}</td>
+    </tr>{% empty %}<tr><td colspan="9" class="cp-empty">Nenhum processo encontrado com os filtros atuais.</td></tr>{% endfor %}
   </tbody></table></div></div></section>
 </div>
 {% endblock %}

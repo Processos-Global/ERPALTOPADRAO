@@ -807,3 +807,12 @@ ItemCompraAberturaFormSet = formset_factory(
     min_num=1,
     validate_min=True,
 )
+
+
+ItemCompraAberturaGrandeFornecedorFormSet = formset_factory(
+    ItemCompraAberturaForm,
+    extra=0,
+    can_delete=True,
+    min_num=0,
+    validate_min=False,
+)

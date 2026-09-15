@@ -23,10 +23,55 @@ from .comercial import (
     quantizar_moeda,
 )
 from .integracao_planejamento import limpar_data_real, sincronizar_data_real
+from .grande_fornecedor_status import status_por_recebimento
 from .historico_suprimentos import remover_historico_processo, sincronizar_historico_processo
 from .numeracao import gerar_numero
 
 ZERO = Decimal("0")
+
+
+def _sincronizar_grande_fornecedor_pedido(pedido):
+    """Sincroniza recebimentos do PedidoCompra com os microitens do fluxo especial.
+
+    O PedidoCompra continua sendo o documento comercial e a origem dos
+    recebimentos/NFs. O status operacional, entretanto, pertence a cada
+    GrandeFornecedorItem e pode evoluir de forma independente.
+    """
+    if not getattr(pedido.processo, "fluxo_grande_fornecedor", False):
+        return
+    try:
+        fluxo = pedido.processo.grande_fornecedor
+    except Exception:
+        return
+
+    if pedido.status in {
+        PedidoCompra.Status.CONFIRMADO,
+        PedidoCompra.Status.EM_PRODUCAO,
+        PedidoCompra.Status.PRONTO_EXPEDICAO,
+        PedidoCompra.Status.EM_TRANSPORTE,
+        PedidoCompra.Status.ENTREGA_PARCIAL,
+        PedidoCompra.Status.ENTREGUE,
+    } and not fluxo.fornecedor_confirmado_em:
+        fluxo.fornecedor_confirmado_em = timezone.now()
+        fluxo.save(update_fields=["fornecedor_confirmado_em", "atualizado_em"])
+
+    for pedido_item in pedido.itens.select_related("item_grande_fornecedor").all():
+        try:
+            micro = pedido_item.item_grande_fornecedor
+        except Exception:
+            continue
+        novo_status = status_por_recebimento(
+            pedido_item.quantidade,
+            pedido_item.quantidade_recebida,
+            micro.status,
+        )
+        if pedido.status == PedidoCompra.Status.CANCELADO:
+            novo_status = micro.Status.CANCELADO
+        elif pedido.status == PedidoCompra.Status.CONFIRMADO and micro.status == micro.Status.AGUARDANDO:
+            novo_status = micro.Status.CONFIRMADO
+        micro.quantidade_recebida = pedido_item.quantidade_recebida
+        micro.status = novo_status
+        micro.save(update_fields=["quantidade_recebida", "status", "atualizado_em"])
 
 
 def _previsao_por_prazo(prazo_dias):
@@ -40,6 +85,33 @@ def _sincronizar_status_contratacao_processo(*, processo, usuario):
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if p.status in {p.Status.CANCELADO, p.Status.REPROVADO}:
         return p
+
+    # No fluxo de Grande Fornecedor, a aprovação do gestor seguida da emissão
+    # dos pedidos é o marco de contratação. O acompanhamento posterior passa
+    # a ser individual por item no Planejamento.
+    if p.fluxo_grande_fornecedor:
+        pedidos_ativos_gf = list(
+            p.pedidos.exclude(status=PedidoCompra.Status.CANCELADO).only("id")
+        )
+        if pedidos_ativos_gf:
+            mudou = p.status != p.Status.CONTRATADO or p.etapa_atual != p.Etapa.CONTRATADO
+            p.status = p.Status.CONTRATADO
+            p.etapa_atual = p.Etapa.CONTRATADO
+            if not p.data_contratacao_concluida:
+                p.data_contratacao_concluida = timezone.now()
+            p.save(update_fields=[
+                "status", "etapa_atual", "data_contratacao_concluida", "atualizado_em"
+            ])
+            if mudou:
+                sincronizar_data_real(p, "CONTRATACAO", usuario)
+                registrar_evento(
+                    p,
+                    "GF_CONTRATACAO_CONCLUIDA",
+                    usuario,
+                    "Pedidos de Grande Fornecedor gerados após aprovação do gestor.",
+                )
+            sincronizar_historico_processo(p)
+            return p
 
     fornecedores_adjudicados = set(
         p.adjudicacoes.filter(cancelada=False).values_list("cotacao__fornecedor_id", flat=True)
@@ -340,6 +412,7 @@ def atualizar_status_pedido(*, pedido, novo_status, usuario, observacao=""):
         return cancelar_pedido(pedido=p, usuario=usuario, motivo=observacao)
     p.status = novo_status
     p.save(update_fields=["status", "atualizado_em"])
+    _sincronizar_grande_fornecedor_pedido(p)
     registrar_evento(p.processo, "STATUS_PEDIDO", usuario, f"Pedido {p.numero}: {p.get_status_display()}.", {"pedido_id": p.pk})
     _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
     return p
@@ -478,6 +551,8 @@ def registrar_recebimento(
     else:
         p.status = PedidoCompra.Status.ENTREGA_PARCIAL
         p.save(update_fields=["status", "atualizado_em"])
+
+    _sincronizar_grande_fornecedor_pedido(p)
 
     registrar_evento(
         p.processo,

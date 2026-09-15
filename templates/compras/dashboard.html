@@ -128,10 +128,10 @@
         {% for processo in coluna.processos %}
           <a
             class="cp-process-card{% if processo.item_cronograma.prazo_limite_contratacao and processo.item_cronograma.prazo_limite_contratacao < hoje and processo.status != 'CONTRATADO' and processo.status != 'REPROVADO' and processo.status != 'CANCELADO' %} cp-process-card--overdue{% endif %}"
-            href="{% url 'compras:detalhe_processo' processo.pk %}"
+            href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}"
           >
             <div class="cp-process-card__top">
-              <span class="cp-process-card__number">{{ processo.numero }}</span>
+              <div><span class="cp-process-card__number">{{ processo.numero }}</span>{% if processo.fluxo_grande_fornecedor %}<div style="margin-top:4px"><span class="cp-badge cp-badge--active">Grande Fornecedor</span></div>{% endif %}</div>
 
               {% if processo.status == 'REPROVADO' or processo.status == 'CANCELADO' %}
                 <span class="cp-badge cp-badge--danger">{{ processo.get_status_display }}</span>
@@ -154,7 +154,7 @@
             <span class="cp-process-card__stage">Etapa: {{ processo.get_etapa_atual_display }}</span>
 
             <div class="cp-process-card__foot">
-              <span>{{ processo.qtd_itens }} item(ns) · {{ processo.qtd_fornecedores }} fornecedor(es)</span>
+              <span>{% if processo.fluxo_grande_fornecedor %}{{ processo.qtd_itens_grande_fornecedor }} item(ns) · {{ processo.qtd_fornecedores_grande_fornecedor }} fornecedor(es){% else %}{{ processo.qtd_itens }} item(ns) · {{ processo.qtd_fornecedores }} fornecedor(es){% endif %}</span>
               <span>
                 {% if processo.item_cronograma.prazo_limite_contratacao %}
                   {{ processo.item_cronograma.prazo_limite_contratacao|date:"d/m" }}

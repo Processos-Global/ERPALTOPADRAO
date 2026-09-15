@@ -23,6 +23,7 @@ from compras.forms import (
     CotacaoItemForm,
     DecisaoComercialLoteForm,
     ItemCompraAberturaFormSet,
+    ItemCompraAberturaGrandeFornecedorFormSet,
     NecessidadeCompraForm,
     NegociacaoForm,
     ProcessoCompraForm,
@@ -69,6 +70,14 @@ def _qs_processos():
             ),
             qtd_fornecedores=Count(
                 "cotacoes__fornecedor",
+                distinct=True,
+            ),
+            qtd_itens_grande_fornecedor=Count(
+                "grande_fornecedor__itens",
+                distinct=True,
+            ),
+            qtd_fornecedores_grande_fornecedor=Count(
+                "grande_fornecedor__participantes",
                 distinct=True,
             ),
         )
@@ -825,6 +834,9 @@ def detalhe_processo(
         pk=pk,
     )
 
+    if processo.fluxo_grande_fornecedor:
+        return redirect("compras:grande_fornecedor_matriz", pk=processo.pk)
+
     pode_editar = (
         possui_permissao_compras(
             request.user,
@@ -1312,7 +1324,17 @@ def novo_processo(request):
         },
     )
 
-    formset = ItemCompraAberturaFormSet(
+    # A abertura deve respeitar a mesma classificação nativa já usada pelo
+    # Cronograma de Suprimentos, sem tentar reinterpretar o texto da categoria.
+    eh_grande_fornecedor = bool(
+        item_inicial and item_inicial.usa_fluxo_grande_fornecedor
+    )
+    FormSetAbertura = (
+        ItemCompraAberturaGrandeFornecedorFormSet
+        if eh_grande_fornecedor
+        else ItemCompraAberturaFormSet
+    )
+    formset = FormSetAbertura(
         request.POST or None,
         prefix="itens",
     )
@@ -1396,6 +1418,8 @@ def novo_processo(request):
                 ),
             )
 
+            if processo.fluxo_grande_fornecedor:
+                return redirect("compras:grande_fornecedor_matriz", pk=processo.pk)
             return redirect(
                 "compras:detalhe_processo",
                 pk=processo.pk,
@@ -1417,6 +1441,7 @@ def novo_processo(request):
             "item_inicial": (
                 item_inicial
             ),
+            "eh_grande_fornecedor": eh_grande_fornecedor,
         },
     )
 
@@ -1476,6 +1501,7 @@ def lista_pedidos(request):
             "responsavel",
         )
         .prefetch_related("itens", "anexos", "recebimentos__usuario", "recebimentos__itens__item_pedido")
+        .filter(processo__fluxo_grande_fornecedor=False)
         .order_by(
             "-criado_em"
         )

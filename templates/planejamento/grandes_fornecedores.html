@@ -1,0 +1,190 @@
+{% extends "layouts/base.html" %}
+{% block title %}Grandes Fornecedores | Planejamento{% endblock %}
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+<style>
+.gfp-page{display:grid;gap:16px}
+.gfp-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gfp-kpi{padding:14px 16px;border:1px solid #e0e7ea;border-radius:10px;background:#fff}
+.gfp-kpi span{display:block;color:#798b93;font-size:9px;font-weight:700}
+.gfp-kpi strong{display:block;margin-top:5px;color:#18384a;font-size:20px;font-weight:850}
+.gfp-kpi small{display:block;margin-top:3px;color:#97a5ab;font-size:8px}
+.gfp-filter-panel{padding:14px 16px;border:1px solid #e0e7ea;border-radius:11px;background:#fff}
+.gfp-filter{display:grid;grid-template-columns:minmax(300px,2fr) minmax(180px,1fr) minmax(190px,1fr) auto;gap:12px;align-items:end}
+.gfp-field label{display:block;margin-bottom:6px;color:#556b75;font-size:9px;font-weight:750}
+.gfp-list{display:grid;gap:12px}
+.gfp-card{border:1px solid #dce5e8;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.025)}
+.gfp-card__head{display:flex;justify-content:space-between;gap:18px;align-items:center;padding:15px 17px;background:#fbfcfd;border-bottom:1px solid #eaf0f2}
+.gfp-card__title strong{display:block;color:#294750;font-size:12px;font-weight:850}
+.gfp-card__title span{display:block;margin-top:4px;color:#7d8f96;font-size:9px;line-height:1.45}
+.gfp-card__meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.gfp-badge-gf{background:#e9f7f7;color:#087f82;border:1px solid #cbe9e8}
+.gfp-preorder{opacity:.96}
+.gfp-table-wrap{overflow:auto}
+.gfp-table{width:100%;border-collapse:collapse;min-width:1040px}
+.gfp-table th,.gfp-table td{padding:12px 13px;border-bottom:1px solid #edf2f3;vertical-align:top}
+.gfp-table th{background:#f8fafb;color:#71858d;font-size:8px;font-weight:850;text-transform:uppercase;letter-spacing:.035em;text-align:left}
+.gfp-table tr:last-child td{border-bottom:0}
+.gfp-material{min-width:270px}
+.gfp-material strong{display:block;color:#34515b;font-size:10px;line-height:1.4}
+.gfp-sub{display:block;margin-top:3px;color:#87999f;font-size:8px}
+.gfp-number{color:#294750;font-size:10px;font-weight:800;white-space:nowrap}
+.gfp-progress{min-width:125px}
+.gfp-progress-top{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.gfp-progress-top strong{color:#294750;font-size:10px}
+.gfp-progress-top span{color:#85979e;font-size:8px}
+.gfp-bar{height:6px;background:#e8eef0;border-radius:999px;overflow:hidden;margin-top:7px}
+.gfp-bar span{display:block;height:100%;background:#4da3a2;border-radius:999px}
+.gfp-stack{display:grid;gap:7px}
+.gfp-read-value{color:#354f59;font-size:10px;font-weight:800}
+.gfp-action{display:inline-flex;width:max-content;padding:0;border:0;background:none;color:#087f82;font-size:8px;font-weight:800;cursor:pointer;text-decoration:none}
+.gfp-action:hover{text-decoration:underline}
+.gfp-edit{margin-top:6px}
+.gfp-edit summary{list-style:none;cursor:pointer;color:#087f82;font-size:8px;font-weight:800}
+.gfp-edit summary::-webkit-details-marker{display:none}
+.gfp-edit[open] summary{margin-bottom:8px}
+.gfp-edit__box{padding:10px;border:1px solid #dfe8ea;border-radius:8px;background:#f9fbfb}
+.gfp-edit__form{display:grid;grid-template-columns:minmax(155px,1fr) auto;gap:7px;align-items:end}
+.gfp-edit__form .cp-input{min-width:0}
+.gfp-provider{min-width:170px;color:#4b626b;font-size:9px;font-weight:700}
+.gfp-receive{border-top:1px solid #edf2f3;background:#fbfcfd}
+.gfp-receive summary{cursor:pointer;list-style:none;padding:12px 16px;color:#45626c;font-size:9px;font-weight:850}
+.gfp-receive summary::-webkit-details-marker{display:none}
+.gfp-receive summary::before{content:'+';display:inline-grid;place-items:center;width:18px;height:18px;margin-right:7px;border-radius:50%;background:#e9f6f6;color:#087f82}
+.gfp-receive[open] summary::before{content:'–'}
+.gfp-receive__body{padding:0 16px 16px}
+.gfp-receive-card{padding:16px;border:1px solid #dfe7ea;border-radius:10px;background:#fff}
+.gfp-form-section+.gfp-form-section{margin-top:18px;padding-top:16px;border-top:1px solid #edf2f3}
+.gfp-form-title{margin-bottom:10px;color:#405a64;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.035em}
+.gfp-receive-grid{display:grid;grid-template-columns:minmax(160px,.8fr) minmax(170px,.9fr) minmax(260px,1.4fr);gap:12px}
+.gfp-rec-items{display:grid;gap:8px}
+.gfp-rec-row{display:grid;grid-template-columns:minmax(260px,1.5fr) 145px 165px;gap:12px;align-items:end;padding:11px 12px;border:1px solid #e4ecee;border-radius:8px;background:#fcfdfd}
+.gfp-rec-row strong{display:block;color:#36505a;font-size:9px}
+.gfp-receive-actions{display:grid;grid-template-columns:minmax(300px,1fr) auto;gap:12px;align-items:end}
+.gfp-empty{padding:30px;border:1px dashed #d6e1e4;border-radius:10px;text-align:center;color:#81939a;background:#fbfcfc;font-size:9px}
+@media(max-width:980px){.gfp-kpis{grid-template-columns:1fr 1fr 1fr}.gfp-filter{grid-template-columns:1fr 1fr}.gfp-filter button{justify-self:start}.gfp-receive-grid,.gfp-receive-actions{grid-template-columns:1fr}.gfp-rec-row{grid-template-columns:1fr 145px 165px}}
+@media(max-width:720px){.gfp-kpis,.gfp-filter,.gfp-rec-row{grid-template-columns:1fr}.gfp-card__head{align-items:flex-start;flex-direction:column}.gfp-card__meta{justify-content:flex-start}.gfp-receive__body{padding:0 10px 10px}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="cp-page gfp-page">
+  <header class="cp-head">
+    <div class="cp-head__copy">
+      <div class="cp-eyebrow">Planejamento · Suprimentos</div>
+      <h1 class="cp-title">Grandes Fornecedores</h1>
+      <div class="cp-sub">Acompanhamento operacional item a item após a aprovação e geração dos pedidos.</div>
+    </div>
+    <div class="cp-actions"><a class="cp-btn" href="{% url 'planejamento:painel_cronograma_suprimentos' %}">Cronograma de Suprimentos</a></div>
+  </header>
+
+  <div class="gfp-kpis">
+    <div class="gfp-kpi"><span>Itens acompanhados</span><strong>{{ total_itens }}</strong><small>Materiais do fluxo especial.</small></div>
+    <div class="gfp-kpi"><span>Itens concluídos</span><strong>{{ total_recebidos }}</strong><small>Recebimento integral registrado.</small></div>
+    <div class="gfp-kpi"><span>Conclusão</span><strong>{{ percentual_geral|floatformat:0 }}%</strong><small>Percentual de itens totalmente recebidos.</small></div>
+  </div>
+
+  <section class="gfp-filter-panel">
+    <form class="gfp-filter" method="get">
+      <div class="gfp-field"><label>Buscar</label><input class="cp-input" name="q" value="{{ filtros.q }}" placeholder="Processo, material, fornecedor ou pedido"></div>
+      <div class="gfp-field"><label>Obra</label><select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if filtros.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+      <div class="gfp-field"><label>Status</label><select class="cp-input" name="status"><option value="">Todos os status</option>{% for v,l in status_choices %}<option value="{{ v }}" {% if filtros.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+      <button class="cp-btn cp-btn--primary" type="submit">Aplicar filtros</button>
+    </form>
+  </section>
+
+  <div class="gfp-list">
+  {% for grupo in grupos %}
+    <section class="gfp-card {% if not grupo.pedido %}gfp-preorder{% endif %}">
+      <div class="gfp-card__head">
+        <div class="gfp-card__title">
+          {% if grupo.pedido %}
+            <strong>{{ grupo.pedido.numero }} · {{ grupo.fornecedor.nome_exibicao }}</strong>
+            <span>{{ grupo.processo.numero }} · {{ grupo.processo.obra }} · {{ grupo.processo.item_cronograma.item }}</span>
+          {% else %}
+            <strong>{{ grupo.processo.numero }} · {{ grupo.processo.titulo }}</strong>
+            <span>{{ grupo.processo.obra }} · Pedido ainda não gerado.</span>
+          {% endif %}
+        </div>
+        <div class="gfp-card__meta">
+          <span class="cp-badge gfp-badge-gf">Grande Fornecedor</span>
+          <span class="cp-badge cp-badge--{{ grupo.status_classe }}">{{ grupo.status_geral }}</span>
+          {% if grupo.pedido %}<a class="cp-btn cp-btn--sm" href="{% url 'compras:pdf_pedido_compra' grupo.pedido.pk %}" target="_blank">PDF do pedido</a>{% endif %}
+          <a class="cp-btn cp-btn--sm" href="{% url 'compras:grande_fornecedor_matriz' grupo.processo.pk %}">Abrir matriz</a>
+        </div>
+      </div>
+
+      <div class="gfp-table-wrap">
+        <table class="gfp-table">
+          <thead><tr><th>Material</th><th>Contratado</th><th>Recebimento</th><th>Status</th><th>Previsão</th><th>Fornecedor</th></tr></thead>
+          <tbody>
+          {% for row in grupo.rows %}
+            <tr>
+              <td class="gfp-material"><strong>{% if row.material %}{{ row.material.codigo }} · {{ row.material.descricao_completa }}{% else %}{{ row.item.item }}{% endif %}</strong><span class="gfp-sub">Unidade: {{ row.item.unidade }}</span></td>
+              <td><span class="gfp-number">{{ row.quantidade|floatformat:2 }} {{ row.item.unidade }}</span></td>
+              <td class="gfp-progress">
+                <div class="gfp-progress-top"><strong>{{ row.quantidade_recebida|floatformat:2 }} {{ row.item.unidade }}</strong><span>{{ row.percentual|floatformat:0 }}%</span></div>
+                <div class="gfp-bar"><span style="width:{{ row.percentual|floatformat:0 }}%"></span></div>
+              </td>
+              <td>
+                <div class="gfp-stack">
+                  <div>{% if row.status_codigo == 'ENTREGUE' %}<span class="cp-badge cp-badge--ok">{{ row.status_label }}</span>{% elif row.status_codigo == 'PARCIAL' %}<span class="cp-badge cp-badge--warn">{{ row.status_label }}</span>{% elif row.status_codigo == 'CANCELADO' %}<span class="cp-badge cp-badge--danger">{{ row.status_label }}</span>{% else %}<span class="cp-badge cp-badge--active">{{ row.status_label }}</span>{% endif %}</div>
+                  {% if pode_operar and row.pedido_item and row.transicoes %}
+                  <details class="gfp-edit"><summary>Alterar status</summary><div class="gfp-edit__box"><form class="gfp-edit__form" method="post" action="{% url 'planejamento:atualizar_status_item_grande_fornecedor' row.item.pk %}">{% csrf_token %}<div class="gfp-field"><label>Novo status</label><select class="cp-input" name="status" required><option value="">Selecione...</option>{% for v,l in row.transicoes %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div><button class="cp-btn cp-btn--sm cp-btn--primary" type="submit">Salvar</button></form></div></details>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                <div class="gfp-stack">
+                  <span class="gfp-read-value">{{ row.previsao|date:"d/m/Y"|default:"—" }}</span>
+                  {% if pode_operar and row.pedido_item and row.status_codigo != 'ENTREGUE' and row.status_codigo != 'CANCELADO' %}
+                  <details class="gfp-edit"><summary>Alterar previsão</summary><div class="gfp-edit__box"><form class="gfp-edit__form" method="post" action="{% url 'planejamento:atualizar_previsao_item_grande_fornecedor' row.item.pk %}">{% csrf_token %}<div class="gfp-field"><label>Nova previsão</label><input class="cp-input" type="date" name="previsao_entrega" value="{{ row.previsao|date:'Y-m-d' }}" required></div><button class="cp-btn cp-btn--sm cp-btn--primary" type="submit">Salvar</button></form></div></details>
+                  {% endif %}
+                </div>
+              </td>
+              <td class="gfp-provider">{% if row.fornecedor %}{{ row.fornecedor.nome_exibicao }}{% else %}<span class="cp-muted">Ainda não definido</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if grupo.pedido and pode_operar %}
+      <details class="gfp-receive">
+        <summary>Registrar recebimento / Nota Fiscal</summary>
+        <div class="gfp-receive__body">
+          <form class="gfp-receive-card" method="post" enctype="multipart/form-data" action="{% url 'planejamento:receber_pedido_grande_fornecedor' grupo.pedido.pk %}">{% csrf_token %}
+            <div class="gfp-form-section">
+              <div class="gfp-form-title">Dados da Nota Fiscal</div>
+              <div class="gfp-receive-grid">
+                <div class="gfp-field"><label>Número da NF</label><input class="cp-input" name="numero_nota_fiscal" placeholder="Ex.: 12548" required></div>
+                <div class="gfp-field"><label>Valor total da NF</label><input class="cp-input" name="valor_total_nota" inputmode="decimal" placeholder="0,00" required></div>
+                <div class="gfp-field"><label>Arquivo da NF</label><input class="cp-input" type="file" name="arquivo_nota_fiscal" required></div>
+              </div>
+            </div>
+
+            <div class="gfp-form-section">
+              <div class="gfp-form-title">Itens recebidos nesta entrega</div>
+              <div class="gfp-rec-items">
+                {% for row in grupo.rows %}{% if row.pedido_item %}
+                <div class="gfp-rec-row">
+                  <div><strong>{{ row.item.item }}</strong><span class="gfp-sub">Saldo a receber: {{ row.pedido_item.saldo_receber|floatformat:2 }} {{ row.item.unidade }}</span></div>
+                  <div class="gfp-field"><label>Qtd. recebida</label><input class="cp-input" name="item_{{ row.pedido_item.pk }}" inputmode="decimal" placeholder="0"></div>
+                  <div class="gfp-field"><label>Valor na NF</label><input class="cp-input" name="valor_item_{{ row.pedido_item.pk }}" inputmode="decimal" placeholder="0,00"></div>
+                </div>
+                {% endif %}{% endfor %}
+              </div>
+            </div>
+
+            <div class="gfp-form-section gfp-receive-actions">
+              <div class="gfp-field"><label>Observação</label><input class="cp-input" name="observacao" placeholder="Observação opcional do recebimento"></div>
+              <button class="cp-btn cp-btn--primary" type="submit">Registrar recebimento</button>
+            </div>
+          </form>
+        </div>
+      </details>
+      {% endif %}
+    </section>
+  {% empty %}<div class="gfp-empty">Nenhum Grande Fornecedor encontrado com os filtros atuais.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

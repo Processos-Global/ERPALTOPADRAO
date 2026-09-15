@@ -20,4 +20,15 @@ __all__ = [
     "kanban_cronograma_suprimentos",
     "painel_cronograma_suprimentos",
     "salvar_datas_item_cronograma_suprimentos",
+    "painel_grandes_fornecedores",
+    "atualizar_status_item_grande_fornecedor",
+    "atualizar_previsao_item_grande_fornecedor",
+    "receber_pedido_grande_fornecedor",
 ]
+
+from .grandes_fornecedores import (
+    atualizar_previsao_item_grande_fornecedor,
+    atualizar_status_item_grande_fornecedor,
+    painel_grandes_fornecedores,
+    receber_pedido_grande_fornecedor,
+)
