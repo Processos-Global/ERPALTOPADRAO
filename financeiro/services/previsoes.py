@@ -222,6 +222,11 @@ def sincronizar_contas_grande_fornecedor(fluxo):
                     },
                 )
 
+            if distribuido > valor_parcela:
+                raise ValueError(
+                    f"A parcela GF '{parcela.descricao}' distribui R$ {distribuido} "
+                    f"para um valor de R$ {valor_parcela}. Revise os beneficiários."
+                )
             saldo = max(valor_parcela - distribuido, Decimal("0"))
             ref_saldo = f"GF_SALDO:{parcela.pk}"
             if saldo > 0:
@@ -284,14 +289,14 @@ def sincronizar_contas_grande_fornecedor(fluxo):
 def sincronizar_conta_mao_obra(
     *,
     referencia,
-    beneficiario_nome,
+    fornecedor,
     obra,
     valor,
     vencimento,
     descricao,
     documento_numero="",
     beneficiario_documento="",
-    fornecedor=None,
+    beneficiario_nome="",
     parcela_ordem=None,
     parcela_total=None,
     parcela_descricao="",
@@ -306,6 +311,11 @@ def sincronizar_conta_mao_obra(
     """
     if not referencia:
         raise ValueError("A integração de M.O. exige uma referência externa estável.")
+    if not fornecedor:
+        raise ValueError("Pagamento de M.O. exige fornecedor/prestador cadastrado.")
+    if not obra:
+        raise ValueError("Pagamento de M.O. exige obra.")
+    beneficiario_nome = beneficiario_nome or _nome_fornecedor(fornecedor)
     return _upsert_conta_integrada(
         referencia=f"MO:{referencia}",
         cancelado=cancelada,

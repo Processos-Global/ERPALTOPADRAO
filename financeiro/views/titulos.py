@@ -15,7 +15,7 @@ from financeiro.models import AprovacaoTituloFinanceiro, TituloPagar
 from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
 from financeiro.services.notificacoes import notificar_aprovadores
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
-from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulo_manual
+from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulos_manuais
 from obras.models import Obra
 
 
@@ -91,10 +91,22 @@ def titulo_novo(request):
     if request.method == "POST":
         form = TituloPagarForm(request.POST, request.FILES)
         if form.is_valid():
-            titulo = criar_titulo_manual(usuario=request.user, **form.cleaned_data)
-            notificar_aprovadores(titulo)
-            messages.success(request, f"Conta {titulo.numero} criada e enviada para aprovação.")
-            return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
+            dados = dict(form.cleaned_data)
+            quantidade = dados.pop("quantidade_parcelas", 1) or 1
+            intervalo = dados.pop("intervalo_dias", 30) or 30
+            titulos = criar_titulos_manuais(
+                usuario=request.user,
+                quantidade_parcelas=quantidade,
+                intervalo_dias=intervalo,
+                **dados,
+            )
+            for titulo in titulos:
+                notificar_aprovadores(titulo)
+            if len(titulos) == 1:
+                messages.success(request, f"Conta {titulos[0].numero} criada e enviada para aprovação.")
+                return redirect("financeiro:titulo_detalhe", pk=titulos[0].pk)
+            messages.success(request, f"{len(titulos)} parcelas criadas e enviadas para aprovação.")
+            return redirect("financeiro:titulos")
     else:
         form = TituloPagarForm()
     return render(request, "financeiro/titulo_form.html", {"form": form, "modo": "novo"})

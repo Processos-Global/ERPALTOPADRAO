@@ -12,7 +12,7 @@ from financeiro.forms import PrevisaoFinanceiraForm
 from financeiro.models import PrevisaoFinanceira, TituloPagar
 from financeiro.services.fluxo_caixa import STATUS_ABERTOS
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
-from financeiro.services.previsoes import gerar_previsoes_recorrentes, sincronizar_todas_integracoes
+from financeiro.services.previsoes import sincronizar_todas_integracoes
 
 
 @financeiro_acao_required("VISUALIZAR")
@@ -30,9 +30,12 @@ def previsoes_lista(request):
     if obra:
         contas = contas.filter(obra_id=obra)
 
-    extras = PrevisaoFinanceira.objects.filter(ativa=True).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).select_related("obra", "fornecedor", "plano_financeiro")
-    # Previsões adicionais só pertencem ao filtro "Manual". Para Compras,
-    # M.O. e GF, a fonte de verdade são as próprias Contas a Pagar.
+    extras = PrevisaoFinanceira.objects.filter(
+        ativa=True,
+        origem=PrevisaoFinanceira.Origem.MANUAL,
+    ).select_related("obra", "fornecedor", "plano_financeiro")
+    # Solicitações avulsas são a única previsão fora de Contas a Pagar.
+    # Compras, M.O. e GF entram pela própria parcela/Conta a Pagar.
     if origem and origem != TituloPagar.Origem.MANUAL:
         extras = extras.none()
     if obra:
@@ -40,6 +43,9 @@ def previsoes_lista(request):
 
     def soma_contas_ate(data):
         return sum((x.saldo_aberto for x in contas.filter(vencimento__range=(hoje, data))), Decimal("0"))
+
+    contas_vencidas = list(contas.filter(vencimento__lt=hoje))
+    valor_vencidas = sum((x.saldo_aberto for x in contas_vencidas), Decimal("0"))
 
     def soma_extras_ate(data):
         return extras.filter(data_prevista__range=(hoje, data)).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
@@ -55,6 +61,8 @@ def previsoes_lista(request):
             "obra": conta.obra,
             "valor": conta.saldo_aberto,
             "status": conta.get_status_display(),
+            "situacao_temporal": conta.situacao_temporal,
+            "dias_atraso": conta.dias_em_atraso,
             "pk": conta.pk,
         })
     for previsao in extras.filter(data_prevista__isnull=False):
@@ -66,7 +74,9 @@ def previsoes_lista(request):
             "beneficiario": getattr(previsao.fornecedor, "nome_exibicao", "") if previsao.fornecedor else "—",
             "obra": previsao.obra,
             "valor": previsao.valor_previsto,
-            "status": "Ainda não formalizada",
+            "status": "Solicitação avulsa",
+            "situacao_temporal": "PREVISAO",
+            "dias_atraso": 0,
             "pk": None,
         })
     linhas.sort(key=lambda item: (item["data"], item["tipo"], item["descricao"]))
@@ -79,11 +89,14 @@ def previsoes_lista(request):
         "origem": origem,
         "obra": obra,
         "obras": Obra.objects.all().order_by("id"),
+        "valor_vencidas": valor_vencidas,
+        "qtd_vencidas": len(contas_vencidas),
         "contas_7": soma_contas_ate(fim_7),
         "contas_30": soma_contas_ate(fim_30),
         "contas_90": soma_contas_ate(fim_90),
         "extras_30": soma_extras_ate(fim_30),
         "total_30": soma_contas_ate(fim_30) + soma_extras_ate(fim_30),
+        "necessidade_caixa_30": valor_vencidas + soma_contas_ate(fim_30) + soma_extras_ate(fim_30),
         "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
         "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
     })
@@ -99,7 +112,7 @@ def previsao_nova(request):
             previsao.certeza = PrevisaoFinanceira.Certeza.PREVISTO
             previsao.criado_por = request.user
             previsao.save()
-            messages.success(request, "Previsão adicional criada. Ela não é uma Conta a Pagar até ser formalizada.")
+            messages.success(request, "Solicitação avulsa de previsão criada. Ela não é uma Conta a Pagar até ser formalizada.")
             return redirect("financeiro:previsoes")
     else:
         form = PrevisaoFinanceiraForm()
@@ -110,11 +123,9 @@ def previsao_nova(request):
 @require_POST
 def sincronizar_compras(request):
     resultado = sincronizar_todas_integracoes()
-    hoje = timezone.localdate()
-    recorrentes = gerar_previsoes_recorrentes(hoje, hoje + timedelta(days=180), request.user)
     messages.success(
         request,
-        f"Financeiro sincronizado: {resultado['compras']} conta(s) de Compras, "
-        f"{resultado['grandes_fornecedores']} de Grandes Fornecedores e {recorrentes} previsão(ões) recorrente(s) nova(s).",
+        f"Financeiro sincronizado: {resultado['compras']} conta(s) de Compras e "
+        f"{resultado['grandes_fornecedores']} de Grandes Fornecedores.",
     )
     return redirect("financeiro:previsoes")

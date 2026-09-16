@@ -151,6 +151,41 @@
 
                     <span class="module-card__accent"></span>
                 </a>
+                    <a
+                        href="{% url 'projetos:menu' %}"
+                        class="module-card"
+                        data-transition-link
+                    >
+                        <header class="module-card__header">
+                            <span class="module-card__number">02</span>
+                            <span class="module-card__permission">Projetos</span>
+                        </header>
+
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon">
+                                    <use href="#icon-file"></use>
+                                </svg>
+                            </span>
+
+                            <div class="module-card__content">
+                                <h3>Projetos</h3>
+                                <p>
+                                    Cadastre e acompanhe a ficha técnica das obras,
+                                    ambientes, características e especificações de projeto.
+                                </p>
+                            </div>
+                        </div>
+
+                        <footer class="module-card__footer">
+                            <span>Acessar</span>
+                            <svg class="icon">
+                                <use href="#icon-arrow"></use>
+                            </svg>
+                        </footer>
+
+                        <span class="module-card__accent"></span>
+                    </a>
 
                 <a
                     href="{% url 'compras:menu' %}"
@@ -159,7 +194,7 @@
                 >
                     <header class="module-card__header">
                         <span class="module-card__number">
-                            02
+                            03
                         </span>
 
                         <span class="module-card__permission">
@@ -197,6 +232,45 @@
                 </a>
 
 
+                {% if financeiro_acesso %}
+                    <a
+                        href="{% url 'financeiro:dashboard' %}"
+                        class="module-card"
+                        data-transition-link
+                    >
+                        <header class="module-card__header">
+                            <span class="module-card__number">04</span>
+                            <span class="module-card__permission">Financeiro</span>
+                        </header>
+
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon">
+                                    <use href="#icon-wallet"></use>
+                                </svg>
+                            </span>
+
+                            <div class="module-card__content">
+                                <h3>Financeiro</h3>
+                                <p>
+                                    Controle contas a pagar, aprovações, pagamentos,
+                                    previsões de gastos e despesas por obra.
+                                </p>
+                            </div>
+                        </div>
+
+                        <footer class="module-card__footer">
+                            <span>Acessar</span>
+                            <svg class="icon">
+                                <use href="#icon-arrow"></use>
+                            </svg>
+                        </footer>
+
+                        <span class="module-card__accent"></span>
+                    </a>
+                {% endif %}
+
+
                 {% if cadastros_acesso %}
                     <a
                         href="{% url 'cadastros:index' %}"
@@ -204,7 +278,7 @@
                         data-transition-link
                     >
                         <header class="module-card__header">
-                            <span class="module-card__number">03</span>
+                            <span class="module-card__number">05</span>
                             <span class="module-card__permission">Dados mestres</span>
                         </header>
                         <div class="module-card__body">
@@ -232,7 +306,7 @@
                     >
                         <header class="module-card__header">
                             <span class="module-card__number">
-                                04
+                                06
                             </span>
 
                             <span class="module-card__permission">

@@ -31,3 +31,33 @@ def calcular_status_pagamento(valor_liquido, total_pago):
 
 def nivel_certeza_ordem(nivel):
     return NIVEIS_CERTEZA.get(nivel, 99)
+
+
+def calcular_situacao_temporal(vencimento, status, hoje):
+    """Classifica o vencimento sem substituir o status do fluxo financeiro."""
+    if status in {"PAGO", "CANCELADO"}:
+        return "ENCERRADA"
+    if vencimento is None:
+        return "SEM_DATA"
+    if vencimento < hoje:
+        return "VENCIDA"
+    if vencimento == hoje:
+        return "VENCE_HOJE"
+    return "A_VENCER"
+
+
+def distribuir_valor_parcelas(valor_total, quantidade):
+    """Divide um valor em parcelas iguais preservando exatamente os centavos."""
+    valor_total = _decimal(valor_total).quantize(Decimal("0.01"))
+    try:
+        quantidade = int(quantidade)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Quantidade de parcelas inválida.") from exc
+    if quantidade <= 0:
+        raise ValueError("Quantidade de parcelas deve ser maior que zero.")
+    if valor_total <= 0:
+        raise ValueError("Valor total deve ser maior que zero.")
+
+    centavos = int(valor_total * 100)
+    base, resto = divmod(centavos, quantidade)
+    return [Decimal(base + (1 if indice < resto else 0)) / Decimal("100") for indice in range(quantidade)]

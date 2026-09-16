@@ -6,7 +6,7 @@ from django.db import models
 from django.utils import timezone
 
 from core.storage import private_media_storage
-from financeiro.services.regras import calcular_saldo_titulo
+from financeiro.services.regras import calcular_saldo_titulo, calcular_situacao_temporal
 from .cadastros import PlanoFinanceiro
 from .previsoes import PrevisaoFinanceira
 
@@ -195,13 +195,18 @@ class TituloPagar(models.Model):
         return self.status == self.Status.PAGO or self.total_pago > 0
 
     @property
+    def situacao_temporal(self):
+        return calcular_situacao_temporal(self.vencimento, self.status, timezone.localdate())
+
+    @property
     def esta_vencido(self):
-        return bool(
-            self.vencimento
-            and self.vencimento < timezone.localdate()
-            and self.status not in {self.Status.PAGO, self.Status.CANCELADO}
-            and self.saldo_aberto > 0
-        )
+        return self.situacao_temporal == "VENCIDA" and self.saldo_aberto > 0
+
+    @property
+    def dias_em_atraso(self):
+        if not self.esta_vencido:
+            return 0
+        return (timezone.localdate() - self.vencimento).days
 
     @property
     def beneficiario_exibicao(self):

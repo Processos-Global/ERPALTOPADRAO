@@ -762,6 +762,22 @@
                             Planejamento
                         </span>
                     </a>
+                        <a
+                            href="{% url 'projetos:menu' %}"
+                            class="sidebar-link {% if request.resolver_match.namespace == 'projetos' %}sidebar-link--active{% endif %}"
+                            data-transition-link
+                            title="Projetos"
+                        >
+                            <span class="sidebar-link__icon">
+                                <svg class="icon">
+                                    <use href="#icon-file"></use>
+                                </svg>
+                            </span>
+
+                            <span class="sidebar-link__text">
+                                Projetos
+                            </span>
+                        </a>
 
                     <a
                         href="{% url 'compras:menu' %}"

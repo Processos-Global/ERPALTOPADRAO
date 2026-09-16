@@ -1,5 +1,11 @@
-﻿from django.urls import path
+from django.urls import path
+
+from .views import menu_projetos
+
 
 app_name = "projetos"
 
-urlpatterns = []
+
+urlpatterns = [
+    path("", menu_projetos, name="menu"),
+]

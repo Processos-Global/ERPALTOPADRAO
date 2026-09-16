@@ -64,4 +64,5 @@ def dashboard(request):
         "por_origem": por_origem,
         "proximos_titulos": abertos.filter(vencimento__isnull=False).order_by("vencimento", "id")[:10],
         "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
+        "pode_administrar": possui_acao_financeiro(request.user, "ADMINISTRAR"),
     })
