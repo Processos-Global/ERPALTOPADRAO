@@ -1,19 +1,14 @@
 from django.contrib import admin
 
-from financeiro.models import (
-    DespesaRecorrente,
-    Pagamento,
-    PlanoFinanceiro,
-    PrevisaoFinanceira,
-    TituloPagar,
-)
+from financeiro.models import DespesaRecorrente, Pagamento, PlanoFinanceiro, PrevisaoFinanceira, TituloPagar
 
 
 @admin.register(TituloPagar)
 class TituloPagarAdmin(admin.ModelAdmin):
-    list_display = ("numero", "fornecedor", "obra", "vencimento", "valor_original", "status", "conferencia")
-    list_filter = ("status", "origem", "conferencia", "obra")
-    search_fields = ("numero", "documento_numero", "descricao", "fornecedor__nome")
+    list_display = ("numero", "beneficiario_nome", "origem", "obra", "vencimento", "valor_original", "status")
+    list_filter = ("status", "origem", "obra")
+    search_fields = ("numero", "documento_numero", "descricao", "beneficiario_nome", "referencia_externa", "fornecedor__nome")
+    readonly_fields = ("referencia_externa", "origem_detalhe")
 
 
 admin.site.register(PlanoFinanceiro)

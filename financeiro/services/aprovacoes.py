@@ -9,22 +9,22 @@ from financeiro.services.auditoria import registrar_evento
 def enviar_para_aprovacao(titulo, *, usuario):
     if not titulo.vencimento:
         raise ValidationError("Informe o vencimento antes de enviar para aprovação.")
-    if titulo.conferencia == TituloPagar.Conferencia.DIVERGENCIA:
-        raise ValidationError("Resolva ou justifique a divergência antes da aprovação.")
+    if not titulo.beneficiario_exibicao or titulo.beneficiario_exibicao == "Beneficiário não definido":
+        raise ValidationError("Defina o beneficiário antes de enviar para aprovação.")
     if titulo.status in {TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO}:
-        raise ValidationError("Este título não pode ser enviado para aprovação.")
+        raise ValidationError("Esta Conta a Pagar não pode ser enviada para aprovação.")
 
     titulo.ciclo_aprovacao += 1
     titulo.status = TituloPagar.Status.AGUARDANDO_APROVACAO
     titulo.save(update_fields=["ciclo_aprovacao", "status", "atualizado_em"])
-    registrar_evento(titulo, "ENVIADO_APROVACAO", "Título enviado para aprovação financeira.", usuario)
+    registrar_evento(titulo, "ENVIADO_APROVACAO", "Conta a Pagar enviada para aprovação.", usuario)
     return titulo
 
 
 @transaction.atomic
 def decidir_titulo(titulo, *, usuario, decisao, observacao=""):
     if titulo.status != TituloPagar.Status.AGUARDANDO_APROVACAO:
-        raise ValidationError("O título não está aguardando aprovação.")
+        raise ValidationError("A Conta a Pagar não está aguardando aprovação.")
 
     if titulo.aprovacoes.filter(ciclo=titulo.ciclo_aprovacao).exists():
         raise ValidationError("Este ciclo de aprovação já possui uma decisão registrada.")

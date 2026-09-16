@@ -2,6 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from django import template
 
+from financeiro.services.permissoes import possui_acao_financeiro
+
 register = template.Library()
 
 
@@ -29,10 +31,16 @@ def numero_br(valor, casas=2):
 
 @register.filter
 def status_fin_classe(status):
-    if status in {"PAGO", "APROVADO", "CONFERIDO", "EXECUTADO", "EFETIVADO"}:
+    if status in {"PAGO", "APROVADO", "CONFERIDO", "EFETIVADO"}:
         return "success"
-    if status in {"VENCIDO", "REJEITADO", "CANCELADO", "DIVERGENCIA", "BLOQUEADO", "ESTORNADO"}:
+    if status in {"REJEITADO", "CANCELADO", "DIVERGENCIA", "ESTORNADO"}:
         return "danger"
-    if status in {"AGUARDANDO_APROVACAO", "PROGRAMADO", "PAGO_PARCIAL", "EM_CONFERENCIA", "DOCUMENTO_RECEBIDO", "PRONTO"}:
+    if status in {"AGUARDANDO_APROVACAO", "PREVISTA"}:
         return "warning"
     return "neutral"
+
+
+@register.simple_tag(takes_context=True)
+def pode_financeiro(context, acao):
+    request = context.get("request")
+    return bool(request and possui_acao_financeiro(request.user, acao))

@@ -1,9 +1,10 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -24,9 +25,10 @@ def titulos_lista(request):
     qs = TituloPagar.objects.select_related("fornecedor", "obra", "plano_financeiro", "pedido").all()
     busca = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "").strip()
+    origem = (request.GET.get("origem") or "").strip()
     obra = (request.GET.get("obra") or "").strip()
     fornecedor = (request.GET.get("fornecedor") or "").strip()
-    periodo = (request.GET.get("periodo") or "30").strip()
+    periodo = (request.GET.get("periodo") or "90").strip()
     atalho = (request.GET.get("atalho") or "").strip()
 
     if busca:
@@ -34,11 +36,15 @@ def titulos_lista(request):
             Q(numero__icontains=busca)
             | Q(documento_numero__icontains=busca)
             | Q(descricao__icontains=busca)
+            | Q(beneficiario_nome__icontains=busca)
             | Q(fornecedor__nome__icontains=busca)
             | Q(fornecedor__nome_fantasia__icontains=busca)
+            | Q(origem_detalhe__icontains=busca)
         )
     if status:
         qs = qs.filter(status=status)
+    if origem:
+        qs = qs.filter(origem=origem)
     if obra:
         qs = qs.filter(obra_id=obra)
     if fornecedor:
@@ -48,31 +54,33 @@ def titulos_lista(request):
         qs = qs.filter(vencimento__lt=hoje).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
     elif atalho == "aprovacao":
         qs = qs.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO)
-    elif atalho in {"7", "30"}:
+    elif atalho == "sem_data":
+        qs = qs.filter(vencimento__isnull=True).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    elif atalho in {"7", "30", "90"}:
         dias = int(atalho)
         qs = qs.filter(vencimento__range=(hoje, hoje + timedelta(days=dias))).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
     elif periodo.isdigit() and int(periodo) > 0:
-        qs = qs.filter(vencimento__lte=hoje + timedelta(days=int(periodo)))
+        qs = qs.filter(Q(vencimento__lte=hoje + timedelta(days=int(periodo))) | Q(vencimento__isnull=True))
 
-    paginator = Paginator(qs.order_by("vencimento", "numero"), 30)
-    page_obj = paginator.get_page(request.GET.get("page"))
+    page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
 
-    base_abertos = TituloPagar.objects.exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO, TituloPagar.Status.REJEITADO])
+    base_abertos = TituloPagar.objects.exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
     vencidos = list(base_abertos.filter(vencimento__lt=hoje))
     sete = list(base_abertos.filter(vencimento__range=(hoje, hoje + timedelta(days=7))))
-    trinta = list(base_abertos.filter(vencimento__range=(hoje, hoje + timedelta(days=30))))
     aprovacao = list(base_abertos.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO))
+    sem_data = list(base_abertos.filter(vencimento__isnull=True))
 
     return render(request, "financeiro/titulos_lista.html", {
         "page_obj": page_obj,
         "status_choices": TituloPagar.Status.choices,
+        "origem_choices": TituloPagar.Origem.choices[:4],
         "obras": Obra.objects.all().order_by("id"),
         "fornecedores": Fornecedor.objects.filter(ativo=True).order_by("nome"),
-        "filtros": {"q": busca, "status": status, "obra": obra, "fornecedor": fornecedor, "periodo": periodo, "atalho": atalho},
-        "kpi_vencidos": sum((x.saldo_aberto for x in vencidos), 0),
-        "kpi_7": sum((x.saldo_aberto for x in sete), 0),
-        "kpi_30": sum((x.saldo_aberto for x in trinta), 0),
-        "kpi_aprovacao": sum((x.saldo_aberto for x in aprovacao), 0),
+        "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "periodo": periodo, "atalho": atalho},
+        "kpi_vencidos": sum((x.saldo_aberto for x in vencidos), Decimal("0")),
+        "kpi_7": sum((x.saldo_aberto for x in sete), Decimal("0")),
+        "kpi_aprovacao": sum((x.saldo_aberto for x in aprovacao), Decimal("0")),
+        "kpi_sem_data": sum((x.saldo_aberto for x in sem_data), Decimal("0")),
         "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
         "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
     })
@@ -83,9 +91,9 @@ def titulo_novo(request):
     if request.method == "POST":
         form = TituloPagarForm(request.POST, request.FILES)
         if form.is_valid():
-            dados = form.cleaned_data.copy()
-            titulo = criar_titulo_manual(usuario=request.user, **dados)
-            messages.success(request, f"Título {titulo.numero} criado com sucesso.")
+            titulo = criar_titulo_manual(usuario=request.user, **form.cleaned_data)
+            notificar_aprovadores(titulo)
+            messages.success(request, f"Conta {titulo.numero} criada e enviada para aprovação.")
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:
         form = TituloPagarForm()
@@ -96,12 +104,20 @@ def titulo_novo(request):
 def titulo_detalhe(request, pk):
     titulo = get_object_or_404(
         TituloPagar.objects.select_related(
-            "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem"
-        ).select_related("pagamento").prefetch_related("aprovacoes__usuario", "historico__usuario"),
+            "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
+        ).prefetch_related("aprovacoes__usuario", "historico__usuario"),
         pk=pk,
     )
+    recebimentos = []
+    valor_documentado = Decimal("0")
+    if titulo.pedido_id:
+        recebimentos = list(titulo.pedido.recebimentos.prefetch_related("itens").all())
+        valor_documentado = sum((r.valor_total_nota or Decimal("0") for r in recebimentos), Decimal("0"))
+
     return render(request, "financeiro/titulo_detalhe.html", {
         "titulo": titulo,
+        "recebimentos": recebimentos,
+        "valor_documentado_pedido": valor_documentado,
         "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
         "pode_aprovar": possui_acao_financeiro(request.user, "APROVAR"),
         "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
@@ -110,13 +126,16 @@ def titulo_detalhe(request, pk):
 
 @financeiro_acao_required("EDITAR_TITULOS")
 def titulo_editar(request, pk):
-    titulo = get_object_or_404(TituloPagar, pk=pk)
+    titulo = get_object_or_404(TituloPagar.objects.select_related("fornecedor"), pk=pk)
+    if titulo.status == TituloPagar.Status.PAGO:
+        messages.error(request, "Conta paga não pode ser editada. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+
     if request.method == "POST":
         form = TituloPagarForm(request.POST, request.FILES, instance=titulo, titulo_integrado=titulo)
         if form.is_valid():
-            dados = {campo: form.cleaned_data[campo] for campo in form.cleaned_data}
-            atualizar_titulo(titulo, usuario=request.user, dados=dados)
-            messages.success(request, "Título atualizado com sucesso.")
+            atualizar_titulo(titulo, usuario=request.user, dados=form.cleaned_data)
+            messages.success(request, "Conta a Pagar atualizada.")
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:
         form = TituloPagarForm(instance=titulo, titulo_integrado=titulo)
@@ -130,7 +149,7 @@ def titulo_enviar_aprovacao(request, pk):
     try:
         enviar_para_aprovacao(titulo, usuario=request.user)
         notificar_aprovadores(titulo)
-        messages.success(request, "Título enviado para aprovação financeira.")
+        messages.success(request, "Conta enviada para aprovação.")
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -147,7 +166,7 @@ def titulo_decidir(request, pk):
         return redirect("financeiro:titulo_detalhe", pk=pk)
     try:
         decidir_titulo(titulo, usuario=request.user, decisao=decisao, observacao=observacao)
-        messages.success(request, "Decisão registrada com sucesso.")
+        messages.success(request, "Decisão registrada.")
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -159,7 +178,7 @@ def titulo_cancelar(request, pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
     try:
         cancelar_titulo(titulo, usuario=request.user, motivo=(request.POST.get("motivo") or "").strip())
-        messages.success(request, "Título cancelado.")
+        messages.success(request, "Conta cancelada.")
     except ValueError as exc:
         messages.error(request, str(exc))
     return redirect("financeiro:titulo_detalhe", pk=pk)

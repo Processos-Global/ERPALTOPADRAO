@@ -9,16 +9,15 @@ from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
 
 
 STATUS_ABERTOS = {
-    TituloPagar.Status.DOCUMENTO_RECEBIDO,
-    TituloPagar.Status.EM_CONFERENCIA,
+    TituloPagar.Status.PREVISTA,
     TituloPagar.Status.AGUARDANDO_APROVACAO,
     TituloPagar.Status.APROVADO,
-    TituloPagar.Status.BLOQUEADO,
+    TituloPagar.Status.REJEITADO,
 }
 
 
 def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
-    """Retorna somente saídas previstas; não calcula ou estima saldo bancário."""
+    """Saídas futuras conhecidas + previsões ainda não formalizadas."""
     inicio = inicio or timezone.localdate()
     fim = inicio + timedelta(days=dias)
     eventos = defaultdict(lambda: {"contas": Decimal("0"), "previsoes": Decimal("0")})
@@ -32,8 +31,7 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
     previsoes = PrevisaoFinanceira.objects.filter(
         ativa=True,
         data_prevista__range=(inicio, fim),
-        titulos_gerados__isnull=True,
-    )
+    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
     if obra_id:
         previsoes = previsoes.filter(obra_id=obra_id)
     for previsao in previsoes:
@@ -72,18 +70,17 @@ def resumo_por_obra():
         for titulo in TituloPagar.objects.filter(obra=obra, status__in=STATUS_ABERTOS):
             aberto += titulo.saldo_aberto
 
-        previsto = PrevisaoFinanceira.objects.filter(
+        previsto_extra = PrevisaoFinanceira.objects.filter(
             obra=obra,
             ativa=True,
-            titulos_gerados__isnull=True,
-        ).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
+        ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
 
-        if pago or aberto or previsto:
+        if pago or aberto or previsto_extra:
             linhas.append({
                 "obra": obra,
                 "pago": pago,
                 "aberto": aberto,
-                "previsto": previsto,
-                "total": pago + aberto + previsto,
+                "previsto": previsto_extra,
+                "total": pago + aberto + previsto_extra,
             })
     return linhas

@@ -8,11 +8,11 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from compras.models import PedidoCompra
 from financeiro.forms import PrevisaoFinanceiraForm
 from financeiro.models import PrevisaoFinanceira, TituloPagar
-from financeiro.services.permissoes import financeiro_acao_required
-from financeiro.services.previsoes import gerar_previsoes_recorrentes, sincronizar_previsoes_pedido
+from financeiro.services.fluxo_caixa import STATUS_ABERTOS
+from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
+from financeiro.services.previsoes import gerar_previsoes_recorrentes, sincronizar_todas_integracoes
 
 
 @financeiro_acao_required("VISUALIZAR")
@@ -21,45 +21,71 @@ def previsoes_lista(request):
     fim_7 = hoje + timedelta(days=7)
     fim_30 = hoje + timedelta(days=30)
     fim_90 = hoje + timedelta(days=90)
+    origem = (request.GET.get("origem") or "").strip()
+    obra = (request.GET.get("obra") or "").strip()
 
-    previsoes = PrevisaoFinanceira.objects.filter(
-        ativa=True,
-        titulos_gerados__isnull=True,
-    ).select_related("obra", "fornecedor", "pedido", "plano_financeiro")
-
-    origem = request.GET.get("origem") or ""
-    obra = request.GET.get("obra") or ""
+    contas = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("obra", "fornecedor", "pedido")
     if origem:
-        previsoes = previsoes.filter(origem=origem)
+        contas = contas.filter(origem=origem)
     if obra:
-        previsoes = previsoes.filter(obra_id=obra)
+        contas = contas.filter(obra_id=obra)
 
-    contas_abertas = TituloPagar.objects.exclude(
-        status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO, TituloPagar.Status.REJEITADO]
-    )
+    extras = PrevisaoFinanceira.objects.filter(ativa=True).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).select_related("obra", "fornecedor", "plano_financeiro")
+    # Previsões adicionais só pertencem ao filtro "Manual". Para Compras,
+    # M.O. e GF, a fonte de verdade são as próprias Contas a Pagar.
+    if origem and origem != TituloPagar.Origem.MANUAL:
+        extras = extras.none()
+    if obra:
+        extras = extras.filter(obra_id=obra)
 
-    def total_previsoes_ate(data):
-        return previsoes.filter(data_prevista__range=(hoje, data)).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
+    def soma_contas_ate(data):
+        return sum((x.saldo_aberto for x in contas.filter(vencimento__range=(hoje, data))), Decimal("0"))
 
-    total_contas_30 = sum(
-        (titulo.saldo_aberto for titulo in contas_abertas.filter(vencimento__range=(hoje, fim_30))),
-        Decimal("0"),
-    )
+    def soma_extras_ate(data):
+        return extras.filter(data_prevista__range=(hoje, data)).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
 
-    page_obj = Paginator(previsoes.order_by("data_prevista", "id"), 30).get_page(request.GET.get("page"))
+    linhas = []
+    for conta in contas.filter(vencimento__isnull=False):
+        linhas.append({
+            "tipo": "CONTA",
+            "data": conta.vencimento,
+            "descricao": conta.descricao,
+            "origem": conta.get_origem_display(),
+            "beneficiario": conta.beneficiario_exibicao,
+            "obra": conta.obra,
+            "valor": conta.saldo_aberto,
+            "status": conta.get_status_display(),
+            "pk": conta.pk,
+        })
+    for previsao in extras.filter(data_prevista__isnull=False):
+        linhas.append({
+            "tipo": "PREVISAO",
+            "data": previsao.data_prevista,
+            "descricao": previsao.descricao,
+            "origem": previsao.get_origem_display(),
+            "beneficiario": getattr(previsao.fornecedor, "nome_exibicao", "") if previsao.fornecedor else "—",
+            "obra": previsao.obra,
+            "valor": previsao.valor_previsto,
+            "status": "Ainda não formalizada",
+            "pk": None,
+        })
+    linhas.sort(key=lambda item: (item["data"], item["tipo"], item["descricao"]))
+    page_obj = Paginator(linhas, 40).get_page(request.GET.get("page"))
 
     from obras.models import Obra
     return render(request, "financeiro/previsoes.html", {
         "page_obj": page_obj,
-        "origem_choices": PrevisaoFinanceira.Origem.choices,
+        "origem_choices": TituloPagar.Origem.choices[:4],
         "origem": origem,
         "obra": obra,
         "obras": Obra.objects.all().order_by("id"),
-        "total_7": total_previsoes_ate(fim_7),
-        "total_30": total_previsoes_ate(fim_30),
-        "total_90": total_previsoes_ate(fim_90),
-        "contas_30": total_contas_30,
-        "total_desembolso_30": total_previsoes_ate(fim_30) + total_contas_30,
+        "contas_7": soma_contas_ate(fim_7),
+        "contas_30": soma_contas_ate(fim_30),
+        "contas_90": soma_contas_ate(fim_90),
+        "extras_30": soma_extras_ate(fim_30),
+        "total_30": soma_contas_ate(fim_30) + soma_extras_ate(fim_30),
+        "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
+        "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
     })
 
 
@@ -73,7 +99,7 @@ def previsao_nova(request):
             previsao.certeza = PrevisaoFinanceira.Certeza.PREVISTO
             previsao.criado_por = request.user
             previsao.save()
-            messages.success(request, "Previsão de gasto criada com sucesso.")
+            messages.success(request, "Previsão adicional criada. Ela não é uma Conta a Pagar até ser formalizada.")
             return redirect("financeiro:previsoes")
     else:
         form = PrevisaoFinanceiraForm()
@@ -83,10 +109,12 @@ def previsao_nova(request):
 @financeiro_acao_required("EDITAR_TITULOS")
 @require_POST
 def sincronizar_compras(request):
-    total = 0
-    for pedido in PedidoCompra.objects.exclude(status=PedidoCompra.Status.CANCELADO).prefetch_related("parcelas_previstas"):
-        total += sincronizar_previsoes_pedido(pedido).count()
+    resultado = sincronizar_todas_integracoes()
     hoje = timezone.localdate()
     recorrentes = gerar_previsoes_recorrentes(hoje, hoje + timedelta(days=180), request.user)
-    messages.success(request, f"Previsões atualizadas: {total} de compras e {recorrentes} recorrentes novas.")
+    messages.success(
+        request,
+        f"Financeiro sincronizado: {resultado['compras']} conta(s) de Compras, "
+        f"{resultado['grandes_fornecedores']} de Grandes Fornecedores e {recorrentes} previsão(ões) recorrente(s) nova(s).",
+    )
     return redirect("financeiro:previsoes")

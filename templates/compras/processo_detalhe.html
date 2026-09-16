@@ -2176,6 +2176,7 @@
                     <span>Total selecionado</span>
                     <strong data-approval-selected-total>R$ 0,00</strong>
                     <small data-approval-selected-note>Selecione as propostas na matriz.</small>
+                    <small class="pc-approval-finance__breakdown">Itens: <b data-approval-selected-subtotal>R$ 0,00</b> · Frete: <b data-approval-selected-freight>R$ 0,00</b></small>
                   </div>
                   <div class="pc-approval-finance__card is-single">
                     <span>Melhor compra em 1 fornecedor</span>
@@ -2214,7 +2215,7 @@
                       <th class="qty-col"><span class="pc-head-label">Qtd.</span></th>
                       {% for cotacao in cotacoes %}
                         <th>
-                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
+                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
                             <strong class="pc-approval-supplier__name">{{ cotacao.fornecedor.nome }}</strong>
                             {% if cotacao.enviada_aprovacao_em %}
                               <button type="submit" class="cp-btn cp-btn--sm pc-approval-supplier__return" data-return-negotiation formaction="{% url 'compras:devolver_cotacao_negociacao' processo.pk cotacao.pk %}" formmethod="post">Voltar à negociação</button>
@@ -2236,19 +2237,20 @@
                           <small>{{ linha.necessidade.unidade }}</small>
                         </td>
                         {% for oferta in linha.ofertas %}
-                          <td class="pc-manager-choice {% if not oferta.item %}is-not-quoted{% elif not oferta.elegivel_aprovacao %}is-disabled{% elif oferta.menor_valor_final %}is-best-cell{% else %}is-eligible{% endif %}">
-                            {% if oferta.item %}
+                          <td class="pc-manager-choice {% if not oferta.item or not oferta.cotado_valido %}is-not-quoted{% elif not oferta.elegivel_aprovacao %}is-disabled{% elif oferta.menor_valor_final %}is-best-cell{% else %}is-eligible{% endif %}">
+                            {% if oferta.item and oferta.cotado_valido %}
                               {% if oferta.elegivel_aprovacao %}
                                 <label class="pc-approval-offer{% if oferta.menor_valor_final %} is-best-price{% endif %}">
                                   <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk }}" class="pc-map-choice-input" data-approval-choice data-supplier-id="{{ oferta.item.cotacao.fornecedor.pk }}" data-supplier-name="{{ oferta.item.cotacao.fornecedor.nome|escape }}" data-item-total="{{ oferta.total_final }}">
                                   <span class="pc-approval-check">✓</span>
                                   <strong class="pc-approval-offer__total">R$ {{ oferta.total_final|floatformat:2 }}</strong>
                                   <span class="pc-approval-offer__unit">R$ {{ oferta.valor_final|floatformat:2 }}/un.</span>
+                                  {% if oferta.desconto_final > 0 %}<span class="pc-approval-offer__unit">Desconto: R$ {{ oferta.desconto_final|floatformat:2 }}</span>{% endif %}
                                   {% if oferta.menor_valor_final %}<em class="pc-approval-offer__best" title="Menor preço">★</em>{% endif %}
                                 </label>
                               {% else %}
                                 <div class="pc-approval-offer pc-approval-offer--blocked">
-                                  <strong class="pc-approval-offer__total">R$ {{ oferta.item.valor_total_cotado|floatformat:2 }}</strong>
+                                  <strong class="pc-approval-offer__total">R$ {{ oferta.total_final|floatformat:2 }}</strong>
                                   <span class="pc-approval-offer__unit">Não elegível</span>
                                 </div>
                               {% endif %}
@@ -2267,7 +2269,7 @@
                     </tr>
                     <tr>
                       <th colspan="2">Frete</th>
-                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete|floatformat:2 }}</td>{% endfor %}
+                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete_aprovacao|floatformat:2 }}</td>{% endfor %}
                     </tr>
                     <tr>
                       <th colspan="2">Condição de pagamento</th>
@@ -3588,6 +3590,8 @@
 
     const selectedOut=approvalForm.querySelector('[data-approval-selected-total]');
     const selectedNote=approvalForm.querySelector('[data-approval-selected-note]');
+    const selectedSubtotalOut=approvalForm.querySelector('[data-approval-selected-subtotal]');
+    const selectedFreightOut=approvalForm.querySelector('[data-approval-selected-freight]');
     const singleOut=approvalForm.querySelector('[data-approval-single-total]');
     const singleNote=approvalForm.querySelector('[data-approval-single-note]');
     const diffOut=approvalForm.querySelector('[data-approval-difference]');
@@ -3615,8 +3619,10 @@
       });
       const freightTotal=[...selectedSuppliers.values()].reduce((sum,s)=>sum+(s.freight||0),0);
       const selectedTotal=itemsTotal+freightTotal;
+      if(selectedSubtotalOut)selectedSubtotalOut.textContent=money(itemsTotal);
+      if(selectedFreightOut)selectedFreightOut.textContent=money(freightTotal);
       if(selectedOut)selectedOut.textContent=money(selectedTotal);
-      if(selectedNote)selectedNote.textContent=selected.length?`${selected.length} proposta(s) · ${selectedSuppliers.size} fornecedor(es) · frete incluído`: 'Selecione as propostas na matriz.';
+      if(selectedNote)selectedNote.textContent=selected.length?`${selected.length} proposta(s) · ${selectedSuppliers.size} fornecedor(es)`: 'Selecione as propostas na matriz.';
 
       const best=viableSuppliers[0];
       if(best){
@@ -3644,8 +3650,9 @@
 
     approvalForm.querySelector('[data-select-cheapest]')?.addEventListener('click',()=>{
       rows.forEach(row=>{
-        const opts=[...row.querySelectorAll('[data-approval-choice]')];
-        opts.forEach(o=>o.checked=false);
+        const allOpts=[...row.querySelectorAll('[data-approval-choice]')];
+        allOpts.forEach(o=>o.checked=false);
+        const opts=allOpts.filter(o=>parseNumber(o.dataset.itemTotal)>0);
         if(opts.length){opts.sort((a,b)=>parseNumber(a.dataset.itemTotal)-parseNumber(b.dataset.itemTotal));opts[0].checked=true;}
       });
       refreshApprovalFinance();

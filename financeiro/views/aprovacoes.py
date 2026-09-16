@@ -14,7 +14,7 @@ from financeiro.services.permissoes import financeiro_acao_required
 def aprovacoes_lista(request):
     titulos = list(
         TituloPagar.objects.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO)
-        .select_related("fornecedor", "obra", "pedido", "recebimento")
+        .select_related("fornecedor", "obra", "pedido")
         .order_by("vencimento", "id")
     )
     return render(request, "financeiro/aprovacoes.html", {
@@ -29,11 +29,7 @@ def aprovacoes_lote(request):
     ids = request.POST.getlist("titulo")
     aprovados = 0
     erros = []
-
-    for titulo in TituloPagar.objects.filter(
-        pk__in=ids,
-        status=TituloPagar.Status.AGUARDANDO_APROVACAO,
-    ):
+    for titulo in TituloPagar.objects.filter(pk__in=ids, status=TituloPagar.Status.AGUARDANDO_APROVACAO):
         try:
             decidir_titulo(
                 titulo,
@@ -44,11 +40,10 @@ def aprovacoes_lote(request):
             aprovados += 1
         except ValidationError as exc:
             erros.append(f"{titulo.numero}: {'; '.join(exc.messages)}")
-
     if aprovados:
-        messages.success(request, f"{aprovados} título(s) aprovado(s).")
+        messages.success(request, f"{aprovados} conta(s) aprovada(s).")
     if not ids:
-        messages.warning(request, "Selecione ao menos um título.")
+        messages.warning(request, "Selecione ao menos uma conta.")
     for erro in erros[:5]:
         messages.error(request, erro)
     return redirect("financeiro:aprovacoes")

@@ -21,13 +21,12 @@ def calcular_saldo_titulo(valor_original, acrescimos=0, descontos=0, total_pago=
 
 
 def calcular_status_pagamento(valor_liquido, total_pago):
+    """Financeiro v2 não trabalha com pagamento parcial de uma Conta a Pagar."""
     valor_liquido = _decimal(valor_liquido)
     total_pago = _decimal(total_pago)
     if total_pago <= 0:
         return "PENDENTE"
-    if total_pago >= valor_liquido:
-        return "PAGO"
-    return "PAGO_PARCIAL"
+    return "PAGO" if total_pago >= valor_liquido else "INCONSISTENTE"
 
 
 def nivel_certeza_ordem(nivel):

@@ -44,7 +44,11 @@ from compras.services.permissoes import (
     possui_permissao_compras,
 )
 from compras.services.processos import criar_processo
-from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
+from compras.services.comercial import (
+    calcular_desconto_adjudicacao,
+    item_tecnicamente_aprovado,
+    processo_exige_compatibilizacao,
+)
 from compras.services.pedidos import transicoes_status_permitidas
 from compras.services.pdf_solicitacao import gerar_pdf_pedido_compra
 from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
@@ -170,6 +174,8 @@ def _montar_dados_comerciais(
             cotacao.itens.all()
         )
 
+        negociacoes_com_frete = []
+
         for item in itens:
 
             todos_itens.append(
@@ -187,6 +193,26 @@ def _montar_dados_comerciais(
                 item.valor_total_cotado
             )
 
+            try:
+                negociacao_item = item.negociacao
+            except Exception:
+                negociacao_item = None
+
+            if (
+                negociacao_item is not None
+                and negociacao_item.frete_negociado is not None
+            ):
+                negociacoes_com_frete.append(negociacao_item)
+
+        frete_aprovacao = cotacao.frete or zero
+        if negociacoes_com_frete:
+            negociacao_frete = max(
+                negociacoes_com_frete,
+                key=lambda n: (n.atualizado_em, n.pk),
+            )
+            frete_aprovacao = negociacao_frete.frete_negociado
+
+        cotacao.frete_aprovacao = frete_aprovacao
         cotacao.total_proposta = total
         cotacao.total_proposta_com_frete = total + (cotacao.frete or zero)
         cotacao.qtd_itens_proposta = len(itens)
@@ -222,6 +248,8 @@ def _montar_dados_comerciais(
 
             valor_final = None
             total_final = None
+            desconto_final = zero
+            cotado_valido = False
             elegivel_aprovacao = False
             if item is not None:
                 valor_final = (
@@ -229,8 +257,28 @@ def _montar_dados_comerciais(
                     if negociacao is not None
                     else item.valor_unitario_cotado
                 )
-                total_final = valor_final * item.quantidade
-                elegivel_aprovacao = bool(cotacao.enviada_aprovacao_em) and item_tecnicamente_aprovado(item)
+                cotado_valido = bool(
+                    valor_final is not None
+                    and valor_final > zero
+                    and item.quantidade > zero
+                )
+
+                if cotado_valido:
+                    desconto_final = calcular_desconto_adjudicacao(
+                        item,
+                        item.quantidade,
+                        valor_final,
+                    )
+                    total_final = max(
+                        (valor_final * item.quantidade) - desconto_final,
+                        zero,
+                    )
+
+                elegivel_aprovacao = bool(
+                    cotado_valido
+                    and cotacao.enviada_aprovacao_em
+                    and item_tecnicamente_aprovado(item)
+                )
 
             ofertas.append(
                 {
@@ -240,6 +288,8 @@ def _montar_dados_comerciais(
                     "negociacao": negociacao,
                     "valor_final": valor_final,
                     "total_final": total_final,
+                    "desconto_final": desconto_final,
+                    "cotado_valido": cotado_valido,
                     "elegivel_aprovacao": elegivel_aprovacao,
                 }
             )
@@ -247,12 +297,18 @@ def _montar_dados_comerciais(
         valores_validos = [
             oferta["item"].valor_unitario_cotado
             for oferta in ofertas
-            if oferta["item"] is not None
+            if (
+                oferta["item"] is not None
+                and oferta["item"].valor_unitario_cotado is not None
+                and oferta["item"].valor_unitario_cotado > zero
+            )
         ]
         menor_preco = min(valores_validos) if valores_validos else None
         for oferta in ofertas:
             oferta["menor_preco"] = bool(
                 oferta["item"] is not None
+                and oferta["item"].valor_unitario_cotado is not None
+                and oferta["item"].valor_unitario_cotado > zero
                 and menor_preco is not None
                 and oferta["item"].valor_unitario_cotado == menor_preco
             )
@@ -260,7 +316,11 @@ def _montar_dados_comerciais(
         valores_finais_elegiveis = [
             oferta["valor_final"]
             for oferta in ofertas
-            if oferta["elegivel_aprovacao"] and oferta["valor_final"] is not None
+            if (
+                oferta["elegivel_aprovacao"]
+                and oferta["valor_final"] is not None
+                and oferta["valor_final"] > zero
+            )
         ]
         menor_valor_final = min(valores_finais_elegiveis) if valores_finais_elegiveis else None
         for oferta in ofertas:

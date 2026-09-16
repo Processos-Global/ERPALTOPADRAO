@@ -29,11 +29,11 @@ def pagamento_novo(request, titulo_id):
 
     pagamento_existente = Pagamento.objects.filter(titulo=titulo).first()
     if (pagamento_existente and pagamento_existente.status == Pagamento.Status.EFETIVADO) or titulo.status == TituloPagar.Status.PAGO:
-        messages.warning(request, "Este título já possui pagamento registrado.")
+        messages.warning(request, "Esta Conta a Pagar já possui pagamento registrado.")
         return redirect("financeiro:titulos")
 
     if titulo.status != TituloPagar.Status.APROVADO:
-        messages.error(request, "O título precisa estar aprovado antes de registrar o pagamento.")
+        messages.error(request, "A Conta a Pagar precisa estar aprovada antes de registrar o pagamento.")
         return redirect("financeiro:titulos")
 
     if request.method == "POST":
@@ -68,5 +68,5 @@ def pagamento_estornar(request, pk):
         usuario=request.user,
         motivo=(request.POST.get("motivo") or "").strip(),
     )
-    messages.success(request, "Pagamento estornado. O título voltou para o status Aprovado.")
+    messages.success(request, "Pagamento estornado. A Conta a Pagar voltou para o status Aprovado.")
     return redirect("financeiro:pagamentos")

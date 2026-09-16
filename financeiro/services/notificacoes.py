@@ -36,7 +36,7 @@ def notificar_aprovadores(titulo):
     for usuario in usuarios_aprovadores_financeiro():
         criar_notificacao(
             usuario=usuario,
-            titulo="Pagamento aguardando aprovação",
+            titulo="Conta a Pagar aguardando aprovação",
             mensagem=f"{titulo.numero} · {titulo.descricao} · R$ {titulo.valor_liquido:,.2f}",
             modulo=modulo,
             tipo=TipoNotificacao.ACAO,
