@@ -33,6 +33,7 @@ class ModuloDef:
     ordem: int
     url_name: str = ""
     permissoes: tuple[PermissaoEspecificaDef, ...] = ()
+    preferencias_email: tuple[PermissaoEspecificaDef, ...] = ()
     carregar_especificas: Callable[[User], dict] | None = None
     salvar_especificas: Callable[[User, dict, bool], None] | None = None
     resolver_nivel: Callable[[dict], str] | None = None
@@ -50,6 +51,17 @@ def _carregar_compras(usuario: User) -> dict:
         "receber_pedidos": permissao.receber_pedidos,
         "cancelar_pedidos": permissao.cancelar_pedidos,
         "administrar": permissao.administrar,
+        "receber_emails": permissao.receber_emails,
+        "email_visualizar": permissao.email_visualizar,
+        "email_solicitar_compra": permissao.email_solicitar_compra,
+        "email_executar_cotacao": permissao.email_executar_cotacao,
+        "email_compatibilizar": permissao.email_compatibilizar,
+        "email_negociar": permissao.email_negociar,
+        "email_aprovar_compra": permissao.email_aprovar_compra,
+        "email_gerenciar_pedidos": permissao.email_gerenciar_pedidos,
+        "email_receber_pedidos": permissao.email_receber_pedidos,
+        "email_cancelar_pedidos": permissao.email_cancelar_pedidos,
+        "email_administrar": permissao.email_administrar,
     }
 
 
@@ -156,6 +168,24 @@ def _salvar_compras(usuario: User, valores: dict, modulo_ativo: bool) -> None:
         "administrar",
     ):
         setattr(permissao, campo, bool(valores.get(campo, False)))
+
+    # Preferências de e-mail são independentes das permissões de acesso.
+    # Um gestor pode, por exemplo, continuar podendo compatibilizar, mas optar
+    # por receber e-mail apenas quando houver algo para aprovação.
+    permissao.receber_emails = bool(valores.get("receber_emails", False))
+    for campo in (
+        "email_visualizar",
+        "email_solicitar_compra",
+        "email_executar_cotacao",
+        "email_compatibilizar",
+        "email_negociar",
+        "email_aprovar_compra",
+        "email_gerenciar_pedidos",
+        "email_receber_pedidos",
+        "email_cancelar_pedidos",
+        "email_administrar",
+    ):
+        setattr(permissao, campo, bool(valores.get(campo, False)))
     permissao.save()
 
 
@@ -222,6 +252,19 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
             PermissaoEspecificaDef("receber_pedidos", "Registrar recebimentos", "Pode registrar recebimentos, valores e nota fiscal."),
             PermissaoEspecificaDef("cancelar_pedidos", "Cancelar pedidos", "Pode cancelar pedidos quando a regra de negócio permitir.", "danger"),
             PermissaoEspecificaDef("administrar", "Administrar Compras", "Concede acesso total às ações de Compras.", "admin"),
+        ),
+        preferencias_email=(
+            PermissaoEspecificaDef("receber_emails", "Receber e-mails de Compras", "Chave geral. Desmarcando, nenhuma notificação de Compras será enviada por e-mail."),
+            PermissaoEspecificaDef("email_solicitar_compra", "Solicitação de compra", "Receber e-mail quando a notificação estiver ligada à ação de solicitar compra."),
+            PermissaoEspecificaDef("email_executar_cotacao", "Cotação", "Receber e-mail de notificações ligadas à etapa de cotação."),
+            PermissaoEspecificaDef("email_compatibilizar", "Compatibilização", "Receber e-mail de notificações ligadas à compatibilização técnica."),
+            PermissaoEspecificaDef("email_negociar", "Negociação", "Receber e-mail de notificações ligadas à negociação."),
+            PermissaoEspecificaDef("email_aprovar_compra", "Aprovação", "Receber e-mail quando houver notificação ligada à aprovação da compra."),
+            PermissaoEspecificaDef("email_gerenciar_pedidos", "Pedidos", "Receber e-mail de notificações ligadas à gestão de pedidos."),
+            PermissaoEspecificaDef("email_receber_pedidos", "Recebimentos", "Receber e-mail de notificações ligadas ao recebimento de pedidos."),
+            PermissaoEspecificaDef("email_cancelar_pedidos", "Cancelamentos", "Receber e-mail de notificações ligadas a cancelamentos."),
+            PermissaoEspecificaDef("email_visualizar", "Avisos gerais", "Receber e-mail quando o evento usar a ação geral de visualização de Compras."),
+            PermissaoEspecificaDef("email_administrar", "Administração", "Receber e-mail quando o evento for direcionado à administração de Compras."),
         ),
         carregar_especificas=_carregar_compras,
         salvar_especificas=_salvar_compras,
@@ -291,6 +334,19 @@ def obter_configuracao_modulos_usuario(usuario: User) -> list[dict]:
                 }
             )
 
+        preferencias_email = []
+        for preferencia in definicao.preferencias_email:
+            preferencias_email.append(
+                {
+                    "campo": preferencia.campo,
+                    "rotulo": preferencia.rotulo,
+                    "descricao": preferencia.descricao,
+                    "destaque": preferencia.destaque,
+                    "marcada": bool(especificas_valores.get(preferencia.campo, True)),
+                    "input_name": f"email__{definicao.codigo}__{preferencia.campo}",
+                }
+            )
+
         resultado.append(
             {
                 "codigo": definicao.codigo,
@@ -303,6 +359,8 @@ def obter_configuracao_modulos_usuario(usuario: User) -> list[dict]:
                 "input_nivel": f"modulo__{definicao.codigo}__nivel",
                 "niveis": NivelPermissao.choices,
                 "permissoes": especificas,
+                "preferencias_email": preferencias_email,
+                "tem_preferencias_email": bool(preferencias_email),
                 "tem_permissoes_especificas": bool(especificas),
                 "nivel_automatico": bool(definicao.resolver_nivel),
             }
@@ -329,6 +387,14 @@ def salvar_configuracao_modulos_usuario(usuario: User, post_data, usuario_execut
             ) == "on"
             for permissao in definicao.permissoes
         }
+        valores.update(
+            {
+                preferencia.campo: post_data.get(
+                    f"email__{definicao.codigo}__{preferencia.campo}"
+                ) == "on"
+                for preferencia in definicao.preferencias_email
+            }
+        )
 
         if definicao.resolver_nivel:
             nivel = definicao.resolver_nivel(valores)

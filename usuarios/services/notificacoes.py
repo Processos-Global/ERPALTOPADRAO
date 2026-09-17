@@ -75,6 +75,47 @@ CAMPO_POR_ACAO_COMPRA = {
 }
 
 
+CAMPO_EMAIL_POR_ACAO_COMPRA = {
+    AcaoCompra.VISUALIZAR: "email_visualizar",
+    AcaoCompra.SOLICITAR: "email_solicitar_compra",
+    AcaoCompra.COTAR: "email_executar_cotacao",
+    AcaoCompra.COMPATIBILIZAR: "email_compatibilizar",
+    AcaoCompra.NEGOCIAR: "email_negociar",
+    AcaoCompra.APROVAR: "email_aprovar_compra",
+    AcaoCompra.GERENCIAR_PEDIDOS: "email_gerenciar_pedidos",
+    AcaoCompra.RECEBER_PEDIDOS: "email_receber_pedidos",
+    AcaoCompra.CANCELAR_PEDIDOS: "email_cancelar_pedidos",
+    AcaoCompra.ADMINISTRAR: "email_administrar",
+}
+
+
+def _usuario_recebe_email_compras(usuario, acao):
+    """
+    Decide somente o canal e-mail. Não interfere na permissão do usuário e
+    não impede a criação da notificação dentro do ERP.
+    """
+    try:
+        acao = AcaoCompra(acao)
+    except ValueError:
+        return False
+
+    try:
+        preferencia = usuario.permissao_compras_erp
+    except PermissaoCompras.DoesNotExist:
+        # Compatibilidade com usuários antigos/legados: enquanto não houver
+        # configuração granular, preserva o comportamento anterior.
+        return True
+
+    if not preferencia.receber_emails:
+        return False
+
+    campo = CAMPO_EMAIL_POR_ACAO_COMPRA.get(acao)
+    if not campo:
+        return True
+
+    return bool(getattr(preferencia, campo, True))
+
+
 ACOES_LEGADAS_APROVACAO = {
     AcaoCompra.APROVAR,
 }
@@ -263,7 +304,7 @@ def notificar_usuarios_com_acao_compras(
             )
         )
 
-        if deve_enviar_email:
+        if deve_enviar_email and _usuario_recebe_email_compras(usuario, acao):
             emails_pendentes.append(notificacao.pk)
 
     # O commit continua protegendo a consistência: só iniciamos o envio depois

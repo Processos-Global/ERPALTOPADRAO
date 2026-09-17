@@ -64,5 +64,24 @@
         Este módulo ainda utiliza apenas o nível geral. Quando forem definidas permissões específicas no futuro, elas aparecerão automaticamente nesta mesma seção.
       </div>
     {% endif %}
+
+    {% if modulo.tem_preferencias_email %}
+      <div class="usr-specific" data-module-content="{{ modulo.codigo }}" style="margin-top:16px">
+        <div class="usr-specific__head">
+          <div>
+            <strong>Notificações por e-mail</strong>
+            <small>Estas opções controlam apenas os e-mails. Desmarcar uma opção não altera o acesso do usuário nem as notificações exibidas dentro do ERP.</small>
+          </div>
+        </div>
+        <div class="usr-permission-grid">
+          {% for preferencia in modulo.preferencias_email %}
+            <label class="usr-permission {% if preferencia.campo == 'receber_emails' %}usr-permission--admin{% endif %}">
+              <input type="checkbox" name="{{ preferencia.input_name }}" {% if preferencia.marcada %}checked{% endif %}>
+              <span><strong>{{ preferencia.rotulo }}</strong><small>{{ preferencia.descricao }}</small></span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 </details>
