@@ -17,6 +17,8 @@ def incluir_cotacao(*, processo, fornecedor, usuario, **dados):
         )
     if dados.get("frete") is None:
         dados["frete"] = Decimal("0")
+    if dados.get("desconto_proposta") is None:
+        dados["desconto_proposta"] = Decimal("0")
     if processo.status == processo.Status.CANCELADO:
         raise ValidationError("Processo cancelado não pode receber cotação.")
 

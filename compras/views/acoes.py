@@ -1,3 +1,4 @@
+from decimal import Decimal
 from core.validators import validar_documento_upload
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -247,6 +248,7 @@ def acao_salvar_proposta_completa(request, pk):
                 "prazo_entrega_dias": form.cleaned_data.get("prazo_entrega_dias"),
                 "condicao_pagamento": form.cleaned_data.get("condicao_pagamento", ""),
                 "frete": form.cleaned_data.get("frete"),
+                "desconto_proposta": form.cleaned_data.get("desconto_proposta") or Decimal("0"),
                 "validade": form.cleaned_data.get("validade"),
                 "observacoes": form.cleaned_data.get("observacoes", ""),
             }

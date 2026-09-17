@@ -157,6 +157,7 @@ class CotacaoFornecedorForm(forms.Form):
         widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
     )
     frete = forms.DecimalField(required=True, min_value=0, decimal_places=2, initial=0, label="Frete (R$)")
+    desconto_proposta = forms.DecimalField(required=False, min_value=0, decimal_places=2, initial=0, label="Desconto da proposta (R$)")
     validade = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     documento = forms.FileField(required=False, validators=[validar_documento_upload])
@@ -254,7 +255,15 @@ class PropostaCompletaForm(forms.Form):
         decimal_places=2,
         initial=0,
         label="Frete (R$)",
-        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0", "data-proposta-frete": "1"}),
+    )
+    desconto_proposta = forms.DecimalField(
+        required=False,
+        min_value=0,
+        decimal_places=2,
+        initial=0,
+        label="Desconto da proposta (R$)",
+        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0", "data-proposta-desconto-geral": "1"}),
     )
     validade = forms.DateField(
         required=True,
@@ -292,6 +301,7 @@ class PropostaCompletaForm(forms.Form):
                         else None
                     ),
                     "frete": _numero_para_input(cotacao.frete),
+                    "desconto_proposta": _numero_para_input(cotacao.desconto_proposta),
                     "validade": cotacao.validade,
                     "observacoes": cotacao.observacoes,
                 }

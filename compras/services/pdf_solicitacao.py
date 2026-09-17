@@ -187,8 +187,22 @@ def gerar_pdf_pedido_compra(pedido):
 
     for item in itens:
         descricao = _texto(item.descricao)
+
         if item.especificacao:
-            descricao += f"<br/><font size='7' color='#64748B'>{_texto(item.especificacao)}</font>"
+            descricao += (
+                "<br/><font size='7' color='#64748B'>"
+                f"<b>Especificação:</b> {_texto(item.especificacao)}"
+                "</font>"
+            )
+
+        observacao_solicitacao = getattr(getattr(item, "necessidade", None), "observacao", "")
+        if observacao_solicitacao:
+            descricao += (
+                "<br/><font size='7' color='#334155'>"
+                f"<b>Observação da solicitação:</b> "
+                f"{_texto(observacao_solicitacao).replace(chr(10), '<br/>')}"
+                "</font>"
+            )
 
         item_rows.append([
             Paragraph(descricao, body),

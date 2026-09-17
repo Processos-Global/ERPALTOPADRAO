@@ -256,7 +256,12 @@
                     <tr>
                       <td>
                         <div class="cp-item-title">{{ item.descricao }}</div>
-                        {% if item.especificacao %}<div class="cp-item-sub">{{ item.especificacao|truncatechars:80 }}</div>{% endif %}
+                        {% if item.especificacao %}
+                          <div class="cp-item-sub"><strong>Especificação:</strong> {{ item.especificacao|truncatechars:120 }}</div>
+                        {% endif %}
+                        {% if item.necessidade.observacao %}
+                          <div class="cp-item-sub"><strong>Observação da solicitação:</strong> {{ item.necessidade.observacao|truncatechars:160 }}</div>
+                        {% endif %}
                       </td>
                       <td>{{ item.quantidade|floatformat:"-4" }} {{ item.unidade }}</td>
                       <td>

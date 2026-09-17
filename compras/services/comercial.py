@@ -4,6 +4,7 @@ import unicodedata
 from django.db.models import F, OuterRef, Q, Subquery
 
 from compras.models import CompatibilizacaoItem
+from .valores import calcular_total_proposta
 
 CENTAVO = Decimal("0.01")
 ZERO = Decimal("0")
@@ -28,6 +29,15 @@ def cotacao_elegivel_para_negociacao(cotacao):
 
 
 def queryset_itens_elegiveis_comercial(queryset, processo):
+    # Oferta com preço final zero não é cotação válida. Se houver negociação,
+    # ela prevalece sobre o preço original; caso contrário usa o valor cotado.
+    queryset = queryset.filter(
+        Q(negociacao__valor_unitario_negociado__gt=ZERO)
+        | (
+            Q(negociacao__valor_unitario_negociado__isnull=True)
+            & Q(valor_unitario_cotado__gt=ZERO)
+        )
+    )
     if not processo_exige_compatibilizacao(processo):
         return queryset
     return queryset_itens_tecnicamente_aprovados(queryset)
@@ -178,6 +188,19 @@ def frete_final_fornecedor(processo, fornecedor_id):
     return quantizar_moeda(primeira.cotacao.frete)
 
 
+def desconto_proposta_final_fornecedor(processo, fornecedor_id):
+    """Retorna o desconto geral da proposta uma única vez por fornecedor."""
+    adjudicacao = (
+        processo.adjudicacoes
+        .filter(cancelada=False, cotacao__fornecedor_id=fornecedor_id)
+        .select_related("cotacao")
+        .order_by("id")
+        .first()
+    )
+    if not adjudicacao:
+        return ZERO
+    return quantizar_moeda(adjudicacao.cotacao.desconto_proposta)
+
 def condicao_pagamento_final_fornecedor(processo, fornecedor_id):
     adjudicacoes = (
         processo.adjudicacoes
@@ -214,4 +237,12 @@ def total_aprovacao_processo(processo):
     subtotal_liquido = sum((a.valor_total for a in adjudicacoes), ZERO)
     fornecedores = {a.cotacao.fornecedor_id for a in adjudicacoes}
     fretes = sum((frete_final_fornecedor(processo, fornecedor_id) for fornecedor_id in fornecedores), ZERO)
-    return quantizar_moeda(subtotal_liquido + fretes)
+    descontos_proposta = sum(
+        (desconto_proposta_final_fornecedor(processo, fornecedor_id) for fornecedor_id in fornecedores),
+        ZERO,
+    )
+    return calcular_total_proposta(
+        subtotal=subtotal_liquido,
+        desconto=descontos_proposta,
+        frete=fretes,
+    )

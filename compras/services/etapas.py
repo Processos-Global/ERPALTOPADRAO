@@ -16,6 +16,7 @@ from .comercial import (
     queryset_itens_elegiveis_comercial, total_aprovacao_processo,
 )
 from .integracao_planejamento import sincronizar_data_real
+from .valores import preco_final_valido
 from .notificacoes import (
     notificar_ajuste_solicitado,
     notificar_pedidos_gerados,
@@ -255,6 +256,11 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
 
         negociacao = getattr(item, "negociacao", None)
         valor = negociacao.valor_final_unitario if negociacao else item.valor_unitario_cotado
+        if not preco_final_valido(valor):
+            raise ValidationError(
+                f"A proposta de {item.cotacao.fornecedor.nome} para {item.necessidade.descricao} "
+                "possui preço final zerado e não pode ser aprovada."
+            )
         prazo = (
             negociacao.prazo_entrega_dias_negociado
             if negociacao and negociacao.prazo_entrega_dias_negociado is not None

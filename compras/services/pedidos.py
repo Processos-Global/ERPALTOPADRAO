@@ -18,6 +18,7 @@ from compras.models import (
 from .auditoria import registrar_evento
 from .comercial import (
     condicao_pagamento_final_fornecedor,
+    desconto_proposta_final_fornecedor,
     frete_final_fornecedor,
     prazo_final_fornecedor,
     quantizar_moeda,
@@ -26,6 +27,7 @@ from .integracao_planejamento import limpar_data_real, sincronizar_data_real
 from .grande_fornecedor_status import status_por_recebimento
 from .historico_suprimentos import remover_historico_processo, sincronizar_historico_processo
 from .numeracao import gerar_numero
+from .valores import calcular_total_proposta
 
 ZERO = Decimal("0")
 
@@ -219,9 +221,11 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
         # Todos os itens aprovados do mesmo fornecedor compõem um único pedido.
         # Frete, condição e prazo também são calculados uma única vez por fornecedor.
         subtotal = quantizar_moeda(sum((a.valor_bruto for a in grupo), ZERO))
-        descontos = quantizar_moeda(sum((a.desconto_final or ZERO for a in grupo), ZERO))
+        descontos_itens = quantizar_moeda(sum((a.desconto_final or ZERO for a in grupo), ZERO))
+        desconto_proposta = desconto_proposta_final_fornecedor(p, fornecedor_id)
+        descontos = quantizar_moeda(descontos_itens + desconto_proposta)
         frete = frete_final_fornecedor(p, fornecedor_id)
-        total = quantizar_moeda(max(subtotal - descontos + frete, ZERO))
+        total = calcular_total_proposta(subtotal=subtotal, desconto=descontos, frete=frete)
 
         condicao = (
             (formalizacao.condicao_pagamento or "").strip()

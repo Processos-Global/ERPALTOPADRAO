@@ -1441,8 +1441,10 @@
                 <div class="pc-saved-fact"><span>Validade</span><strong>{{ bloco.cotacao.validade|date:"d/m/Y"|default:"—" }}</strong></div>
                 <div class="pc-saved-fact"><span>Pagamento</span><strong>{{ bloco.cotacao.condicao_pagamento|default:"—" }}</strong></div>
                 <div class="pc-saved-fact"><span>Prazo</span><strong>{% if bloco.cotacao.prazo_entrega_dias %}{{ bloco.cotacao.prazo_entrega_dias }} dias{% else %}—{% endif %}</strong></div>
-                <div class="pc-saved-fact"><span>Frete</span><strong>R$ {{ bloco.cotacao.frete|floatformat:2 }}</strong></div>
-                <div class="pc-saved-fact"><span>Total</span><strong>R$ {{ bloco.cotacao.total_proposta|floatformat:2 }}</strong></div>
+                <div class="pc-saved-fact"><span>Subtotal dos itens</span><strong>R$ {{ bloco.cotacao.subtotal_proposta|floatformat:2 }}</strong></div>
+                <div class="pc-saved-fact"><span>Desconto da proposta</span><strong>- R$ {{ bloco.cotacao.desconto_proposta|floatformat:2 }}</strong></div>
+                <div class="pc-saved-fact"><span>Frete</span><strong>+ R$ {{ bloco.cotacao.frete|floatformat:2 }}</strong></div>
+                <div class="pc-saved-fact"><span>Total da proposta</span><strong>R$ {{ bloco.cotacao.total_proposta|floatformat:2 }}</strong></div>
               </div>
 
               {% if bloco.cotacao.observacoes %}
@@ -1491,6 +1493,7 @@
                         <div class="pc-field" data-parcelas-field><label>{{ bloco.form.parcelas_pagamento.label }}</label>{{ bloco.form.parcelas_pagamento }}</div>
                         <div class="pc-field"><label>{{ bloco.form.prazo_entrega_dias.label }} <span class="req">*</span></label>{{ bloco.form.prazo_entrega_dias }}</div>
                         <div class="pc-field"><label>{{ bloco.form.frete.label }} <span class="req">*</span></label><div class="pc-money-input"><span>R$</span>{{ bloco.form.frete }}</div></div>
+                        <div class="pc-field"><label>{{ bloco.form.desconto_proposta.label }}</label><div class="pc-money-input"><span>R$</span>{{ bloco.form.desconto_proposta }}</div></div>
                         <div class="pc-field"><label>{{ bloco.form.documento.label }}{% if not bloco.cotacao.documento %} <span class="req">*</span>{% endif %}</label>{{ bloco.form.documento }}{% for e in bloco.form.documento.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}{% if bloco.cotacao.documento %}<div class="pc-help">O arquivo salvo permanece se você não selecionar outro.</div>{% endif %}</div>
                         <div class="pc-field full"><label>{{ bloco.form.observacoes.label }}</label>{{ bloco.form.observacoes }}</div>
                       </div>
@@ -1516,7 +1519,10 @@
                       </div>
 
                       <div class="pc-form-footer">
-                        <div class="pc-form-total"><span>Total recalculado</span><strong data-proposta-total>R$ 0,00</strong></div>
+                        <div class="pc-form-total">
+                          <span>Subtotal: <b data-proposta-subtotal>R$ 0,00</b> · Desconto: <b data-proposta-desconto-total>R$ 0,00</b> · Frete: <b data-proposta-frete-total>R$ 0,00</b></span>
+                          <strong data-proposta-total>R$ 0,00</strong>
+                        </div>
                         <div class="pc-form-actions"><button class="cp-btn cp-btn--primary" type="submit">Salvar alterações</button></div>
                       </div>
                     </form>
@@ -1585,12 +1591,20 @@
                   </tbody>
                   <tfoot class="pc-approval-details-legacy">
                     <tr>
-                      <th colspan="2" class="sticky-col">Total da proposta</th>
-                      {% for cotacao in cotacoes %}<td><strong>R$ {{ cotacao.total_proposta|floatformat:2 }}</strong></td>{% endfor %}
+                      <th colspan="2" class="sticky-col">Subtotal dos itens</th>
+                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.subtotal_proposta|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Desconto da proposta</th>
+                      {% for cotacao in cotacoes %}<td>- R$ {{ cotacao.desconto_proposta|floatformat:2 }}</td>{% endfor %}
                     </tr>
                     <tr>
                       <th colspan="2" class="sticky-col">Frete</th>
-                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete|floatformat:2 }}</td>{% endfor %}
+                      {% for cotacao in cotacoes %}<td>+ R$ {{ cotacao.frete|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="sticky-col">Total da proposta</th>
+                      {% for cotacao in cotacoes %}<td><strong>R$ {{ cotacao.total_proposta|floatformat:2 }}</strong></td>{% endfor %}
                     </tr>
                     <tr>
                       <th colspan="2" class="sticky-col">Condição de pagamento</th>
@@ -1701,6 +1715,11 @@
       </div>
 
       <div class="pc-field">
+        <label>{{ form_proposta_nova.desconto_proposta.label }}</label>
+        <div class="pc-money-input"><span>R$</span>{{ form_proposta_nova.desconto_proposta }}</div>
+      </div>
+
+      <div class="pc-field">
         <label>{{ form_proposta_nova.documento.label }} <span class="req">*</span></label>
         {{ form_proposta_nova.documento }}
         {% for e in form_proposta_nova.documento.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}
@@ -1770,7 +1789,7 @@
 
     <div class="pc-form-footer">
       <div class="pc-form-total">
-        <span>Total calculado da proposta</span>
+        <span>Subtotal: <b data-proposta-subtotal>R$ 0,00</b> · Desconto: <b data-proposta-desconto-total>R$ 0,00</b> · Frete: <b data-proposta-frete-total>R$ 0,00</b></span>
         <strong data-proposta-total>R$ 0,00</strong>
       </div>
 
@@ -2176,7 +2195,7 @@
                     <span>Total selecionado</span>
                     <strong data-approval-selected-total>R$ 0,00</strong>
                     <small data-approval-selected-note>Selecione as propostas na matriz.</small>
-                    <small class="pc-approval-finance__breakdown">Itens: <b data-approval-selected-subtotal>R$ 0,00</b> · Frete: <b data-approval-selected-freight>R$ 0,00</b></small>
+                    <small class="pc-approval-finance__breakdown">Itens: <b data-approval-selected-subtotal>R$ 0,00</b> · Desconto proposta: <b data-approval-selected-discount>R$ 0,00</b> · Frete: <b data-approval-selected-freight>R$ 0,00</b></small>
                   </div>
                   <div class="pc-approval-finance__card is-single">
                     <span>Melhor compra em 1 fornecedor</span>
@@ -2215,7 +2234,7 @@
                       <th class="qty-col"><span class="pc-head-label">Qtd.</span></th>
                       {% for cotacao in cotacoes %}
                         <th>
-                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
+                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" data-supplier-discount="{{ cotacao.desconto_proposta|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
                             <strong class="pc-approval-supplier__name">{{ cotacao.fornecedor.nome }}</strong>
                             {% if cotacao.enviada_aprovacao_em %}
                               <button type="submit" class="cp-btn cp-btn--sm pc-approval-supplier__return" data-return-negotiation formaction="{% url 'compras:devolver_cotacao_negociacao' processo.pk cotacao.pk %}" formmethod="post">Voltar à negociação</button>
@@ -2241,7 +2260,7 @@
                             {% if oferta.item and oferta.cotado_valido %}
                               {% if oferta.elegivel_aprovacao %}
                                 <label class="pc-approval-offer{% if oferta.menor_valor_final %} is-best-price{% endif %}">
-                                  <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk }}" class="pc-map-choice-input" data-approval-choice data-supplier-id="{{ oferta.item.cotacao.fornecedor.pk }}" data-supplier-name="{{ oferta.item.cotacao.fornecedor.nome|escape }}" data-item-total="{{ oferta.total_final }}">
+                                  <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk }}" class="pc-map-choice-input" data-approval-choice data-supplier-id="{{ oferta.item.cotacao.fornecedor.pk }}" data-supplier-name="{{ oferta.item.cotacao.fornecedor.nome|escape }}" data-item-total="{{ oferta.total_final }}" data-item-unit="{{ oferta.valor_final }}">
                                   <span class="pc-approval-check">✓</span>
                                   <strong class="pc-approval-offer__total">R$ {{ oferta.total_final|floatformat:2 }}</strong>
                                   <span class="pc-approval-offer__unit">R$ {{ oferta.valor_final|floatformat:2 }}/un.</span>
@@ -2264,12 +2283,20 @@
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th colspan="2">Total da proposta</th>
-                      {% for cotacao in cotacoes %}<td><strong>R$ {{ cotacao.total_proposta|floatformat:2 }}</strong></td>{% endfor %}
+                      <th colspan="2">Subtotal dos itens</th>
+                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.subtotal_proposta|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2">Desconto da proposta</th>
+                      {% for cotacao in cotacoes %}<td>- R$ {{ cotacao.desconto_proposta|floatformat:2 }}</td>{% endfor %}
                     </tr>
                     <tr>
                       <th colspan="2">Frete</th>
-                      {% for cotacao in cotacoes %}<td>R$ {{ cotacao.frete_aprovacao|floatformat:2 }}</td>{% endfor %}
+                      {% for cotacao in cotacoes %}<td>+ R$ {{ cotacao.frete_aprovacao|floatformat:2 }}</td>{% endfor %}
+                    </tr>
+                    <tr>
+                      <th colspan="2">Total da proposta</th>
+                      {% for cotacao in cotacoes %}<td><strong>R$ {{ cotacao.total_proposta_aprovacao|floatformat:2 }}</strong></td>{% endfor %}
                     </tr>
                     <tr>
                       <th colspan="2">Condição de pagamento</th>
@@ -3340,14 +3367,20 @@
 
   root.querySelectorAll('[data-proposta-form]').forEach(form=>{
     const update=()=>{
-      let total=0;
+      let subtotal=0;
       form.querySelectorAll('[data-proposta-linha]').forEach(row=>{
         const q=parseNumber(row.querySelector('[data-proposta-quantidade]')?.value);
         const p=parseNumber(row.querySelector('[data-proposta-valor]')?.value);
         const d=parseNumber(row.querySelector('[data-proposta-desconto]')?.value);
-        const line=Math.max(q*p-d,0);total+=line;
+        const line=Math.max(q*p-d,0);subtotal+=line;
         const out=row.querySelector('[data-linha-total]');if(out)out.textContent=money(line);
       });
+      const desconto=Math.max(parseNumber(form.querySelector('[data-proposta-desconto-geral]')?.value),0);
+      const frete=Math.max(parseNumber(form.querySelector('[data-proposta-frete]')?.value),0);
+      const total=Math.max(subtotal-desconto+frete,0);
+      const subtotalOut=form.querySelector('[data-proposta-subtotal]');if(subtotalOut)subtotalOut.textContent=money(subtotal);
+      const descontoOut=form.querySelector('[data-proposta-desconto-total]');if(descontoOut)descontoOut.textContent=money(desconto);
+      const freteOut=form.querySelector('[data-proposta-frete-total]');if(freteOut)freteOut.textContent=money(frete);
       const out=form.querySelector('[data-proposta-total]');if(out)out.textContent=money(total);
     };
     form.addEventListener('input',update);form.addEventListener('change',update);update();
@@ -3567,6 +3600,7 @@
         id,
         name:el.dataset.supplierName||'Fornecedor',
         freight:parseNumber(el.dataset.supplierFreight),
+        discount:parseNumber(el.dataset.supplierDiscount),
         total:0,
         rows:new Set()
       });
@@ -3576,7 +3610,7 @@
       row.querySelectorAll('[data-approval-choice]').forEach(choice=>{
         const id=choice.dataset.supplierId||'';
         if(!id)return;
-        if(!supplierMap.has(id))supplierMap.set(id,{id,name:choice.dataset.supplierName||'Fornecedor',freight:0,total:0,rows:new Set()});
+        if(!supplierMap.has(id))supplierMap.set(id,{id,name:choice.dataset.supplierName||'Fornecedor',freight:0,discount:0,total:0,rows:new Set()});
         const supplier=supplierMap.get(id);
         supplier.total+=parseNumber(choice.dataset.itemTotal);
         supplier.rows.add(rowIndex);
@@ -3585,12 +3619,13 @@
 
     const viableSuppliers=[...supplierMap.values()]
       .filter(s=>rows.length>0&&s.rows.size===rows.length)
-      .map(s=>({...s,grandTotal:s.total+s.freight}))
+      .map(s=>({...s,grandTotal:Math.max(s.total-(s.discount||0)+(s.freight||0),0)}))
       .sort((a,b)=>a.grandTotal-b.grandTotal);
 
     const selectedOut=approvalForm.querySelector('[data-approval-selected-total]');
     const selectedNote=approvalForm.querySelector('[data-approval-selected-note]');
     const selectedSubtotalOut=approvalForm.querySelector('[data-approval-selected-subtotal]');
+    const selectedDiscountOut=approvalForm.querySelector('[data-approval-selected-discount]');
     const selectedFreightOut=approvalForm.querySelector('[data-approval-selected-freight]');
     const singleOut=approvalForm.querySelector('[data-approval-single-total]');
     const singleNote=approvalForm.querySelector('[data-approval-single-note]');
@@ -3617,9 +3652,11 @@
         const id=choice.dataset.supplierId||'';
         if(id&&!selectedSuppliers.has(id))selectedSuppliers.set(id,supplierMap.get(id)||{freight:0,name:choice.dataset.supplierName||'Fornecedor'});
       });
+      const discountTotal=[...selectedSuppliers.values()].reduce((sum,s)=>sum+(s.discount||0),0);
       const freightTotal=[...selectedSuppliers.values()].reduce((sum,s)=>sum+(s.freight||0),0);
-      const selectedTotal=itemsTotal+freightTotal;
+      const selectedTotal=Math.max(itemsTotal-discountTotal+freightTotal,0);
       if(selectedSubtotalOut)selectedSubtotalOut.textContent=money(itemsTotal);
+      if(selectedDiscountOut)selectedDiscountOut.textContent=money(discountTotal);
       if(selectedFreightOut)selectedFreightOut.textContent=money(freightTotal);
       if(selectedOut)selectedOut.textContent=money(selectedTotal);
       if(selectedNote)selectedNote.textContent=selected.length?`${selected.length} proposta(s) · ${selectedSuppliers.size} fornecedor(es)`: 'Selecione as propostas na matriz.';
@@ -3627,7 +3664,7 @@
       const best=viableSuppliers[0];
       if(best){
         if(singleOut)singleOut.textContent=money(best.grandTotal);
-        if(singleNote)singleNote.textContent=`${best.name} · itens + frete`;
+        if(singleNote)singleNote.textContent=`${best.name} · itens − desconto + frete`;
       }else{
         if(singleOut)singleOut.textContent='—';
         if(singleNote)singleNote.textContent='Nenhum fornecedor cobre todos os itens elegíveis.';
@@ -3652,7 +3689,11 @@
       rows.forEach(row=>{
         const allOpts=[...row.querySelectorAll('[data-approval-choice]')];
         allOpts.forEach(o=>o.checked=false);
-        const opts=allOpts.filter(o=>parseNumber(o.dataset.itemTotal)>0);
+        const opts=allOpts.filter(o=>{
+          const total=parseNumber(o.dataset.itemTotal);
+          const unit=parseNumber(o.dataset.itemUnit);
+          return Number.isFinite(total)&&Number.isFinite(unit)&&total>0&&unit>0;
+        });
         if(opts.length){opts.sort((a,b)=>parseNumber(a.dataset.itemTotal)-parseNumber(b.dataset.itemTotal));opts[0].checked=true;}
       });
       refreshApprovalFinance();

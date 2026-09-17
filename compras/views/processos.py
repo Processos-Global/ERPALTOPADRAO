@@ -50,6 +50,7 @@ from compras.services.comercial import (
     processo_exige_compatibilizacao,
 )
 from compras.services.pedidos import transicoes_status_permitidas
+from compras.services.valores import calcular_total_proposta
 from compras.services.pdf_solicitacao import gerar_pdf_pedido_compra
 from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
 
@@ -212,9 +213,22 @@ def _montar_dados_comerciais(
             )
             frete_aprovacao = negociacao_frete.frete_negociado
 
+        desconto_proposta = cotacao.desconto_proposta or zero
         cotacao.frete_aprovacao = frete_aprovacao
-        cotacao.total_proposta = total
-        cotacao.total_proposta_com_frete = total + (cotacao.frete or zero)
+        cotacao.subtotal_proposta = total
+        cotacao.desconto_proposta_aplicado = min(desconto_proposta, total)
+        cotacao.total_proposta = calcular_total_proposta(
+            subtotal=total,
+            desconto=desconto_proposta,
+            frete=cotacao.frete or zero,
+        )
+        cotacao.total_proposta_aprovacao = calcular_total_proposta(
+            subtotal=total,
+            desconto=desconto_proposta,
+            frete=frete_aprovacao or zero,
+        )
+        # Compatibilidade com usos legados do atributo dinâmico.
+        cotacao.total_proposta_com_frete = cotacao.total_proposta
         cotacao.qtd_itens_proposta = len(itens)
 
     # --------------------------------------------------------

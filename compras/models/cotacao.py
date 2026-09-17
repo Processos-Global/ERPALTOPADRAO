@@ -75,6 +75,13 @@ class CotacaoFornecedor(models.Model):
     prazo_entrega_dias = models.PositiveIntegerField(null=True, blank=True)
     condicao_pagamento = models.CharField(max_length=255, blank=True)
     frete = models.DecimalField(max_digits=18, decimal_places=2, default=Decimal("0"), validators=[MinValueValidator(Decimal("0"))])
+    desconto_proposta = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=Decimal("0"),
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Desconto geral aplicado uma única vez sobre o valor total da proposta.",
+    )
     validade = models.DateField(null=True, blank=True)
     observacoes = models.TextField(blank=True)
     documento = models.FileField(storage=private_media_storage, upload_to="compras/cotacoes/%Y/%m/", null=True, blank=True)
