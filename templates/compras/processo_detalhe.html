@@ -1229,12 +1229,12 @@
           <div class="pc-kpi"><span>Pedidos</span><strong>{{ pedidos|length }}</strong><small>Pedidos gerados</small></div>
         </div>
 
-        <section class="pc-card">
+        <section class="pc-card" id="itens-compra">
           <div class="pc-card-head"><div><h2>Itens da compra</h2></div></div>
           <div class="pc-card-body pc-card-body--flush">
             <div class="cp-table-wrap">
               <table class="cp-table">
-                <thead><tr><th>Item</th><th>Especificação</th><th>Necessário</th><th>Incluído</th><th>Saldo</th></tr></thead>
+                <thead><tr><th>Item</th><th>Especificação</th><th>Necessário</th><th>Incluído</th><th>Saldo</th>{% if processo.etapa_atual == 'COTACAO' and permissoes_compras.pode_solicitar %}<th style="width:110px">Ação</th>{% endif %}</tr></thead>
                 <tbody>
                   {% for n in necessidades %}
                     <tr>
@@ -1243,8 +1243,18 @@
                       <td>{{ n.quantidade_necessaria|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td><strong>{{ n.saldo|floatformat:"-4" }} {{ n.unidade }}</strong></td>
+                      {% if processo.etapa_atual == 'COTACAO' and permissoes_compras.pode_solicitar %}
+                        <td>
+                          <form method="post"
+                                action="{% url 'compras:excluir_necessidade' processo.pk n.pk %}"
+                                onsubmit="return confirm('Excluir o item {{ n.descricao|escapejs }} da compra? Ele também será removido das propostas ainda abertas dos fornecedores.');">
+                            {% csrf_token %}
+                            <button type="submit" class="cp-btn cp-btn--sm">Excluir</button>
+                          </form>
+                        </td>
+                      {% endif %}
                     </tr>
-                  {% empty %}<tr><td colspan="5" class="pc-empty">Nenhum item informado.</td></tr>{% endfor %}
+                  {% empty %}<tr><td colspan="{% if processo.etapa_atual == 'COTACAO' and permissoes_compras.pode_solicitar %}6{% else %}5{% endif %}" class="pc-empty">Nenhum item informado.</td></tr>{% endfor %}
                 </tbody>
               </table>
             </div>

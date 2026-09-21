@@ -21,6 +21,7 @@ from .acoes import (
     acao_marcar_solicitacao_enviada,
     acao_decisao_comercial_lote,
     acao_excluir_cotacao,
+    acao_excluir_necessidade,
     acao_enviar_cotacao_compatibilizacao,
     acao_enviar_cotacao_aprovacao,
     acao_devolver_cotacao_negociacao,

@@ -202,3 +202,67 @@ def incluir_necessidade(
         },
     )
     return necessidade
+
+@transaction.atomic
+def excluir_necessidade(*, processo, necessidade, usuario):
+    """Exclui um item do fluxo normal enquanto ele ainda está em cotação.
+
+    O item é removido também das propostas ainda abertas dos fornecedores.
+    Se qualquer proposta que contenha o item já tiver avançado no fluxo, a
+    exclusão é bloqueada para preservar o histórico comercial.
+    """
+    if processo.fluxo_grande_fornecedor:
+        raise ValidationError("Use a exclusão própria do fluxo de Grandes Fornecedores.")
+
+    if processo.etapa_atual != ProcessoCompra.Etapa.COTACAO:
+        raise ValidationError("Itens só podem ser excluídos enquanto o processo estiver na etapa de cotação.")
+
+    if processo.status in {
+        ProcessoCompra.Status.CANCELADO,
+        ProcessoCompra.Status.REPROVADO,
+        ProcessoCompra.Status.CONTRATADO,
+    }:
+        raise ValidationError("Este processo não permite mais excluir itens.")
+
+    if necessidade.processo_id != processo.pk:
+        raise ValidationError("O item informado não pertence a este processo.")
+
+    itens_cotados = necessidade.itens_cotados.select_related("cotacao").all()
+    if any(
+        item.cotacao.enviada_compatibilizacao_em
+        or item.cotacao.enviada_negociacao_em
+        or item.cotacao.enviada_aprovacao_em
+        for item in itens_cotados
+    ):
+        raise ValidationError(
+            "Este item já faz parte de uma proposta que avançou no fluxo e não pode mais ser excluído."
+        )
+
+    if necessidade.adjudicacoes.filter(cancelada=False).exists() or necessidade.itens_pedido.exists():
+        raise ValidationError("Este item já possui adjudicação ou pedido e não pode ser excluído.")
+
+    descricao = necessidade.descricao
+    necessidade_id = necessidade.pk
+    quantidade = necessidade.quantidade_incluida
+
+    # NecessidadeCompra é PROTECT em CotacaoFornecedorItem; removemos primeiro
+    # apenas os itens das propostas ainda abertas, preservando as propostas.
+    quantidade_propostas = itens_cotados.count()
+    itens_cotados.delete()
+    necessidade.delete()
+
+    registrar_evento(
+        processo,
+        "NECESSIDADE_EXCLUIDA",
+        usuario,
+        f"Item excluído da compra: {descricao}.",
+        {
+            "necessidade_id": necessidade_id,
+            "descricao": descricao,
+            "quantidade": str(quantidade),
+            "propostas_afetadas": quantidade_propostas,
+        },
+    )
+
+    return descricao, quantidade_propostas
+

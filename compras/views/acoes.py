@@ -31,6 +31,7 @@ from compras.models import (
     PedidoCompra,
     PedidoCompraAnexo,
     ProcessoCompra,
+    NecessidadeCompra,
     SolicitacaoCotacaoFornecedor,
 )
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
@@ -54,7 +55,7 @@ from compras.services.pedidos import (
     gerar_pedidos, registrar_recebimento,
 )
 from compras.services.permissoes import compras_acao_required, possui_acao_compras
-from compras.services.processos import incluir_necessidade
+from compras.services.processos import excluir_necessidade, incluir_necessidade
 from compras.services.solicitacoes_cotacao import criar_e_marcar_solicitacao_enviada, marcar_solicitacao_enviada
 
 
@@ -94,6 +95,36 @@ def acao_incluir_necessidade(request, pk):
         else:
             messages.error(request, "Revise os dados da necessidade.")
     return _voltar(processo)
+
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def acao_excluir_necessidade(request, pk, necessidade_id):
+    processo = _processo(pk)
+    necessidade = get_object_or_404(
+        NecessidadeCompra.objects.select_related("processo"),
+        pk=necessidade_id,
+        processo=processo,
+    )
+
+    if request.method == "POST":
+        try:
+            descricao, propostas_afetadas = excluir_necessidade(
+                processo=processo,
+                necessidade=necessidade,
+                usuario=request.user,
+            )
+            complemento = (
+                f" O item também foi retirado de {propostas_afetadas} proposta(s) ainda aberta(s)."
+                if propostas_afetadas
+                else ""
+            )
+            messages.success(request, f"Item {descricao} excluído da compra.{complemento}")
+        except ValidationError as exc:
+            _erro(request, exc)
+
+    resposta = _voltar(processo)
+    resposta["Location"] += "#itens-compra"
+    return resposta
 
 
 @compras_acao_required(AcaoCompra.COTAR)
