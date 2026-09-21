@@ -917,248 +917,240 @@
 
 <style>
 /* ================================================================
-   NOVA CAMADA VISUAL — lógica original preservada integralmente
+   Interface consolidada — Processo de compra
+   Somente apresentação. Fluxos, formulários e JavaScript preservados.
    ================================================================ */
 #processo-compra{
-  --nv-ink:#153743;
-  --nv-text:#405c66;
-  --nv-muted:#7c9098;
-  --nv-line:#e3eaed;
-  --nv-soft:#f7f9fa;
-  --nv-brand:#1D91A6;
-  --nv-brand-dark:#0E5268;
-  --nv-brand-soft:#edf8fa;
-  --nv-ok:#327257;
-  --nv-ok-soft:#eef8f2;
-  --nv-warn:#9a6a22;
-  --nv-warn-soft:#fff7e8;
-  --nv-danger:#a44747;
-  --nv-danger-soft:#fff2f2;
-  max-width:1720px;
+  --ui-ink:#203942;
+  --ui-text:#46606a;
+  --ui-muted:#7b8d95;
+  --ui-line:#dde6e9;
+  --ui-line-strong:#ccd9de;
+  --ui-soft:#f7f9fa;
+  --ui-brand:#147f92;
+  --ui-brand-dark:#24505d;
+  --ui-brand-soft:#eef7f8;
+  --ui-ok:#34745a;
+  --ui-ok-soft:#eef7f2;
+  --ui-warn:#956823;
+  --ui-warn-soft:#fff7e9;
+  --ui-danger:#a34c4c;
+  --ui-danger-soft:#fff2f2;
+  max-width:1680px;
   margin:0 auto;
-  padding:20px 24px 72px;
+  padding:22px 26px 76px;
+  color:var(--ui-text);
+  font-size:13px;
   background:transparent;
-  color:var(--nv-text);
 }
 #processo-compra *{box-sizing:border-box}
 
-/* cabeçalho */
+/* Cabeçalho */
 #processo-compra .pc-hero{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
-  gap:18px;
   align-items:center;
-  margin:0 0 12px;
-  padding:18px 20px;
-  border:1px solid var(--nv-line);
-  border-radius:14px;
+  gap:22px;
+  margin-bottom:12px;
+  padding:20px 22px;
+  border:1px solid var(--ui-line);
+  border-radius:12px;
   background:#fff;
   box-shadow:none;
 }
-#processo-compra .pc-eyebrow{margin-bottom:4px;color:var(--nv-brand);font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
-#processo-compra .pc-title{margin:0;color:var(--nv-ink);font-size:23px;line-height:1.18;letter-spacing:-.02em}
-#processo-compra .pc-subtitle{margin:4px 0 0;color:var(--nv-muted);font-size:10px;line-height:1.45}
-#processo-compra .pc-hero-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
-#processo-compra .pc-hero-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border:1px solid var(--nv-line);border-radius:7px;background:#fafcfc;color:#647b85;font-size:8px;font-weight:800}
-#processo-compra .pc-hero-chip strong{color:var(--nv-ink)}
-#processo-compra .pc-hero-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
-#processo-compra .pc-status{display:inline-flex;align-items:center;min-height:32px;padding:6px 9px;border:1px solid #cde6ea;border-radius:8px;background:var(--nv-brand-soft);color:var(--nv-brand-dark);font-size:9px;font-weight:900}
+#processo-compra .pc-eyebrow{font-size:10px;letter-spacing:.06em;color:var(--ui-muted)}
+#processo-compra .pc-title{margin:4px 0 5px;font-size:26px;line-height:1.2;color:var(--ui-ink)}
+#processo-compra .pc-subtitle{font-size:12px;line-height:1.45;color:var(--ui-muted)}
+#processo-compra .pc-hero-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+#processo-compra .pc-hero-chip{padding:5px 8px;border:1px solid var(--ui-line);border-radius:7px;background:var(--ui-soft);font-size:10px;color:#647b84}
+#processo-compra .pc-hero-chip strong{color:var(--ui-ink)}
+#processo-compra .pc-hero-actions{gap:7px;align-items:center}
+#processo-compra .pc-status{min-height:34px;padding:7px 10px;border:1px solid #cde3e7;border-radius:7px;background:var(--ui-brand-soft);color:#176e7c;font-size:10px}
 
-/* progresso */
-#processo-compra .pc-progress{
-  position:relative;
-  display:grid;
-  grid-template-columns:repeat(5,minmax(0,1fr));
-  gap:0;
-  margin:0 0 10px;
-  padding:4px;
-  border:1px solid var(--nv-line);
-  border-radius:11px;
-  background:#fff;
-}
-#processo-compra .pc-progress-step{position:relative;min-height:40px;padding:8px 10px 8px 34px;border:0!important;border-radius:8px;background:transparent!important;box-shadow:none!important}
-#processo-compra .pc-progress-step:before{content:attr(data-step);position:absolute;left:9px;top:50%;transform:translateY(-50%);width:18px;height:18px;display:grid;place-items:center;border-radius:6px;background:#edf2f4;color:#6d8189;font-size:8px;font-weight:900}
-#processo-compra .pc-progress-step span{display:none!important}
-#processo-compra .pc-progress-step strong{display:block;margin:0;color:#5d737c;font-size:9px;font-weight:850}
-#processo-compra .pc-progress-step.is-current{background:var(--nv-brand-soft)!important}
-#processo-compra .pc-progress-step.is-current:before{background:var(--nv-brand);color:#fff}
-#processo-compra .pc-progress-step.is-current strong{color:var(--nv-brand-dark)}
-#processo-compra .pc-progress-step.is-done{background:#f4f8f6!important}
-#processo-compra .pc-progress-step.is-done:before{content:'✓';background:var(--nv-ok);color:#fff}
-#processo-compra .pc-progress-step.is-done strong{color:var(--nv-ok)}
+/* Progresso e ação atual */
+#processo-compra .pc-progress{gap:5px;margin:0 0 12px;padding:5px;border:1px solid var(--ui-line);border-radius:10px;background:#fff}
+#processo-compra .pc-progress-step{min-height:48px;padding:9px 11px 9px 38px;border:0;border-radius:7px;background:#fff}
+#processo-compra .pc-progress-step:before{left:10px;width:20px;height:20px;border-radius:6px}
+#processo-compra .pc-progress-step strong{font-size:11px;font-weight:800}
+#processo-compra .pc-progress-step.is-current{background:var(--ui-brand-soft)}
+#processo-compra .pc-progress-step.is-done{background:var(--ui-ok-soft)}
+#processo-compra .pc-next{margin-bottom:12px;padding:12px 14px;border:1px solid #d5e4e7;border-radius:9px;background:#fbfcfd;box-shadow:none}
+#processo-compra .pc-next span{font-size:9px}
+#processo-compra .pc-next strong{font-size:13px}
+#processo-compra .pc-next small{font-size:10px}
 
-/* próxima ação */
-#processo-compra .pc-next{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:10px 12px;border:1px solid #d6e6e9;border-radius:9px;background:#fbfdfd;box-shadow:none}
-#processo-compra .pc-next span{font-size:7.5px;color:#8a9aa1}
-#processo-compra .pc-next strong{margin-top:1px;color:#294d5b;font-size:11px}
-#processo-compra .pc-next small{display:none}
-#processo-compra .pc-next-actions{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+/* Abas */
+#processo-compra .pc-tabs-shell{top:6px;margin-bottom:12px;padding:5px;border:1px solid var(--ui-line);border-radius:10px;background:rgba(255,255,255,.98);box-shadow:none}
+#processo-compra .pc-tabs{gap:3px}
+#processo-compra .pc-tab{min-height:36px;padding:8px 12px;border-radius:7px;font-size:11px;color:#677e87}
+#processo-compra .pc-tab.is-active{background:var(--ui-brand-dark);color:#fff;box-shadow:none}
+#processo-compra .pc-count{min-width:19px;height:19px;font-size:8px}
 
-/* navegação secundária */
-#processo-compra .pc-tabs-shell{position:sticky;top:8px;z-index:24;margin:0 0 12px;padding:4px;border:1px solid var(--nv-line);border-radius:10px;background:rgba(255,255,255,.98);backdrop-filter:blur(10px);box-shadow:none}
-#processo-compra .pc-tabs{display:flex;gap:2px;overflow:auto}
-#processo-compra .pc-tab{min-height:34px;padding:7px 11px;border:0;border-radius:7px;background:transparent;color:#6d818a;font:inherit;font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer}
-#processo-compra .pc-tab.is-active{background:var(--nv-brand-dark);color:#fff;box-shadow:none}
-#processo-compra .pc-count{min-width:17px;height:17px;margin-left:3px;padding:0 4px;border-radius:999px;background:#edf2f4;color:#607681;font-size:7px}
-#processo-compra .pc-tab.is-active .pc-count{background:rgba(255,255,255,.16);color:#fff}
-
-/* área de trabalho */
-#processo-compra .pc-workspace{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:12px;align-items:start}
-#processo-compra .pc-main{min-width:0;display:grid;gap:10px}
-#processo-compra .pc-aside{position:sticky;top:62px;display:grid;gap:8px}
-
-/* cards */
+/* Estrutura */
+#processo-compra .pc-workspace{grid-template-columns:minmax(0,1fr) 285px;gap:14px}
+#processo-compra .pc-main{gap:12px}
+#processo-compra .pc-aside{top:64px;gap:9px}
 #processo-compra .pc-card,
 #processo-compra .pc-provider,
 #processo-compra .pc-context-panel,
-#processo-compra .pc-quote-map,
 #processo-compra .pc-tech-supplier-card,
-#processo-compra .pc-neg-group,
+#processo-compra .pc-tech-item,
+#processo-compra .pc-need-block,
 #processo-compra .pc-compare-item{
-  border:1px solid var(--nv-line)!important;
-  border-radius:10px!important;
-  background:#fff!important;
+  border:1px solid var(--ui-line);
+  border-radius:10px;
+  background:#fff;
   box-shadow:none!important;
 }
-#processo-compra .pc-card-head{padding:11px 13px;border-bottom:1px solid #edf1f3;background:#fbfcfd!important}
-#processo-compra .pc-card-head h2,#processo-compra .pc-card-head h3{margin:0;color:var(--nv-ink);font-size:12px;letter-spacing:0}
-#processo-compra .pc-card-head p{display:none!important}
-#processo-compra .pc-card-body{padding:12px}
+#processo-compra .pc-card-head{padding:14px 16px;border-bottom:1px solid #edf1f3;background:#fbfcfd}
+#processo-compra .pc-card-head h2,#processo-compra .pc-card-head h3{font-size:15px;color:var(--ui-ink)}
+#processo-compra .pc-card-head p{margin-top:4px;font-size:10px;line-height:1.45}
+#processo-compra .pc-card-body{padding:16px}
 #processo-compra .pc-card-body--flush{padding:0}
 
-/* reduzir textos auxiliares */
-#processo-compra .pc-help{font-size:7.5px;color:#8a9ba2}
-#processo-compra .pc-note{padding:8px 10px;border-radius:8px;font-size:8.5px;line-height:1.4}
-#processo-compra .pc-note strong{font-size:8.5px}
-#processo-compra .pc-stage-intro span,
-#processo-compra .pc-tech-guide span,
-#processo-compra .pc-approval-submit-copy span{display:none!important}
+/* Contexto lateral */
+#processo-compra .pc-context-panel>summary{padding:11px 12px;background:#fbfcfd}
+#processo-compra .pc-context-panel>summary strong{font-size:11px}
+#processo-compra .pc-context-panel>summary span{font-size:9px}
+#processo-compra .pc-context-body{padding:10px 12px}
+#processo-compra .pc-context-row{padding:8px 0;font-size:10px}
+#processo-compra .pc-context-item{padding:9px 10px;border-radius:7px;background:#fbfcfd}
+#processo-compra .pc-context-item strong{font-size:10px}
+#processo-compra .pc-context-item small{font-size:9px}
 
 /* KPIs */
-#processo-compra .pc-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
-#processo-compra .pc-kpi{padding:10px 11px;border:1px solid var(--nv-line);border-radius:9px;background:#fff;box-shadow:none}
-#processo-compra .pc-kpi span{font-size:7px;color:#80929a}
-#processo-compra .pc-kpi strong{margin-top:3px;color:var(--nv-ink);font-size:16px}
-#processo-compra .pc-kpi small{display:none}
+#processo-compra .pc-kpis{gap:8px}
+#processo-compra .pc-kpi{padding:13px 14px;border:1px solid var(--ui-line);border-radius:9px;background:#fff;box-shadow:none}
+#processo-compra .pc-kpi span{font-size:8px}
+#processo-compra .pc-kpi strong{margin-top:4px;font-size:19px;color:var(--ui-ink)}
+#processo-compra .pc-kpi small{font-size:9px}
 
-/* tabelas */
-#processo-compra .cp-table-wrap,
-#processo-compra .pc-approval-matrix-wrap{border:0;border-radius:0;overflow:auto;background:#fff}
-#processo-compra .cp-table,
-#processo-compra .pc-items-table,
-#processo-compra .pc-approval-matrix{font-size:9px}
-#processo-compra .cp-table th,
-#processo-compra .pc-items-table th,
-#processo-compra .pc-approval-matrix thead th{padding:8px 9px;background:#f7f9fa!important;color:#71858e;font-size:7px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--nv-line)}
-#processo-compra .cp-table td,
-#processo-compra .pc-items-table td{padding:8px 9px;border-bottom:1px solid #edf2f3;vertical-align:middle}
-#processo-compra .cp-table tbody tr:hover td{background:#fbfdfd}
-#processo-compra .pc-item-name strong{font-size:9px}
-#processo-compra .pc-item-name small{font-size:7px}
-
-/* fornecedores/cotação */
-#processo-compra .pc-provider+.pc-provider{margin-top:7px}
-#processo-compra .pc-provider summary,
-#processo-compra .pc-provider-static-head{padding:10px 12px;background:#fbfcfd}
-#processo-compra .pc-provider-name{font-size:10px}
-#processo-compra .pc-provider-meta{margin-top:2px;font-size:7.5px}
-#processo-compra .pc-provider-total{font-size:12px}
-#processo-compra .pc-edit-proposal>summary{padding:8px 10px!important;font-size:8px!important}
-#processo-compra .pc-edit-proposal-body{padding:10px}
-
-/* formulários */
-#processo-compra .pc-form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
-#processo-compra .pc-field label,#processo-compra .pc-inline-field label{margin-bottom:4px;color:#58717b;font-size:8px;font-weight:850;text-transform:none}
+/* Formulários */
+#processo-compra .pc-form-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#processo-compra .pc-field label,#processo-compra .pc-inline-field label{margin-bottom:5px;color:#4d6670;font-size:10px;font-weight:800;text-transform:none}
 #processo-compra .pc-field .cp-input,
 #processo-compra .pc-inline-field .cp-input,
 #processo-compra .pc-field select,
-#processo-compra .pc-inline-field select{min-height:36px!important;padding:7px 8px!important;border-radius:7px!important;font-size:9px!important}
-#processo-compra .pc-field textarea.cp-input{min-height:60px!important}
-#processo-compra .pc-form-footer{position:static;margin-top:8px;padding:8px 9px;border:1px solid #dce8eb;border-radius:8px;background:#fbfdfd;box-shadow:none;backdrop-filter:none}
-#processo-compra .pc-form-total span{font-size:7px}
-#processo-compra .pc-form-total strong{font-size:13px}
+#processo-compra .pc-inline-field select{min-height:40px!important;padding:8px 10px!important;border-radius:7px!important;font-size:11px!important;background:#fff}
+#processo-compra .pc-field textarea.cp-input{min-height:76px!important}
+#processo-compra .pc-help{font-size:9px}
+#processo-compra .pc-field-errors{font-size:9px}
+#processo-compra .pc-form-footer{position:sticky;bottom:8px;margin-top:12px;padding:10px 11px;border:1px solid #d3e3e6;border-radius:9px;background:rgba(255,255,255,.98);box-shadow:0 8px 18px rgba(31,69,82,.07)}
+#processo-compra .pc-form-total span{font-size:8px}
+#processo-compra .pc-form-total strong{font-size:15px}
 
-/* compatibilização */
-#processo-compra .pc-compat-supplier-tabs{gap:5px;margin-bottom:8px;padding:0;border:0;background:transparent}
-#processo-compra .pc-compat-supplier-tab{min-height:31px;padding:6px 9px;border:1px solid var(--nv-line);border-radius:7px;background:#fff;font-size:8px}
-#processo-compra .pc-compat-supplier-tab.is-active{border-color:#a8d8df;background:var(--nv-brand-soft);color:var(--nv-brand-dark)}
-#processo-compra .pc-tech-supplier-card__head{padding:9px 10px;background:#fbfcfd}
-#processo-compra .pc-tech-progress{position:static!important;margin:8px!important;padding:7px 8px!important;border-radius:7px!important;box-shadow:none!important;background:#fff!important}
-#processo-compra .pc-tech-progress__main span{font-size:7px}
-#processo-compra .pc-tech-stat{min-width:60px;padding:4px 6px}
-#processo-compra .pc-tech-group{margin:0!important;border-radius:8px!important}
-#processo-compra .pc-tech-group__head{padding:7px 9px!important;background:#f8fafb!important}
-#processo-compra .pc-tech-group__title strong{font-size:9px!important}
-#processo-compra .pc-tech-group__title p{display:block!important;margin:4px 0 0!important;font-size:11px!important;line-height:1.4!important;color:#5f7680!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;max-width:none!important}
-#processo-compra .pc-tech-chip,#processo-compra .pc-tech-group-state{min-height:22px;padding:4px 6px;font-size:7px}
-#processo-compra .pc-tech-offer__main{min-height:44px;padding:6px 8px!important;grid-template-columns:minmax(180px,1.25fr) 100px minmax(150px,.7fr) 72px auto!important}
-#processo-compra .pc-tech-supplier strong{font-size:9px!important}
-#processo-compra .pc-tech-supplier small{font-size:7px!important}
-#processo-compra .pc-tech-price strong{font-size:9px!important}
-#processo-compra .pc-tech-status{min-height:25px!important;font-size:6.5px!important}
+/* Botões */
+#processo-compra .cp-btn{min-height:36px!important;padding:7px 11px!important;border-radius:7px!important;font-size:10px!important;box-shadow:none!important}
+#processo-compra .cp-btn--primary{background:var(--ui-brand)!important;border-color:var(--ui-brand)!important;color:#fff!important}
+#processo-compra .cp-btn--primary:hover{background:#116f80!important;border-color:#116f80!important}
 
-/* negociação */
-#processo-compra .pc-neg-toolbar{padding:8px 10px;border:1px solid var(--nv-line);border-radius:8px;background:#fbfcfd}
-#processo-compra .pc-neg-toolbar__copy strong{font-size:9px}
+/* Tabelas */
+#processo-compra .cp-table-wrap{border:1px solid #e8eef0;border-radius:8px;overflow:auto}
+#processo-compra .cp-table,#processo-compra .pc-items-table{font-size:11px}
+#processo-compra .cp-table thead th,#processo-compra .pc-items-table th{padding:9px 10px;background:#f5f7f8!important;color:#647b84;font-size:9px}
+#processo-compra .cp-table td,#processo-compra .pc-items-table td{padding:10px;border-bottom-color:#edf1f3}
+#processo-compra .pc-item-name strong{font-size:11px}
+#processo-compra .pc-item-name small{font-size:9px}
+
+/* Fornecedores e propostas */
+#processo-compra .pc-provider+.pc-provider{margin-top:8px}
+#processo-compra .pc-provider summary,#processo-compra .pc-provider-static-head{padding:13px 15px;background:#fbfcfd}
+#processo-compra .pc-provider-name{font-size:12px}
+#processo-compra .pc-provider-meta{font-size:9px}
+#processo-compra .pc-provider-total{font-size:15px}
+#processo-compra .pc-saved-grid{gap:8px}
+#processo-compra .pc-saved-fact{padding:10px;border-radius:7px}
+#processo-compra .pc-saved-fact span{font-size:8px}
+#processo-compra .pc-saved-fact strong{font-size:10px}
+#processo-compra .pc-edit-proposal>summary{padding:10px 12px!important;font-size:9px}
+#processo-compra .pc-edit-proposal-body{padding:13px}
+
+/* Compatibilização: mais leitura, menos miniatura */
+#processo-compra .pc-compat-supplier-tabs{gap:6px;margin-bottom:10px;padding:5px;border:1px solid var(--ui-line);border-radius:8px;background:#f8fafb}
+#processo-compra .pc-compat-supplier-tab{min-height:34px;padding:7px 9px;border-radius:7px;font-size:9px}
+#processo-compra .pc-compat-supplier-tab strong{font-size:10px}
+#processo-compra .pc-compat-supplier-tab span{font-size:8px}
+#processo-compra .pc-compat-supplier-tab.is-active{border-color:var(--ui-brand-dark);background:var(--ui-brand-dark);color:#fff}
+#processo-compra .pc-tech-supplier-card__head{padding:12px 13px!important;background:#fbfcfd}
+#processo-compra .pc-tech-supplier-card__head strong{font-size:12px!important}
+#processo-compra .pc-tech-supplier-card__head small{font-size:9px!important}
+#processo-compra .pc-tech-progress{position:static!important;margin:10px!important;padding:9px 10px!important;border-radius:8px!important;box-shadow:none!important}
+#processo-compra .pc-tech-progress__main strong{font-size:10px!important}
+#processo-compra .pc-tech-progress__main span{font-size:9px!important}
+#processo-compra .pc-tech-stat{min-width:72px;padding:6px 8px}
+#processo-compra .pc-tech-stat span{font-size:7px}
+#processo-compra .pc-tech-stat strong{font-size:12px}
+#processo-compra .pc-tech-group{margin-bottom:10px!important;border-radius:8px!important}
+#processo-compra .pc-tech-group__head{padding:10px 12px!important;background:#f7fafb!important}
+#processo-compra .pc-tech-index{width:34px;height:34px;border-radius:8px;font-size:12px}
+#processo-compra .pc-tech-group__title small{font-size:8px}
+#processo-compra .pc-tech-group__title strong{font-size:12px!important}
+#processo-compra .pc-tech-group__title p{margin-top:3px!important;font-size:9px!important;line-height:1.4!important;color:#6d838c!important}
+#processo-compra .pc-tech-chip,#processo-compra .pc-tech-group-state{min-height:25px;padding:5px 7px;font-size:8px}
+#processo-compra .pc-tech-offer__main{min-height:54px;padding:9px 10px!important;grid-template-columns:32px minmax(190px,1.2fr) 115px minmax(170px,.8fr)!important;gap:10px}
+#processo-compra .pc-tech-supplier strong{font-size:11px!important}
+#processo-compra .pc-tech-supplier small{font-size:8px!important}
+#processo-compra .pc-tech-price span{font-size:8px}
+#processo-compra .pc-tech-price strong{font-size:12px!important}
+#processo-compra .pc-tech-status{min-height:31px!important;font-size:8px!important}
+#processo-compra .pc-tech-offer__details summary{font-size:9px}
+
+/* Negociação */
+#processo-compra .pc-neg-toolbar{padding:10px 12px;border:1px solid var(--ui-line);border-radius:8px;background:#fbfcfd}
+#processo-compra .pc-neg-toolbar__copy strong{font-size:10px}
+#processo-compra .pc-neg-toolbar__copy span{font-size:9px}
 #processo-compra .pc-neg-provider-action{padding:7px 8px;border-radius:7px}
-#processo-compra .pc-neg-provider-action strong{font-size:8.5px}
-#processo-compra .pc-neg-provider-action small{display:none}
-#processo-compra .pc-step-switcher{padding:7px 9px;border-radius:8px}
-#processo-compra .pc-neg-group-head{padding:8px 10px}
-#processo-compra .pc-neg-group-head strong{font-size:9px}
-#processo-compra .pc-neg-group-head small{display:none}
-#processo-compra .pc-neg-cols{font-size:6.5px}
-#processo-compra .pc-decision-row{padding:8px 9px;gap:8px}
-#processo-compra .pc-offer strong{font-size:9px}
-#processo-compra .pc-offer small{font-size:7px}
+#processo-compra .pc-neg-provider-action strong{font-size:9px}
+#processo-compra .pc-neg-provider-action small{font-size:8px}
+#processo-compra .pc-neg-group-head{padding:10px 12px}
+#processo-compra .pc-neg-group-head strong{font-size:11px}
+#processo-compra .pc-neg-group-head small{font-size:8px}
+#processo-compra .pc-decision-row{padding:10px 11px;gap:9px}
+#processo-compra .pc-offer strong{font-size:10px}
+#processo-compra .pc-offer small{font-size:8px}
 
-/* aprovação — somente visual; lógica e inputs originais permanecem */
-#processo-compra .pc-approval-map-card{overflow:hidden!important}
-#processo-compra .pc-approval-matrix{min-width:900px!important}
-#processo-compra .pc-approval-matrix thead .item-col{width:210px!important;min-width:210px!important}
-#processo-compra .pc-approval-matrix thead .qty-col{left:210px!important;width:70px!important;min-width:70px!important}
-#processo-compra .pc-approval-matrix tbody .item-col{left:0!important;width:210px!important;min-width:210px!important;padding:10px!important}
-#processo-compra .pc-approval-matrix tbody .qty-col{left:210px!important;width:70px!important;min-width:70px!important;padding:10px 8px!important}
-#processo-compra .pc-approval-supplier{min-height:88px!important;padding:9px 10px!important}
-#processo-compra .pc-approval-supplier__name{font-size:9px!important}
-#processo-compra .pc-approval-supplier__facts{display:none!important}
-#processo-compra .pc-approval-supplier__tags{margin-top:4px!important}
-#processo-compra .pc-approval-matrix tbody td.pc-manager-choice{padding:6px!important}
-#processo-compra .pc-approval-offer{min-height:78px!important;padding:9px 30px 8px 9px!important;border-radius:7px!important}
-#processo-compra .pc-approval-offer__total{font-size:14px!important}
-#processo-compra .pc-approval-offer__unit{font-size:7px!important}
-#processo-compra .pc-approval-check{top:7px!important;right:7px!important;width:18px!important;height:18px!important}
-#processo-compra .pc-approval-submit{position:static!important;margin-top:8px!important;box-shadow:none!important}
-#processo-compra .pc-approval-submit .pc-card-body{padding:9px!important}
-#processo-compra .pc-approval-submit-grid{grid-template-columns:180px minmax(220px,1fr) auto!important}
+/* Aprovação — matriz legível, sem exagerar nos blocos */
+#processo-compra .pc-approval-tools{padding:12px 14px;background:#fff}
+#processo-compra .pc-approval-strategies{gap:8px;margin-bottom:10px}
+#processo-compra .pc-approval-strategy{min-height:68px;padding:10px 12px;border-radius:8px;box-shadow:none!important;transform:none!important}
+#processo-compra .pc-approval-strategy__eyebrow{font-size:7px}
+#processo-compra .pc-approval-strategy strong{font-size:11px}
+#processo-compra .pc-approval-strategy small{font-size:8px}
+#processo-compra .pc-approval-finance{gap:8px}
+#processo-compra .pc-approval-finance__card{padding:10px 12px;border-radius:8px}
+#processo-compra .pc-approval-finance__card span{font-size:7px}
+#processo-compra .pc-approval-finance__card strong{font-size:14px}
+#processo-compra .pc-approval-finance__card small{font-size:8px}
+#processo-compra .pc-approval-matrix{min-width:980px!important}
+#processo-compra .pc-approval-matrix thead th{padding:10px!important}
+#processo-compra .pc-approval-supplier{min-height:100px!important;padding:10px 11px!important}
+#processo-compra .pc-approval-supplier__name{font-size:11px!important}
+#processo-compra .pc-approval-supplier__rating{font-size:9px}
+#processo-compra .pc-approval-supplier__facts{display:grid!important}
+#processo-compra .pc-approval-supplier__fact span{font-size:7px}
+#processo-compra .pc-approval-supplier__fact strong{font-size:9px}
+#processo-compra .pc-approval-offer{min-height:88px!important;padding:10px 32px 9px 10px!important;border-radius:8px!important}
+#processo-compra .pc-approval-offer__unit{font-size:8px!important}
+#processo-compra .pc-approval-offer__total{font-size:15px!important}
+#processo-compra .pc-approval-offer__qty{font-size:8px}
+#processo-compra .pc-approval-offer__state{font-size:8px}
+#processo-compra .pc-approval-submit{position:static!important;margin-top:10px!important;box-shadow:none!important}
 
-/* pedidos/histórico/contexto */
-#processo-compra .pc-order{padding:9px 11px;gap:9px}
-#processo-compra .pc-order span{font-size:7px}
-#processo-compra .pc-order strong{font-size:9px}
-#processo-compra .pc-order .value{font-size:11px}
-#processo-compra .pc-order-files{padding:0 10px 9px}
-#processo-compra .pc-file-chips a{font-size:8px}
-#processo-compra .pc-upload-inline{gap:6px}
-#processo-compra .pc-context-panel>summary{padding:9px 10px}
-#processo-compra .pc-context-panel>summary strong{font-size:9px}
-#processo-compra .pc-context-panel>summary span{display:none}
-#processo-compra .pc-context-body{padding:8px 10px}
-#processo-compra .pc-context-row{padding:6px 0;font-size:8px}
-#processo-compra .pc-context-item{padding:7px 8px}
-#processo-compra .pc-context-item strong{font-size:8px}
-#processo-compra .pc-context-item small{font-size:7px}
-#processo-compra .pc-event{padding-bottom:12px}
-#processo-compra .pc-event strong{font-size:9px}
-#processo-compra .pc-event p{font-size:8px}
-#processo-compra .pc-event time{font-size:7px}
+/* Pedidos e histórico */
+#processo-compra .pc-order{padding:11px 13px;gap:10px}
+#processo-compra .pc-order span{font-size:8px}
+#processo-compra .pc-order strong{font-size:10px}
+#processo-compra .pc-order .value{font-size:13px}
+#processo-compra .pc-order-files{padding:0 12px 10px}
+#processo-compra .pc-file-chips a{font-size:9px}
+#processo-compra .pc-event{padding-bottom:14px}
+#processo-compra .pc-event strong{font-size:10px}
+#processo-compra .pc-event p{font-size:9px}
+#processo-compra .pc-event time{font-size:8px}
+#processo-compra .pc-note{padding:10px 12px;border-radius:8px;font-size:10px}
+#processo-compra .pc-empty{padding:26px 18px;font-size:10px}
 
-/* botões */
-#processo-compra .cp-btn{min-height:32px!important;padding:6px 9px!important;border-radius:7px!important;font-size:8.5px!important;box-shadow:none!important}
-#processo-compra .cp-btn--primary{background:var(--nv-brand)!important;border-color:var(--nv-brand)!important;color:#fff!important}
-#processo-compra .cp-btn--primary:hover{background:var(--nv-brand-dark)!important;border-color:var(--nv-brand-dark)!important}
-
-/* responsividade */
+/* Responsividade */
 @media(max-width:1180px){
   #processo-compra .pc-workspace{grid-template-columns:1fr}
   #processo-compra .pc-aside{position:static;grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1170,16 +1162,19 @@
   #processo-compra .pc-progress{grid-template-columns:repeat(2,minmax(0,1fr))}
   #processo-compra .pc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
   #processo-compra .pc-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  #processo-compra .pc-approval-submit-grid{grid-template-columns:1fr!important}
+  #processo-compra .pc-tech-offer__main{grid-template-columns:32px minmax(160px,1fr) 110px!important}
+  #processo-compra .pc-tech-decision{grid-column:2/-1!important}
 }
 @media(max-width:640px){
-  #processo-compra .pc-title{font-size:19px}
+  #processo-compra .pc-title{font-size:21px}
   #processo-compra .pc-aside,#processo-compra .pc-kpis,#processo-compra .pc-form-grid{grid-template-columns:1fr!important}
   #processo-compra .pc-tech-offer__main{grid-template-columns:1fr!important}
+  #processo-compra .pc-tech-decision{grid-column:1/-1!important}
   #processo-compra .pc-next{align-items:flex-start;flex-direction:column}
   #processo-compra .pc-next-actions{margin-left:0;width:100%}
 }
 </style>
+
 {% endblock %}
 
 {% block content %}

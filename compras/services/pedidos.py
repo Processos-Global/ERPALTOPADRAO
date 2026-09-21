@@ -69,8 +69,6 @@ def _sincronizar_grande_fornecedor_pedido(pedido):
         )
         if pedido.status == PedidoCompra.Status.CANCELADO:
             novo_status = micro.Status.CANCELADO
-        elif pedido.status == PedidoCompra.Status.CONFIRMADO and micro.status == micro.Status.AGUARDANDO:
-            novo_status = micro.Status.CONFIRMADO
         micro.quantidade_recebida = pedido_item.quantidade_recebida
         micro.status = novo_status
         micro.save(update_fields=["quantidade_recebida", "status", "atualizado_em"])

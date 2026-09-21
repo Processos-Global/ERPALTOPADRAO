@@ -1,21 +1,37 @@
 from decimal import Decimal, InvalidOperation
 
-TRANSICOES_MANUAIS = {
-    "AGUARDANDO": ("CONFIRMADO", "CANCELADO"),
-    "CONFIRMADO": ("PRODUCAO", "PRONTO", "TRANSPORTE", "CANCELADO"),
-    "PRODUCAO": ("PRONTO", "TRANSPORTE", "CANCELADO"),
-    "PRONTO": ("TRANSPORTE", "CANCELADO"),
-    "TRANSPORTE": ("CANCELADO",),
-    "PARCIAL": ("TRANSPORTE", "CANCELADO"),
-    "ENTREGUE": (),
-    "CANCELADO": (),
-}
+
+# Status que o usuário pode selecionar manualmente no acompanhamento.
+STATUS_OPERACIONAIS_MANUAIS = (
+    "APROVACAO_PROJETO",
+    "LIBERADO_MEDICAO",
+    "PRODUCAO",
+)
+
+# Status exibidos no filtro/tela de acompanhamento. PARCIAL e ENTREGUE
+# são calculados pelo recebimento do PedidoCompra.
+STATUS_ACOMPANHAMENTO = (
+    "APROVACAO_PROJETO",
+    "LIBERADO_MEDICAO",
+    "PRODUCAO",
+    "PARCIAL",
+    "ENTREGUE",
+)
 
 STATUS_DERIVADOS_RECEBIMENTO = {"PARCIAL", "ENTREGUE"}
 
 
 def transicoes_manuais(status_atual):
-    return TRANSICOES_MANUAIS.get(str(status_atual or ""), ())
+    """Retorna as etapas operacionais disponíveis para seleção manual.
+
+    O fluxo não é travado em sequência: Aprovação de projeto, Liberado p/
+    medição e Produção podem ser escolhidos conforme a situação real do item.
+    Entrega Parcial e Entregue permanecem derivados do recebimento.
+    """
+    atual = str(status_atual or "")
+    if atual in STATUS_DERIVADOS_RECEBIMENTO or atual == "CANCELADO":
+        return ()
+    return tuple(status for status in STATUS_OPERACIONAIS_MANUAIS if status != atual)
 
 
 def _decimal(valor):
@@ -32,4 +48,4 @@ def status_por_recebimento(quantidade, quantidade_recebida, status_atual):
         return "ENTREGUE"
     if recebido > 0:
         return "PARCIAL"
-    return str(status_atual or "AGUARDANDO")
+    return str(status_atual or "APROVACAO_PROJETO")

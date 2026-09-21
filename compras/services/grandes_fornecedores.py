@@ -812,7 +812,7 @@ def decidir_aprovacao(*, processo, decisao, usuario, observacao=""):
         pedido_item = mapa.get(micro.necessidade_gerada_id)
         if pedido_item:
             micro.pedido_item = pedido_item
-            micro.status = GrandeFornecedorItem.Status.AGUARDANDO
+            micro.status = GrandeFornecedorItem.Status.APROVACAO_PROJETO
             micro.quantidade_recebida = pedido_item.quantidade_recebida
             micro.previsao_entrega = pedido_item.pedido.previsao_entrega_atual
             micro.save(update_fields=[

@@ -53,6 +53,19 @@
 .ft-sync{display:inline-flex;padding:4px 6px;border-radius:6px;background:#eef8fa;border:1px solid #cde7eb;color:#12697c;font-size:9px;font-weight:900;white-space:nowrap}.ft-sync.is-linked{background:#edf8f1;border-color:#cae7d5;color:#287146}
 @media(max-width:1050px){.ft-layout{grid-template-columns:1fr}.ft-side{position:static}.ft-cats{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.ft-page{padding:14px}.ft-top{align-items:flex-start;flex-direction:column}.ft-grid>[class^="c"],.ft-grid>.c2,.ft-grid>.c3,.ft-grid>.c4,.ft-grid>.c5,.ft-grid>.c6,.ft-grid>.c8,.ft-grid>.c9{grid-column:1/-1}.ft-cats{grid-template-columns:1fr}.ft-review-grid{grid-template-columns:1fr 1fr}}
+
+/* revisão de legibilidade e preenchimento */
+
+.ft-layout{grid-template-columns:minmax(0,1fr)}
+.ft-side{display:none}
+.ft-top small,.ft-section-bar span,.ft-context span{font-size:12px}
+.ft-status,.ft-flow a,.ft-field label,.ft-tabs a{font-size:12px}
+.ft-field input,.ft-field select,.ft-field textarea,.ft-btn{font-size:13px}
+.ft-form-title,.ft-section-bar strong{font-size:14px}
+.ft-table th{font-size:11px}.ft-table td{font-size:13px}
+.ft-row-note{font-size:11px}
+.ft-empty{font-size:13px}
+
 </style>
 {% endblock %}
 

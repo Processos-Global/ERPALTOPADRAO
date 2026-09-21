@@ -86,13 +86,12 @@ class GrandeFornecedorParticipante(models.Model):
 
 class GrandeFornecedorItem(models.Model):
     class Status(models.TextChoices):
-        AGUARDANDO = "AGUARDANDO", "Pedido gerado"
-        CONFIRMADO = "CONFIRMADO", "Confirmado"
-        PRODUCAO = "PRODUCAO", "Em produção"
-        PRONTO = "PRONTO", "Pronto para expedição"
-        TRANSPORTE = "TRANSPORTE", "Em transporte"
-        PARCIAL = "PARCIAL", "Entrega parcial"
+        APROVACAO_PROJETO = "APROVACAO_PROJETO", "Aprovação de projeto"
+        LIBERADO_MEDICAO = "LIBERADO_MEDICAO", "Liberado p/ medição"
+        PRODUCAO = "PRODUCAO", "Produção"
+        PARCIAL = "PARCIAL", "Entrega Parcial"
         ENTREGUE = "ENTREGUE", "Entregue"
+        # Status técnico. Não aparece como opção operacional no acompanhamento.
         CANCELADO = "CANCELADO", "Cancelado"
 
     fluxo = models.ForeignKey(
@@ -129,7 +128,7 @@ class GrandeFornecedorItem(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.AGUARDANDO,
+        default=Status.APROVACAO_PROJETO,
         db_index=True,
     )
     quantidade_recebida = models.DecimalField(

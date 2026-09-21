@@ -696,7 +696,11 @@ def _voltar_acompanhamento():
 
 @compras_acao_required(AcaoCompra.VISUALIZAR)
 def painel_grandes_fornecedores_compras(request):
-    from compras.services.grande_fornecedor_status import status_por_recebimento, transicoes_manuais
+    from compras.services.grande_fornecedor_status import (
+        STATUS_ACOMPANHAMENTO,
+        status_por_recebimento,
+        transicoes_manuais,
+    )
     from obras.models import Obra
 
     qs = (
@@ -762,7 +766,10 @@ def painel_grandes_fornecedores_compras(request):
 
     return render(request, "compras/grandes_fornecedores.html", {
         "rows": rows, "pedidos_recebimento": list(pedidos_recebimento.values()),
-        "obras": Obra.objects.order_by("nome"), "status_choices": GrandeFornecedorItem.Status.choices,
+        "obras": Obra.objects.order_by("nome"),
+        "status_choices": [
+            (codigo, labels[codigo]) for codigo in STATUS_ACOMPANHAMENTO if codigo in labels
+        ],
         "filtros": {"obra": obra, "status": status, "q": busca},
         "pode_operar": _pode_operar_acompanhamento(request.user),
         "pode_status": any(possui_acao_compras(request.user, acao) for acao in (AcaoCompra.GERENCIAR_PEDIDOS, AcaoCompra.ADMINISTRAR)),
@@ -775,12 +782,46 @@ def painel_grandes_fornecedores_compras(request):
 @compras_acao_required(AcaoCompra.GERENCIAR_PEDIDOS)
 @require_POST
 def atualizar_status_item_grande_fornecedor_compras(request, item_id):
-    item = get_object_or_404(GrandeFornecedorItem.objects.select_related("fluxo__processo", "pedido_item"), pk=item_id, fluxo__processo__fluxo_grande_fornecedor=True)
+    from compras.services.grande_fornecedor_status import transicoes_manuais
+
+    item = get_object_or_404(
+        GrandeFornecedorItem.objects.select_related("fluxo__processo", "pedido_item"),
+        pk=item_id,
+        fluxo__processo__fluxo_grande_fornecedor=True,
+    )
+
+    ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
     try:
-        atualizar_status_operacional_item(micro_item=item, novo_status=request.POST.get("status"), usuario=request.user)
+        atualizar_status_operacional_item(
+            micro_item=item,
+            novo_status=request.POST.get("status"),
+            usuario=request.user,
+        )
+        item.refresh_from_db(fields=["status"])
+
+        if ajax:
+            labels = dict(GrandeFornecedorItem.Status.choices)
+            transicoes = [
+                {"value": codigo, "label": labels.get(codigo, codigo)}
+                for codigo in transicoes_manuais(item.status)
+                if codigo in labels and codigo != GrandeFornecedorItem.Status.CANCELADO
+            ]
+            return JsonResponse({
+                "ok": True,
+                "item_id": item.pk,
+                "status": item.status,
+                "status_label": item.get_status_display(),
+                "transicoes": transicoes,
+                "mensagem": f"Status de {item.item} atualizado.",
+            })
+
         messages.success(request, f"Status de {item.item} atualizado.")
     except ValidationError as exc:
+        if ajax:
+            return _erro_json(exc)
         messages.error(request, str(exc))
+
     return _voltar_acompanhamento()
 
 

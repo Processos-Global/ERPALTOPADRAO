@@ -106,19 +106,17 @@ def _retirar_reutilizavel(mapa, *, obra_id, dados_item):
     return retirar(mapa["por_linha"].get(chave_linha, deque()))
 
 
-def _tipo_fluxo_por_categoria(categoria):
-    """Resolve a classificação comercial a partir da categoria da planilha.
+def _tipo_fluxo_por_categoria(categoria_grande_fornecedor):
+    """Define o fluxo somente quando a categoria técnica GF foi reconhecida.
 
-    Sem categoria e Materiais Variados seguem o fluxo normal. As demais
-    categorias são tratadas como Grandes Fornecedores, reproduzindo a regra
-    histórica do cronograma sem carregar o valor NORMAL legado da migration.
+    Regra de negócio: a ausência de identificação explícita de Grande
+    Fornecedor nunca deve retirar o suprimento do fluxo normal. Projetos e
+    demais categorias especiais entram no fluxo GF porque o resolvedor de
+    categoria os vincula a uma CategoriaGrandeFornecedor ativa.
     """
-    texto = normalizar_texto(categoria or "")
-    if not texto:
-        return ItemCronogramaSuprimento.TipoFluxoCompra.NORMAL
-    if "MATERIA" in texto and "VARIAD" in texto:
-        return ItemCronogramaSuprimento.TipoFluxoCompra.NORMAL
-    return ItemCronogramaSuprimento.TipoFluxoCompra.GRANDE_FORNECEDOR
+    if categoria_grande_fornecedor is not None:
+        return ItemCronogramaSuprimento.TipoFluxoCompra.GRANDE_FORNECEDOR
+    return ItemCronogramaSuprimento.TipoFluxoCompra.NORMAL
 
 
 def _chave_item_manual(*, obra_id, item, local, linha_origem=None):
@@ -422,15 +420,17 @@ def _ler_aba(df: pd.DataFrame, *, nome_aba: str = "") -> tuple[object, list[dict
             data_real=data_real,
         )
 
+        categoria_gf = resolver_categoria_grande_fornecedor(categoria_atual, item)
+
         ordem += 1
         itens.append(
             {
                 "categoria": categoria_atual,
                 "situacao": situacao,
-                # A categoria da planilha define o fluxo macro. Em paralelo,
-                # resolvemos a FK técnica usada para conectar com a Ficha Técnica.
-                "tipo_fluxo_compra": _tipo_fluxo_por_categoria(categoria_atual),
-                "categoria_grande_fornecedor": resolver_categoria_grande_fornecedor(categoria_atual, item),
+                # O fluxo GF só é ativado quando existe uma categoria técnica
+                # reconhecida. Sem mapeamento, o item permanece no fluxo normal.
+                "tipo_fluxo_compra": _tipo_fluxo_por_categoria(categoria_gf),
+                "categoria_grande_fornecedor": categoria_gf,
                 "data_cotacao": converter_data(_valor(row, colunas["data_cotacao"])),
                 "duracao_cotacao": converter_inteiro(_valor(row, colunas["duracao_cotacao"])),
                 "data_compatibilizacao": converter_data(_valor(row, colunas["data_compatibilizacao"])),

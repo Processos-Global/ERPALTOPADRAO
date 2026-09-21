@@ -218,26 +218,11 @@ class ItemCronogramaSuprimento(models.Model):
     def usa_fluxo_grande_fornecedor(self) -> bool:
         """Retorna o fluxo comercial efetivo do suprimento.
 
-        Regra atual:
-        - categoria vazia/sem classificação -> fluxo NORMAL;
-        - categoria de Materiais Variados -> fluxo NORMAL;
-        - demais categorias classificadas -> Grande Fornecedor.
-
-        ``tipo_fluxo_compra`` continua sendo persistido, mas não pode fazer um
-        Grande Fornecedor legado cair no fluxo normal apenas porque a migration
-        antiga preencheu ``NORMAL`` como valor padrão.
+        Grande Fornecedor exige identificação técnica explícita. Isso evita
+        que uma categoria comum da planilha seja enviada ao fluxo paralelo
+        apenas por possuir um nome de categoria preenchido.
         """
-        if self.categoria_grande_fornecedor_id:
-            return True
-
-        categoria = unicodedata.normalize(
-            "NFKD", str(self.categoria or "")
-        ).encode("ascii", "ignore").decode("ascii").upper().strip()
-        if not categoria:
-            return False
-        if "MATERIA" in categoria and "VARIAD" in categoria:
-            return False
-        return True
+        return bool(self.categoria_grande_fornecedor_id)
 
     @property
     def exige_compatibilizacao(self) -> bool:
