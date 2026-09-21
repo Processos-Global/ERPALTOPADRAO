@@ -1,0 +1,261 @@
+{% extends "layouts/base.html" %}
+{% block title %}Ficha Técnica | {{ obra.nome }}{% endblock %}
+{% block page_name %}Ficha Técnica{% endblock %}
+
+{% block extra_css %}
+<style>
+:root{
+  --ft-primary:#1f8fa5;
+  --ft-primary-dark:#12697c;
+  --ft-line:#dce6e9;
+  --ft-text:#17384a;
+  --ft-muted:#74878f;
+  --ft-soft:#f7fafb;
+  --ft-danger:#b42318;
+}
+.ft-page{max-width:1580px;margin:0 auto;padding:20px 24px 38px;color:var(--ft-text)}
+.ft-top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
+.ft-top h1{margin:0;font-size:24px}.ft-top small{display:block;color:var(--ft-muted);margin-top:3px}
+.ft-status{padding:6px 9px;border:1px solid #d7e4e7;border-radius:7px;background:#fff;font-size:10px;font-weight:800;color:#526870}
+.ft-flow{display:flex;gap:6px;overflow:auto;margin-bottom:14px}
+.ft-flow a{white-space:nowrap;text-decoration:none;padding:8px 11px;border:1px solid var(--ft-line);border-radius:8px;background:#fff;color:#5d727a;font-size:11px;font-weight:800}
+.ft-flow a.active{background:#eaf6f8;border-color:#8cc8d2;color:var(--ft-primary-dark)}
+.ft-layout{display:grid;grid-template-columns:minmax(0,1fr) 235px;gap:14px;align-items:start}
+.ft-panel,.ft-side-card,.ft-form-box,.ft-cat-card{background:#fff;border:1px solid var(--ft-line);border-radius:10px}
+.ft-panel-head{padding:15px 17px;border-bottom:1px solid #edf1f2}.ft-panel-head h2{margin:0;font-size:17px}
+.ft-panel-body{padding:16px}
+.ft-form-box{padding:14px;margin-bottom:16px}
+.ft-form-title{font-size:12px;font-weight:900;margin-bottom:10px;color:#315666}
+.ft-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:9px;align-items:end}
+.ft-grid.compact{gap:8px}
+.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c9{grid-column:span 9}.c12{grid-column:1/-1}
+.ft-field label{display:block;font-size:10px;font-weight:850;color:#506873;margin-bottom:4px}
+.ft-field input,.ft-field select,.ft-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd8dd;border-radius:7px;background:#fff;padding:9px 10px;font-size:11px;color:#223f4c;outline:none}
+.ft-field textarea{resize:vertical}.ft-field input:focus,.ft-field select:focus,.ft-field textarea:focus{border-color:#78bcc8;box-shadow:0 0 0 2px rgba(31,143,165,.07)}
+.ft-btn{border:0;border-radius:7px;padding:9px 12px;background:var(--ft-primary);color:#fff;font-size:11px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:35px}
+.ft-btn.secondary{background:#fff;color:#35545f;border:1px solid #cbd8dd}.ft-btn.danger,.ft-icon-btn.danger{background:#fff;color:var(--ft-danger);border:1px solid #efc7c1}
+.ft-icon-btn{border-radius:6px;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}
+.ft-section-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:16px 0 8px}.ft-section-bar strong{font-size:12px}.ft-section-bar span{font-size:10px;color:var(--ft-muted)}
+.ft-table-wrap{overflow:auto;border:1px solid var(--ft-line);border-radius:9px}.ft-table{width:100%;border-collapse:collapse;min-width:690px}
+.ft-table th,.ft-table td{padding:9px 10px;border-bottom:1px solid #edf2f4;text-align:left;font-size:11px;vertical-align:middle}
+.ft-table th{background:#f7f9fa;color:#687d85;text-transform:uppercase;font-size:9px;letter-spacing:.03em}.ft-table tr:last-child td{border-bottom:0}
+.ft-table-items{min-width:760px}.ft-row-note{display:block;color:#87979d;font-size:9px;margin-top:2px}.ft-spec{max-width:340px}.ft-action-cell{width:68px}
+.ft-empty{padding:20px;text-align:center;color:#82939a;font-size:11px}
+.ft-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.ft-tabs a{padding:7px 9px;border:1px solid var(--ft-line);border-radius:7px;background:#fff;color:#56707b;text-decoration:none;font-size:10px;font-weight:800}.ft-tabs a.active{background:#eaf6f8;color:var(--ft-primary-dark);border-color:#8bcbd6}
+.ft-context{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-radius:8px;background:#f7f9fa;border:1px solid #e5ecef;margin-bottom:10px}.ft-context span{font-size:10px;color:#536c76}.ft-context strong{color:#2b4f5f}
+.ft-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ft-cat{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--ft-line);border-radius:8px;padding:9px;background:#fff;cursor:pointer}.ft-cat input{margin-top:2px}.ft-cat strong{display:block;font-size:11px;color:#284b5b}.ft-cat small{display:block;color:#83949b;font-size:9px;margin-top:2px}
+.ft-side{display:grid;gap:10px;position:sticky;top:14px}.ft-side-card{padding:13px}.ft-side-card h3{margin:0 0 9px;font-size:12px}.ft-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ft-kpi{border:1px solid #e7edef;border-radius:8px;padding:9px}.ft-kpi span{display:block;color:#84959d;font-size:9px}.ft-kpi strong{display:block;font-size:17px;margin-top:2px}
+.ft-review-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ft-review-card{border:1px solid var(--ft-line);border-radius:8px;padding:10px}.ft-review-card span{font-size:9px;color:#81939b;text-transform:uppercase}.ft-review-card strong{display:block;font-size:17px;margin-top:2px}
+.ft-cat-card{margin-bottom:10px;overflow:hidden}.ft-cat-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#f8fafb;border-bottom:1px solid #e7edef}.ft-cat-head strong{font-size:12px}.ft-cat-head small{display:block;color:#84959d;font-size:9px;margin-top:2px}
+.ft-chip{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border:1px solid #dce6e9;border-radius:6px;background:#fff;font-size:9px;font-weight:900;color:#607780}
+.ft-add{border-top:1px solid #edf2f4;padding:0 12px 12px}.ft-add summary{cursor:pointer;padding:10px 0 8px;font-size:10px;font-weight:900;color:#315666}.ft-add[open] summary{color:var(--ft-primary-dark)}
+.ft-submit-cell{display:flex;align-items:end}.ft-submit-cell .ft-btn{width:100%}
+.ft-sync{display:inline-flex;padding:4px 6px;border-radius:6px;background:#eef8fa;border:1px solid #cde7eb;color:#12697c;font-size:9px;font-weight:900;white-space:nowrap}.ft-sync.is-linked{background:#edf8f1;border-color:#cae7d5;color:#287146}
+@media(max-width:1050px){.ft-layout{grid-template-columns:1fr}.ft-side{position:static}.ft-cats{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.ft-page{padding:14px}.ft-top{align-items:flex-start;flex-direction:column}.ft-grid>[class^="c"],.ft-grid>.c2,.ft-grid>.c3,.ft-grid>.c4,.ft-grid>.c5,.ft-grid>.c6,.ft-grid>.c8,.ft-grid>.c9{grid-column:1/-1}.ft-cats{grid-template-columns:1fr}.ft-review-grid{grid-template-columns:1fr 1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ft-page">
+  {% if messages %}
+    {% for message in messages %}
+      <div style="padding:9px 11px;border:1px solid #dce6e9;border-radius:8px;background:#fff;margin-bottom:10px;font-size:11px">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="ft-top">
+    <div>
+      <h1>{{ obra.nome }}</h1>
+      <small>{{ obra.codigo }} · Ficha Técnica</small>
+    </div>
+    <span class="ft-status">{{ ficha.get_status_display }}</span>
+  </div>
+
+  <nav class="ft-flow">
+    <a class="{% if etapa == '1' %}active{% endif %}" href="?etapa=1">1. Pavimentos</a>
+    <a class="{% if etapa == '2' %}active{% endif %}" href="?etapa=2">2. Ambientes</a>
+    <a class="{% if etapa == '3' %}active{% endif %}" href="?etapa=3">3. Categorias GF</a>
+    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">4. Itens</a>
+    <a class="{% if etapa == '5' %}active{% endif %}" href="?etapa=5">5. Resumo</a>
+  </nav>
+
+  <div class="ft-layout">
+    <main class="ft-panel">
+
+      {% if etapa == '1' %}
+      <div class="ft-panel-head"><h2>Pavimentos</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Adicionar pavimento</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="adicionar_pavimento">
+            <input type="hidden" name="etapa" value="1">
+            <div class="ft-grid">
+              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" required>{% for p in tipos_pavimento %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c5"><label>Nome na obra</label><input name="nome" placeholder="Ex.: Térreo, 1º Pavimento"></div>
+              <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="ft-section-bar"><strong>Pavimentos cadastrados</strong><span>{{ pavimentos|length }}</span></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Ordem</th><th>Pavimento</th><th>Ambientes</th><th></th></tr></thead>
+            <tbody>
+              {% for p in pavimentos %}
+              <tr>
+                <td>{{ p.ordem }}</td><td><strong>{{ p.nome }}</strong></td><td>{{ p.ambientes.count }}</td>
+                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_pavimento"><input type="hidden" name="etapa" value="1"><input type="hidden" name="pavimento_id" value="{{ p.pk }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+              </tr>
+              {% empty %}<tr><td colspan="4" class="ft-empty">Nenhum pavimento cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% elif etapa == '2' %}
+      <div class="ft-panel-head"><h2>Ambientes</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Adicionar ambiente</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="adicionar_ambiente">
+            <input type="hidden" name="etapa" value="2">
+            <div class="ft-grid">
+              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" required>{% for a in tipos_ambiente %}<option value="{{ a.pk }}">{{ a.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Identificação</label><input name="identificacao" placeholder="Ex.: Quarto 01" required></div>
+              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk }}">{{ c.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Área (m²)</label><input name="area_m2" required inputmode="decimal" placeholder="12,50"></div>
+              <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="ft-section-bar"><strong>Ambientes cadastrados</strong><span>{{ total_ambientes }}</span></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Pavimento</th><th>Ambiente</th><th>Tipo</th><th>Característica</th><th>Área</th><th></th></tr></thead>
+            <tbody>
+              {% for a in ambientes %}
+              <tr>
+                <td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.caracteristica.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td>
+                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+              </tr>
+              {% empty %}<tr><td colspan="6" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% elif etapa == '3' %}
+      <div class="ft-panel-head"><h2>Categorias de Grandes Fornecedores</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Categorias gerais da obra</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_obra"><input type="hidden" name="etapa" value="3">
+            <div class="ft-cats">
+              {% for c in categorias_obra %}
+                <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
+              {% empty %}<div class="ft-empty">Nenhuma categoria geral disponível.</div>{% endfor %}
+            </div>
+            <div style="margin-top:10px"><button class="ft-btn">Salvar</button></div>
+          </form>
+        </div>
+
+        <div class="ft-form-box">
+          <div class="ft-form-title">Categorias por ambiente</div>
+          <div class="ft-tabs">
+            {% for a in ambientes %}<a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">{{ a.pavimento.nome }} · {{ a.identificacao }}</a>{% empty %}<span class="ft-empty">Cadastre os ambientes primeiro.</span>{% endfor %}
+          </div>
+
+          {% if ambiente_selecionado %}
+            <div class="ft-context">
+              <span><strong>{{ ambiente_selecionado.identificacao }}</strong></span>
+              <span>{{ ambiente_selecionado.pavimento.nome }}</span>
+              <span>{{ ambiente_selecionado.area_m2|floatformat:2 }} m²</span>
+              <span>{{ ambiente_selecionado.caracteristica.nome }}</span>
+            </div>
+
+            <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+              {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_ambiente"><input type="hidden" name="etapa" value="3"><input type="hidden" name="ambiente_id" value="{{ ambiente_selecionado.pk }}">
+              <div class="ft-cats">
+                {% for c in categorias_ambiente %}
+                  {% if not c.somente_area_molhada or ambiente_selecionado.caracteristica.codigo == 'AREA_MOLHADA' %}
+                  <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_ambiente_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <div style="margin-top:10px"><button class="ft-btn">Salvar</button></div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      {% elif etapa == '4' %}
+      <div class="ft-panel-head"><h2>Itens</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-tabs">
+          <a class="{% if not ambiente_selecionado %}active{% endif %}" href="?etapa=4">Gerais</a>
+          {% for a in ambientes %}<a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}" href="?etapa=4&ambiente={{ a.pk }}">{{ a.pavimento.nome }} · {{ a.identificacao }}</a>{% endfor %}
+        </div>
+
+        {% if ambiente_selecionado %}
+          <div class="ft-context">
+            <span><strong>{{ ambiente_selecionado.identificacao }}</strong></span>
+            <span>{{ ambiente_selecionado.pavimento.nome }}</span>
+            <span>{{ ambiente_selecionado.area_m2|floatformat:2 }} m²</span>
+            <span>{{ ambiente_selecionado.caracteristica.nome }}</span>
+          </div>
+          {% for ap in aplicacoes_ambiente %}{% include "obras/_categoria_itens.html" with ap=ap %}{% empty %}<div class="ft-empty">Nenhuma categoria selecionada para este ambiente.</div>{% endfor %}
+        {% else %}
+          {% for ap in aplicacoes_obra %}{% include "obras/_categoria_itens.html" with ap=ap %}{% empty %}<div class="ft-empty">Nenhuma categoria geral selecionada.</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      {% else %}
+      <div class="ft-panel-head"><h2>Resumo</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-review-grid">
+          <div class="ft-review-card"><span>Pavimentos</span><strong>{{ pavimentos|length }}</strong></div>
+          <div class="ft-review-card"><span>Ambientes</span><strong>{{ total_ambientes }}</strong></div>
+          <div class="ft-review-card"><span>Categorias</span><strong>{{ total_categorias }}</strong></div>
+          <div class="ft-review-card"><span>Itens</span><strong>{{ total_itens }}</strong></div>
+        </div>
+
+        <div class="ft-section-bar"><strong>Ambientes</strong></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Pavimento</th><th>Ambiente</th><th>Tipo</th><th>Área</th><th>Característica</th></tr></thead>
+            <tbody>
+              {% for a in ambientes %}
+              <tr><td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td><td>{{ a.caracteristica.nome }}</td></tr>
+              {% empty %}<tr><td colspan="5" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </main>
+
+    <aside class="ft-side">
+      <div class="ft-side-card">
+        <h3>Resumo</h3>
+        <div class="ft-kpis">
+          <div class="ft-kpi"><span>Pavimentos</span><strong>{{ pavimentos|length }}</strong></div>
+          <div class="ft-kpi"><span>Ambientes</span><strong>{{ total_ambientes }}</strong></div>
+          <div class="ft-kpi"><span>Categorias</span><strong>{{ total_categorias }}</strong></div>
+          <div class="ft-kpi"><span>Itens</span><strong>{{ total_itens }}</strong></div>
+        </div>
+      </div>
+
+      <a class="ft-btn secondary" href="{% url 'obras:fichas_tecnicas' %}">Voltar</a>
+    </aside>
+  </div>
+</div>
+{% endblock %}

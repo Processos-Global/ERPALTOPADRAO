@@ -44,6 +44,17 @@ class ProcessoCompra(models.Model):
         db_index=True,
         help_text="Congela a classificação do suprimento no momento da abertura do processo.",
     )
+    categoria_grande_fornecedor = models.ForeignKey(
+        "cadastros.CategoriaGrandeFornecedor",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processos_compra",
+        help_text=(
+            "Categoria GF herdada do Cronograma de Suprimentos. Define quais itens da Ficha Técnica "
+            "pertencem a este processo."
+        ),
+    )
     descricao = models.TextField(blank=True)
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -1,11 +1,14 @@
 from django.urls import path
-
 from cadastros import views
 
 app_name = "cadastros"
-
 urlpatterns = [
     path("", views.index, name="index"),
+    path("ficha-tecnica/", views.ficha_tecnica_cadastros, name="ficha_tecnica_cadastros"),
+    path("ficha-tecnica/<slug:tipo>/", views.ficha_tecnica_lista, name="ficha_tecnica_lista"),
+    path("ficha-tecnica/<slug:tipo>/novo/", views.ficha_tecnica_novo, name="ficha_tecnica_novo"),
+    path("ficha-tecnica/<slug:tipo>/<int:pk>/editar/", views.ficha_tecnica_editar, name="ficha_tecnica_editar"),
+    path("ficha-tecnica/<slug:tipo>/<int:pk>/excluir/", views.ficha_tecnica_excluir, name="ficha_tecnica_excluir"),
     path("unidades/", views.unidades_lista, name="unidades_lista"),
     path("unidades/nova/", views.unidade_nova, name="unidade_nova"),
     path("unidades/<int:pk>/editar/", views.unidade_editar, name="unidade_editar"),

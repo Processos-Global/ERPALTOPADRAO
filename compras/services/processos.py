@@ -65,6 +65,10 @@ def criar_processo(
         item_cronograma=item_cronograma,
         titulo=titulo or item_cronograma.item,
         fluxo_grande_fornecedor=fluxo_grande_fornecedor,
+        categoria_grande_fornecedor=(
+            item_cronograma.categoria_grande_fornecedor
+            if fluxo_grande_fornecedor else None
+        ),
         descricao=descricao,
         comprador=comprador or usuario,
         observacao=observacao,
@@ -133,6 +137,10 @@ def criar_processo(
             usuario,
             "Processo aberto como Grande Fornecedor e direcionado para a matriz de compatibilização.",
         )
+        # A Ficha Técnica é contínua. Se a obra já possuir itens da categoria
+        # técnica deste processo, eles entram na matriz imediatamente na criação.
+        from .grandes_fornecedores import sincronizar_itens_ficha_tecnica
+        sincronizar_itens_ficha_tecnica(processo=processo, usuario=usuario)
     elif iniciar_cotacao:
         registrar_evento(processo, "PEDIDO_ENVIADO", usuario, "Pedido de compra enviado ao Suprimentos.")
         registrar_evento(

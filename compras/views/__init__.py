@@ -49,7 +49,9 @@ from .downloads import (
 )
 
 from .grandes_fornecedores import (
-    matriz_grande_fornecedor, incluir_participante as gf_incluir_participante,
+    matriz_grande_fornecedor, importar_ficha_tecnica as gf_importar_ficha_tecnica,
+    vincular_item_ficha as gf_vincular_item_ficha,
+    incluir_participante as gf_incluir_participante,
     incluir_item as gf_incluir_item, salvar_linha as gf_salvar_linha,
     incluir_oferta as gf_incluir_oferta, excluir_oferta as gf_excluir_oferta,
     excluir_linha as gf_excluir_linha, historico_item as gf_historico_item,

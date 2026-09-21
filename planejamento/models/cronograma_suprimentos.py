@@ -131,6 +131,17 @@ class ItemCronogramaSuprimento(models.Model):
             "Cronogramas sem classificação explícita usam o fluxo normal principal como padrão."
         ),
     )
+    categoria_grande_fornecedor = models.ForeignKey(
+        "cadastros.CategoriaGrandeFornecedor",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="itens_cronograma_suprimentos",
+        help_text=(
+            "Categoria técnica de Grande Fornecedor identificada a partir da categoria do cronograma. "
+            "É esta relação que conecta Planejamento, Ficha Técnica e Compras."
+        ),
+    )
 
     cronograma_obra = models.ForeignKey(
         CronogramaSuprimentosObra,
@@ -216,6 +227,9 @@ class ItemCronogramaSuprimento(models.Model):
         Grande Fornecedor legado cair no fluxo normal apenas porque a migration
         antiga preencheu ``NORMAL`` como valor padrão.
         """
+        if self.categoria_grande_fornecedor_id:
+            return True
+
         categoria = unicodedata.normalize(
             "NFKD", str(self.categoria or "")
         ).encode("ascii", "ignore").decode("ascii").upper().strip()

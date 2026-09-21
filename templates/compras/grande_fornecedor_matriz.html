@@ -172,6 +172,9 @@
     box-shadow: 5px 0 8px rgba(42, 66, 75, .10);
 }
 
+ .gf-col-spec { width: 270px; min-width: 270px; max-width: 320px; }
+.gf-spec-text { white-space: normal; line-height: 1.35; color: #526870; }
+.gf-origin { display:block; margin-top:4px; font-size:9px; font-weight:800; color:#168da0; text-transform:uppercase; }
 .gf-col-qty {
     width: 90px;
     min-width: 90px;
@@ -717,6 +720,83 @@
     font-size: 11px;
 }
 
+.gf-ficha-box{
+    margin:0 0 12px;
+    border:1px solid #dce6e9;
+    border-radius:10px;
+    background:#fff;
+    overflow:hidden;
+}
+.gf-ficha-head{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+    padding:10px 12px;
+    background:#f7f9fa;
+}
+.gf-ficha-head strong{font-size:11px;color:#294a56}
+.gf-ficha-head span{font-size:10px;color:#6f8289}
+.gf-ficha-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+}
+.gf-ficha-tag{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:0 8px;
+    border:1px solid #d9e4e7;
+    border-radius:6px;
+    background:#fff;
+    color:#5d727a;
+    font-size:9px;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    white-space:nowrap;
+}
+.gf-ficha-category{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:11px;
+    font-weight:900;
+    color:#284b58;
+}
+.gf-ficha-status{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    min-height:24px;
+    padding:0 8px;
+    border-radius:6px;
+    background:#edf7f2;
+    color:#34704d;
+    font-size:9px;
+    font-weight:900;
+    white-space:nowrap;
+}
+.gf-ficha-status.is-warning{
+    background:#fff4db;
+    color:#8a5a00;
+}
+.gf-ficha-body{padding:10px 12px;border-top:1px solid #e7edef}
+.gf-ficha-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.gf-ficha-pending{padding-top:2px}
+.gf-ficha-pending-title{font-size:10px;font-weight:900;color:#526870;margin-bottom:7px}
+.gf-ficha-pending-list{display:grid;gap:6px}
+.gf-ficha-pending-item{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid #e1ebee;border-radius:8px;background:#fff}
+.gf-ficha-pending-item strong{font-size:11px;color:#284c5b}
+.gf-ficha-pending-item small{display:block;color:#7c8f97;font-size:9px;margin-top:2px}
+.gf-link-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.gf-link-form select{min-width:230px}
+.gf-manual-note{display:block;margin-top:4px;font-size:9px;color:#8a6b27;font-weight:800}
+.gf-origin.manual{color:#8a6b27}
+.gf-origin.linked{color:#34704d}
+
 @media (max-width: 900px) {
     .gf-step:not(:last-child):after {
         width: 35px;
@@ -784,7 +864,7 @@
 
     <div class="gf-summary">
         <div class="cp-kpi">
-            <span>Materiais</span>
+            <span>Itens</span>
             <strong>{{ itens|length }}</strong>
         </div>
         <div class="cp-kpi">
@@ -800,14 +880,78 @@
     {% if pode_editar %}
     <section class="cp-section">
         <div class="cp-section__head">
-            <div>
-                <strong>Matriz de Compatibilização e Negociação</strong>
-                <div class="gf-help">
-                    Adicione materiais, pavimento e local de utilização. Cada fornecedor vira uma coluna da planilha.
-                </div>
-            </div>
+            <strong>Compatibilização</strong>
         </div>
     {% endif %}
+
+        {% if pode_editar %}
+        <div class="gf-ficha-box">
+            <div class="gf-ficha-head">
+                <div class="gf-ficha-title">
+                    <span class="gf-ficha-tag">Ficha técnica</span>
+
+                    {% if categoria_ficha_processo %}
+                        <span class="gf-ficha-category">{{ categoria_ficha_processo.nome }}</span>
+                    {% else %}
+                        <span class="gf-ficha-category">Categoria não identificada</span>
+                    {% endif %}
+                </div>
+
+                {% if categoria_ficha_processo %}
+                    {% if not ficha_tecnica_existe %}
+                        <span class="gf-ficha-status is-warning">Sem ficha</span>
+                    {% elif qtd_itens_ficha_pendentes %}
+                        <span class="gf-ficha-status is-warning">{{ qtd_itens_ficha_pendentes }} pendente(s)</span>
+                    {% else %}
+                        <span class="gf-ficha-status">Sincronizada</span>
+                    {% endif %}
+                {% else %}
+                    <span class="gf-ficha-status is-warning">Revisar categoria</span>
+                {% endif %}
+            </div>
+
+            {% if categoria_ficha_processo and ficha_tecnica_existe and itens_ficha_pendentes and itens_manuais %}
+            <div class="gf-ficha-body">
+                <div class="gf-ficha-pending">
+                    <div class="gf-ficha-pending-title">Vincular itens da ficha a linhas manuais existentes</div>
+
+                    <div class="gf-ficha-pending-list">
+                        {% for pendente in itens_ficha_pendentes %}
+                        <div class="gf-ficha-pending-item">
+                            <div>
+                                <strong>{{ pendente.nome_item }}</strong>
+                                <small>
+                                    {% if pendente.aplicacao_categoria.ambiente %}
+                                        {{ pendente.aplicacao_categoria.ambiente.pavimento.nome }} · {{ pendente.aplicacao_categoria.ambiente.identificacao }}
+                                    {% else %}
+                                        Obra inteira
+                                    {% endif %}
+                                    · {{ pendente.quantidade|floatformat:2 }}
+                                    · {{ pendente.especificacao_completa|default:"Sem especificação" }}
+                                </small>
+                            </div>
+
+                            <form method="post" class="gf-link-form" action="{% url 'compras:gf_vincular_item_ficha' processo.pk itens_manuais.0.pk %}" data-link-template="{% url 'compras:gf_vincular_item_ficha' processo.pk 999999999 %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="item_ficha_tecnica" value="{{ pendente.pk }}">
+
+                                <select class="cp-input js-manual-link-select" required>
+                                    <option value="">Selecionar linha manual...</option>
+                                    {% for manual in itens_manuais %}
+                                        <option value="{{ manual.pk }}">{{ manual.item }} · {{ manual.pavimento|default:"—" }} / {{ manual.local|default:"—" }}</option>
+                                    {% endfor %}
+                                </select>
+
+                                <button class="cp-btn" type="submit">Vincular</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <div class="gf-table-wrap">
             <table class="gf-table">
@@ -817,6 +961,7 @@
                         <th class="gf-sticky gf-col-material">Material</th>
                         <th class="gf-sticky gf-col-pav">Pavimento</th>
                         <th class="gf-sticky gf-col-local">Local</th>
+                        <th class="gf-col-spec">Especificação</th>
                         <th class="gf-col-qty">Qtd.</th>
                         <th class="gf-col-unit">Un.</th>
 
@@ -830,7 +975,7 @@
                         {% if pode_editar %}
                             <th class="gf-provider-add">
                                 <div class="gf-provider-add-wrap">
-                                    <span class="gf-provider-add-title">+ Fornecedor</span>
+                                    <span class="gf-provider-add-title">Fornecedor</span>
                                     <div class="gf-provider-add-controls">
                                         <div class="gf-search-select" data-search-select="fornecedor">
                                             <input
@@ -842,7 +987,7 @@
                                             <input
                                                 type="search"
                                                 class="cp-input gf-search-input js-search-input"
-                                                placeholder="Digite para pesquisar..."
+                                                placeholder="Buscar..."
                                                 autocomplete="off"
                                                 aria-label="Pesquisar fornecedor"
                                             >
@@ -900,48 +1045,21 @@
                                     {% endif %}
                                 </div>
                                 <span class="gf-material-code">
-                                    {% if linha.item.material %}
-                                        {{ linha.item.material.codigo|default:"MAT" }}
-                                    {% endif %}
+                                    {% if linha.item.material %}{{ linha.item.material.codigo|default:"MAT" }}{% endif %}
                                 </span>
+                                {% if linha.item.item_ficha_tecnica_id %}<span class="gf-origin linked">Ficha</span>{% else %}<span class="gf-origin manual">Manual</span>{% endif %}
                             </td>
 
                             <td class="gf-sticky gf-col-pav">
-                                {% if pode_editar %}
-                                    <input
-                                        class="cp-input js-pav"
-                                        value="{{ linha.item.pavimento }}"
-                                        placeholder="Ex.: 1º Pavimento"
-                                    >
-                                {% else %}
-                                    {{ linha.item.pavimento|default:"—" }}
-                                {% endif %}
+                                {% if pode_editar and not linha.item.item_ficha_tecnica_id %}<input class="cp-input js-pav" value="{{ linha.item.pavimento }}" placeholder="Pavimento">{% else %}{{ linha.item.pavimento|default:"—" }}{% endif %}
                             </td>
 
                             <td class="gf-sticky gf-col-local">
-                                {% if pode_editar %}
-                                    <input
-                                        class="cp-input js-local"
-                                        value="{{ linha.item.local }}"
-                                        placeholder="Ex.: Quartos"
-                                    >
-                                {% else %}
-                                    {{ linha.item.local|default:"—" }}
-                                {% endif %}
+                                {% if pode_editar and not linha.item.item_ficha_tecnica_id %}<input class="cp-input js-local" value="{{ linha.item.local }}" placeholder="Local">{% else %}{{ linha.item.local|default:"—" }}{% endif %}
                                 <span class="gf-save-state"></span>
                             </td>
-
-                            <td>
-                                {% if pode_editar %}
-                                    <input
-                                        class="cp-input js-qty"
-                                        value="{{ linha.item.quantidade|floatformat:2 }}"
-                                        inputmode="decimal"
-                                    >
-                                {% else %}
-                                    {{ linha.item.quantidade|floatformat:2 }}
-                                {% endif %}
-                            </td>
+                            <td class="gf-col-spec"><div class="gf-spec-text">{{ linha.item.especificacao|default:"—" }}</div></td>
+                            <td>{% if pode_editar and not linha.item.item_ficha_tecnica_id %}<input class="cp-input js-qty" value="{{ linha.item.quantidade|floatformat:2 }}" inputmode="decimal">{% else %}{{ linha.item.quantidade|floatformat:2 }}{% endif %}</td>
 
                             <td class="js-row-unit">{{ linha.item.unidade }}</td>
 
@@ -1035,7 +1153,7 @@
                                     <input
                                         type="search"
                                         class="cp-input gf-search-input js-search-input"
-                                        placeholder="Digite para pesquisar..."
+                                        placeholder="Buscar..."
                                         autocomplete="off"
                                         aria-label="Pesquisar material"
                                     >
@@ -1075,6 +1193,8 @@
                                     placeholder="Local"
                                 >
                             </td>
+
+                            <td class="gf-col-spec"><span class="cp-muted">Item manual</span></td>
 
                             <td>
                                 <input
@@ -1715,5 +1835,24 @@
         if (event.key === 'Escape' && modal && !modal.hidden) closeHistory();
     });
 })();
+</script>
+
+<script>
+document.addEventListener('change', function (event) {
+    if (!event.target.classList.contains('js-manual-link-select')) return;
+    const form = event.target.closest('form');
+    const template = form.dataset.linkTemplate;
+    const itemId = event.target.value;
+    if (template && itemId) form.action = template.replace('999999999', itemId);
+});
+document.addEventListener('submit', function (event) {
+    const form = event.target;
+    if (!form.classList.contains('gf-link-form')) return;
+    const select = form.querySelector('.js-manual-link-select');
+    if (!select || !select.value) {
+        event.preventDefault();
+        alert('Selecione a linha manual que deve ser vinculada.');
+    }
+});
 </script>
 {% endblock %}

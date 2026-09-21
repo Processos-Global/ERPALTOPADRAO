@@ -2,7 +2,7 @@ from collections import OrderedDict
 from decimal import Decimal
 
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.http import FileResponse, JsonResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -35,6 +35,9 @@ from compras.services.grandes_fornecedores import (
     excluir_item,
     excluir_oferta_item,
     obter_ou_criar_fluxo,
+    importar_itens_ficha_tecnica,
+    sincronizar_itens_ficha_tecnica,
+    vincular_item_manual_a_ficha,
     salvar_valor_oferta,
     selecionar_fornecedor_item,
     atualizar_status_operacional_item,
@@ -45,7 +48,9 @@ from compras.services.permissoes import compras_acao_required, possui_acao_compr
 
 def _processo(pk):
     processo = get_object_or_404(
-        ProcessoCompra.objects.select_related("obra", "item_cronograma", "comprador"),
+        ProcessoCompra.objects.select_related(
+            "obra", "item_cronograma", "comprador", "categoria_grande_fornecedor"
+        ),
         pk=pk,
     )
     if not processo.fluxo_grande_fornecedor:
@@ -74,9 +79,37 @@ def _exigir_edicao(usuario):
 def matriz_grande_fornecedor(request, pk):
     processo = _processo(pk)
     fluxo = obter_ou_criar_fluxo(processo)
+
+    pode_editar = _pode_editar_matriz(request.user) and processo.etapa_atual in {
+        processo.Etapa.COMPATIBILIZACAO,
+        processo.Etapa.NEGOCIACAO,
+    } and processo.status not in {
+        processo.Status.CANCELADO,
+        processo.Status.REPROVADO,
+        processo.Status.CONTRATADO,
+        processo.Status.APROVADO,
+        processo.Status.EM_CONTRATACAO,
+    }
+
+    # A Ficha Técnica é contínua: sempre que a matriz editável é aberta,
+    # sincronizamos os itens já cadastrados da categoria GF deste processo.
+    # A função é idempotente e não duplica itens já vinculados.
+    resultado_sincronizacao = {
+        "criados": 0,
+        "atualizados": 0,
+        "conflitos": [],
+        "sem_ficha": False,
+        "categoria": processo.categoria_grande_fornecedor,
+    }
+    if pode_editar and processo.categoria_grande_fornecedor_id:
+        resultado_sincronizacao = sincronizar_itens_ficha_tecnica(
+            processo=processo,
+            usuario=request.user,
+        )
+
     itens = list(
         fluxo.itens
-        .select_related("material__unidade", "participante_aprovado__fornecedor", "pedido_item__pedido")
+        .select_related("material__unidade", "item_ficha_tecnica", "participante_aprovado__fornecedor", "pedido_item__pedido")
         .prefetch_related("ofertas__participante__fornecedor", "ofertas__historico")
         .all()
     )
@@ -106,17 +139,6 @@ def matriz_grande_fornecedor(request, pk):
     )
     aprovacoes = processo.aprovacoes.select_related("usuario").order_by("-ciclo", "-id")[:10]
 
-    pode_editar = _pode_editar_matriz(request.user) and processo.etapa_atual in {
-        processo.Etapa.COMPATIBILIZACAO,
-        processo.Etapa.NEGOCIACAO,
-    } and processo.status not in {
-        processo.Status.CANCELADO,
-        processo.Status.REPROVADO,
-        processo.Status.CONTRATADO,
-        processo.Status.APROVADO,
-        processo.Status.EM_CONTRATACAO,
-    }
-
     # Estrutura pronta para o template: uma linha por material e uma coluna por fornecedor.
     matriz_linhas = []
     for item in itens:
@@ -137,6 +159,43 @@ def matriz_grande_fornecedor(request, pk):
         if item.participante_aprovado_id
     }
     valor_escolhido = sum((item.valor_total for item in itens), Decimal("0"))
+    categoria_ficha_processo = processo.categoria_grande_fornecedor
+    itens_ficha_pendentes = []
+    itens_manuais = [item for item in itens if not item.item_ficha_tecnica_id]
+    ficha_tecnica_existe = True
+
+    if categoria_ficha_processo is not None:
+        try:
+            ficha = processo.obra.ficha_tecnica
+        except ObjectDoesNotExist:
+            ficha_tecnica_existe = False
+        else:
+            from obras.models import ItemFichaTecnica
+
+            ids_importados = {
+                item.item_ficha_tecnica_id
+                for item in itens
+                if item.item_ficha_tecnica_id
+            }
+            itens_ficha_pendentes = list(
+                ItemFichaTecnica.objects.filter(
+                    aplicacao_categoria__ficha=ficha,
+                    aplicacao_categoria__categoria=categoria_ficha_processo,
+                    aplicacao_categoria__ativo=True,
+                    ativo=True,
+                )
+                .exclude(pk__in=ids_importados)
+                .select_related(
+                    "tipo_item", "tipo_item__unidade_padrao", "unidade", "opcao_especificacao",
+                    "aplicacao_categoria__categoria",
+                    "aplicacao_categoria__ambiente__pavimento",
+                )
+                .order_by(
+                    "aplicacao_categoria__ambiente__pavimento__ordem",
+                    "ordem", "id",
+                )
+            )
+
 
     return render(
         request,
@@ -158,8 +217,66 @@ def matriz_grande_fornecedor(request, pk):
             "pode_aprovar": possui_acao_compras(request.user, AcaoCompra.APROVAR),
             "qtd_fornecedores_escolhidos": len(fornecedores_escolhidos),
             "valor_escolhido": valor_escolhido,
+            "categoria_ficha_processo": categoria_ficha_processo,
+            "itens_ficha_pendentes": itens_ficha_pendentes,
+            "itens_manuais": itens_manuais,
+            "qtd_itens_ficha_pendentes": len(itens_ficha_pendentes),
+            "ficha_tecnica_existe": ficha_tecnica_existe,
+            "sincronizacao_ficha": resultado_sincronizacao,
         },
     )
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+@require_POST
+def importar_ficha_tecnica(request, pk):
+    _exigir_edicao(request.user)
+    processo = _processo(pk)
+    try:
+        quantidade = importar_itens_ficha_tecnica(
+            processo=processo,
+            usuario=request.user,
+        )
+        messages.success(request, f"{quantidade} item(ns) importado(s) da Ficha Técnica.")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    return redirect("compras:grande_fornecedor_matriz", pk=pk)
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+@require_POST
+def vincular_item_ficha(request, pk, item_id):
+    _exigir_edicao(request.user)
+    processo = _processo(pk)
+    micro = get_object_or_404(
+        GrandeFornecedorItem,
+        pk=item_id,
+        fluxo__processo=processo,
+        item_ficha_tecnica__isnull=True,
+    )
+    try:
+        from obras.models import ItemFichaTecnica
+        item_ficha = get_object_or_404(
+            ItemFichaTecnica.objects.select_related(
+                "tipo_item__unidade_padrao", "unidade", "opcao_especificacao",
+                "aplicacao_categoria__ficha",
+                "aplicacao_categoria__ambiente__pavimento",
+            ),
+            pk=request.POST.get("item_ficha_tecnica"),
+            aplicacao_categoria__ficha__obra=processo.obra,
+            aplicacao_categoria__categoria=processo.categoria_grande_fornecedor,
+            ativo=True,
+        )
+        vincular_item_manual_a_ficha(
+            processo=processo,
+            micro_item=micro,
+            item_ficha=item_ficha,
+            usuario=request.user,
+        )
+        messages.success(request, "Item manual vinculado à Ficha Técnica sem perder as ofertas já lançadas.")
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+    return redirect("compras:grande_fornecedor_matriz", pk=pk)
 
 
 @compras_acao_required(AcaoCompra.VISUALIZAR)

@@ -780,6 +780,23 @@
                         </a>
 
                     <a
+                        href="{% url 'obras:menu' %}"
+                        class="sidebar-link {% if request.resolver_match.namespace == 'obras' %}sidebar-link--active{% endif %}"
+                        data-transition-link
+                        title="Obras"
+                    >
+                        <span class="sidebar-link__icon">
+                            <svg class="icon">
+                                <use href="#icon-building"></use>
+                            </svg>
+                        </span>
+
+                        <span class="sidebar-link__text">
+                            Obras
+                        </span>
+                    </a>
+
+                    <a
                         href="{% url 'compras:menu' %}"
                         class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
                         data-transition-link

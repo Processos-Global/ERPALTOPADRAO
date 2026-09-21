@@ -1,0 +1,118 @@
+<section class="ft-cat-card">
+  <div class="ft-cat-head">
+    <div>
+      <strong>{{ ap.categoria.nome }}</strong>
+      <small>{{ ap.escopo }}</small>
+    </div>
+    <span class="ft-chip">{{ ap.itens.count }}</span>
+  </div>
+
+  {% if ap.itens.count %}
+  <div class="ft-table-wrap">
+    <table class="ft-table ft-table-items">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Qtd.</th>
+          <th>Un.</th>
+          <th>Especificação</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ap.itens.all %}
+          {% if item.ativo %}
+          <tr>
+            <td><strong>{{ item.nome_item }}</strong>{% if item.observacao %}<small class="ft-row-note">{{ item.observacao }}</small>{% endif %}</td>
+            <td>{{ item.quantidade|floatformat:2 }}</td>
+            <td>{% if item.unidade %}{{ item.unidade.sigla }}{% else %}—{% endif %}</td>
+            <td class="ft-spec">{{ item.especificacao_completa|default:"—" }}</td>
+            <td>
+              {% if item.itens_compatibilizacao_gf.exists %}
+                <span class="ft-sync is-linked">Em compras</span>
+              {% else %}
+                <span class="ft-sync">Disponível</span>
+              {% endif %}
+            </td>
+            <td class="ft-action-cell">
+              <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="excluir_item">
+                <input type="hidden" name="item_id" value="{{ item.pk }}">
+                <button class="ft-icon-btn danger" type="submit" title="Excluir item">Excluir</button>
+              </form>
+            </td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <details class="ft-add" {% if not ap.itens.count %}open{% endif %}>
+    <summary>Adicionar item</summary>
+    <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="acao" value="adicionar_item">
+      <input type="hidden" name="aplicacao" value="{{ ap.pk }}">
+
+      <div class="ft-grid compact">
+        <div class="ft-field c4">
+          <label>Item</label>
+          <select name="tipo_item">
+            <option value="">Selecionar...</option>
+            {% for t in ap.categoria.tipos_itens.all %}
+              {% if t.ativo %}<option value="{{ t.pk }}">{{ t.nome }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="ft-field c4">
+          <label>Descrição livre</label>
+          <input name="descricao_item" placeholder="Se não estiver no cadastro">
+        </div>
+
+        <div class="ft-field c2">
+          <label>Qtd.</label>
+          <input name="quantidade" value="1,00" inputmode="decimal">
+        </div>
+
+        <div class="ft-field c2">
+          <label>Unidade</label>
+          <select name="unidade">
+            <option value="">—</option>
+            {% for u in unidades %}<option value="{{ u.pk }}">{{ u.sigla }}</option>{% endfor %}
+          </select>
+        </div>
+
+        {% if ap.categoria.opcoes_especificacao.all %}
+        <div class="ft-field c4">
+          <label>Especificação padrão</label>
+          <select name="opcao_especificacao">
+            <option value="">Nenhuma</option>
+            {% for o in ap.categoria.opcoes_especificacao.all %}
+              {% if o.ativo %}<option value="{{ o.pk }}">{{ o.nome }}</option>{% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+
+        <div class="ft-field {% if ap.categoria.opcoes_especificacao.all %}c8{% else %}c12{% endif %}">
+          <label>Especificação</label>
+          <textarea name="especificacao" rows="2" placeholder="Medidas, material, acabamento, modelo..."></textarea>
+        </div>
+
+        <div class="ft-field c9">
+          <label>Observação</label>
+          <input name="observacao" placeholder="Opcional">
+        </div>
+
+        <div class="c3 ft-submit-cell">
+          <button class="ft-btn" type="submit">Adicionar</button>
+        </div>
+      </div>
+    </form>
+  </details>
+</section>

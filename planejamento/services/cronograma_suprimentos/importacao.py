@@ -7,6 +7,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 
 import pandas as pd
+from cadastros.services import resolver_categoria_grande_fornecedor
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -41,6 +42,7 @@ CAMPOS_PLANEJADOS = (
     "categoria",
     "situacao",
     "tipo_fluxo_compra",
+    "categoria_grande_fornecedor",
     "data_cotacao",
     "duracao_cotacao",
     "data_compatibilizacao",
@@ -425,9 +427,10 @@ def _ler_aba(df: pd.DataFrame, *, nome_aba: str = "") -> tuple[object, list[dict
             {
                 "categoria": categoria_atual,
                 "situacao": situacao,
-                # A categoria da planilha é a fonte de verdade da classificação:
-                # Materiais Variados/sem categoria -> normal; demais -> Grande Fornecedor.
+                # A categoria da planilha define o fluxo macro. Em paralelo,
+                # resolvemos a FK técnica usada para conectar com a Ficha Técnica.
                 "tipo_fluxo_compra": _tipo_fluxo_por_categoria(categoria_atual),
+                "categoria_grande_fornecedor": resolver_categoria_grande_fornecedor(categoria_atual, item),
                 "data_cotacao": converter_data(_valor(row, colunas["data_cotacao"])),
                 "duracao_cotacao": converter_inteiro(_valor(row, colunas["duracao_cotacao"])),
                 "data_compatibilizacao": converter_data(_valor(row, colunas["data_compatibilizacao"])),

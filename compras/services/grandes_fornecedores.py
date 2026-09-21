@@ -1,6 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -331,6 +331,251 @@ def excluir_oferta_item(*, micro_item, participante, usuario):
 
 
 @transaction.atomic
+def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
+    """Sincroniza automaticamente a Ficha Técnica com a matriz GF.
+
+    Regras:
+    - usa exclusivamente a categoria GF vinculada ao ProcessoCompra;
+    - cria na matriz todo item técnico novo que ainda não possua vínculo;
+    - atualiza os dados técnicos de itens já vinculados enquanto a matriz estiver editável;
+    - não duplica uma linha manual que seja claramente equivalente ao item técnico;
+      nesses casos o item permanece pendente para vínculo manual, preservando ofertas/histórico.
+
+    A função é idempotente e pode ser chamada tanto na criação do processo quanto
+    em cada abertura da matriz.
+    """
+    fluxo = obter_ou_criar_fluxo(processo)
+    categoria = processo.categoria_grande_fornecedor
+    resultado = {
+        "categoria": categoria,
+        "criados": 0,
+        "atualizados": 0,
+        "conflitos": [],
+        "sem_ficha": False,
+    }
+
+    if categoria is None:
+        return resultado
+
+    try:
+        ficha = processo.obra.ficha_tecnica
+    except ObjectDoesNotExist:
+        resultado["sem_ficha"] = True
+        return resultado
+
+    from obras.models import ItemFichaTecnica
+
+    itens_ficha = list(
+        ItemFichaTecnica.objects.filter(
+            aplicacao_categoria__ficha=ficha,
+            aplicacao_categoria__categoria=categoria,
+            ativo=True,
+            aplicacao_categoria__ativo=True,
+        )
+        .select_related(
+            "tipo_item", "tipo_item__unidade_padrao", "unidade", "opcao_especificacao",
+            "aplicacao_categoria__ambiente__pavimento",
+            "aplicacao_categoria__categoria",
+        )
+        .order_by("aplicacao_categoria__ambiente__pavimento__ordem", "ordem", "id")
+    )
+
+    itens_vinculados = {
+        item.item_ficha_tecnica_id: item
+        for item in fluxo.itens.filter(item_ficha_tecnica__isnull=False)
+        .select_related("item_ficha_tecnica")
+    }
+    itens_manuais = list(
+        fluxo.itens.filter(item_ficha_tecnica__isnull=True)
+        .select_related("material")
+        .order_by("ordem", "id")
+    )
+
+    def _normalizar(valor):
+        import unicodedata
+        texto = unicodedata.normalize("NFKD", str(valor or ""))
+        texto = "".join(c for c in texto if not unicodedata.combining(c))
+        return " ".join(texto.upper().strip().split())
+
+    def _dados_origem(origem):
+        ambiente = origem.aplicacao_categoria.ambiente
+        pavimento = ambiente.pavimento.nome if ambiente else ""
+        local = ambiente.identificacao if ambiente else "Obra inteira"
+        unidade = origem.unidade.sigla if origem.unidade_id else (
+            origem.tipo_item.unidade_padrao.sigla
+            if origem.tipo_item_id and origem.tipo_item.unidade_padrao_id else "UN"
+        )
+        return ambiente, pavimento, local, unidade
+
+    def _manual_equivalente(origem, pavimento, local):
+        nome = _normalizar(origem.nome_item)
+        pav = _normalizar(pavimento)
+        loc = _normalizar(local)
+        for manual in itens_manuais:
+            nome_manual = _normalizar(manual.item or (manual.material.descricao_completa if manual.material_id else ""))
+            if nome_manual != nome:
+                continue
+            # Se os campos de localização estiverem preenchidos, exigimos também a correspondência.
+            if manual.pavimento and _normalizar(manual.pavimento) != pav:
+                continue
+            if manual.local and _normalizar(manual.local) != loc:
+                continue
+            return manual
+        return None
+
+    editavel = _matriz_editavel(processo)
+    ordem = fluxo.itens.order_by("-ordem").values_list("ordem", flat=True).first() or 0
+
+    for origem in itens_ficha:
+        ambiente, pavimento, local, unidade = _dados_origem(origem)
+        existente = itens_vinculados.get(origem.pk)
+
+        if existente is not None:
+            # Enquanto a matriz ainda estiver em compatibilização/negociação, a parte técnica
+            # acompanha alterações feitas posteriormente na Ficha Técnica.
+            if editavel and not existente.pedido_item_id:
+                alterados = []
+                novos = {
+                    "pavimento": pavimento,
+                    "local": local,
+                    "item": origem.nome_item,
+                    "especificacao": origem.especificacao_completa,
+                    "unidade": unidade,
+                    "quantidade": origem.quantidade,
+                }
+                for campo, valor in novos.items():
+                    if getattr(existente, campo) != valor:
+                        setattr(existente, campo, valor)
+                        alterados.append(campo)
+                if existente.material_id is not None:
+                    existente.material = None
+                    alterados.append("material")
+                if alterados:
+                    existente.save(update_fields=[*alterados, "atualizado_em"])
+                    resultado["atualizados"] += 1
+            continue
+
+        # Em etapas fechadas não criamos novos micro-itens automaticamente.
+        if not editavel:
+            continue
+
+        manual = _manual_equivalente(origem, pavimento, local)
+        if manual is not None:
+            resultado["conflitos"].append({"item_ficha": origem, "item_manual": manual})
+            continue
+
+        ordem += 1
+        novo = GrandeFornecedorItem.objects.create(
+            fluxo=fluxo,
+            item_ficha_tecnica=origem,
+            pavimento=pavimento,
+            local=local,
+            material=None,
+            item=origem.nome_item,
+            especificacao=origem.especificacao_completa,
+            unidade=unidade,
+            quantidade=origem.quantidade,
+            ordem=ordem,
+        )
+        itens_vinculados[origem.pk] = novo
+        resultado["criados"] += 1
+
+    if usuario is not None and (resultado["criados"] or resultado["atualizados"]):
+        registrar_evento(
+            processo,
+            "GF_FICHA_TECNICA_SINCRONIZADA",
+            usuario,
+            (
+                f"Ficha Técnica sincronizada · {categoria.nome}: "
+                f"{resultado['criados']} novo(s), {resultado['atualizados']} atualizado(s)."
+            ),
+            {
+                "categoria_id": categoria.pk,
+                "criados": resultado["criados"],
+                "atualizados": resultado["atualizados"],
+            },
+        )
+
+    return resultado
+
+
+@transaction.atomic
+def importar_itens_ficha_tecnica(*, processo, usuario):
+    """Endpoint legado: agora apenas força a mesma sincronização automática."""
+    if not _matriz_editavel(processo):
+        raise ValidationError("A matriz está fechada para importação de itens.")
+    if processo.categoria_grande_fornecedor_id is None:
+        raise ValidationError(
+            "Este processo GF ainda não possui uma categoria técnica vinculada ao cronograma."
+        )
+
+    resultado = sincronizar_itens_ficha_tecnica(processo=processo, usuario=usuario)
+    if resultado["sem_ficha"]:
+        raise ValidationError("A obra ainda não possui Ficha Técnica.")
+    if resultado["criados"]:
+        return resultado["criados"]
+    if resultado["conflitos"]:
+        raise ValidationError(
+            "Os itens novos da Ficha Técnica coincidem com linhas manuais existentes. "
+            "Vincule as linhas manuais para preservar fornecedores e valores já lançados."
+        )
+    raise ValidationError("Todos os itens desta categoria já estão sincronizados com a matriz.")
+
+
+@transaction.atomic
+def vincular_item_manual_a_ficha(*, processo, micro_item, item_ficha, usuario):
+    """Vincula uma linha manual existente a um item técnico que surgiu depois na ficha.
+
+    A linha comercial é preservada (fornecedores, ofertas e histórico); apenas sua origem e
+    os dados técnicos passam a refletir a Ficha Técnica.
+    """
+    fluxo = obter_ou_criar_fluxo(processo)
+    if not _matriz_editavel(processo):
+        raise ValidationError("A matriz está fechada para vincular itens da Ficha Técnica.")
+    if micro_item.fluxo_id != fluxo.pk:
+        raise ValidationError("O item informado não pertence a este processo.")
+    if micro_item.item_ficha_tecnica_id:
+        raise ValidationError("Este item já está vinculado à Ficha Técnica.")
+    if item_ficha.aplicacao_categoria.ficha.obra_id != processo.obra_id:
+        raise ValidationError("O item da Ficha Técnica pertence a outra obra.")
+    if (
+        processo.categoria_grande_fornecedor_id
+        and item_ficha.aplicacao_categoria.categoria_id != processo.categoria_grande_fornecedor_id
+    ):
+        raise ValidationError("O item da Ficha Técnica pertence a outra categoria de Grande Fornecedor.")
+    if not item_ficha.ativo or not item_ficha.aplicacao_categoria.ativo:
+        raise ValidationError("O item da Ficha Técnica não está ativo.")
+    if fluxo.itens.filter(item_ficha_tecnica=item_ficha).exclude(pk=micro_item.pk).exists():
+        raise ValidationError("Este item da Ficha Técnica já está presente na matriz.")
+
+    ambiente = item_ficha.aplicacao_categoria.ambiente
+    unidade = item_ficha.unidade.sigla if item_ficha.unidade_id else (
+        item_ficha.tipo_item.unidade_padrao.sigla
+        if item_ficha.tipo_item_id and item_ficha.tipo_item.unidade_padrao_id else "UN"
+    )
+    micro_item.item_ficha_tecnica = item_ficha
+    micro_item.material = None
+    micro_item.pavimento = ambiente.pavimento.nome if ambiente else ""
+    micro_item.local = ambiente.identificacao if ambiente else "Obra inteira"
+    micro_item.item = item_ficha.nome_item
+    micro_item.especificacao = item_ficha.especificacao_completa
+    micro_item.unidade = unidade
+    micro_item.quantidade = item_ficha.quantidade
+    micro_item.save(update_fields=[
+        "item_ficha_tecnica", "material", "pavimento", "local", "item",
+        "especificacao", "unidade", "quantidade", "atualizado_em",
+    ])
+    registrar_evento(
+        processo,
+        "GF_ITEM_VINCULADO_FICHA",
+        usuario,
+        f"Item manual vinculado à Ficha Técnica: {micro_item.item}.",
+        {"item_ficha_tecnica_id": item_ficha.pk, "item_matriz_id": micro_item.pk},
+    )
+    return micro_item
+
+
+@transaction.atomic
 def avancar_para_negociacao(*, processo, usuario):
     """Compatibilidade: a nova experiência trata compatibilização e negociação como uma etapa."""
     fluxo = obter_ou_criar_fluxo(processo)
@@ -363,7 +608,7 @@ def enviar_para_aprovacao(*, processo, usuario, condicao_pagamento_resumo=""):
     incompletos = []
     for micro in itens:
         oferta = micro.oferta_negociada
-        if not micro.material_id or not micro.participante_aprovado_id or not oferta or oferta.valor_atual is None or oferta.valor_atual <= ZERO:
+        if not (micro.material_id or micro.item_ficha_tecnica_id) or not micro.participante_aprovado_id or not oferta or oferta.valor_atual is None or oferta.valor_atual <= ZERO:
             incompletos.append(micro.item or f"Item {micro.pk}")
     if incompletos:
         raise ValidationError(
@@ -427,7 +672,7 @@ def _materializar_para_pedido(*, fluxo, usuario):
     incompletos = []
     for micro in itens:
         oferta = micro.oferta_negociada
-        if not micro.material_id or not micro.participante_aprovado_id or not oferta or oferta.valor_atual is None:
+        if not (micro.material_id or micro.item_ficha_tecnica_id) or not micro.participante_aprovado_id or not oferta or oferta.valor_atual is None:
             incompletos.append(micro.item or f"Item {micro.pk}")
     if incompletos:
         raise ValidationError("Existem itens incompletos na matriz: " + ", ".join(incompletos[:5]))
@@ -467,9 +712,9 @@ def _materializar_para_pedido(*, fluxo, usuario):
             necessidade = NecessidadeCompra.objects.create(
                 processo=processo,
                 material=micro.material,
-                descricao=micro.material.nome,
-                especificacao=micro.material.especificacao,
-                unidade=micro.material.unidade.sigla,
+                descricao=micro.item,
+                especificacao=micro.especificacao,
+                unidade=micro.unidade,
                 quantidade_necessaria=micro.quantidade,
                 quantidade_incluida=micro.quantidade,
                 observacao="Item negociado no fluxo de Grande Fornecedor.",
@@ -481,7 +726,7 @@ def _materializar_para_pedido(*, fluxo, usuario):
             cotacao=cotacao,
             necessidade=necessidade,
             defaults={
-                "descricao_comercial": micro.material.descricao_completa,
+                "descricao_comercial": micro.item,
                 "quantidade": micro.quantidade,
                 "valor_unitario_cotado": oferta.valor_inicial if oferta.valor_inicial is not None else oferta.valor_atual,
             },

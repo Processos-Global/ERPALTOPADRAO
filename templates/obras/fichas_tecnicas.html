@@ -1,0 +1,56 @@
+{% extends "layouts/base.html" %}
+{% block title %}Obras | Ficha Técnica{% endblock %}
+{% block page_name %}Obras{% endblock %}
+
+{% block extra_css %}
+<style>
+.ft-list{max-width:1450px;margin:0 auto;padding:22px 26px;color:#17384a}
+.ft-list-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
+.ft-list-head h1{font-size:24px;margin:0}.ft-list-head p{color:#74878f;margin:4px 0 0;font-size:11px}
+.ft-table-wrap{border:1px solid #dce6e9;border-radius:10px;overflow:auto;background:#fff}
+.ft-table{width:100%;border-collapse:collapse;min-width:720px}
+.ft-table th,.ft-table td{padding:11px 13px;border-bottom:1px solid #edf2f4;text-align:left;font-size:11px}
+.ft-table th{font-size:9px;text-transform:uppercase;color:#657983;background:#f7f9fa}
+.ft-table tr:last-child td{border-bottom:0}.ft-name strong{display:block}.ft-name small{display:block;color:#83949b;margin-top:2px;font-size:9px}
+.ft-badge{display:inline-flex;padding:4px 7px;border-radius:6px;background:#edf7f8;color:#117487;font-weight:800;font-size:9px}
+.ft-btn{display:inline-flex;padding:8px 10px;border-radius:7px;background:#1d91a6;color:#fff;text-decoration:none;font-weight:800;font-size:10px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ft-list">
+  <div class="ft-list-head">
+    <div>
+      <h1>Ficha Técnica</h1>
+      <p>Selecione uma obra para continuar o preenchimento.</p>
+    </div>
+  </div>
+
+  <div class="ft-table-wrap">
+    <table class="ft-table">
+      <thead>
+        <tr>
+          <th>Obra</th>
+          <th>Código</th>
+          <th>Status</th>
+          <th>Versão</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in linhas %}
+        <tr>
+          <td class="ft-name"><strong>{{ linha.obra.nome }}</strong></td>
+          <td>{{ linha.obra.codigo }}</td>
+          <td><span class="ft-badge">{% if linha.ficha %}{{ linha.ficha.get_status_display }}{% else %}Não iniciada{% endif %}</span></td>
+          <td>{% if linha.ficha %}{{ linha.ficha.versao }}{% else %}—{% endif %}</td>
+          <td><a class="ft-btn" href="{% url 'obras:ficha_tecnica' linha.obra.pk %}">{% if linha.ficha %}Abrir{% else %}Criar{% endif %}</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="padding:22px;text-align:center;color:#81939b">Nenhuma obra ativa encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

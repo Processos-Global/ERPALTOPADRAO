@@ -110,7 +110,16 @@ class GrandeFornecedorItem(models.Model):
         related_name="itens_grande_fornecedor",
         help_text="Material selecionado do catálogo central. Obrigatório para novos itens.",
     )
+    item_ficha_tecnica = models.ForeignKey(
+        "obras.ItemFichaTecnica",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="itens_compatibilizacao_gf",
+        help_text="Origem técnica do item quando importado da Ficha Técnica da Obra.",
+    )
     item = models.CharField(max_length=500)
+    especificacao = models.TextField(blank=True)
     unidade = models.CharField(max_length=20, default="UN")
     quantidade = models.DecimalField(
         max_digits=18,
