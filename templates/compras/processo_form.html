@@ -284,6 +284,19 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         </section>
 
         <div class="purchase-body-grid">
+          {% if permite_sem_atividade %}
+          <section class="purchase-card purchase-activities">
+            <h2 class="purchase-section-title">Atividade do Cronograma Físico</h2>
+            <div class="purchase-existing" style="margin:0;">
+              <div class="purchase-existing__head">
+                <strong>Não exigida para a obra 02-04-02.</strong>
+                <span>Esta compra será criada diretamente a partir do Cronograma de Suprimentos, sem apropriação de atividade do Cronograma Físico.</span>
+              </div>
+            </div>
+            <div class="purchase-native-activities" style="display:none;">{{ form.atividades }}</div>
+            {% for error in form.atividades.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
+          </section>
+          {% else %}
           <section class="purchase-card purchase-activities">
             <div class="purchase-activities__head"><h2 class="purchase-section-title">Atividades</h2><div class="purchase-selected-count"><span><strong id="selected-count">0</strong> atividade(s) selecionada(s)</span><button type="button" class="purchase-mini-btn" id="clear-activities">Limpar seleção</button></div></div>
             <div class="purchase-native-activities">{{ form.atividades }}</div>{% for error in form.atividades.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
@@ -292,6 +305,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
             <div class="purchase-table-wrap"><div class="purchase-table-scroll"><table class="purchase-table"><thead><tr><th></th><th>Atividade</th><th>Disciplina</th><th>Data base</th><th>Data planejada</th></tr></thead><tbody id="activity-table-body"></tbody></table><div class="purchase-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div></div><div class="purchase-table-footer"><span id="activity-footer-text">Mostrando atividades disponíveis</span></div></div>
 
           </section>
+          {% endif %}
 
           <aside class="purchase-card purchase-side">
             <section class="purchase-side-section"><h2 class="purchase-section-title">Dados do comprador</h2><div class="purchase-side-grid"><div class="purchase-field"><label for="{{ form.comprador.id_for_label }}">Comprador responsável{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field"><label>Data necessária <span class="req">*</span></label><div class="purchase-readonly">{% if item_inicial.prazo_limite_contratacao %}{{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% else %}—{% endif %}</div></div><div class="purchase-field purchase-field--full"><label for="{{ form.descricao.id_for_label }}">Descrição{% if form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.descricao }}<div class="purchase-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field purchase-field--full"><label for="{{ form.observacao.id_for_label }}">Observação geral (máx. 200 caracteres)</label>{{ form.observacao }}<div class="purchase-counter"><span id="observation-count">0</span>/200</div>{% for error in form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div></div></section>

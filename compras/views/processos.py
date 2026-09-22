@@ -1571,6 +1571,7 @@ def novo_processo(request):
                 item_inicial
             ),
             "eh_grande_fornecedor": eh_grande_fornecedor,
+            "permite_sem_atividade": getattr(form, "permite_sem_atividade", False),
             "processos_existentes": processos_existentes,
             "processos_ativos_existentes": processos_ativos_existentes,
         },

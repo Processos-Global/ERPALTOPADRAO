@@ -10,6 +10,34 @@ from .numeracao import gerar_numero
 from .notificacoes import notificar_novo_processo_para_cotacao
 
 
+CRONOGRAMAS_SEM_ATIVIDADE_FISICA = {"02-04-02"}
+
+
+def permite_compra_sem_atividade(item_cronograma):
+    """Retorna True para cronogramas autorizados a comprar sem atividade física.
+
+    A exceção é intencionalmente restrita ao código 02-04-02. A identificação
+    prioriza o código da aba do Cronograma de Suprimentos e também aceita o
+    código da obra quando esse atributo existir no cadastro.
+    """
+    if item_cronograma is None:
+        return False
+
+    cronograma_obra = getattr(item_cronograma, "cronograma_obra", None)
+    if cronograma_obra is None:
+        return False
+
+    codigos = {
+        str(getattr(cronograma_obra, "codigo_aba", "") or "").strip().upper(),
+    }
+
+    obra = getattr(cronograma_obra, "obra", None)
+    if obra is not None:
+        codigos.add(str(getattr(obra, "codigo", "") or "").strip().upper())
+
+    return bool(codigos & CRONOGRAMAS_SEM_ATIVIDADE_FISICA)
+
+
 @transaction.atomic
 def criar_processo(
     *,
@@ -38,10 +66,10 @@ def criar_processo(
     # Ausente, legado ou não reconhecido permanece no fluxo normal principal.
     fluxo_grande_fornecedor = bool(item_cronograma.usa_fluxo_grande_fornecedor)
 
-    # A atividade continua sendo obrigatória também para Grande Fornecedor.
-    # O que muda no fluxo especial é somente o detalhamento dos itens: os
-    # micro itens nascem depois, dentro da matriz de compatibilização.
-    if not atividades:
+    # Regra geral: a compra deve estar vinculada a pelo menos uma atividade
+    # do Cronograma Físico. A obra/cronograma 02-04-02 é a exceção porque não
+    # possui Cronograma Físico e pode comprar diretamente pelo de Suprimentos.
+    if not atividades and not permite_compra_sem_atividade(item_cronograma):
         raise ValidationError("Selecione pelo menos uma atividade relacionada à compra.")
     if not itens and not fluxo_grande_fornecedor:
         raise ValidationError("Inclua pelo menos um item para iniciar a compra.")
@@ -169,7 +197,11 @@ def incluir_necessidade(
     quantidade = Decimal(str(quantidade))
     if quantidade <= 0:
         raise ValidationError("A quantidade deve ser maior que zero.")
-    if processo.item_cronograma_id and not processo.vinculos_atividades.exists():
+    if (
+        processo.item_cronograma_id
+        and not processo.vinculos_atividades.exists()
+        and not permite_compra_sem_atividade(processo.item_cronograma)
+    ):
         raise ValidationError(
             "O processo precisa possuir ao menos uma atividade relacionada antes de receber itens."
         )

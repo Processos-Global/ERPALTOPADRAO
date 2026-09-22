@@ -3,6 +3,7 @@ from django.forms import formset_factory
 
 from compras.models import NecessidadeCompra, ProcessoCompra
 from cadastros.models import Material
+from compras.services.processos import permite_compra_sem_atividade
 from planejamento.models import (
     AtividadePlanejamento,
     ImportacaoCronograma,
@@ -580,6 +581,14 @@ class ProcessoCompraForm(
         # SUPRIMENTO DE ORIGEM
         # ----------------------------------------------------
 
+        self.permite_sem_atividade = permite_compra_sem_atividade(item)
+
+        if self.permite_sem_atividade:
+            self.fields["atividades"].required = False
+            self.fields["atividades"].help_text = (
+                "Para a obra 02-04-02 o vínculo com atividade do Cronograma Físico não é necessário."
+            )
+
         if item:
 
             obra_id = (
@@ -659,7 +668,11 @@ class ProcessoCompraForm(
         ] = item.item
 
         if not atividades:
-            return cleaned
+            if permite_compra_sem_atividade(item):
+                return cleaned
+            raise forms.ValidationError(
+                "Selecione pelo menos uma atividade relacionada à compra."
+            )
 
         obra_id = (
             item
