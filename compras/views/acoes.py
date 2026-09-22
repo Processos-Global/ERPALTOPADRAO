@@ -55,7 +55,7 @@ from compras.services.pedidos import (
     gerar_pedidos, registrar_recebimento,
 )
 from compras.services.permissoes import compras_acao_required, possui_acao_compras
-from compras.services.processos import excluir_necessidade, incluir_necessidade
+from compras.services.processos import editar_necessidade, excluir_necessidade, incluir_necessidade
 from compras.services.solicitacoes_cotacao import criar_e_marcar_solicitacao_enviada, marcar_solicitacao_enviada
 
 
@@ -96,6 +96,27 @@ def acao_incluir_necessidade(request, pk):
             messages.error(request, "Revise os dados da necessidade.")
     return _voltar(processo)
 
+
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def acao_editar_necessidade(request, pk, necessidade_id):
+    processo = _processo(pk)
+    necessidade = get_object_or_404(NecessidadeCompra, pk=necessidade_id, processo=processo)
+    if request.method == "POST":
+        form = NecessidadeCompraForm(request.POST, processo=processo)
+        if form.is_valid():
+            try:
+                editar_necessidade(
+                    processo=processo, necessidade=necessidade,
+                    material=form.cleaned_data["material"], quantidade=form.cleaned_data["quantidade"],
+                    observacao=form.cleaned_data["observacao"], usuario=request.user,
+                )
+                messages.success(request, "Item atualizado com sucesso.")
+            except ValidationError as exc:
+                _erro(request, exc)
+        else:
+            messages.error(request, "Revise os dados do item.")
+    return _voltar(processo)
 
 @compras_acao_required(AcaoCompra.SOLICITAR)
 def acao_excluir_necessidade(request, pk, necessidade_id):

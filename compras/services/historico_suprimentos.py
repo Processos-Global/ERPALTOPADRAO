@@ -93,7 +93,7 @@ def sincronizar_historico_processo(processo: ProcessoCompra):
         .get(pk=processo.pk)
     )
 
-    if p.status != ProcessoCompra.Status.CONTRATADO:
+    if p.status != ProcessoCompra.Status.CONTRATADO or not p.item_cronograma_id:
         remover_historico_processo(p)
         return []
 

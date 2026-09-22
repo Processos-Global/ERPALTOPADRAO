@@ -1,4 +1,4 @@
-from .processo import ItemCompraAberturaFormSet, ItemCompraAberturaGrandeFornecedorFormSet, ProcessoCompraForm
+from .processo import CompraAvulsaForm, ItemCompraAberturaFormSet, ItemCompraAberturaGrandeFornecedorFormSet, ProcessoCompraForm
 from .fluxo import (
     AdjudicacaoForm,
     AnaliseTecnicaLoteForm,

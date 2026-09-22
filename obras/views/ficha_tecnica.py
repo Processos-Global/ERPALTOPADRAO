@@ -1,7 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -16,6 +15,9 @@ from cadastros.models import (
     TipoPavimento,
     UnidadeMedida,
 )
+from usuarios.decorators import modulo_required
+from usuarios.models import ModuloSistema, NivelPermissao
+
 from obras.models import (
     AmbienteFichaTecnica,
     CategoriaFichaTecnica,
@@ -41,7 +43,7 @@ def _ficha(obra, usuario):
     return ficha
 
 
-@login_required
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def fichas_tecnicas(request):
     obras = Obra.objects.filter(ativa=True).order_by("nome")
     fichas = {f.obra_id: f for f in FichaTecnicaObra.objects.filter(obra__in=obras)}
@@ -49,7 +51,7 @@ def fichas_tecnicas(request):
     return render(request, "obras/fichas_tecnicas.html", {"linhas": linhas})
 
 
-@login_required
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def ficha_tecnica(request, obra_id):
     obra = get_object_or_404(Obra, pk=obra_id)
     ficha = _ficha(obra, request.user)
@@ -125,7 +127,7 @@ def ficha_tecnica(request, obra_id):
     })
 
 
-@login_required
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
 @require_POST
 @transaction.atomic
 def ficha_tecnica_acao(request, obra_id):

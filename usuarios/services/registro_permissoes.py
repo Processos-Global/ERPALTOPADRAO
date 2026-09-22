@@ -199,7 +199,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         descricao="Cadastro e informações gerais das obras.",
         icone="building",
         ordem=10,
-        url_name="",
+        url_name="obras:menu",
     ),
     ModuloDef(
         codigo=ModuloSistema.CADASTROS,
@@ -291,7 +291,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         resolver_nivel=_resolver_nivel_financeiro,
     ),
     ModuloDef(ModuloSistema.ALMOXARIFADO, "Almoxarifado", "Entradas, saídas, estoque e transferências.", "warehouse", 70, ""),
-    ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, ""),
+    ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, "projetos:menu"),
     ModuloDef(ModuloSistema.VISTORIAS, "Vistorias", "Inspeções, vistorias e registros de campo.", "check", 90, ""),
     ModuloDef(ModuloSistema.DIARIO_OBRA, "Diário de obra", "Registros diários e acompanhamento de campo.", "book", 100, ""),
     ModuloDef(ModuloSistema.POS_OBRA, "Pós-obra", "Atendimento, garantias e ordens de serviço.", "tools", 110, ""),

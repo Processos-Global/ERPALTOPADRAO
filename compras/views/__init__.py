@@ -5,6 +5,7 @@ from .processos import (
     lista_pedidos,
     lista_processos,
     novo_processo,
+    nova_compra_avulsa,
     pdf_pedido_compra,
     pdf_solicitacao_cotacao,
 )
@@ -22,6 +23,7 @@ from .acoes import (
     acao_decisao_comercial_lote,
     acao_excluir_cotacao,
     acao_excluir_necessidade,
+    acao_editar_necessidade,
     acao_enviar_cotacao_compatibilizacao,
     acao_enviar_cotacao_aprovacao,
     acao_devolver_cotacao_negociacao,

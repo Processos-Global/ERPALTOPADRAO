@@ -933,30 +933,88 @@ def _anexar_acompanhamento_compras(itens):
             [],
         )
 
-        processo_referencia = processos_item[-1] if processos_item else None
-        if processo_referencia is None:
+        # O Cronograma representa o SUPRIMENTO, e um mesmo suprimento pode ter
+        # vários processos simultâneos. A visão principal, portanto, é
+        # consolidada; nenhum processo mais novo "substitui" o anterior.
+        status_finais = {
+            ProcessoCompra.Status.CONTRATADO,
+            ProcessoCompra.Status.REPROVADO,
+            ProcessoCompra.Status.CANCELADO,
+        }
+        processos_ativos = [
+            processo
+            for processo in processos_item
+            if processo.status not in status_finais
+        ]
+        processos_finalizados = [
+            processo
+            for processo in processos_item
+            if processo.status in status_finais
+        ]
+        processos_contratados = [
+            processo
+            for processo in processos_item
+            if processo.status == ProcessoCompra.Status.CONTRATADO
+        ]
+
+        item.acompanhamento_processos_ativos = processos_ativos
+        item.acompanhamento_processos_finalizados = processos_finalizados
+        item.acompanhamento_qtd_processos = len(processos_item)
+        item.acompanhamento_qtd_processos_ativos = len(processos_ativos)
+        item.acompanhamento_qtd_processos_finalizados = len(processos_finalizados)
+        item.acompanhamento_qtd_processos_contratados = len(processos_contratados)
+
+        processo_referencia = (
+            processos_ativos[-1]
+            if processos_ativos
+            else (processos_item[-1] if processos_item else None)
+        )
+
+        mapa_status = {
+            "RASCUNHO": ("RASCUNHO", "Rascunho", "muted"),
+            "PEDIDO_ENVIADO": ("PEDIDO_ENVIADO", "Solicitação enviada", "info"),
+            "SOLICITACAO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
+            "AGUARDANDO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
+            "EM_COTACAO": ("COTACAO", "Proposta recebida", "info"),
+            "AGUARDANDO_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
+            "EM_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
+            "EM_NEGOCIACAO": ("NEGOCIACAO", "Negociação", "info"),
+            "AGUARDANDO_APROVACAO": ("APROVACAO", "Aguardando aprovação", "warning"),
+            "AJUSTE_SOLICITADO": ("AJUSTE", "Ajuste solicitado", "warning"),
+            "APROVADO": ("APROVADO", "Aprovado", "success"),
+            "EM_CONTRATACAO": ("CONTRATACAO", "Contratação", "info"),
+            "CONTRATADO": ("CONTRATADO", "Contratado", "success"),
+            "REPROVADO": ("REPROVADO", "Reprovado", "danger"),
+            "CANCELADO": ("CANCELADO", "Cancelado", "danger"),
+        }
+
+        if not processos_item:
             item.status_compras_codigo = "AGUARDANDO_PEDIDO"
             item.status_compras_label = "Aguardando pedido"
             item.status_compras_classe = "muted"
+        elif len(processos_ativos) > 1:
+            item.status_compras_codigo = "MULTIPLOS_PROCESSOS"
+            item.status_compras_label = f"{len(processos_ativos)} processos ativos"
+            item.status_compras_classe = "info"
+        elif len(processos_ativos) == 1:
+            status = processos_ativos[0].status
+            codigo, label, classe = mapa_status.get(
+                status,
+                (status, processos_ativos[0].get_status_display(), "muted"),
+            )
+            item.status_compras_codigo = codigo
+            item.status_compras_label = label
+            item.status_compras_classe = classe
+        elif processos_contratados:
+            item.status_compras_codigo = "CONTRATADO"
+            item.status_compras_label = (
+                "Contratado"
+                if len(processos_contratados) == 1
+                else f"{len(processos_contratados)} compras contratadas"
+            )
+            item.status_compras_classe = "success"
         else:
             status = processo_referencia.status
-            mapa_status = {
-                "RASCUNHO": ("RASCUNHO", "Rascunho", "muted"),
-                "PEDIDO_ENVIADO": ("PEDIDO_ENVIADO", "Solicitação enviada", "info"),
-                "SOLICITACAO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
-                "AGUARDANDO_COTACAO": ("SOLICITACAO_COTACAO", "Aguardando fornecedor", "warning"),
-                "EM_COTACAO": ("COTACAO", "Proposta recebida", "info"),
-                "AGUARDANDO_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
-                "EM_COMPATIBILIZACAO": ("COMPATIBILIZACAO", "Compatibilização", "warning"),
-                "EM_NEGOCIACAO": ("NEGOCIACAO", "Negociação", "info"),
-                "AGUARDANDO_APROVACAO": ("APROVACAO", "Aguardando aprovação", "warning"),
-                "AJUSTE_SOLICITADO": ("AJUSTE", "Ajuste solicitado", "warning"),
-                "APROVADO": ("APROVADO", "Aprovado", "success"),
-                "EM_CONTRATACAO": ("CONTRATACAO", "Contratação", "info"),
-                "CONTRATADO": ("CONTRATADO", "Contratado", "success"),
-                "REPROVADO": ("REPROVADO", "Reprovado", "danger"),
-                "CANCELADO": ("CANCELADO", "Cancelado", "danger"),
-            }
             codigo, label, classe = mapa_status.get(
                 status,
                 (status, processo_referencia.get_status_display(), "muted"),
@@ -965,14 +1023,20 @@ def _anexar_acompanhamento_compras(itens):
             item.status_compras_label = label
             item.status_compras_classe = classe
 
-        item.fornecedor_pedido_nome = (
-            ", ".join(
-                solicitacao.fornecedor.nome
-                for solicitacao in processo_referencia.solicitacoes_cotacao.all()
-            )
-            if processo_referencia
-            else ""
-        )
+        # Fornecedores apresentados no resumo vêm de todos os processos do
+        # suprimento, e não somente do último processo criado.
+        nomes_fornecedores = []
+        nomes_fornecedores_vistos = set()
+        for processo in processos_item:
+            for solicitacao in processo.solicitacoes_cotacao.all():
+                nome = solicitacao.fornecedor.nome
+                chave = nome.casefold()
+                if chave in nomes_fornecedores_vistos:
+                    continue
+                nomes_fornecedores_vistos.add(chave)
+                nomes_fornecedores.append(nome)
+
+        item.fornecedor_pedido_nome = ", ".join(nomes_fornecedores)
 
         # Previsão de entrega do suprimento: usa a previsão ATUAL do pedido
         # (com fallback para a original). Havendo vários pedidos, mostra a
@@ -1176,6 +1240,10 @@ def _anexar_acompanhamento_compras(itens):
         )
 
         item.acompanhamento_resumo = {
+            "processos": len(processos_item),
+            "processos_ativos": len(processos_ativos),
+            "processos_finalizados": len(processos_finalizados),
+            "processos_contratados": len(processos_contratados),
             "fornecedores": len(linhas),
 
             "solicitacoes_enviadas": sum(

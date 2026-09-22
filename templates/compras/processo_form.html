@@ -182,6 +182,10 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 .purchase-action--primary:hover{background:var(--purchase-teal-dark)}
 
 .purchase-form-error{margin:0 0 12px;padding:10px 12px;border:1px solid #FECACA;border-radius:7px;background:#FEF2F2;color:#991B1B;font-size:10px}
+.purchase-existing{margin:0 0 14px;padding:12px 14px;border:1px solid #bae0e6;border-radius:9px;background:#f2fbfc;color:#355763}
+.purchase-existing__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.purchase-existing__head strong{font-size:11px;color:#0b7181}.purchase-existing__head span{font-size:9px;color:#607b84}
+.purchase-existing__list{display:flex;gap:6px;flex-wrap:wrap}.purchase-existing__item{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #d3e8ec;border-radius:999px;background:#fff;color:#405b66;font-size:9px;font-weight:700}
 
 @media(max-width:1200px){
   .purchase-item{grid-template-columns:21px 24px minmax(190px,1.4fr) 110px 100px minmax(150px,1fr) minmax(190px,1.2fr) 34px;gap:8px}
@@ -245,6 +249,19 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
       <form method="post" id="purchase-form" novalidate>
         {% csrf_token %}{{ form.item_cronograma }}{{ form.titulo }}{{ formset.management_form }}
+        {% if processos_ativos_existentes %}
+        <div class="purchase-existing">
+          <div class="purchase-existing__head">
+            <strong>Este suprimento já possui {{ processos_ativos_existentes|length }} processo{{ processos_ativos_existentes|length|pluralize }} em andamento.</strong>
+            <span>Você pode abrir outra compra normalmente; os processos ficam independentes.</span>
+          </div>
+          <div class="purchase-existing__list">
+            {% for processo_existente in processos_ativos_existentes %}
+            <span class="purchase-existing__item">{{ processo_existente.numero }} · {{ processo_existente.get_status_display }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
         {% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
         {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
 

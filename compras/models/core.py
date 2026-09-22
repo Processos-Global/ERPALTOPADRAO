@@ -35,8 +35,11 @@ class ProcessoCompra(models.Model):
     obra = models.ForeignKey("obras.Obra", on_delete=models.PROTECT, related_name="processos_compra")
     item_cronograma = models.ForeignKey(
         "planejamento.ItemCronogramaSuprimento",
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="processos_compra",
+        help_text="Suprimento de origem. Fica vazio nas compras avulsas.",
     )
     titulo = models.CharField(max_length=255)
     fluxo_grande_fornecedor = models.BooleanField(

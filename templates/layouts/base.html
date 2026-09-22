@@ -746,7 +746,8 @@
                 </header>
 
                 <div class="sidebar__modules-list">
-                    <a
+                    {% if planejamento_acesso %}
+<a
                         href="{% url 'planejamento:menu' %}"
                         class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' %}sidebar-link--active{% endif %}"
                         data-transition-link
@@ -762,7 +763,9 @@
                             Planejamento
                         </span>
                     </a>
-                        <a
+{% endif %}
+                        {% if projetos_acesso %}
+<a
                             href="{% url 'projetos:menu' %}"
                             class="sidebar-link {% if request.resolver_match.namespace == 'projetos' %}sidebar-link--active{% endif %}"
                             data-transition-link
@@ -778,8 +781,10 @@
                                 Projetos
                             </span>
                         </a>
+{% endif %}
 
-                    <a
+                    {% if obras_acesso %}
+<a
                         href="{% url 'obras:menu' %}"
                         class="sidebar-link {% if request.resolver_match.namespace == 'obras' %}sidebar-link--active{% endif %}"
                         data-transition-link
@@ -795,8 +800,10 @@
                             Obras
                         </span>
                     </a>
+{% endif %}
 
-                    <a
+                    {% if compras_acesso %}
+<a
                         href="{% url 'compras:menu' %}"
                         class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
                         data-transition-link
@@ -812,6 +819,7 @@
                             Suprimentos
                         </span>
                     </a>
+{% endif %}
 
 
                     {% if financeiro_acesso %}
@@ -842,7 +850,7 @@
                         </a>
                     {% endif %}
 
-                    {% if request.user.is_superuser %}
+                    {% if usuarios_acesso %}
                         <a
                             href="{% url 'usuarios:lista_usuarios' %}"
                             class="sidebar-link {% if request.resolver_match.namespace == 'usuarios' %}sidebar-link--active{% endif %}"

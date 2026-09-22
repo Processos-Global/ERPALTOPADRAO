@@ -460,6 +460,11 @@
   .ps-context-pill strong { margin-right: 4px; color: var(--ps-text); }
   .ps-processes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .ps-process-pill { border-radius: 999px; font-weight: 700; }
+  .ps-process-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .ps-process-count{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:3px 8px;border:1px solid #d7e4e8;border-radius:999px;background:#f8fbfc;color:#405b66;font-size:.61rem;font-weight:750}
+  .ps-process-count.active{border-color:#b9dbe1;background:#eef8fa;color:#0b7181}
+  .ps-process-count.done{border-color:#cde5d6;background:#f2faf5;color:#27734a}
+  .ps-new-purchase{gap:5px;white-space:nowrap}
   a.ps-process-pill {
     text-decoration: none;
     color: var(--ps-accent-strong);
@@ -1042,7 +1047,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
                     Histórico
                   </button>
-                  <a href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}" class="ps-btn ps-btn-sm ps-btn-icon" title="Iniciar processo de compra">
+                  <a href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}" class="ps-btn ps-btn-sm ps-btn-icon" title="Abrir uma nova compra para este suprimento, mesmo que já existam outros processos em andamento">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></svg>
                   </a>
                   <button type="button" class="ps-btn ps-btn-sm ps-btn-icon js-open-progress"
@@ -1074,16 +1079,21 @@
                       <span class="ps-context-pill"><strong>Atividade{% if item.acompanhamento_atividades|length != 1 %}s{% endif %}:</strong>{{ item.acompanhamento_atividades_texto }}</span>
                     </div>
                     {% if item.acompanhamento_processos %}
-                    <div class="ps-processes">
-                      {% for processo in item.acompanhamento_processos %}
-                      <a class="ps-process-pill" href="{% url 'compras:detalhe_processo' processo.pk %}" title="Abrir processo {{ processo.numero }}">{{ processo.numero }} · {{ processo.get_status_display }}</a>
-                      {% endfor %}
+                    <div class="ps-process-summary">
+                      {% if item.acompanhamento_qtd_processos_ativos %}<span class="ps-process-count active">{{ item.acompanhamento_qtd_processos_ativos }} ativo{{ item.acompanhamento_qtd_processos_ativos|pluralize }}</span>{% endif %}
+                      {% if item.acompanhamento_qtd_processos_contratados %}<span class="ps-process-count done">{{ item.acompanhamento_qtd_processos_contratados }} contratado{{ item.acompanhamento_qtd_processos_contratados|pluralize }}</span>{% endif %}
+                      <div class="ps-processes">
+                        {% for processo in item.acompanhamento_processos %}
+                        <a class="ps-process-pill" href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}" title="Abrir processo {{ processo.numero }}">{{ processo.numero }} · {{ processo.get_status_display }}</a>
+                        {% endfor %}
+                      </div>
                     </div>
                     {% endif %}
                   </div>
 
                   {% if item.acompanhamento_tem_compras %}
                   <div class="ps-detail-summary">
+                    <div class="ps-detail-kpi"><span>Processos</span><strong>{{ item.acompanhamento_resumo.processos }}</strong><small>{{ item.acompanhamento_resumo.processos_ativos }} ativo{{ item.acompanhamento_resumo.processos_ativos|pluralize }}</small></div>
                     <div class="ps-detail-kpi"><span>Fornecedores</span><strong>{{ item.acompanhamento_resumo.fornecedores }}</strong></div>
                     <div class="ps-detail-kpi"><span>Propostas</span><strong>{{ item.acompanhamento_resumo.propostas_recebidas }}</strong></div>
                     <div class="ps-detail-kpi"><span>Compatibilizados</span><strong>{{ item.acompanhamento_resumo.compatibilizados }}</strong></div>
@@ -1165,7 +1175,7 @@
                     </span>
                   </div>
                   {% else %}
-                  <div class="ps-detail-empty">Ainda não existe processo de compra iniciado para este suprimento. Use <strong>Comprar</strong> para iniciar o acompanhamento.</div>
+                  <div class="ps-detail-empty">Ainda não existe processo de compra iniciado para este suprimento. Use <strong>Nova compra</strong> para iniciar o acompanhamento.</div>
                   {% endif %}
                 </div>
               </td>

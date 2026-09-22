@@ -61,6 +61,14 @@
 #processo-compra .pc-delete-proposal{min-height:34px;padding:7px 11px;border:1px solid #e5bcbc;border-radius:8px;background:#fff;color:var(--pc-danger);font-size:10.5px;font-weight:850;cursor:pointer;transition:background .16s ease,border-color .16s ease,transform .16s ease}
 #processo-compra .pc-delete-proposal:hover{background:var(--pc-danger-soft);border-color:#d89b9b;transform:translateY(-1px)}
 #processo-compra .pc-delete-proposal:focus-visible{outline:2px solid #d89b9b;outline-offset:2px}
+#processo-compra .pc-item-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#processo-compra .pc-item-actions details{margin:0}
+#processo-compra .pc-item-actions details summary{list-style:none}
+#processo-compra .pc-item-actions details summary::-webkit-details-marker{display:none}
+#processo-compra .pc-item-actions .pc-inline-delete{margin:0}
+#processo-compra .pc-item-edit-form{margin-top:8px;display:grid;gap:7px;min-width:320px}
+#processo-compra .pc-item-edit-form .cp-input{width:100%}
+
 #processo-compra .pc-approval-item{min-width:220px}#processo-compra .pc-approval-item strong{display:block;color:var(--pc-ink);font-size:11px}#processo-compra .pc-approval-item small{display:block;margin-top:3px;color:var(--pc-muted);font-size:9.5px;line-height:1.4}
 #processo-compra .pc-price-stack{white-space:nowrap}#processo-compra .pc-price-stack span{display:block;color:var(--pc-muted);font-size:9px}#processo-compra .pc-price-stack strong{display:block;margin-top:2px;color:var(--pc-ink);font-size:12px}#processo-compra .pc-price-stack .is-final{color:var(--pc-ok)}
 #processo-compra .pc-economy{white-space:nowrap;font-weight:900}#processo-compra .pc-economy.is-positive{color:var(--pc-ok)}#processo-compra .pc-economy.is-negative{color:var(--pc-danger)}#processo-compra .pc-tech-note{display:block;margin-top:6px;max-width:260px;color:var(--pc-muted);font-size:9.5px;line-height:1.4}
@@ -1230,7 +1238,18 @@
         </div>
 
         <section class="pc-card" id="itens-compra">
-          <div class="pc-card-head"><div><h2>Itens da compra</h2></div></div>
+          <div class="pc-card-head"><div><h2>Itens da compra</h2><div class="pc-muted">{% if not processo.item_cronograma_id %}Compra avulsa · {% endif %}edite, acrescente ou exclua itens enquanto estiver em cotação.</div></div></div>
+          {% if processo.etapa_atual == 'COTACAO' and permissoes_compras.pode_solicitar and form_necessidade %}
+          <div class="pc-card-body" style="border-bottom:1px solid var(--cp-border,#e5e7eb)">
+            <form method="post" action="{% url 'compras:incluir_necessidade' processo.pk %}" style="display:grid;grid-template-columns:minmax(260px,1fr) 150px minmax(240px,.8fr) auto;gap:10px;align-items:end">
+              {% csrf_token %}
+              <div><label class="pc-muted" style="display:block;margin-bottom:5px">Material</label>{{ form_necessidade.material }}</div>
+              <div><label class="pc-muted" style="display:block;margin-bottom:5px">Quantidade</label>{{ form_necessidade.quantidade }}</div>
+              <div><label class="pc-muted" style="display:block;margin-bottom:5px">Observação</label>{{ form_necessidade.observacao }}</div>
+              <button type="submit" class="cp-btn cp-btn--primary">+ Adicionar item</button>
+            </form>
+          </div>
+          {% endif %}
           <div class="pc-card-body pc-card-body--flush">
             <div class="cp-table-wrap">
               <table class="cp-table">
@@ -1244,13 +1263,25 @@
                       <td>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td><strong>{{ n.saldo|floatformat:"-4" }} {{ n.unidade }}</strong></td>
                       {% if processo.etapa_atual == 'COTACAO' and permissoes_compras.pode_solicitar %}
-                        <td>
-                          <form method="post"
-                                action="{% url 'compras:excluir_necessidade' processo.pk n.pk %}"
-                                onsubmit="return confirm('Excluir o item {{ n.descricao|escapejs }} da compra? Ele também será removido das propostas ainda abertas dos fornecedores.');">
-                            {% csrf_token %}
-                            <button type="submit" class="cp-btn cp-btn--sm">Excluir</button>
-                          </form>
+                        <td style="min-width:210px">
+                          <div class="pc-item-actions">
+                            <details>
+                              <summary class="cp-btn cp-btn--sm" style="display:inline-flex;cursor:pointer">Editar</summary>
+                              <form method="post" action="{% url 'compras:editar_necessidade' processo.pk n.pk %}" class="pc-item-edit-form">
+                                {% csrf_token %}
+                                {{ n.form_edicao.material }}
+                                {{ n.form_edicao.quantidade }}
+                                {{ n.form_edicao.observacao }}
+                                <button type="submit" class="cp-btn cp-btn--primary cp-btn--sm">Salvar alterações</button>
+                              </form>
+                            </details>
+                            <form method="post" class="pc-inline-delete"
+                                  action="{% url 'compras:excluir_necessidade' processo.pk n.pk %}"
+                                  onsubmit="return confirm('Excluir o item {{ n.descricao|escapejs }} da compra? Ele também será removido das propostas ainda abertas dos fornecedores.');">
+                              {% csrf_token %}
+                              <button type="submit" class="cp-btn cp-btn--sm">Excluir</button>
+                            </form>
+                          </div>
                         </td>
                       {% endif %}
                     </tr>

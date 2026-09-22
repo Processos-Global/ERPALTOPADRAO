@@ -816,3 +816,22 @@ ItemCompraAberturaGrandeFornecedorFormSet = formset_factory(
     min_num=0,
     validate_min=False,
 )
+
+class CompraAvulsaForm(forms.Form):
+    obra = forms.ModelChoiceField(queryset=None, label="Obra", empty_label="Selecione a obra")
+    titulo = forms.CharField(max_length=255, label="Título da compra")
+    comprador = forms.ModelChoiceField(queryset=None, label="Comprador responsável", required=False)
+    descricao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}), label="Descrição")
+    observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}), label="Observação geral")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from obras.models import Obra
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.fields["obra"].queryset = Obra.objects.all().order_by("nome")
+        self.fields["comprador"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
+        self.fields["comprador"].label_from_instance = _rotulo_usuario
+        for field in self.fields.values():
+            classe = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = f"{classe} cp-input".strip()

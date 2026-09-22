@@ -25,14 +25,11 @@ def criar_processo(
 ):
     obra_id = item_cronograma.cronograma_obra.obra_id
 
-    ativos = ProcessoCompra.objects.filter(item_cronograma=item_cronograma).exclude(
-        status__in=[ProcessoCompra.Status.CANCELADO, ProcessoCompra.Status.REPROVADO, ProcessoCompra.Status.CONTRATADO]
-    )
-    if ativos.exists():
-        existente = ativos.order_by("-criado_em").first()
-        raise ValidationError(
-            f"Já existe um processo ativo para este suprimento ({existente.numero}). Conclua/cancele-o antes de abrir outro."
-        )
+    # Um mesmo suprimento pode originar várias compras ao longo da obra.
+    # Cada ProcessoCompra é independente e mantém suas próprias atividades,
+    # itens, fornecedores, cotações, aprovações e pedidos. Por isso NÃO há
+    # mais bloqueio quando já existe outro processo ativo para o mesmo item
+    # do Cronograma de Suprimentos.
 
     atividades = list(atividades)
     itens = list(itens)
@@ -172,7 +169,7 @@ def incluir_necessidade(
     quantidade = Decimal(str(quantidade))
     if quantidade <= 0:
         raise ValidationError("A quantidade deve ser maior que zero.")
-    if not processo.vinculos_atividades.exists():
+    if processo.item_cronograma_id and not processo.vinculos_atividades.exists():
         raise ValidationError(
             "O processo precisa possuir ao menos uma atividade relacionada antes de receber itens."
         )
@@ -266,3 +263,80 @@ def excluir_necessidade(*, processo, necessidade, usuario):
 
     return descricao, quantidade_propostas
 
+
+@transaction.atomic
+def criar_processo_avulso(*, obra, titulo, usuario, itens, comprador=None, descricao="", observacao="", iniciar_cotacao=True):
+    itens = list(itens)
+    if not itens:
+        raise ValidationError("Inclua pelo menos um item para iniciar a compra avulsa.")
+
+    processo = ProcessoCompra.objects.create(
+        numero=gerar_numero("PROCESSO"),
+        obra=obra,
+        item_cronograma=None,
+        titulo=(titulo or "Compra avulsa").strip(),
+        fluxo_grande_fornecedor=False,
+        descricao=descricao,
+        comprador=comprador or usuario,
+        observacao=observacao,
+        etapa_atual=ProcessoCompra.Etapa.COTACAO,
+        status=(ProcessoCompra.Status.SOLICITACAO_COTACAO if iniciar_cotacao else ProcessoCompra.Status.RASCUNHO),
+        criado_por=usuario,
+    )
+
+    necessidades = []
+    for item in itens:
+        quantidade = Decimal(str(item["quantidade"]))
+        material = item.get("material")
+        if quantidade <= 0:
+            raise ValidationError("A quantidade dos itens deve ser maior que zero.")
+        if material is None or not material.ativo:
+            raise ValidationError("Selecione materiais ativos do catálogo.")
+        necessidades.append(NecessidadeCompra(
+            processo=processo,
+            material=material,
+            descricao=material.nome,
+            especificacao=material.especificacao,
+            unidade=material.unidade.sigla,
+            quantidade_necessaria=quantidade,
+            quantidade_incluida=quantidade,
+            observacao=(item.get("observacao") or "").strip(),
+        ))
+    NecessidadeCompra.objects.bulk_create(necessidades)
+    registrar_evento(processo, "CRIACAO_AVULSA", usuario, f"Compra avulsa criada com {len(necessidades)} item(ns), sem vínculo com o Cronograma de Suprimentos.")
+    if iniciar_cotacao:
+        notificar_novo_processo_para_cotacao(processo)
+    return processo
+
+
+@transaction.atomic
+def editar_necessidade(*, processo, necessidade, material, quantidade, observacao, usuario):
+    if processo.fluxo_grande_fornecedor:
+        raise ValidationError("Use a edição própria do fluxo de Grandes Fornecedores.")
+    if processo.etapa_atual != ProcessoCompra.Etapa.COTACAO:
+        raise ValidationError("Itens só podem ser editados enquanto o processo estiver na etapa de cotação.")
+    if necessidade.processo_id != processo.pk:
+        raise ValidationError("O item informado não pertence a este processo.")
+    itens_cotados = list(necessidade.itens_cotados.select_related("cotacao"))
+    if any(i.cotacao.enviada_compatibilizacao_em or i.cotacao.enviada_negociacao_em or i.cotacao.enviada_aprovacao_em for i in itens_cotados):
+        raise ValidationError("Este item já faz parte de uma proposta que avançou no fluxo e não pode mais ser editado.")
+    if necessidade.adjudicacoes.filter(cancelada=False).exists() or necessidade.itens_pedido.exists():
+        raise ValidationError("Este item já possui adjudicação ou pedido e não pode ser editado.")
+    quantidade = Decimal(str(quantidade))
+    if quantidade <= 0:
+        raise ValidationError("A quantidade deve ser maior que zero.")
+    if material is None or not material.ativo:
+        raise ValidationError("Selecione um material ativo do catálogo.")
+    necessidade.material = material
+    necessidade.descricao = material.nome
+    necessidade.especificacao = material.especificacao
+    necessidade.unidade = material.unidade.sigla
+    necessidade.quantidade_necessaria = quantidade
+    necessidade.quantidade_incluida = quantidade
+    necessidade.observacao = (observacao or "").strip()
+    necessidade.save(update_fields=["material","descricao","especificacao","unidade","quantidade_necessaria","quantidade_incluida","observacao"])
+    for item in itens_cotados:
+        item.quantidade = quantidade
+        item.save(update_fields=["quantidade","atualizado_em"])
+    registrar_evento(processo, "NECESSIDADE_EDITADA", usuario, f"Item editado: {necessidade.descricao}.", {"necessidade_id": necessidade.pk, "quantidade": str(quantidade)})
+    return necessidade

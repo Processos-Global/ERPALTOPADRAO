@@ -108,7 +108,8 @@
 
         <section class="modules">
             <div class="module-cards">
-                <a
+                {% if planejamento_acesso %}
+<a
                     href="{% url 'planejamento:menu' %}"
                     class="module-card"
                     data-transition-link
@@ -151,7 +152,9 @@
 
                     <span class="module-card__accent"></span>
                 </a>
-                    <a
+{% endif %}
+                    {% if projetos_acesso %}
+<a
                         href="{% url 'projetos:menu' %}"
                         class="module-card"
                         data-transition-link
@@ -186,8 +189,10 @@
 
                         <span class="module-card__accent"></span>
                     </a>
+{% endif %}
 
-                <a
+                {% if obras_acesso %}
+<a
                     href="{% url 'obras:menu' %}"
                     class="module-card"
                     data-transition-link
@@ -222,8 +227,10 @@
 
                     <span class="module-card__accent"></span>
                 </a>
+{% endif %}
 
-                <a
+                {% if compras_acesso %}
+<a
                     href="{% url 'compras:menu' %}"
                     class="module-card"
                     data-transition-link
@@ -266,6 +273,7 @@
 
                     <span class="module-card__accent"></span>
                 </a>
+{% endif %}
 
 
                 {% if financeiro_acesso %}
@@ -334,7 +342,7 @@
                     </a>
                 {% endif %}
 
-                {% if request.user.is_superuser %}
+                {% if usuarios_acesso %}
                     <a
                         href="{% url 'usuarios:lista_usuarios' %}"
                         class="module-card"

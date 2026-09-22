@@ -22,6 +22,7 @@ from compras.forms import (
     CotacaoFornecedorForm,
     CotacaoItemForm,
     DecisaoComercialLoteForm,
+    CompraAvulsaForm,
     ItemCompraAberturaFormSet,
     ItemCompraAberturaGrandeFornecedorFormSet,
     NecessidadeCompraForm,
@@ -43,7 +44,7 @@ from compras.services.permissoes import (
     possui_acao_compras,
     possui_permissao_compras,
 )
-from compras.services.processos import criar_processo
+from compras.services.processos import criar_processo, criar_processo_avulso
 from compras.services.comercial import (
     calcular_desconto_adjudicacao,
     item_tecnicamente_aprovado,
@@ -993,6 +994,16 @@ def detalhe_processo(
         )
     )
 
+    for necessidade in necessidades:
+        necessidade.form_edicao = NecessidadeCompraForm(
+            processo=processo,
+            initial={
+                "material": necessidade.material_id,
+                "quantidade": necessidade.quantidade_incluida,
+                "observacao": necessidade.observacao,
+            },
+        )
+
     itens_prefetch = Prefetch(
         "itens",
         queryset=(
@@ -1348,6 +1359,30 @@ def detalhe_processo(
     )
 
 
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def nova_compra_avulsa(request):
+    form = CompraAvulsaForm(request.POST or None)
+    formset = ItemCompraAberturaFormSet(request.POST or None, prefix="itens")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        itens = [f.cleaned_data for f in formset if f.cleaned_data and not f.cleaned_data.get("DELETE")]
+        try:
+            processo = criar_processo_avulso(
+                obra=form.cleaned_data["obra"],
+                titulo=form.cleaned_data["titulo"],
+                comprador=form.cleaned_data.get("comprador"),
+                descricao=form.cleaned_data.get("descricao", ""),
+                observacao=form.cleaned_data.get("observacao", ""),
+                itens=itens,
+                usuario=request.user,
+                iniciar_cotacao=request.POST.get("acao") != "rascunho",
+            )
+            messages.success(request, f"Compra avulsa {processo.numero} criada com {len(itens)} item(ns).")
+            return redirect("compras:detalhe_processo", pk=processo.pk)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset})
+
 # ============================================================
 # NOVO PROCESSO
 # ============================================================
@@ -1397,6 +1432,26 @@ def novo_processo(request):
             ),
         },
     )
+
+    processos_existentes = []
+    processos_ativos_existentes = []
+
+    if item_inicial is not None:
+        processos_existentes = list(
+            ProcessoCompra.objects
+            .filter(item_cronograma=item_inicial)
+            .select_related("comprador")
+            .order_by("-criado_em", "-id")
+        )
+        processos_ativos_existentes = [
+            processo
+            for processo in processos_existentes
+            if processo.status not in {
+                ProcessoCompra.Status.CANCELADO,
+                ProcessoCompra.Status.REPROVADO,
+                ProcessoCompra.Status.CONTRATADO,
+            }
+        ]
 
     # A abertura deve respeitar a mesma classificação nativa já usada pelo
     # Cronograma de Suprimentos, sem tentar reinterpretar o texto da categoria.
@@ -1516,6 +1571,8 @@ def novo_processo(request):
                 item_inicial
             ),
             "eh_grande_fornecedor": eh_grande_fornecedor,
+            "processos_existentes": processos_existentes,
+            "processos_ativos_existentes": processos_ativos_existentes,
         },
     )
 

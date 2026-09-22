@@ -1,6 +1,6 @@
 from django.urls import NoReverseMatch, reverse
 
-from usuarios.models import ModuloSistema, Notificacao, PermissaoModulo
+from usuarios.models import ModuloSistema, NivelPermissao, Notificacao, PermissaoModulo
 from usuarios.services.registro_permissoes import MODULOS_REGISTRY
 
 
@@ -56,13 +56,32 @@ def erp_layout(request):
         lida=False,
     ).count()
 
+    planejamento_acesso = bool(permissoes.get(ModuloSistema.PLANEJAMENTO))
+    compras_acesso = bool(permissoes.get(ModuloSistema.COMPRAS))
+    projetos_acesso = bool(permissoes.get(ModuloSistema.PROJETOS))
+    obras_acesso = bool(permissoes.get(ModuloSistema.OBRAS))
     cadastros_acesso = bool(permissoes.get(ModuloSistema.CADASTROS))
     financeiro_acesso = bool(permissoes.get(ModuloSistema.FINANCEIRO))
 
+    if request.user.is_superuser:
+        usuarios_acesso = True
+    else:
+        usuarios_acesso = PermissaoModulo.objects.filter(
+            usuario=request.user,
+            modulo=ModuloSistema.USUARIOS,
+            ativo=True,
+            nivel=NivelPermissao.ADMINISTRADOR,
+        ).exists()
+
     return {
         "notificacoes_recentes": notificacoes_recentes,
+        "planejamento_acesso": planejamento_acesso,
+        "compras_acesso": compras_acesso,
+        "projetos_acesso": projetos_acesso,
+        "obras_acesso": obras_acesso,
         "cadastros_acesso": cadastros_acesso,
         "financeiro_acesso": financeiro_acesso,
+        "usuarios_acesso": usuarios_acesso,
         "notificacoes_nao_lidas": notificacoes_nao_lidas,
         "sidebar_dashboard": {
             "titulo": "Painel Geral",

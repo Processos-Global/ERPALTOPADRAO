@@ -1,0 +1,144 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+<style>
+.av-wrap{max-width:1180px;margin:0 auto;padding:24px}
+.av-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.av-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.av-card{background:#fff;border:1px solid #dfe6ec;border-radius:10px;padding:18px;margin-bottom:14px}
+.av-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#243746}
+.av-field--full{grid-column:1/-1}
+.av-items{display:grid;gap:10px}
+.av-item{display:grid;grid-template-columns:minmax(320px,1fr) 150px minmax(260px,.9fr) 44px;gap:10px;align-items:end;padding:14px;border:1px solid #e5eaef;border-radius:10px;background:#fbfcfd}
+.av-item__meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.av-item__meta strong{font-size:12px;color:#1f3442}
+.av-item__meta small{font-size:10px;color:#708391}
+.av-remove{height:42px;border:1px solid #d9e3e8;background:#fff;border-radius:8px;cursor:pointer;color:#425968;font-size:20px;line-height:1}
+.av-remove:hover{background:#f8fbfc}
+.av-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.av-hidden-delete{display:none!important}
+.av-note{margin-top:6px;color:#708391;font-size:11px}
+@media(max-width:900px){.av-grid,.av-item{grid-template-columns:1fr}.av-field--full{grid-column:auto}.av-head{flex-direction:column}.av-actions{justify-content:stretch}.av-actions .cp-btn{width:100%}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="av-wrap">
+  <div class="av-head">
+    <div>
+      <div class="cp-eyebrow">Suprimentos</div>
+      <h1 class="cp-title">Nova compra</h1>
+      <div class="cp-sub">Cadastro de compra sem vínculo com o Cronograma de Suprimentos.</div>
+    </div>
+    <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Voltar</a>
+  </div>
+
+  <form method="post" id="avulsa-form">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {% if form.non_field_errors %}<div class="cp-alert cp-alert--danger">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="av-card">
+      <div class="av-grid">
+        <div class="av-field">
+          <label>{{ form.obra.label }}</label>
+          {{ form.obra }}{{ form.obra.errors }}
+        </div>
+        <div class="av-field">
+          <label>{{ form.comprador.label }}</label>
+          {{ form.comprador }}{{ form.comprador.errors }}
+        </div>
+        <div class="av-field av-field--full">
+          <label>{{ form.titulo.label }}</label>
+          {{ form.titulo }}{{ form.titulo.errors }}
+        </div>
+        <div class="av-field">
+          <label>{{ form.descricao.label }}</label>
+          {{ form.descricao }}{{ form.descricao.errors }}
+        </div>
+        <div class="av-field">
+          <label>{{ form.observacao.label }}</label>
+          {{ form.observacao }}{{ form.observacao.errors }}
+        </div>
+      </div>
+    </section>
+
+    <section class="av-card">
+      <div class="cp-head" style="margin-bottom:12px">
+        <div>
+          <h2 style="margin:0">Itens da compra</h2>
+          <div class="cp-muted">Selecione os materiais do cadastro e informe as quantidades.</div>
+        </div>
+        <button type="button" class="cp-btn" id="add-item">+ Adicionar item</button>
+      </div>
+
+      <div class="av-items" id="items"></div>
+
+      <template id="empty-form">
+        <div class="av-item" data-row>
+          <div class="av-item__meta"><strong>Item da compra</strong><small>Selecione o material e informe os dados</small></div>
+          <div class="av-field"><label>Material</label>{{ formset.empty_form.material }}</div>
+          <div class="av-field"><label>Quantidade</label>{{ formset.empty_form.quantidade }}</div>
+          <div class="av-field"><label>Observação</label>{{ formset.empty_form.observacao }}</div>
+          <button type="button" class="av-remove" data-remove title="Remover item">×</button>
+          <div class="av-hidden-delete">{{ formset.empty_form.DELETE }}</div>
+        </div>
+      </template>
+
+      <div id="initial-forms" hidden>
+        {% for f in formset %}
+        <div class="av-item" data-row>
+          <div class="av-item__meta"><strong>Item da compra</strong><small>Selecione o material e informe os dados</small></div>
+          <div class="av-field"><label>Material</label>{{ f.material }}{{ f.material.errors }}</div>
+          <div class="av-field"><label>Quantidade</label>{{ f.quantidade }}{{ f.quantidade.errors }}</div>
+          <div class="av-field"><label>Observação</label>{{ f.observacao }}{{ f.observacao.errors }}</div>
+          <button type="button" class="av-remove" data-remove title="Remover item">×</button>
+          <div class="av-hidden-delete">{{ f.DELETE }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <div class="av-actions">
+      <button class="cp-btn" type="submit" name="acao" value="rascunho">Salvar rascunho</button>
+      <button class="cp-btn cp-btn--primary" type="submit" name="acao" value="iniciar">Criar e iniciar cotação</button>
+    </div>
+  </form>
+</div>
+<script>
+(function(){
+  const box=document.getElementById('items');
+  const total=document.getElementById('id_itens-TOTAL_FORMS');
+  const tpl=document.getElementById('empty-form');
+
+  function bind(row){
+    const button=row.querySelector('[data-remove]');
+    if(!button) return;
+    button.onclick=()=>{
+      const del=row.querySelector('input[name$="-DELETE"]');
+      if(del){
+        del.checked=true;
+        row.style.display='none';
+      }else{
+        row.remove();
+      }
+    };
+  }
+
+  const initial=document.getElementById('initial-forms');
+  [...initial.children].forEach(r=>{box.appendChild(r);bind(r)});
+
+  function add(){
+    let i=parseInt(total.value||'0');
+    let html=tpl.innerHTML.replaceAll('__prefix__',i);
+    box.insertAdjacentHTML('beforeend',html);
+    const r=box.lastElementChild;
+    bind(r);
+    total.value=i+1;
+  }
+
+  document.getElementById('add-item').onclick=add;
+  if(box.children.length===0) add();
+})();
+</script>
+{% endblock %}
