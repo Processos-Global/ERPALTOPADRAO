@@ -43,7 +43,7 @@
 .ft-empty{padding:20px;text-align:center;color:#82939a;font-size:11px}
 .ft-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.ft-tabs a{padding:7px 9px;border:1px solid var(--ft-line);border-radius:7px;background:#fff;color:#56707b;text-decoration:none;font-size:10px;font-weight:800}.ft-tabs a.active{background:#eaf6f8;color:var(--ft-primary-dark);border-color:#8bcbd6}
 .ft-context{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-radius:8px;background:#f7f9fa;border:1px solid #e5ecef;margin-bottom:10px}.ft-context span{font-size:10px;color:#536c76}.ft-context strong{color:#2b4f5f}
-.ft-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ft-cat{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--ft-line);border-radius:8px;padding:9px;background:#fff;cursor:pointer}.ft-cat input{margin-top:2px}.ft-cat strong{display:block;font-size:11px;color:#284b5b}.ft-cat small{display:block;color:#83949b;font-size:9px;margin-top:2px}
+.ft-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ft-cat-wrap{border:1px solid var(--ft-line);border-radius:8px;background:#fff;overflow:hidden}.ft-cat{display:flex;gap:8px;align-items:flex-start;padding:9px;cursor:pointer}.ft-cat input{margin-top:2px}.ft-cat strong{display:block;font-size:11px;color:#284b5b}.ft-cat small{display:block;color:#83949b;font-size:9px;margin-top:2px}.ft-system-choice{padding:0 9px 9px 29px}.ft-system-choice label{display:block;font-size:10px;font-weight:800;color:#506873;margin-bottom:4px}.ft-system-choice select{width:100%;box-sizing:border-box;border:1px solid #cbd8dd;border-radius:7px;background:#fff;padding:8px 9px;font-size:12px;color:#223f4c}
 .ft-side{display:grid;gap:10px;position:sticky;top:14px}.ft-side-card{padding:13px}.ft-side-card h3{margin:0 0 9px;font-size:12px}.ft-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ft-kpi{border:1px solid #e7edef;border-radius:8px;padding:9px}.ft-kpi span{display:block;color:#84959d;font-size:9px}.ft-kpi strong{display:block;font-size:17px;margin-top:2px}
 .ft-review-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ft-review-card{border:1px solid var(--ft-line);border-radius:8px;padding:10px}.ft-review-card span{font-size:9px;color:#81939b;text-transform:uppercase}.ft-review-card strong{display:block;font-size:17px;margin-top:2px}
 .ft-cat-card{margin-bottom:10px;overflow:hidden}.ft-cat-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#f8fafb;border-bottom:1px solid #e7edef}.ft-cat-head strong{font-size:12px}.ft-cat-head small{display:block;color:#84959d;font-size:9px;margin-top:2px}
@@ -174,7 +174,26 @@
             {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_obra"><input type="hidden" name="etapa" value="3">
             <div class="ft-cats">
               {% for c in categorias_obra %}
-                <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
+                <div class="ft-cat-wrap">
+                  <label class="ft-cat">
+                    <input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}{% if c.pk == ar_sistema_categoria_id %} data-ar-sistema-toggle{% endif %}>
+                    <span>
+                      <strong>{{ c.nome }}</strong>
+                      {% if c.pk == ar_sistema_categoria_id %}<small>Selecione também o tipo do sistema</small>{% endif %}
+                    </span>
+                  </label>
+                  {% if c.pk == ar_sistema_categoria_id %}
+                    <div class="ft-system-choice" data-ar-sistema-box {% if c.pk not in aplicacoes_obra_ids %}hidden{% endif %}>
+                      <label>Tipo do sistema de ar-condicionado</label>
+                      <select name="tipo_sistema_ar" data-ar-sistema-select>
+                        <option value="">Selecionar...</option>
+                        {% for tipo in tipos_sistema_ar %}
+                          <option value="{{ tipo }}" {% if ar_sistema_tipo_atual == tipo %}selected{% endif %}>{{ tipo|title }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  {% endif %}
+                </div>
               {% empty %}<div class="ft-empty">Nenhuma categoria geral disponível.</div>{% endfor %}
             </div>
             <div style="margin-top:10px"><button class="ft-btn">Salvar</button></div>
@@ -183,6 +202,7 @@
 
         <div class="ft-form-box">
           <div class="ft-form-title">Categorias por ambiente</div>
+          <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
           <div class="ft-tabs">
             {% for a in ambientes %}<a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">{{ a.pavimento.nome }} · {{ a.identificacao }}</a>{% empty %}<span class="ft-empty">Cadastre os ambientes primeiro.</span>{% endfor %}
           </div>
@@ -271,4 +291,19 @@
     </aside>
   </div>
 </div>
+<script>
+(function(){
+  const toggle = document.querySelector('[data-ar-sistema-toggle]');
+  const box = document.querySelector('[data-ar-sistema-box]');
+  const select = document.querySelector('[data-ar-sistema-select]');
+  if (!toggle || !box || !select) return;
+  function atualizar(){
+    box.hidden = !toggle.checked;
+    select.required = toggle.checked;
+    if (!toggle.checked) select.value = '';
+  }
+  toggle.addEventListener('change', atualizar);
+  atualizar();
+})();
+</script>
 {% endblock %}

@@ -846,13 +846,19 @@ def atualizar_status_operacional_item(*, micro_item, novo_status, usuario):
     anterior = micro_item.status
     micro_item.status = novo_status
     micro_item.save(update_fields=["status", "atualizado_em"])
-    registrar_evento(
+    evento = registrar_evento(
         processo,
         "GF_STATUS_ITEM",
         usuario,
         f"{micro_item.item}: {GrandeFornecedorItem.Status(anterior).label} → {micro_item.get_status_display()}.",
-        {"item_id": micro_item.pk, "pedido_item_id": micro_item.pedido_item_id},
+        {
+            "item_id": micro_item.pk,
+            "pedido_item_id": micro_item.pedido_item_id,
+            "status_anterior": anterior,
+            "status_novo": novo_status,
+        },
     )
+    micro_item._historico_evento = evento
     return micro_item
 
 
@@ -869,13 +875,19 @@ def atualizar_previsao_operacional_item(*, micro_item, previsao, usuario):
     anterior = micro_item.previsao_entrega
     micro_item.previsao_entrega = previsao
     micro_item.save(update_fields=["previsao_entrega", "atualizado_em"])
-    registrar_evento(
+    evento = registrar_evento(
         processo,
         "GF_PREVISAO_ITEM",
         usuario,
-        f"Previsão de {micro_item.item} alterada para {previsao:%d/%m/%Y}.",
-        {"item_id": micro_item.pk, "anterior": str(anterior or "")},
+        f"Previsão de {micro_item.item}: "
+        f"{anterior.strftime('%d/%m/%Y') if anterior else 'sem data'} → {previsao:%d/%m/%Y}.",
+        {
+            "item_id": micro_item.pk,
+            "previsao_anterior": str(anterior or ""),
+            "previsao_nova": str(previsao),
+        },
     )
+    micro_item._historico_evento = evento
     return micro_item
 
 

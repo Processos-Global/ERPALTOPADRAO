@@ -454,6 +454,7 @@ def registrar_recebimento(
     valor_total_nota,
     arquivo_nota_fiscal,
     observacao="",
+    dados_fiscais_opcionais=False,
 ):
     """
     Registra uma entrega física vinculada obrigatoriamente à respectiva Nota Fiscal.
@@ -465,20 +466,27 @@ def registrar_recebimento(
     if p.status in {PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE}:
         raise ValidationError("Este pedido não aceita novos recebimentos.")
 
-    numero_nota_fiscal = (numero_nota_fiscal or "").strip()
-    if not numero_nota_fiscal:
-        raise ValidationError("Informe o número da Nota Fiscal.")
-    if not arquivo_nota_fiscal:
-        raise ValidationError("Anexe o arquivo da Nota Fiscal.")
-    if RecebimentoPedido.objects.filter(pedido=p, numero_nota_fiscal=numero_nota_fiscal).exists():
+    numero_nota_fiscal = (numero_nota_fiscal or "").strip() or None
+    if not dados_fiscais_opcionais:
+        if not numero_nota_fiscal:
+            raise ValidationError("Informe o número da Nota Fiscal.")
+        if not arquivo_nota_fiscal:
+            raise ValidationError("Anexe o arquivo da Nota Fiscal.")
+    if numero_nota_fiscal and RecebimentoPedido.objects.filter(
+        pedido=p, numero_nota_fiscal=numero_nota_fiscal
+    ).exists():
         raise ValidationError(f"A Nota Fiscal {numero_nota_fiscal} já foi registrada neste pedido.")
 
-    try:
-        total_nota = Decimal(str(valor_total_nota).replace(",", "."))
-    except Exception as exc:
-        raise ValidationError("Informe um valor total válido para a Nota Fiscal.") from exc
-    if total_nota <= ZERO:
-        raise ValidationError("O valor total da Nota Fiscal deve ser maior que zero.")
+    total_nota = None
+    if valor_total_nota not in (None, ""):
+        try:
+            total_nota = Decimal(str(valor_total_nota).replace(",", "."))
+        except Exception as exc:
+            raise ValidationError("Informe um valor total válido para a Nota Fiscal.") from exc
+        if total_nota <= ZERO:
+            raise ValidationError("O valor total da Nota Fiscal deve ser maior que zero.")
+    elif not dados_fiscais_opcionais:
+        raise ValidationError("Informe um valor total válido para a Nota Fiscal.")
 
     itens_receber = []
     for item in p.itens.select_for_update().all():
@@ -498,16 +506,19 @@ def registrar_recebimento(
         # pagamento do que efetivamente foi entregue.
 
         valor_informado = valores_itens.get(item.pk)
-        if valor_informado in (None, ""):
+        valor_recebido = None
+        if valor_informado not in (None, ""):
+            try:
+                valor_recebido = Decimal(str(valor_informado).replace(",", "."))
+            except Exception as exc:
+                raise ValidationError(f"Valor recebido inválido para {item.descricao}.") from exc
+            if valor_recebido <= ZERO:
+                raise ValidationError(f"O valor recebido de {item.descricao} deve ser maior que zero.")
+            valor_recebido = quantizar_moeda(valor_recebido)
+        elif not dados_fiscais_opcionais:
             raise ValidationError(f"Informe o valor recebido do item {item.descricao}.")
-        try:
-            valor_recebido = Decimal(str(valor_informado).replace(",", "."))
-        except Exception as exc:
-            raise ValidationError(f"Valor recebido inválido para {item.descricao}.") from exc
-        if valor_recebido <= ZERO:
-            raise ValidationError(f"O valor recebido de {item.descricao} deve ser maior que zero.")
 
-        itens_receber.append((item, quantidade, quantizar_moeda(valor_recebido)))
+        itens_receber.append((item, quantidade, valor_recebido))
 
     if not itens_receber:
         raise ValidationError("Informe ao menos uma quantidade recebida maior que zero.")
@@ -516,7 +527,7 @@ def registrar_recebimento(
         pedido=p,
         numero_nota_fiscal=numero_nota_fiscal,
         arquivo_nota_fiscal=arquivo_nota_fiscal,
-        valor_total_nota=quantizar_moeda(total_nota),
+        valor_total_nota=quantizar_moeda(total_nota) if total_nota is not None else None,
         usuario=usuario,
         observacao=(observacao or "").strip(),
     )
@@ -560,7 +571,7 @@ def registrar_recebimento(
         p.processo,
         "RECEBIMENTO_PEDIDO",
         usuario,
-        f"Recebimento registrado no pedido {p.numero} - NF {numero_nota_fiscal}.",
+        f"Recebimento registrado no pedido {p.numero}" + (f" - NF {numero_nota_fiscal}." if numero_nota_fiscal else "."),
         {
             "pedido_id": p.pk,
             "recebimento_id": recebimento.pk,

@@ -390,6 +390,59 @@
     white-space:nowrap;
 }
 
+
+.gfa-history-col{
+    width:150px;
+    min-width:150px;
+}
+
+.gfa-history summary{
+    cursor:pointer;
+    color:#0f666b;
+    font-size:11px;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.gfa-history-list{
+    width:330px;
+    max-height:220px;
+    overflow:auto;
+    margin-top:8px;
+    padding:9px;
+    border:1px solid #d7e2e5;
+    border-radius:9px;
+    background:#fff;
+    box-shadow:0 10px 24px rgba(15,23,42,.10);
+}
+
+.gfa-history-entry{
+    padding:8px 0;
+    border-bottom:1px solid #edf2f3;
+}
+
+.gfa-history-entry:last-child{
+    border-bottom:0;
+}
+
+.gfa-history-entry strong{
+    display:block;
+    margin-bottom:2px;
+    color:#24363b;
+    font-size:11px;
+}
+
+.gfa-history-entry span{
+    display:block;
+    color:#72858b;
+    font-size:10px;
+}
+
+.gfa-history-empty{
+    color:#7a8d93;
+    font-size:11px;
+}
+
 .gfa-empty{
     padding:36px;
     border:1px dashed #bdcbd0;
@@ -714,6 +767,7 @@
                                         <th>Qtd. recebida</th>
                                         <th>Previsão</th>
                                         <th>Status</th>
+                                        <th>Histórico</th>
                                     </tr>
                                 </thead>
 
@@ -788,6 +842,29 @@
                                                 </span>
                                             {% endif %}
                                         </td>
+
+                                        <td class="gfa-history-col">
+                                            <details class="gfa-history" data-history-item="{{ row.item.pk }}">
+                                                <summary>Histórico{% if row.historico %} ({{ row.historico|length }}){% endif %}</summary>
+                                                <div class="gfa-history-list">
+                                                    {% for evento in row.historico %}
+                                                        <div class="gfa-history-entry">
+                                                            <strong>{{ evento.descricao }}</strong>
+                                                            <span>
+                                                                {{ evento.criado_em|date:"d/m/Y H:i" }} ·
+                                                                {% if evento.usuario %}
+                                                                    {{ evento.usuario.get_full_name|default:evento.usuario.username }}
+                                                                {% else %}
+                                                                    Sistema
+                                                                {% endif %}
+                                                            </span>
+                                                        </div>
+                                                    {% empty %}
+                                                        <div class="gfa-history-empty">Nenhuma alteração de status ou previsão registrada.</div>
+                                                    {% endfor %}
+                                                </div>
+                                            </details>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -824,17 +901,17 @@
                 <div class="gfa-rec-grid">
                     <div>
                         <label class="cp-label">Número da NF</label>
-                        <input class="cp-input" name="numero_nota_fiscal" required>
+                        <input class="cp-input" name="numero_nota_fiscal">
                     </div>
 
                     <div>
                         <label class="cp-label">Valor total da NF</label>
-                        <input class="cp-input" name="valor_total_nota" inputmode="decimal" required>
+                        <input class="cp-input" name="valor_total_nota" inputmode="decimal">
                     </div>
 
                     <div>
                         <label class="cp-label">Arquivo da NF</label>
-                        <input class="cp-input" type="file" name="arquivo_nota_fiscal" required>
+                        <input class="cp-input" type="file" name="arquivo_nota_fiscal">
                     </div>
                 </div>
 
@@ -857,7 +934,8 @@
                                     class="cp-input"
                                     name="item_{{ row.pedido_item.pk }}"
                                     inputmode="decimal"
-                                    placeholder="0"
+                                    value="0"
+                                    required
                                 >
                             </div>
 
@@ -1008,6 +1086,33 @@ document.querySelectorAll('.gfa-modal').forEach((dialog) => {
     });
 });
 
+function adicionarHistorico(row, historico) {
+    if (!row || !historico) return;
+
+    const details = row.querySelector('.gfa-history');
+    const list = row.querySelector('.gfa-history-list');
+    if (!details || !list) return;
+
+    list.querySelector('.gfa-history-empty')?.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'gfa-history-entry';
+
+    const descricao = document.createElement('strong');
+    descricao.textContent = historico.descricao || 'Alteração registrada.';
+
+    const meta = document.createElement('span');
+    meta.textContent = `${historico.criado_em || ''} · ${historico.usuario || 'Sistema'}`;
+
+    entry.appendChild(descricao);
+    entry.appendChild(meta);
+    list.prepend(entry);
+
+    const total = list.querySelectorAll('.gfa-history-entry').length;
+    const summary = details.querySelector('summary');
+    if (summary) summary.textContent = `Histórico (${total})`;
+}
+
 document.querySelectorAll('.js-status-form').forEach((form) => {
     const select = form.querySelector('.js-status-select');
     const state = form.querySelector('.js-status-state');
@@ -1065,6 +1170,7 @@ document.querySelectorAll('.js-status-form').forEach((form) => {
 
             const group = form.closest('.js-order-group');
             if (group) atualizarResumoGrupo(group);
+            adicionarHistorico(row, data.historico);
 
             window.setTimeout(() => {
                 if (state.textContent === 'Salvo ✓') {
@@ -1106,10 +1212,13 @@ document.querySelectorAll('.js-previsao-form').forEach((form) => {
                 credentials: 'same-origin'
             });
 
-            if (!response.ok) {
-                throw new Error('Erro ao salvar');
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok || !data.ok) {
+                throw new Error(data.erro || 'Erro ao salvar');
             }
 
+            adicionarHistorico(form.closest('.js-status-row'), data.historico);
             state.textContent = 'Salvo ✓';
 
             window.setTimeout(() => {

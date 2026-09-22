@@ -36,12 +36,16 @@
               {% endif %}
             </td>
             <td class="ft-action-cell">
-              <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
-                {% csrf_token %}
-                <input type="hidden" name="acao" value="excluir_item">
-                <input type="hidden" name="item_id" value="{{ item.pk }}">
-                <button class="ft-icon-btn danger" type="submit" title="Excluir item">Excluir</button>
-              </form>
+              {% if ap.categoria.nome == "AR CONDICIONADO - SISTEMA" and not ap.ambiente_id and not item.tipo_item_id and item.descricao_item == "AR CONDICIONADO - SISTEMA" %}
+                <span class="ft-sync">Definido nas categorias</span>
+              {% else %}
+                <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="acao" value="excluir_item">
+                  <input type="hidden" name="item_id" value="{{ item.pk }}">
+                  <button class="ft-icon-btn danger" type="submit" title="Excluir item">Excluir</button>
+                </form>
+              {% endif %}
             </td>
           </tr>
           {% endif %}
@@ -51,6 +55,7 @@
   </div>
   {% endif %}
 
+  {% if ap.categoria.nome != "AR CONDICIONADO - SISTEMA" or ap.ambiente_id %}
   <details class="ft-add" {% if not ap.itens.count %}open{% endif %}>
     <summary>Adicionar item</summary>
     <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
@@ -115,4 +120,5 @@
       </div>
     </form>
   </details>
+  {% endif %}
 </section>

@@ -2,6 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -26,6 +27,86 @@ from obras.models import (
     Obra,
     PavimentoFichaTecnica,
 )
+
+
+# Regras de escopo específicas da ficha técnica.
+# O sistema de ar-condicionado é uma definição da obra/projeto, enquanto
+# os equipamentos são informados por ambiente. Mantemos esta regra aqui
+# também para bases antigas em que o tipo_preenchimento ficou invertido.
+NOME_CAT_AR_SISTEMA = "AR CONDICIONADO - SISTEMA"
+NOME_CAT_AR_EQUIPAMENTO = "AR CONDICIONADO - EQUIPAMENTO"
+TIPOS_SISTEMA_AR = ("DUTADO", "VRF", "SPLIT", "MULTI SPLIT")
+
+
+def _sincronizar_item_sistema_ar(aplicacao, tipo_sistema):
+    """Mantém uma linha técnica automática para levar o tipo do sistema até Compras."""
+    item = (
+        aplicacao.itens.filter(
+            tipo_item__isnull=True,
+            descricao_item=NOME_CAT_AR_SISTEMA,
+        )
+        .order_by("id")
+        .first()
+    )
+    if item is None:
+        item = ItemFichaTecnica.objects.create(
+            aplicacao_categoria=aplicacao,
+            descricao_item=NOME_CAT_AR_SISTEMA,
+            quantidade=Decimal("1.00"),
+            especificacao=tipo_sistema,
+            ordem=0,
+        )
+        return item
+
+    alterados = []
+    if item.quantidade != Decimal("1.00"):
+        item.quantidade = Decimal("1.00")
+        alterados.append("quantidade")
+    if item.especificacao != tipo_sistema:
+        item.especificacao = tipo_sistema
+        alterados.append("especificacao")
+    if not item.ativo:
+        item.ativo = True
+        alterados.append("ativo")
+    if alterados:
+        item.save(update_fields=[*alterados, "atualizado_em"])
+    return item
+
+
+def _categorias_por_escopo():
+    categorias = CategoriaGrandeFornecedor.objects.filter(ativo=True).prefetch_related(
+        "tipos_itens", "opcoes_especificacao"
+    )
+
+    tipos_obra = [
+        CategoriaGrandeFornecedor.TipoPreenchimento.MULTIPLA_PROJETO,
+        CategoriaGrandeFornecedor.TipoPreenchimento.SIM_NAO_PROJETO,
+        CategoriaGrandeFornecedor.TipoPreenchimento.DESCRITIVO,
+    ]
+    tipos_ambiente = [
+        CategoriaGrandeFornecedor.TipoPreenchimento.MULTIPLA_AMBIENTE,
+        CategoriaGrandeFornecedor.TipoPreenchimento.SIM_NAO_AMBIENTE,
+    ]
+
+    categorias_obra = (
+        categorias.filter(
+            Q(tipo_preenchimento__in=tipos_obra)
+            | Q(nome__iexact=NOME_CAT_AR_SISTEMA)
+        )
+        .exclude(nome__iexact=NOME_CAT_AR_EQUIPAMENTO)
+        .order_by("ordem", "nome")
+    )
+
+    categorias_ambiente = (
+        categorias.filter(
+            Q(tipo_preenchimento__in=tipos_ambiente)
+            | Q(nome__iexact=NOME_CAT_AR_EQUIPAMENTO)
+        )
+        .exclude(nome__iexact=NOME_CAT_AR_SISTEMA)
+        .order_by("ordem", "nome")
+    )
+
+    return categorias_obra, categorias_ambiente
 
 
 def _decimal(valor, padrao="0"):
@@ -70,16 +151,7 @@ def ficha_tecnica(request, obra_id):
     if not ambiente_selecionado and ambientes:
         ambiente_selecionado = ambientes[0]
 
-    categorias = CategoriaGrandeFornecedor.objects.filter(ativo=True).prefetch_related("tipos_itens", "opcoes_especificacao")
-    categorias_obra = categorias.filter(tipo_preenchimento__in=[
-        CategoriaGrandeFornecedor.TipoPreenchimento.MULTIPLA_PROJETO,
-        CategoriaGrandeFornecedor.TipoPreenchimento.SIM_NAO_PROJETO,
-        CategoriaGrandeFornecedor.TipoPreenchimento.DESCRITIVO,
-    ])
-    categorias_ambiente = categorias.filter(tipo_preenchimento__in=[
-        CategoriaGrandeFornecedor.TipoPreenchimento.MULTIPLA_AMBIENTE,
-        CategoriaGrandeFornecedor.TipoPreenchimento.SIM_NAO_AMBIENTE,
-    ])
+    categorias_obra, categorias_ambiente = _categorias_por_escopo()
 
     aplicacoes_obra = list(
         ficha.categorias_aplicadas.filter(ambiente__isnull=True, ativo=True)
@@ -104,6 +176,12 @@ def ficha_tecnica(request, obra_id):
             )
         )
 
+    aplicacao_ar_sistema = next(
+        (a for a in aplicacoes_obra if a.categoria.nome.upper() == NOME_CAT_AR_SISTEMA),
+        None,
+    )
+    ar_sistema_tipo_atual = aplicacao_ar_sistema.descricao if aplicacao_ar_sistema else ""
+
     return render(request, "obras/ficha_tecnica.html", {
         "obra": obra,
         "ficha": ficha,
@@ -120,6 +198,11 @@ def ficha_tecnica(request, obra_id):
         "aplicacoes_ambiente": aplicacoes_ambiente,
         "aplicacoes_obra_ids": {a.categoria_id for a in aplicacoes_obra},
         "aplicacoes_ambiente_ids": {a.categoria_id for a in aplicacoes_ambiente},
+        "ar_sistema_categoria_id": aplicacao_ar_sistema.categoria_id if aplicacao_ar_sistema else (
+            categorias_obra.filter(nome__iexact=NOME_CAT_AR_SISTEMA).values_list("pk", flat=True).first()
+        ),
+        "ar_sistema_tipo_atual": ar_sistema_tipo_atual,
+        "tipos_sistema_ar": TIPOS_SISTEMA_AR,
         "unidades": UnidadeMedida.objects.filter(ativo=True).order_by("sigla"),
         "total_ambientes": len(ambientes),
         "total_categorias": ficha.categorias_aplicadas.filter(ativo=True).count(),
@@ -175,17 +258,42 @@ def ficha_tecnica_acao(request, obra_id):
 
     elif acao == "salvar_categorias_obra":
         selecionadas = {int(x) for x in request.POST.getlist("categorias") if x.isdigit()}
+        categorias_obra, _ = _categorias_por_escopo()
+        permitidas = list(categorias_obra.filter(pk__in=selecionadas))
+        ids = {c.pk for c in permitidas}
+
+        categoria_ar_sistema = next(
+            (c for c in permitidas if c.nome.upper() == NOME_CAT_AR_SISTEMA),
+            None,
+        )
+        tipo_sistema_ar = (request.POST.get("tipo_sistema_ar") or "").strip().upper()
+        if categoria_ar_sistema and tipo_sistema_ar not in TIPOS_SISTEMA_AR:
+            messages.error(
+                request,
+                "Selecione o tipo do sistema de ar-condicionado: Dutado, VRF, Split ou Multi Split.",
+            )
+            return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=3")
+
         qs = ficha.categorias_aplicadas.filter(ambiente__isnull=True)
-        qs.exclude(categoria_id__in=selecionadas).delete()
-        for cat in CategoriaGrandeFornecedor.objects.filter(pk__in=selecionadas, ativo=True):
-            CategoriaFichaTecnica.objects.get_or_create(ficha=ficha, categoria=cat, ambiente=None)
+        qs.exclude(categoria_id__in=ids).delete()
+        for cat in permitidas:
+            aplicacao, _ = CategoriaFichaTecnica.objects.get_or_create(
+                ficha=ficha, categoria=cat, ambiente=None
+            )
+            if cat.nome.upper() == NOME_CAT_AR_SISTEMA:
+                if aplicacao.descricao != tipo_sistema_ar:
+                    aplicacao.descricao = tipo_sistema_ar
+                    aplicacao.save(update_fields=["descricao"])
+                _sincronizar_item_sistema_ar(aplicacao, tipo_sistema_ar)
+
         messages.success(request, "Categorias gerais da obra atualizadas.")
 
     elif acao == "salvar_categorias_ambiente":
         ambiente = get_object_or_404(AmbienteFichaTecnica, pk=request.POST.get("ambiente_id"), pavimento__ficha=ficha)
         selecionadas = {int(x) for x in request.POST.getlist("categorias") if x.isdigit()}
+        _, categorias_ambiente = _categorias_por_escopo()
         permitidas = []
-        for cat in CategoriaGrandeFornecedor.objects.filter(pk__in=selecionadas, ativo=True):
+        for cat in categorias_ambiente.filter(pk__in=selecionadas):
             if cat.somente_area_molhada and ambiente.caracteristica.codigo != "AREA_MOLHADA":
                 continue
             permitidas.append(cat)
@@ -228,6 +336,17 @@ def ficha_tecnica_acao(request, obra_id):
     elif acao == "excluir_item":
         item = get_object_or_404(ItemFichaTecnica, pk=request.POST.get("item_id"), aplicacao_categoria__ficha=ficha)
         ambiente_id = item.aplicacao_categoria.ambiente_id
+        if (
+            item.aplicacao_categoria.ambiente_id is None
+            and item.aplicacao_categoria.categoria.nome.upper() == NOME_CAT_AR_SISTEMA
+            and item.tipo_item_id is None
+            and item.descricao_item.upper() == NOME_CAT_AR_SISTEMA
+        ):
+            messages.error(
+                request,
+                "O tipo do sistema de ar-condicionado é alterado na etapa Categorias de Grandes Fornecedores.",
+            )
+            return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=3")
         item.delete()
         messages.success(request, "Item removido da ficha técnica.")
         ambiente_param = f"&ambiente={ambiente_id}" if ambiente_id else ""

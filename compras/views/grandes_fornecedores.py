@@ -1,11 +1,13 @@
 from collections import OrderedDict
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.http import FileResponse, JsonResponse
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
@@ -18,6 +20,7 @@ from compras.models import (
     GrandeFornecedorItem,
     GrandeFornecedorOferta,
     GrandeFornecedorParticipante,
+    HistoricoProcessoCompra,
     ParcelaGrandeFornecedor,
     ProcessoCompra,
 )
@@ -764,6 +767,32 @@ def painel_grandes_fornecedores_compras(request):
         if status_codigo == GrandeFornecedorItem.Status.ENTREGUE:
             total_recebidos += 1
 
+    historico_por_item = {}
+    if rows:
+        processos_ids = {row["processo"].pk for row in rows}
+        itens_ids = {row["item"].pk for row in rows}
+        eventos = (
+            HistoricoProcessoCompra.objects
+            .select_related("usuario")
+            .filter(
+                processo_id__in=processos_ids,
+                tipo__in=("GF_STATUS_ITEM", "GF_PREVISAO_ITEM"),
+            )
+            .order_by("-criado_em", "-id")
+        )
+        for evento in eventos:
+            item_id = (evento.dados or {}).get("item_id")
+            try:
+                item_id = int(item_id)
+            except (TypeError, ValueError):
+                continue
+            if item_id not in itens_ids:
+                continue
+            historico_por_item.setdefault(item_id, []).append(evento)
+
+    for row in rows:
+        row["historico"] = historico_por_item.get(row["item"].pk, [])
+
     return render(request, "compras/grandes_fornecedores.html", {
         "rows": rows, "pedidos_recebimento": list(pedidos_recebimento.values()),
         "obras": Obra.objects.order_by("nome"),
@@ -793,11 +822,12 @@ def atualizar_status_item_grande_fornecedor_compras(request, item_id):
     ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
     try:
-        atualizar_status_operacional_item(
+        item = atualizar_status_operacional_item(
             micro_item=item,
             novo_status=request.POST.get("status"),
             usuario=request.user,
         )
+        evento = getattr(item, "_historico_evento", None)
         item.refresh_from_db(fields=["status"])
 
         if ajax:
@@ -814,6 +844,11 @@ def atualizar_status_item_grande_fornecedor_compras(request, item_id):
                 "status_label": item.get_status_display(),
                 "transicoes": transicoes,
                 "mensagem": f"Status de {item.item} atualizado.",
+                "historico": {
+                    "descricao": evento.descricao if evento else "Status atualizado.",
+                    "criado_em": timezone.localtime(evento.criado_em, ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M") if evento else "",
+                    "usuario": evento.usuario.get_username() if evento and evento.usuario else "Sistema",
+                },
             })
 
         messages.success(request, f"Status de {item.item} atualizado.")
@@ -830,10 +865,24 @@ def atualizar_status_item_grande_fornecedor_compras(request, item_id):
 def atualizar_previsao_item_grande_fornecedor_compras(request, item_id):
     item = get_object_or_404(GrandeFornecedorItem.objects.select_related("fluxo__processo", "pedido_item"), pk=item_id, fluxo__processo__fluxo_grande_fornecedor=True)
     previsao = parse_date(request.POST.get("previsao_entrega") or "")
+    ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     try:
-        atualizar_previsao_operacional_item(micro_item=item, previsao=previsao, usuario=request.user)
+        item = atualizar_previsao_operacional_item(micro_item=item, previsao=previsao, usuario=request.user)
+        evento = getattr(item, "_historico_evento", None)
+        if ajax:
+            return JsonResponse({
+                "ok": True,
+                "mensagem": f"Previsão de {item.item} atualizada.",
+                "historico": {
+                    "descricao": evento.descricao if evento else "Previsão atualizada.",
+                    "criado_em": timezone.localtime(evento.criado_em, ZoneInfo("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M") if evento else "",
+                    "usuario": evento.usuario.get_username() if evento and evento.usuario else "Sistema",
+                },
+            })
         messages.success(request, f"Previsão de {item.item} atualizada.")
     except ValidationError as exc:
+        if ajax:
+            return _erro_json(exc)
         messages.error(request, str(exc))
     return _voltar_acompanhamento()
 
@@ -854,12 +903,14 @@ def receber_pedido_grande_fornecedor_compras(request, pedido_id):
             valores_itens[pedido_item.pk] = valor
     try:
         arquivo = request.FILES.get("arquivo_nota_fiscal")
-        validar_documento_upload(arquivo)
+        if arquivo:
+            validar_documento_upload(arquivo)
         registrar_recebimento(
             pedido=pedido, quantidades=quantidades, valores_itens=valores_itens, usuario=request.user,
             numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
             valor_total_nota=request.POST.get("valor_total_nota", ""),
             arquivo_nota_fiscal=arquivo, observacao=request.POST.get("observacao", ""),
+            dados_fiscais_opcionais=True,
         )
         messages.success(request, f"Recebimento do pedido {pedido.numero} registrado.")
     except ValidationError as exc:
