@@ -45,6 +45,11 @@
           {{ form.obra }}{{ form.obra.errors }}
         </div>
         <div class="av-field">
+          <label>{{ form.apropriacao.label }}</label>
+          {{ form.apropriacao }}{{ form.apropriacao.errors }}
+          <div class="av-note">Mesma estrutura de apropriação usada nas compras do cronograma.</div>
+        </div>
+        <div class="av-field">
           <label>{{ form.comprador.label }}</label>
           {{ form.comprador }}{{ form.comprador.errors }}
         </div>

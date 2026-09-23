@@ -235,7 +235,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
     <main class="purchase-main">
 
-      <header class="purchase-heading"><h1>{% if eh_grande_fornecedor %}Novo processo de Grande Fornecedor{% else %}Nova compra{% endif %}</h1><p>{% if eh_grande_fornecedor %}Selecione as atividades e o comprador responsável antes de abrir a matriz{% else %}Preencha os dados para iniciar o processo de compra{% endif %}</p></header>
+      <header class="purchase-heading"><h1>{% if eh_grande_fornecedor %}Novo processo de Grande Fornecedor{% else %}Nova compra{% endif %}</h1><p>{% if eh_grande_fornecedor %}Defina a apropriação financeira e o comprador responsável antes de abrir a matriz{% else %}Preencha os dados para iniciar o processo de compra{% endif %}</p></header>
 
       <section class="purchase-card purchase-hero">
         <div class="purchase-hero__block">
@@ -284,28 +284,20 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         </section>
 
         <div class="purchase-body-grid">
-          {% if permite_sem_atividade %}
           <section class="purchase-card purchase-activities">
-            <h2 class="purchase-section-title">Atividade do Cronograma Físico</h2>
-            <div class="purchase-existing" style="margin:0;">
-              <div class="purchase-existing__head">
-                <strong>Não exigida para a obra 02-04-02.</strong>
-                <span>Esta compra será criada diretamente a partir do Cronograma de Suprimentos, sem apropriação de atividade do Cronograma Físico.</span>
+            <div class="purchase-activities__head">
+              <div>
+                <h2 class="purchase-section-title">Apropriação financeira</h2>
+                <div class="cp-muted">Define desde a abertura onde esta compra será apropriada no Financeiro.</div>
               </div>
             </div>
-            <div class="purchase-native-activities" style="display:none;">{{ form.atividades }}</div>
-            {% for error in form.atividades.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
+            <div class="purchase-field" style="margin-top:14px">
+              <label for="{{ form.apropriacao.id_for_label }}">Apropriação <span class="req">*</span></label>
+              {{ form.apropriacao }}
+              {% if form.apropriacao.help_text %}<small class="purchase-field-help">{{ form.apropriacao.help_text }}</small>{% endif %}
+              {% for error in form.apropriacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
+            </div>
           </section>
-          {% else %}
-          <section class="purchase-card purchase-activities">
-            <div class="purchase-activities__head"><h2 class="purchase-section-title">Atividades</h2><div class="purchase-selected-count"><span><strong id="selected-count">0</strong> atividade(s) selecionada(s)</span><button type="button" class="purchase-mini-btn" id="clear-activities">Limpar seleção</button></div></div>
-            <div class="purchase-native-activities">{{ form.atividades }}</div>{% for error in form.atividades.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
-            <div class="purchase-tools"><div class="purchase-search" style="width:280px"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="activity-search" placeholder="Pesquisar atividade..." autocomplete="off"><button type="button" class="purchase-search__clear" id="activity-search-clear">×</button></div></div>
-            <div class="purchase-selected-chips" id="selected-activities"></div>
-            <div class="purchase-table-wrap"><div class="purchase-table-scroll"><table class="purchase-table"><thead><tr><th></th><th>Atividade</th><th>Disciplina</th><th>Data base</th><th>Data planejada</th></tr></thead><tbody id="activity-table-body"></tbody></table><div class="purchase-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div></div><div class="purchase-table-footer"><span id="activity-footer-text">Mostrando atividades disponíveis</span></div></div>
-
-          </section>
-          {% endif %}
 
           <aside class="purchase-card purchase-side">
             <section class="purchase-side-section"><h2 class="purchase-section-title">Dados do comprador</h2><div class="purchase-side-grid"><div class="purchase-field"><label for="{{ form.comprador.id_for_label }}">Comprador responsável{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field"><label>Data necessária <span class="req">*</span></label><div class="purchase-readonly">{% if item_inicial.prazo_limite_contratacao %}{{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% else %}—{% endif %}</div></div><div class="purchase-field purchase-field--full"><label for="{{ form.descricao.id_for_label }}">Descrição{% if form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.descricao }}<div class="purchase-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field purchase-field--full"><label for="{{ form.observacao.id_for_label }}">Observação geral (máx. 200 caracteres)</label>{{ form.observacao }}<div class="purchase-counter"><span id="observation-count">0</span>/200</div>{% for error in form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div></div></section>
@@ -334,123 +326,6 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   if(desc){desc.setAttribute('maxlength','200');desc.setAttribute('placeholder','Ex.: Compra para execução da etapa');desc.addEventListener('input',updateCounters)}
   if(obs){obs.setAttribute('maxlength','200');obs.setAttribute('placeholder','Compra destinada à execução da etapa selecionada.');obs.addEventListener('input',updateCounters)}
   updateCounters();
-
-  /* ATIVIDADES
-     Mantém o select original como fonte de verdade, mas NÃO duplica centenas
-     ou milhares de atividades no DOM. Isso evita reflow pesado quando a
-     largura da página muda ao abrir/retrair a sidebar. */
-  const activitiesSelect=document.getElementById('{{ form.atividades.id_for_label }}');
-  const activityBody=qs('#activity-table-body'),
-        activitySearch=qs('#activity-search'),
-        activityClear=qs('#activity-search-clear'),
-        activityEmpty=qs('#activity-empty'),
-        selectedCount=qs('#selected-count'),
-        footerText=qs('#activity-footer-text');
-
-  const ACTIVITY_RENDER_LIMIT=60;
-  let activitySearchFrame=null;
-
-  function activityOptions(){
-    return activitiesSelect
-      ? Array.from(activitiesSelect.options).filter(o=>o.value&&!o.disabled)
-      : [];
-  }
-
-  function parseActivity(text,index){
-    const clean=String(text||'').replace(/\s+/g,' ').trim();
-    const p=clean.split('|').map(x=>x.trim()).filter(Boolean);
-    return {
-      title:p[0]||clean||'Atividade',
-      discipline:p[1]||'—',
-      baseDate:p[2]||p[3]||'—',
-      plannedDate:p[3]||p[4]||'—'
-    };
-  }
-
-  function filteredActivities(){
-    const term=(activitySearch?.value||'').trim().toLocaleLowerCase('pt-BR');
-    const all=activityOptions();
-
-    if(!term){
-      return all.map((o,i)=>({o,i,data:parseActivity(o.text,i)}));
-    }
-
-    const result=[];
-    for(let i=0;i<all.length;i++){
-      const o=all[i];
-      if(o.text.toLocaleLowerCase('pt-BR').includes(term)){
-        result.push({o,i,data:parseActivity(o.text,i)});
-      }
-    }
-    return result;
-  }
-
-  function renderActivities(){
-    if(!activitiesSelect||!activityBody)return;
-
-    const all=activityOptions();
-    const filtered=filteredActivities();
-    const visible=filtered.slice(0,ACTIVITY_RENDER_LIMIT);
-    let selectedTotal=0;
-
-    for(const o of all){
-      if(o.selected)selectedTotal++;
-    }
-
-    if(selectedCount)selectedCount.textContent=selectedTotal;
-    if(activityClear)activityClear.style.display=(activitySearch?.value||'').trim()?'block':'none';
-    if(activityEmpty)activityEmpty.hidden=filtered.length>0;
-
-    if(footerText){
-      footerText.textContent=filtered.length>ACTIVITY_RENDER_LIMIT
-        ? `Mostrando ${ACTIVITY_RENDER_LIMIT} de ${filtered.length} atividades — use a pesquisa para localizar as demais`
-        : `Mostrando ${filtered.length} de ${all.length} atividades`;
-    }
-
-    activityBody.innerHTML=visible.map(({o,data})=>`
-      <tr>
-        <td><input class="purchase-check" type="checkbox" data-activity-check="${esc(o.value)}" ${o.selected?'checked':''}></td>
-        <td title="${esc(data.title)}">${esc(data.title)}</td>
-        <td>${esc(data.discipline)}</td>
-        <td class="purchase-date-cell">${esc(data.baseDate)}</td>
-        <td class="purchase-date-cell">${esc(data.plannedDate)}</td>
-      </tr>
-    `).join('');
-  }
-
-  activityBody?.addEventListener('change',e=>{
-    const input=e.target.closest('[data-activity-check]');
-    if(!input||!activitiesSelect)return;
-
-    const option=Array.from(activitiesSelect.options).find(
-      o=>String(o.value)===String(input.dataset.activityCheck)
-    );
-
-    if(option){
-      option.selected=input.checked;
-      activitiesSelect.dispatchEvent(new Event('change',{bubbles:true}));
-      let count=0;
-      for(const o of activityOptions()) if(o.selected) count++;
-      if(selectedCount)selectedCount.textContent=count;
-    }
-  });
-
-  activitySearch?.addEventListener('input',()=>{
-    if(activitySearchFrame)cancelAnimationFrame(activitySearchFrame);
-    activitySearchFrame=requestAnimationFrame(renderActivities);
-  });
-
-  activityClear?.addEventListener('click',()=>{
-    activitySearch.value='';
-    activitySearch.focus();
-    renderActivities();
-  });
-
-  qs('#clear-activities')?.addEventListener('click',()=>{
-    activityOptions().forEach(o=>o.selected=false);
-    activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));
-    renderActivities();
-  });
 
   /* ITENS / FORMSET */
   const items=qs('#items-container'),addItem=qs('#add-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),template=qs('#empty-form-template');

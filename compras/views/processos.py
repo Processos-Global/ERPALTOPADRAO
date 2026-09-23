@@ -1369,6 +1369,7 @@ def nova_compra_avulsa(request):
         try:
             processo = criar_processo_avulso(
                 obra=form.cleaned_data["obra"],
+                apropriacao=form.cleaned_data["apropriacao"],
                 titulo=form.cleaned_data["titulo"],
                 comprador=form.cleaned_data.get("comprador"),
                 descricao=form.cleaned_data.get("descricao", ""),
@@ -1512,9 +1513,9 @@ def novo_processo(request):
                     ]
                 ),
 
-                atividades=(
+                apropriacao=(
                     form.cleaned_data[
-                        "atividades"
+                        "apropriacao"
                     ]
                 ),
 

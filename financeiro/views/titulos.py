@@ -11,7 +11,7 @@ from django.views.decorators.http import require_POST
 
 from cadastros.models import Fornecedor
 from financeiro.forms import TituloPagarForm
-from financeiro.models import AprovacaoTituloFinanceiro, TituloPagar
+from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
 from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
 from financeiro.services.notificacoes import notificar_aprovadores
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
@@ -28,6 +28,8 @@ def titulos_lista(request):
     origem = (request.GET.get("origem") or "").strip()
     obra = (request.GET.get("obra") or "").strip()
     fornecedor = (request.GET.get("fornecedor") or "").strip()
+    apropriacao = (request.GET.get("apropriacao") or "").strip()
+    classe = (request.GET.get("classe") or "").strip()
     periodo = (request.GET.get("periodo") or "90").strip()
     atalho = (request.GET.get("atalho") or "").strip()
 
@@ -49,6 +51,10 @@ def titulos_lista(request):
         qs = qs.filter(obra_id=obra)
     if fornecedor:
         qs = qs.filter(fornecedor_id=fornecedor)
+    if apropriacao:
+        qs = qs.filter(plano_financeiro_id=apropriacao)
+    if classe:
+        qs = qs.filter(plano_financeiro__pai_id=classe)
 
     if atalho == "vencidos":
         qs = qs.filter(vencimento__lt=hoje).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
@@ -76,7 +82,9 @@ def titulos_lista(request):
         "origem_choices": TituloPagar.Origem.choices[:4],
         "obras": Obra.objects.all().order_by("id"),
         "fornecedores": Fornecedor.objects.filter(ativo=True).order_by("nome"),
-        "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "periodo": periodo, "atalho": atalho},
+        "classes_financeiras": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome"),
+        "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False).select_related("pai").order_by("pai__codigo", "codigo", "nome"),
+        "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "apropriacao": apropriacao, "classe": classe, "periodo": periodo, "atalho": atalho},
         "kpi_vencidos": sum((x.saldo_aberto for x in vencidos), Decimal("0")),
         "kpi_7": sum((x.saldo_aberto for x in sete), Decimal("0")),
         "kpi_aprovacao": sum((x.saldo_aberto for x in aprovacao), Decimal("0")),
@@ -117,7 +125,7 @@ def titulo_detalhe(request, pk):
     titulo = get_object_or_404(
         TituloPagar.objects.select_related(
             "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
-        ).prefetch_related("aprovacoes__usuario", "historico__usuario"),
+        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais"),
         pk=pk,
     )
     recebimentos = []
@@ -139,7 +147,7 @@ def titulo_detalhe(request, pk):
 @financeiro_acao_required("EDITAR_TITULOS")
 def titulo_editar(request, pk):
     titulo = get_object_or_404(TituloPagar.objects.select_related("fornecedor"), pk=pk)
-    if titulo.status == TituloPagar.Status.PAGO:
+    if titulo.esta_pago:
         messages.error(request, "Conta paga não pode ser editada. Estorne o pagamento primeiro.")
         return redirect("financeiro:titulo_detalhe", pk=pk)
 
@@ -182,6 +190,62 @@ def titulo_decidir(request, pk):
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:titulo_detalhe", pk=pk)
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_configurar(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    # Depois de um pagamento efetivado, dados financeiros da conta ficam
+    # imutáveis até que o pagamento seja estornado. Usamos esta_pago em vez de
+    # testar somente o status para também proteger eventuais dados legados em
+    # que exista pagamento efetivado antes da sincronização do status.
+    if titulo.esta_pago:
+        messages.error(
+            request,
+            "Conta paga não pode ter apropriação ou vencimento alterados. "
+            "Estorne o pagamento primeiro."
+        )
+        return redirect("financeiro:titulos")
+
+    apropriacao_id = (request.POST.get("apropriacao") or "").strip()
+    vencimento_txt = (request.POST.get("vencimento") or "").strip()
+    dados = {}
+
+    if apropriacao_id:
+        apropriacao = get_object_or_404(PlanoFinanceiro, pk=apropriacao_id, ativo=True, pai__isnull=False)
+        dados["plano_financeiro"] = apropriacao
+
+    if titulo.origem != TituloPagar.Origem.GRANDE_FORNECEDOR:
+        from django.utils.dateparse import parse_date
+        vencimento = parse_date(vencimento_txt) if vencimento_txt else None
+        if vencimento:
+            dados["vencimento"] = vencimento
+
+    if not dados:
+        messages.warning(request, "Nenhuma alteração informada.")
+        return redirect("financeiro:titulos")
+
+    atualizar_titulo(titulo, usuario=request.user, dados=dados, motivo="Vencimento/apropriação ajustados na lista de Contas a Pagar.")
+
+    # Na operação diária, salvar o vencimento já conclui a preparação da conta.
+    # Se todos os requisitos estiverem preenchidos, ela segue automaticamente
+    # para aprovação sem exigir um segundo botão/segunda etapa.
+    if titulo.status not in {
+        TituloPagar.Status.AGUARDANDO_APROVACAO,
+        TituloPagar.Status.APROVADO,
+        TituloPagar.Status.PAGO,
+        TituloPagar.Status.CANCELADO,
+    }:
+        try:
+            enviar_para_aprovacao(titulo, usuario=request.user)
+            notificar_aprovadores(titulo)
+            messages.success(request, f"Conta {titulo.numero} atualizada e enviada para aprovação.")
+        except ValidationError as exc:
+            messages.warning(request, f"Conta {titulo.numero} salva, mas ainda não foi enviada: {'; '.join(exc.messages)}")
+    else:
+        messages.success(request, f"Conta {titulo.numero} atualizada.")
+    return redirect("financeiro:titulos")
 
 
 @financeiro_acao_required("EDITAR_TITULOS")

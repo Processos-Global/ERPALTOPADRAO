@@ -17,6 +17,8 @@ def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias
     Lançamento manual usa fornecedor cadastrado, obra obrigatória e parcelas
     independentes. Cada parcela segue aprovação e pagamento integral próprios.
     """
+    materiais = dados.pop("materiais", None)
+    dados.pop("tipo_pagamento", None)
     fornecedor = dados.get("fornecedor")
     if fornecedor and not dados.get("beneficiario_nome"):
         dados["beneficiario_nome"] = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
@@ -24,6 +26,10 @@ def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias
         raise ValueError("A obra é obrigatória para Conta a Pagar.")
     if not fornecedor:
         raise ValueError("Selecione um beneficiário / fornecedor cadastrado.")
+    if not dados.get("vencimento"):
+        raise ValueError("Informe a data de vencimento.")
+    if not (dados.get("especificacao_pagamento") or "").strip():
+        raise ValueError("Informe o que está sendo pago.")
 
     quantidade = int(quantidade_parcelas or 1)
     intervalo = int(intervalo_dias or 30)
@@ -49,6 +55,8 @@ def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias
             criado_por=usuario,
             **parcela_dados,
         )
+        if materiais is not None:
+            titulo.materiais.set(materiais)
         registrar_evento(
             titulo,
             "CRIADO_MANUAL",
@@ -68,9 +76,13 @@ def criar_titulo_manual(*, usuario=None, **dados):
 
 @transaction.atomic
 def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar atualizados."):
+    if titulo.status == TituloPagar.Status.PAGO:
+        raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento antes de qualquer ajuste financeiro.")
+    materiais = dados.pop("materiais", None)
+    dados.pop("tipo_pagamento", None)
     criticos = {
         "valor_original", "desconto", "juros", "multa", "outros_acrescimos",
-        "vencimento", "fornecedor", "beneficiario_nome", "beneficiario_documento", "obra",
+        "vencimento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento", "obra",
     }
     alterou_critico = False
     for campo, valor in dados.items():
@@ -90,6 +102,8 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
         registrar_evento(titulo, "APROVACAO_REABERTA", "A Conta a Pagar voltou para aprovação porque dados financeiros foram alterados.", usuario)
 
     titulo.save()
+    if materiais is not None:
+        titulo.materiais.set(materiais)
     registrar_evento(titulo, "ATUALIZADO", motivo, usuario)
     return titulo
 

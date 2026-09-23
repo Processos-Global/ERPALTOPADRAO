@@ -12,7 +12,6 @@ STATUS_ABERTOS = {
     TituloPagar.Status.PREVISTA,
     TituloPagar.Status.AGUARDANDO_APROVACAO,
     TituloPagar.Status.APROVADO,
-    TituloPagar.Status.REJEITADO,
 }
 
 

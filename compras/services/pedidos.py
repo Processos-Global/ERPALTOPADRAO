@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -10,6 +11,7 @@ from compras.models import (
     HistoricoPrevisaoPedido,
     PedidoCompra,
     PedidoCompraItem,
+    ParcelaPrevistaPedido,
     ProcessoCompra,
     RecebimentoPedido,
     RecebimentoPedidoItem,
@@ -30,6 +32,94 @@ from .numeracao import gerar_numero
 from .valores import calcular_total_proposta
 
 ZERO = Decimal("0")
+
+
+def _quantidade_parcelas_da_condicao(condicao):
+    """Extrai o número de parcelas da condição comercial salva em Compras."""
+    texto = (condicao or "").strip()
+    if not texto:
+        return 1
+
+    match = re.search(r"parcelado\s+em\s+(\d+)x", texto, flags=re.IGNORECASE)
+    if match:
+        return max(int(match.group(1)), 1)
+
+    # Condições padronizadas como 30/60 ou 30/60/90 representam 2 e 3 parcelas.
+    antes_dias = re.sub(r"\s*dias?\s*$", "", texto, flags=re.IGNORECASE)
+    if re.fullmatch(r"\d+(?:\s*/\s*\d+)+", antes_dias):
+        return len(re.findall(r"\d+", antes_dias))
+
+    return 1
+
+
+def _valores_parcelados(total, quantidade):
+    total = Decimal(total or 0).quantize(Decimal("0.01"))
+    quantidade = max(int(quantidade or 1), 1)
+    base = (total / quantidade).quantize(Decimal("0.01"))
+    valores = [base for _ in range(quantidade)]
+    diferenca = total - sum(valores, Decimal("0"))
+    valores[0] += diferenca
+    return valores
+
+
+def sincronizar_parcelas_previstas_condicao(pedido):
+    """Mantém o parcelamento estruturado do pedido coerente com a condição comercial.
+
+    O fluxo de Cotação/Negociação continua exatamente igual. Esta função apenas
+    transforma condições como ``Parcelado em 3x`` e ``30/60/90 dias`` em registros
+    de ParcelaPrevistaPedido, que o Financeiro já sabe consumir.
+    """
+    quantidade = _quantidade_parcelas_da_condicao(pedido.condicao_pagamento)
+    atuais = list(pedido.parcelas_previstas.order_by("ordem", "id"))
+
+    if quantidade <= 1:
+        if atuais:
+            pedido.parcelas_previstas.all().delete()
+        return []
+
+    valores = _valores_parcelados(pedido.valor_total, quantidade)
+
+    # Mantém os mesmos IDs quando a quantidade de parcelas não mudou. Isso é
+    # importante porque o Financeiro usa o ID da parcela como chave idempotente.
+    if len(atuais) == quantidade:
+        for indice, (parcela, valor) in enumerate(zip(atuais, valores), start=1):
+            alterados = []
+            descricao = f"Parcela {indice}/{quantidade}"
+            if parcela.ordem != indice:
+                parcela.ordem = indice
+                alterados.append("ordem")
+            if parcela.valor != valor:
+                parcela.valor = valor
+                alterados.append("valor")
+            if parcela.percentual is not None:
+                parcela.percentual = None
+                alterados.append("percentual")
+            if parcela.descricao != descricao:
+                parcela.descricao = descricao
+                alterados.append("descricao")
+            if parcela.evento_gatilho != ParcelaPrevistaPedido.Gatilho.DATA:
+                parcela.evento_gatilho = ParcelaPrevistaPedido.Gatilho.DATA
+                alterados.append("evento_gatilho")
+            if alterados:
+                parcela.save(update_fields=alterados)
+        return atuais
+
+    # A quantidade comercial mudou: substitui a estrutura para refletir a nova
+    # condição. Na sincronização seguinte o Financeiro cancela as referências
+    # antigas ainda não pagas e cria as novas parcelas.
+    pedido.parcelas_previstas.all().delete()
+    parcelas = [
+        ParcelaPrevistaPedido(
+            pedido=pedido,
+            ordem=indice,
+            valor=valor,
+            evento_gatilho=ParcelaPrevistaPedido.Gatilho.DATA,
+            descricao=f"Parcela {indice}/{quantidade}",
+        )
+        for indice, valor in enumerate(valores, start=1)
+    ]
+    ParcelaPrevistaPedido.objects.bulk_create(parcelas)
+    return parcelas
 
 
 def _sincronizar_grande_fornecedor_pedido(pedido):
@@ -300,6 +390,10 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
                     {"pedido_id": existente.pk, "itens_adicionados": len(faltantes)},
                 )
 
+            sincronizar_parcelas_previstas_condicao(existente)
+            # O post_save do PedidoCompra sincroniza as parcelas já estruturadas
+            # com o Financeiro.
+            existente.save(update_fields=["atualizado_em"])
             pedidos_resultado.append(existente)
             continue
 
@@ -333,6 +427,10 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
             )
             for a in grupo
         ])
+        sincronizar_parcelas_previstas_condicao(pedido)
+        # O primeiro post_save ocorre na criação do pedido, antes das parcelas.
+        # Este save final dispara a integração financeira com a estrutura completa.
+        pedido.save(update_fields=["atualizado_em"])
         pedidos_resultado.append(pedido)
         registrar_evento(
             p,

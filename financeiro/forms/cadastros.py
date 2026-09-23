@@ -18,6 +18,18 @@ class PlanoFinanceiroForm(ERPModelForm):
     class Meta:
         model = PlanoFinanceiro
         fields = ("codigo", "nome", "tipo", "pai", "ativo")
+        labels = {
+            "nome": "Classe / apropriação",
+            "pai": "Classe financeira (deixe vazio para cadastrar uma classe)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome")
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        self.fields["pai"].queryset = qs
+        self.fields["pai"].empty_label = "— Este registro é uma classe financeira —"
 
 
 class DespesaRecorrenteForm(ERPModelForm):

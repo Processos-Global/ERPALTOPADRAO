@@ -1,23 +1,41 @@
 {% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
-{% block financeiro_title %}Aprovações financeiras{% endblock %}
+{% block financeiro_title %}Aprovações{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Fila de decisão</div><h1 class="fin-title">Aprovações financeiras</h1><div class="fin-sub">Revise beneficiário, obra, origem, parcela e valor antes de decidir.</div></div><div class="fin-actions"><span class="fin-btn">{{ titulos|length }} pendência{{ titulos|length|pluralize }}</span><span class="fin-btn fin-btn--soft">{{ total|moeda_br }}</span></div></header>
+<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Fila de decisão</div><h1 class="fin-title">Aprovações</h1><div class="fin-sub">Visualização em linha, com valor, vencimento, fornecedor, apropriação e itens do pedido.</div></div><div class="fin-actions"><span class="fin-badge fin-badge--info">{{ titulos|length }} pendência{{ titulos|length|pluralize }}</span><span class="fin-badge fin-badge--warning">{{ total|moeda_br }}</span></div></header>
+
+<form class="fin-toolbar" method="get"><div class="fin-filter-field"><label>Buscar</label><input class="fin-control" name="q" value="{{ filtros.q }}" placeholder="Conta, fornecedor ou descrição"></div><div class="fin-filter-field"><label>Obra</label><select class="fin-control" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div><div class="fin-filter-field"><label>Origem</label><select class="fin-control" name="origem"><option value="">Todas</option>{% for v,r in origem_choices %}<option value="{{ v }}" {% if filtros.origem == v %}selected{% endif %}>{{ r }}</option>{% endfor %}</select></div><div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary">Filtrar</button><a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Limpar</a></div></form>
+
 {% if titulos %}
 <section class="fin-section">
-  <div class="fin-section__head"><div><h2>Contas aguardando aprovação</h2><p>Selecione várias contas para aprovar em lote ou abra uma conta para revisar documentos.</p></div><form id="bulk-approval" method="post" action="{% url 'financeiro:aprovacoes_lote' %}">{% csrf_token %}<button class="fin-btn fin-btn--primary">Aprovar selecionados</button></form></div>
-  <div class="fin-section__body--flush">
-  {% for titulo in titulos %}<div class="fin-approval-bar">
-    <div class="fin-approval-bar__check"><input class="fin-check" type="checkbox" name="titulo" value="{{ titulo.pk }}" form="bulk-approval"></div>
-    <div class="fin-approval-bar__main"><a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}"><strong>{{ titulo.beneficiario_exibicao }}</strong><small>{{ titulo.numero }} · {{ titulo.get_origem_display }}{% if titulo.origem_detalhe %} · {{ titulo.origem_detalhe }}{% endif %}</small></a></div>
-    <div class="fin-approval-bar__fact"><span>Vencimento</span><strong>{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</strong></div>
-    <div class="fin-approval-bar__fact"><span>Obra</span><strong>{{ titulo.obra|default:"—" }}</strong></div>
-    <div class="fin-approval-bar__fact fin-approval-bar__optional"><span>Parcela</span><strong>{{ titulo.rotulo_parcela }}</strong></div>
-    <div class="fin-approval-bar__fact fin-approval-bar__optional"><span>Origem</span><strong>{{ titulo.get_origem_display }}</strong></div>
-    <div class="fin-approval-bar__money">{{ titulo.valor_liquido|moeda_br }}</div>
-  </div>
-  <div class="fin-approval-actions"><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Abrir conta</a><form class="fin-inline-form" method="post" action="{% url 'financeiro:titulo_decidir' titulo.pk %}">{% csrf_token %}<input class="fin-control" name="observacao" placeholder="Observação opcional"><button class="fin-btn fin-btn--danger" name="decisao" value="REJEITADO">Rejeitar</button><button class="fin-btn fin-btn--primary" name="decisao" value="APROVADO">Aprovar</button></form></div>
-  {% endfor %}
+  <div class="fin-section__head"><div><h2>Contas aguardando decisão</h2><p>Selecione várias linhas para aprovar em lote ou decida individualmente à direita.</p></div><form id="bulk-approval" method="post" action="{% url 'financeiro:aprovacoes_lote' %}">{% csrf_token %}<button class="fin-btn fin-btn--primary">Aprovar selecionados</button></form></div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table" style="font-size:12px">
+      <thead><tr><th style="width:34px"><input type="checkbox" id="check-all"></th><th>Fornecedor / conta</th><th>O que foi comprado/pago</th><th>Obra</th><th>Apropriação</th><th>Venc.</th><th style="text-align:right">Valor</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>
+      {% for titulo in titulos %}
+      <tr>
+        <td><input class="fin-check row-check" type="checkbox" name="titulo" value="{{ titulo.pk }}" form="bulk-approval"></td>
+        <td class="fin-main-cell"><strong>{{ titulo.beneficiario_exibicao }}</strong><small>{{ titulo.numero }} · {{ titulo.descricao }}{% if titulo.parcela_total %} · {{ titulo.rotulo_parcela }}{% endif %}</small></td>
+        <td style="min-width:260px;max-width:420px">
+          {% if titulo.pedido_id %}
+            <div style="display:flex;flex-wrap:wrap;gap:3px 8px;line-height:1.35">
+            {% for item in titulo.pedido.itens.all %}<span><strong>{{ item.descricao }}</strong>{% if item.especificacao %} · {{ item.especificacao }}{% endif %} · {{ item.quantidade|floatformat:"-4" }} {{ item.unidade }}</span>{% if not forloop.last %}<span class="fin-muted">|</span>{% endif %}{% empty %}<span class="fin-muted">Pedido sem itens.</span>{% endfor %}
+            </div>
+          {% elif titulo.especificacao_pagamento %}<div style="white-space:pre-line;line-height:1.35">{{ titulo.especificacao_pagamento }}</div>{% else %}<span class="fin-muted">Sem detalhamento.</span>{% endif %}
+        </td>
+        <td>{{ titulo.obra|default:"—" }}</td>
+        <td>{% if titulo.plano_financeiro %}<strong>{{ titulo.plano_financeiro.nome }}</strong>{% if titulo.plano_financeiro.pai %}<small class="fin-muted" style="display:block">{{ titulo.plano_financeiro.pai.nome }}</small>{% endif %}{% else %}—{% endif %}</td>
+        <td class="fin-date">{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>
+        <td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
+        <td style="white-space:nowrap;text-align:right">
+          <form method="post" action="{% url 'financeiro:titulo_decidir' titulo.pk %}" style="display:inline-flex;gap:5px">{% csrf_token %}<button class="fin-btn fin-btn--sm fin-btn--danger" name="decisao" value="REJEITADO">Reprovar</button><button class="fin-btn fin-btn--sm fin-btn--primary" name="decisao" value="APROVADO">Aprovar</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
   </div>
 </section>
-{% else %}<section class="fin-section"><div class="fin-empty"><strong>Nenhuma aprovação pendente</strong>As contas enviadas para aprovação aparecerão aqui.</div></section>{% endif %}
+{% else %}<section class="fin-section"><div class="fin-empty"><strong>Nenhuma aprovação pendente</strong></div></section>{% endif %}
+<script>const all=document.getElementById('check-all');if(all){all.addEventListener('change',()=>document.querySelectorAll('.row-check').forEach(c=>c.checked=all.checked));}</script>
 {% endblock %}

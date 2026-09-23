@@ -40,6 +40,16 @@ CONDICOES_PAGAMENTO_CHOICES = [
 ]
 
 
+def _parcelas_da_condicao(valor):
+    texto = (valor or "").strip()
+    if texto.startswith("Parcelado em ") and texto.endswith("x"):
+        try:
+            return int(texto.replace("Parcelado em ", "").replace("x", ""))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _numero_para_input(valor):
     """Formata Decimal sem zeros decimais desnecessários para inputs HTML."""
     if valor in (None, ""):
@@ -605,6 +615,9 @@ class NegociacaoForm(forms.Form):
     condicao_pagamento_negociada = forms.ChoiceField(
         required=False, choices=CONDICOES_PAGAMENTO_CHOICES
     )
+    parcelas_pagamento_negociada = forms.IntegerField(
+        required=False, min_value=2, max_value=120, label="Número de parcelas"
+    )
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
 
     def __init__(self, *args, processo=None, **kwargs):
@@ -615,6 +628,18 @@ class NegociacaoForm(forms.Form):
                 processo,
             ).select_related("cotacao__fornecedor", "necessidade")
         _aplicar_classe_campos(self)
+
+    def clean(self):
+        cleaned = super().clean()
+        pagamento = cleaned.get("condicao_pagamento_negociada")
+        parcelas = cleaned.get("parcelas_pagamento_negociada")
+        if pagamento == "Parcelado":
+            if not parcelas:
+                self.add_error("parcelas_pagamento_negociada", "Informe o número de parcelas.")
+            else:
+                cleaned["condicao_pagamento_negociada"] = f"Parcelado em {parcelas}x"
+        cleaned.pop("parcelas_pagamento_negociada", None)
+        return cleaned
 
 
 class AdjudicacaoForm(forms.Form):
@@ -707,7 +732,15 @@ class DecisaoComercialLoteForm(forms.Form):
                 required=False,
                 choices=_choices_com_valor_atual(CONDICOES_PAGAMENTO_CHOICES, pagamento_atual),
                 label="Pagamento negociado",
-                initial=pagamento_atual,
+                initial=("Parcelado" if _parcelas_da_condicao(pagamento_atual) else pagamento_atual),
+            )
+            self.fields[f"parcelas_{sid}"] = forms.IntegerField(
+                required=False,
+                min_value=2,
+                max_value=120,
+                label="Número de parcelas",
+                initial=_parcelas_da_condicao(pagamento_atual),
+                widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
             )
             self.fields[f"observacoes_{sid}"] = forms.CharField(
                 required=False,
@@ -733,6 +766,7 @@ class DecisaoComercialLoteForm(forms.Form):
                 "frete": self[f"frete_{sid}"],
                 "prazo": self[f"prazo_{sid}"],
                 "pagamento": self[f"pagamento_{sid}"],
+                "parcelas": self[f"parcelas_{sid}"],
                 "observacoes": self[f"observacoes_{sid}"],
             }
             self.linhas.append(linha)
@@ -745,16 +779,30 @@ class DecisaoComercialLoteForm(forms.Form):
                 linha["menor_preco"] = menor_preco is not None and linha["item"].valor_unitario_cotado == menor_preco
             self.grupos.append({"necessidade": necessidade, "linhas": linhas, "menor_preco": menor_preco})
 
+    def clean(self):
+        cleaned = super().clean()
+        for linha in self.linhas:
+            sid = str(linha["item"].pk)
+            pagamento = cleaned.get(f"pagamento_{sid}", "")
+            parcelas = cleaned.get(f"parcelas_{sid}")
+            if pagamento == "Parcelado" and not parcelas:
+                self.add_error(f"parcelas_{sid}", "Informe o número de parcelas.")
+        return cleaned
+
     def dados_linhas(self):
         for linha in self.linhas:
             item = linha["item"]
             sid = str(item.pk)
+            pagamento = self.cleaned_data.get(f"pagamento_{sid}", "")
+            parcelas = self.cleaned_data.get(f"parcelas_{sid}")
+            if pagamento == "Parcelado" and parcelas:
+                pagamento = f"Parcelado em {parcelas}x"
             yield {
                 "item": item,
                 "valor_unitario_negociado": self.cleaned_data.get(f"valor_{sid}"),
                 "frete_negociado": self.cleaned_data.get(f"frete_{sid}"),
                 "prazo_entrega_dias_negociado": self.cleaned_data.get(f"prazo_{sid}"),
-                "condicao_pagamento_negociada": self.cleaned_data.get(f"pagamento_{sid}", ""),
+                "condicao_pagamento_negociada": pagamento,
                 "observacoes": self.cleaned_data.get(f"observacoes_{sid}", ""),
             }
 

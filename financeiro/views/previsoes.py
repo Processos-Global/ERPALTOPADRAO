@@ -32,12 +32,14 @@ def previsoes_lista(request):
 
     extras = PrevisaoFinanceira.objects.filter(
         ativa=True,
-        origem=PrevisaoFinanceira.Origem.MANUAL,
-    ).select_related("obra", "fornecedor", "plano_financeiro")
+    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).select_related("obra", "fornecedor", "plano_financeiro")
     # Solicitações avulsas são a única previsão fora de Contas a Pagar.
     # Compras, M.O. e GF entram pela própria parcela/Conta a Pagar.
-    if origem and origem != TituloPagar.Origem.MANUAL:
-        extras = extras.none()
+    if origem:
+        if origem == TituloPagar.Origem.MANUAL:
+            extras = extras.filter(origem__in=[PrevisaoFinanceira.Origem.MANUAL, PrevisaoFinanceira.Origem.RECORRENTE])
+        else:
+            extras = extras.none()
     if obra:
         extras = extras.filter(obra_id=obra)
 
@@ -126,6 +128,6 @@ def sincronizar_compras(request):
     messages.success(
         request,
         f"Financeiro sincronizado: {resultado['compras']} conta(s) de Compras e "
-        f"{resultado['grandes_fornecedores']} de Grandes Fornecedores.",
+        f"{resultado['grandes_fornecedores']} de Grandes Fornecedores e {resultado.get('recorrentes', 0)} recorrência(s) gerada(s).",
     )
     return redirect("financeiro:previsoes")

@@ -458,6 +458,9 @@ def decidir(request, pk):
             decisao=request.POST.get("decisao"),
             usuario=request.user,
             observacao=request.POST.get("observacao", ""),
+            fornecedor=fornecedor,
+            data_vencimento=parse_date(request.POST.get("data_vencimento") or ""),
+            forma_pagamento=request.POST.get("forma_pagamento", ""),
         )
         if pedidos:
             messages.success(
@@ -672,12 +675,18 @@ def incluir_rateio(request, pk, parcela_id):
     processo = _processo(pk)
     parcela = get_object_or_404(ParcelaGrandeFornecedor, pk=parcela_id, fluxo__processo=processo)
     try:
+        fornecedor = None
+        fornecedor_id = request.POST.get("fornecedor")
+        if fornecedor_id:
+            fornecedor = get_object_or_404(Fornecedor, pk=fornecedor_id)
         adicionar_rateio(
             parcela=parcela,
             beneficiario_nome=request.POST.get("beneficiario_nome", ""),
             documento=request.POST.get("documento", ""),
             valor=request.POST.get("valor"),
             observacao=request.POST.get("observacao", ""),
+            fornecedor=fornecedor,
+            data_vencimento=parse_date(request.POST.get("data_vencimento") or ""),
         )
         messages.success(request, "Beneficiário incluído no rateio.")
     except (ValidationError, ValueError) as exc:

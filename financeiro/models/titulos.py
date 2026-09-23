@@ -76,6 +76,12 @@ class TituloPagar(models.Model):
         on_delete=models.PROTECT,
         related_name="titulos",
     )
+    materiais = models.ManyToManyField(
+        "cadastros.Material",
+        blank=True,
+        related_name="titulos_financeiros_manuais",
+        help_text="Materiais selecionados em solicitações avulsas do tipo material.",
+    )
 
     pedido = models.ForeignKey(
         "compras.PedidoCompra",
@@ -115,6 +121,10 @@ class TituloPagar(models.Model):
     condicao_pagamento = models.CharField(max_length=255, blank=True)
 
     descricao = models.CharField(max_length=300)
+    especificacao_pagamento = models.TextField(
+        blank=True,
+        help_text="Detalhamento do que está sendo pago: itens, especificações, parcela e origem.",
+    )
     documento_numero = models.CharField(max_length=100, blank=True, db_index=True)
     arquivo_documento = models.FileField(
         storage=private_media_storage,

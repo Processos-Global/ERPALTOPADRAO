@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from compras.models import NecessidadeCompra, ProcessoCompra, ProcessoCompraAtividade
+from compras.models import NecessidadeCompra, ProcessoCompra
 
 from .auditoria import registrar_evento
 from .numeracao import gerar_numero
@@ -44,7 +44,7 @@ def criar_processo(
     item_cronograma,
     titulo,
     usuario,
-    atividades,
+    apropriacao,
     itens,
     comprador=None,
     descricao="",
@@ -59,18 +59,16 @@ def criar_processo(
     # mais bloqueio quando já existe outro processo ativo para o mesmo item
     # do Cronograma de Suprimentos.
 
-    atividades = list(atividades)
     itens = list(itens)
+    if apropriacao is None:
+        raise ValidationError("Selecione a apropriação financeira da compra.")
+    if apropriacao.pai_id is None:
+        raise ValidationError("Selecione uma apropriação, não apenas a classe financeira.")
 
     # Somente GRANDE_FORNECEDOR usa o fluxo paralelo.
     # Ausente, legado ou não reconhecido permanece no fluxo normal principal.
     fluxo_grande_fornecedor = bool(item_cronograma.usa_fluxo_grande_fornecedor)
 
-    # Regra geral: a compra deve estar vinculada a pelo menos uma atividade
-    # do Cronograma Físico. A obra/cronograma 02-04-02 é a exceção porque não
-    # possui Cronograma Físico e pode comprar diretamente pelo de Suprimentos.
-    if not atividades and not permite_compra_sem_atividade(item_cronograma):
-        raise ValidationError("Selecione pelo menos uma atividade relacionada à compra.")
     if not itens and not fluxo_grande_fornecedor:
         raise ValidationError("Inclua pelo menos um item para iniciar a compra.")
     if fluxo_grande_fornecedor:
@@ -78,15 +76,10 @@ def criar_processo(
         # Os itens reais nascem exclusivamente na matriz de compatibilização.
         itens = []
 
-    for atividade in atividades:
-        if atividade.obra_id != obra_id:
-            raise ValidationError(
-                "Todas as atividades devem pertencer à mesma obra do suprimento."
-            )
-
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra_id=obra_id,
+        apropriacao=apropriacao,
         item_cronograma=item_cronograma,
         titulo=titulo or item_cronograma.item,
         fluxo_grande_fornecedor=fluxo_grande_fornecedor,
@@ -100,21 +93,6 @@ def criar_processo(
         etapa_atual=(ProcessoCompra.Etapa.COMPATIBILIZACAO if fluxo_grande_fornecedor else ProcessoCompra.Etapa.COTACAO),
         status=(ProcessoCompra.Status.EM_COMPATIBILIZACAO if fluxo_grande_fornecedor else (ProcessoCompra.Status.SOLICITACAO_COTACAO if iniciar_cotacao else ProcessoCompra.Status.RASCUNHO)),
         criado_por=usuario,
-    )
-
-    # As atividades são vínculo do PROCESSO, não de cada linha de item.
-    # O usuário seleciona esse conjunto uma única vez na abertura.
-    atividades_por_id = {atividade.pk: atividade for atividade in atividades}
-
-    ProcessoCompraAtividade.objects.bulk_create(
-        [
-            ProcessoCompraAtividade(
-                processo=processo,
-                atividade=atividade,
-                criado_por=usuario,
-            )
-            for atividade in atividades_por_id.values()
-        ]
     )
 
     necessidades = []
@@ -147,7 +125,7 @@ def criar_processo(
         "CRIACAO",
         usuario,
         (
-            f"Compra criada com {len(atividades_por_id)} atividade(s) e {len(necessidades)} item(ns). "
+            f"Compra criada com apropriação {apropriacao.caminho} e {len(necessidades)} item(ns). "
             + (
                 "Os micro itens e fornecedores serão definidos na matriz de Grande Fornecedor."
                 if fluxo_grande_fornecedor
@@ -197,14 +175,6 @@ def incluir_necessidade(
     quantidade = Decimal(str(quantidade))
     if quantidade <= 0:
         raise ValidationError("A quantidade deve ser maior que zero.")
-    if (
-        processo.item_cronograma_id
-        and not processo.vinculos_atividades.exists()
-        and not permite_compra_sem_atividade(processo.item_cronograma)
-    ):
-        raise ValidationError(
-            "O processo precisa possuir ao menos uma atividade relacionada antes de receber itens."
-        )
     if material is None or not material.ativo:
         raise ValidationError("Selecione um material ativo do catálogo.")
 
@@ -297,14 +267,17 @@ def excluir_necessidade(*, processo, necessidade, usuario):
 
 
 @transaction.atomic
-def criar_processo_avulso(*, obra, titulo, usuario, itens, comprador=None, descricao="", observacao="", iniciar_cotacao=True):
+def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprador=None, descricao="", observacao="", iniciar_cotacao=True):
     itens = list(itens)
     if not itens:
         raise ValidationError("Inclua pelo menos um item para iniciar a compra avulsa.")
+    if apropriacao is None or apropriacao.pai_id is None:
+        raise ValidationError("Selecione uma apropriação financeira válida.")
 
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra=obra,
+        apropriacao=apropriacao,
         item_cronograma=None,
         titulo=(titulo or "Compra avulsa").strip(),
         fluxo_grande_fornecedor=False,
@@ -335,7 +308,7 @@ def criar_processo_avulso(*, obra, titulo, usuario, itens, comprador=None, descr
             observacao=(item.get("observacao") or "").strip(),
         ))
     NecessidadeCompra.objects.bulk_create(necessidades)
-    registrar_evento(processo, "CRIACAO_AVULSA", usuario, f"Compra avulsa criada com {len(necessidades)} item(ns), sem vínculo com o Cronograma de Suprimentos.")
+    registrar_evento(processo, "CRIACAO_AVULSA", usuario, f"Compra avulsa criada com {len(necessidades)} item(ns) e apropriação {apropriacao.caminho}.")
     if iniciar_cotacao:
         notificar_novo_processo_para_cotacao(processo)
     return processo

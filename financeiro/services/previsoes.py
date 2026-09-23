@@ -6,6 +6,7 @@ from django.db import transaction
 
 from compras.models import (
     GrandeFornecedorProcesso,
+    GrandeFornecedorItem,
     ParcelaGrandeFornecedor,
     PedidoCompra,
 )
@@ -25,6 +26,32 @@ def _nome_fornecedor(fornecedor):
     if not fornecedor:
         return ""
     return getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
+
+
+
+
+def _especificacao_pedido(pedido):
+    linhas = []
+    for item in pedido.itens.all().order_by("id"):
+        linha = f"{item.descricao} · {item.quantidade} {item.unidade}"
+        if item.especificacao:
+            linha += f" · Especificação: {item.especificacao.strip()}"
+        linhas.append(linha)
+    if pedido.observacoes:
+        linhas.append(f"Observações do pedido: {pedido.observacoes.strip()}")
+    return "\n".join(linhas)
+
+
+def _especificacao_gf(fluxo, parcela):
+    linhas = [f"Grande Fornecedor {fluxo.processo.numero}", f"Parcela: {parcela.descricao}"]
+    for item in fluxo.itens.exclude(status=GrandeFornecedorItem.Status.CANCELADO).order_by("ordem", "id"):
+        linha = f"{item.item} · {item.quantidade} {item.unidade}"
+        if item.especificacao:
+            linha += f" · Especificação: {item.especificacao.strip()}"
+        if item.pavimento or item.local:
+            linha += f" · Local: {' / '.join(x for x in [item.pavimento, item.local] if x)}"
+        linhas.append(linha)
+    return "\n".join(linhas)
 
 
 def _valor_parcela_pedido(pedido, parcela):
@@ -65,7 +92,7 @@ def _status_integrado_atual(conta, *, cancelado=False, liberado=False):
 
 
 def _upsert_conta_integrada(*, referencia, defaults, cancelado=False, liberado=False):
-    conta = TituloPagar.objects.filter(referencia_externa=referencia).first()
+    conta = TituloPagar.objects.select_for_update().filter(referencia_externa=referencia).first()
     criada = conta is None
     if criada:
         conta = TituloPagar(
@@ -74,18 +101,51 @@ def _upsert_conta_integrada(*, referencia, defaults, cancelado=False, liberado=F
             status=TituloPagar.Status.PREVISTA,
         )
 
+    # Uma obrigação já paga é documento financeiro histórico: a sincronização
+    # nunca reescreve beneficiário, valor, vencimento ou conteúdo.
+    if not criada and conta.status == TituloPagar.Status.PAGO:
+        return conta
+
+    criticos = {
+        "valor_original", "vencimento", "fornecedor", "beneficiario_nome",
+        "beneficiario_documento", "obra", "pedido", "plano_financeiro",
+    }
+    alteracoes_criticas = {}
     for campo, valor in defaults.items():
-        # Se a origem ainda não conhece a data, preserva um vencimento que o
-        # Financeiro tenha definido manualmente. Quando a origem passar a
-        # informar uma data, ela volta a ser a fonte oficial.
         if campo == "vencimento" and valor is None and not criada and conta.vencimento:
             continue
+        anterior = getattr(conta, campo, None)
+        if not criada and campo in criticos and anterior != valor:
+            alteracoes_criticas[campo] = {"anterior": str(anterior or ""), "novo": str(valor or "")}
         setattr(conta, campo, valor)
 
-    conta.status = _status_integrado_atual(conta, cancelado=cancelado, liberado=liberado)
+    status_anterior = conta.status
+    if cancelado:
+        conta.status = TituloPagar.Status.CANCELADO
+    elif alteracoes_criticas and status_anterior in {TituloPagar.Status.APROVADO, TituloPagar.Status.REJEITADO}:
+        conta.ciclo_aprovacao += 1
+        conta.status = TituloPagar.Status.AGUARDANDO_APROVACAO
+    else:
+        conta.status = _status_integrado_atual(conta, cancelado=cancelado, liberado=liberado)
+
     conta.save()
     if criada:
         registrar_evento(conta, "CRIADO_INTEGRACAO", "Conta criada automaticamente pela origem integrada.", None)
+    elif alteracoes_criticas:
+        registrar_evento(
+            conta,
+            "SINCRONIZACAO_ORIGEM",
+            "Dados financeiros foram atualizados pela origem integrada.",
+            None,
+            alteracoes_criticas,
+        )
+        if status_anterior == TituloPagar.Status.APROVADO:
+            registrar_evento(
+                conta,
+                "APROVACAO_REABERTA",
+                "A aprovação foi reaberta após alteração de valor, vencimento ou beneficiário na origem.",
+                None,
+            )
     return conta
 
 
@@ -120,9 +180,11 @@ def sincronizar_contas_pedido(pedido):
                     "fornecedor": pedido.fornecedor,
                     "beneficiario_nome": beneficiario,
                     "obra": pedido.obra,
+                    "plano_financeiro": pedido.processo.apropriacao,
                     "descricao": f"{pedido.numero} · {descricao_parcela}",
+                    "especificacao_pagamento": _especificacao_pedido(pedido),
                     "valor_original": valor,
-                    "vencimento": _data_parcela_pedido(pedido, parcela),
+                    "vencimento": None,
                     "parcela_ordem": indice,
                     "parcela_total": total_parcelas,
                     "parcela_descricao": descricao_parcela,
@@ -143,9 +205,11 @@ def sincronizar_contas_pedido(pedido):
                 "fornecedor": pedido.fornecedor,
                 "beneficiario_nome": beneficiario,
                 "obra": pedido.obra,
+                "plano_financeiro": pedido.processo.apropriacao,
                 "descricao": f"Pedido {pedido.numero} · {beneficiario}",
+                "especificacao_pagamento": _especificacao_pedido(pedido),
                 "valor_original": pedido.valor_total,
-                "vencimento": pedido.previsao_entrega_atual or pedido.previsao_entrega_original,
+                "vencimento": None,
                 "parcela_ordem": 1,
                 "parcela_total": 1,
                 "parcela_descricao": "Pagamento único",
@@ -206,18 +270,20 @@ def sincronizar_contas_grande_fornecedor(fluxo):
                     defaults={
                         "origem": TituloPagar.Origem.GRANDE_FORNECEDOR,
                         "origem_detalhe": f"GF {fluxo.processo.numero}",
-                        "fornecedor": None,
-                        "beneficiario_nome": rateio.beneficiario_nome,
+                        "fornecedor": rateio.fornecedor,
+                        "beneficiario_nome": rateio.beneficiario_nome or _nome_fornecedor(rateio.fornecedor),
                         "beneficiario_documento": rateio.documento,
                         "obra": fluxo.processo.obra,
+                        "plano_financeiro": fluxo.processo.apropriacao,
                         "descricao": f"{fluxo.processo.numero} · {parcela.descricao}",
+                        "especificacao_pagamento": _especificacao_gf(fluxo, parcela),
                         "valor_original": rateio.valor,
-                        "vencimento": parcela.data_prevista,
+                        "vencimento": rateio.data_vencimento or parcela.data_prevista,
                         "parcela_ordem": indice,
                         "parcela_total": total_parcelas,
                         "parcela_descricao": parcela.descricao,
                         "gatilho_pagamento": parcela.get_gatilho_display(),
-                        "condicao_pagamento": fluxo.condicao_pagamento_resumo or "",
+                        "condicao_pagamento": " · ".join(x for x in [fluxo.condicao_pagamento_resumo, rateio.forma_pagamento] if x),
                         "observacao": rateio.observacao,
                     },
                 )
@@ -241,7 +307,9 @@ def sincronizar_contas_grande_fornecedor(fluxo):
                         "fornecedor": None,
                         "beneficiario_nome": "Beneficiário não definido",
                         "obra": fluxo.processo.obra,
+                        "plano_financeiro": fluxo.processo.apropriacao,
                         "descricao": f"{fluxo.processo.numero} · saldo a distribuir · {parcela.descricao}",
+                        "especificacao_pagamento": _especificacao_gf(fluxo, parcela),
                         "valor_original": saldo,
                         "vencimento": parcela.data_prevista,
                         "parcela_ordem": indice,
@@ -266,7 +334,9 @@ def sincronizar_contas_grande_fornecedor(fluxo):
                     "fornecedor": fornecedor_principal,
                     "beneficiario_nome": nome_principal or "Beneficiário não definido",
                     "obra": fluxo.processo.obra,
+                    "plano_financeiro": fluxo.processo.apropriacao,
                     "descricao": f"{fluxo.processo.numero} · {parcela.descricao}",
+                    "especificacao_pagamento": _especificacao_gf(fluxo, parcela),
                     "valor_original": valor_parcela,
                     "vencimento": parcela.data_prevista,
                     "parcela_ordem": indice,
@@ -347,7 +417,10 @@ def sincronizar_todas_integracoes():
         total_compras += sincronizar_contas_pedido(pedido).count()
     for fluxo in GrandeFornecedorProcesso.objects.select_related("processo", "fornecedor_escolhido").prefetch_related("parcelas__rateios"):
         total_gf += sincronizar_contas_grande_fornecedor(fluxo).count()
-    return {"compras": total_compras, "grandes_fornecedores": total_gf}
+    hoje = date.today()
+    fim = hoje + timedelta(days=365)
+    recorrentes = gerar_previsoes_recorrentes(hoje, fim)
+    return {"compras": total_compras, "grandes_fornecedores": total_gf, "recorrentes": recorrentes}
 
 
 def _data_segura(ano, mes, dia):

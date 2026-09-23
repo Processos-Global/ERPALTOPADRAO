@@ -907,7 +907,7 @@ def adicionar_parcela(*, processo, descricao, percentual=None, valor=None, data_
 
 
 @transaction.atomic
-def adicionar_rateio(*, parcela, beneficiario_nome, documento, valor, observacao=""):
+def adicionar_rateio(*, parcela, beneficiario_nome, documento, valor, observacao="", fornecedor=None, data_vencimento=None, forma_pagamento=""):
     valor = Decimal(str(valor))
     if valor <= 0:
         raise ValidationError("O valor do rateio deve ser maior que zero.")
@@ -915,10 +915,23 @@ def adicionar_rateio(*, parcela, beneficiario_nome, documento, valor, observacao
         ja_rateado = sum(parcela.rateios.values_list("valor", flat=True), ZERO)
         if ja_rateado + valor > parcela.valor:
             raise ValidationError("O rateio ultrapassa o valor previsto da parcela.")
+    nome = (beneficiario_nome or "").strip()
+    if fornecedor and not nome:
+        nome = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
+    if not nome:
+        raise ValidationError("Informe o beneficiário do pagamento.")
+    if not data_vencimento:
+        raise ValidationError("Informe o vencimento deste pagamento GF.")
+    forma_pagamento = (forma_pagamento or "").strip()
+    if not forma_pagamento:
+        raise ValidationError("Informe a forma de pagamento deste beneficiário.")
     return RateioParcelaGrandeFornecedor.objects.create(
         parcela=parcela,
-        beneficiario_nome=(beneficiario_nome or "").strip(),
+        fornecedor=fornecedor,
+        beneficiario_nome=nome,
         documento=(documento or "").strip(),
+        forma_pagamento=forma_pagamento,
+        data_vencimento=data_vencimento,
         valor=valor,
         observacao=(observacao or "").strip(),
     )

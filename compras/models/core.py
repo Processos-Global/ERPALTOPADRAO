@@ -33,6 +33,14 @@ class ProcessoCompra(models.Model):
 
     numero = models.CharField(max_length=20, unique=True, db_index=True)
     obra = models.ForeignKey("obras.Obra", on_delete=models.PROTECT, related_name="processos_compra")
+    apropriacao = models.ForeignKey(
+        "financeiro.PlanoFinanceiro",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processos_compra",
+        help_text="Apropriação financeira definida na abertura da compra.",
+    )
     item_cronograma = models.ForeignKey(
         "planejamento.ItemCronogramaSuprimento",
         null=True,

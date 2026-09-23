@@ -305,8 +305,14 @@ class RateioParcelaGrandeFornecedor(models.Model):
         on_delete=models.CASCADE,
         related_name="rateios",
     )
-    beneficiario_nome = models.CharField(max_length=255)
+    fornecedor = models.ForeignKey(
+        "cadastros.Fornecedor", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="rateios_grande_fornecedor",
+    )
+    beneficiario_nome = models.CharField(max_length=255, blank=True)
     documento = models.CharField(max_length=40, blank=True)
+    forma_pagamento = models.CharField(max_length=80, blank=True)
+    data_vencimento = models.DateField(null=True, blank=True, db_index=True)
     valor = models.DecimalField(
         max_digits=18,
         decimal_places=2,

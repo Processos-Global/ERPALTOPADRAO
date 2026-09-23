@@ -4,6 +4,7 @@ from django.forms import formset_factory
 from compras.models import NecessidadeCompra, ProcessoCompra
 from cadastros.models import Material
 from compras.services.processos import permite_compra_sem_atividade
+from financeiro.models import PlanoFinanceiro
 from planejamento.models import (
     AtividadePlanejamento,
     ImportacaoCronograma,
@@ -432,321 +433,78 @@ class AtividadePlanejamentoMultipleChoiceField(
 # ============================================================
 
 
-class ProcessoCompraForm(
-    forms.ModelForm
-):
+class ApropriacaoChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        if obj.pai_id:
+            return f"{obj.pai.nome} → {obj.nome}"
+        return obj.nome
 
-    atividades = (
-        AtividadePlanejamentoMultipleChoiceField(
-            queryset=(
-                AtividadePlanejamento.objects.none()
-            ),
-            required=True,
-            widget=forms.SelectMultiple(
-                attrs={
-                    "class": "cp-input",
-                    "size": 8,
-                }
-            ),
-            help_text=(
-                "Selecione uma ou mais atividades da obra "
-                "relacionadas a esta compra."
-            ),
-        )
+
+class ProcessoCompraForm(forms.ModelForm):
+    apropriacao = ApropriacaoChoiceField(
+        queryset=PlanoFinanceiro.objects.none(),
+        required=True,
+        label="Apropriação financeira",
+        empty_label="Selecione a apropriação",
+        widget=forms.Select(attrs={"class": "cp-input"}),
+        help_text="A classe financeira é herdada da apropriação selecionada.",
     )
 
     class Meta:
-
         model = ProcessoCompra
-
         fields = [
             "item_cronograma",
             "titulo",
+            "apropriacao",
             "descricao",
             "comprador",
             "observacao",
         ]
-
         widgets = {
-
-            "item_cronograma": (
-                forms.HiddenInput()
-            ),
-
-            "titulo": (
-                forms.HiddenInput()
-            ),
-
-            "descricao": (
-                forms.Textarea(
-                    attrs={
-                        "class": "cp-input",
-                        "rows": 2,
-                        "placeholder": (
-                            "Descrição geral da compra"
-                        ),
-                    }
-                )
-            ),
-
-            "comprador": (
-                forms.Select(
-                    attrs={
-                        "class": "cp-input",
-                    }
-                )
-            ),
-
-            "observacao": (
-                forms.Textarea(
-                    attrs={
-                        "class": "cp-input",
-                        "rows": 2,
-                        "placeholder": (
-                            "Observações adicionais"
-                        ),
-                    }
-                )
-            ),
+            "item_cronograma": forms.HiddenInput(),
+            "titulo": forms.HiddenInput(),
+            "descricao": forms.Textarea(attrs={"class": "cp-input", "rows": 2, "placeholder": "Descrição geral da compra"}),
+            "comprador": forms.Select(attrs={"class": "cp-input"}),
+            "observacao": forms.Textarea(attrs={"class": "cp-input", "rows": 2, "placeholder": "Observações adicionais"}),
         }
 
-    def __init__(
-        self,
-        *args,
-        item_inicial=None,
-        **kwargs,
-    ):
-
-        super().__init__(
-            *args,
-            **kwargs,
-        )
-
+    def __init__(self, *args, item_inicial=None, **kwargs):
+        super().__init__(*args, **kwargs)
         comprador_field = self.fields.get("comprador")
         if comprador_field is not None:
-            comprador_field.queryset = (
-                comprador_field.queryset
-                .filter(is_active=True)
-                .order_by("first_name", "last_name")
-            )
+            comprador_field.queryset = comprador_field.queryset.filter(is_active=True).order_by("first_name", "last_name")
             comprador_field.label_from_instance = _rotulo_usuario
 
-        self.fields[
-            "item_cronograma"
-        ].queryset = (
-            ItemCronogramaSuprimento.objects
-            .select_related(
-                "cronograma_obra__obra"
-            )
-            .order_by(
-                "cronograma_obra__obra__nome",
-                "ordem",
-                "item",
-            )
+        self.fields["item_cronograma"].queryset = (
+            ItemCronogramaSuprimento.objects.select_related("cronograma_obra__obra")
+            .order_by("cronograma_obra__obra__nome", "ordem", "item")
+        )
+        self.fields["apropriacao"].queryset = (
+            PlanoFinanceiro.objects.filter(ativo=True, tipo=PlanoFinanceiro.Tipo.DESPESA, pai__isnull=False)
+            .select_related("pai")
+            .order_by("pai__codigo", "codigo", "nome")
         )
 
         item = item_inicial
-
-        # ----------------------------------------------------
-        # QUANDO É POST
-        # ----------------------------------------------------
-
         if self.is_bound:
-
-            item_id = (
-                self.data.get(
-                    "item_cronograma"
-                )
-                or self.data.get(
-                    "item_origem"
-                )
-            )
-
+            item_id = self.data.get("item_cronograma") or self.data.get("item_origem")
             if item_id:
-
-                item = (
-                    ItemCronogramaSuprimento.objects
-                    .select_related(
-                        "cronograma_obra__obra"
-                    )
-                    .filter(
-                        pk=item_id
-                    )
-                    .first()
-                )
-
-        obra_id = None
-
-        # ----------------------------------------------------
-        # SUPRIMENTO DE ORIGEM
-        # ----------------------------------------------------
-
-        self.permite_sem_atividade = permite_compra_sem_atividade(item)
-
-        if self.permite_sem_atividade:
-            self.fields["atividades"].required = False
-            self.fields["atividades"].help_text = (
-                "Para a obra 02-04-02 o vínculo com atividade do Cronograma Físico não é necessário."
-            )
-
+                item = (ItemCronogramaSuprimento.objects.select_related("cronograma_obra__obra").filter(pk=item_id).first())
         if item:
-
-            obra_id = (
-                item
-                .cronograma_obra
-                .obra_id
-            )
-
-            # O usuário NÃO escolhe isso nesta tela.
-            self.initial[
-                "item_cronograma"
-            ] = item.pk
-
-            # O título também é derivado automaticamente.
-            self.initial[
-                "titulo"
-            ] = item.item
-
-        # ----------------------------------------------------
-        # ATIVIDADES
-        # ----------------------------------------------------
-
-        (
-            atividades,
-            dados_por_atividade,
-        ) = obter_atividades_e_datas(
-            obra_id=obra_id
-        )
-
-        self.fields[
-            "atividades"
-        ].queryset = atividades
-
-        self.fields[
-            "atividades"
-        ].dados_por_atividade = (
-            dados_por_atividade
-        )
-
-        # Reutilizados pela view no formset.
-        self.atividades_queryset = (
-            atividades
-        )
-
-        self.dados_por_atividade = (
-            dados_por_atividade
-        )
+            self.initial["item_cronograma"] = item.pk
+            self.initial["titulo"] = item.item
 
     def clean(self):
-
-        cleaned = (
-            super().clean()
-        )
-
-        item = cleaned.get(
-            "item_cronograma"
-        )
-
-        atividades = cleaned.get(
-            "atividades"
-        )
-
+        cleaned = super().clean()
+        item = cleaned.get("item_cronograma")
+        apropriacao = cleaned.get("apropriacao")
         if not item:
-            raise forms.ValidationError(
-                "O suprimento de origem não foi informado."
-            )
-
-        # ----------------------------------------------------
-        # TÍTULO SEMPRE VEM DO SUPRIMENTO
-        #
-        # Mesmo que alguém altere manualmente o HTML no
-        # navegador, o backend redefine o título correto.
-        # ----------------------------------------------------
-
-        cleaned[
-            "titulo"
-        ] = item.item
-
-        if not atividades:
-            if permite_compra_sem_atividade(item):
-                return cleaned
-            raise forms.ValidationError(
-                "Selecione pelo menos uma atividade relacionada à compra."
-            )
-
-        obra_id = (
-            item
-            .cronograma_obra
-            .obra_id
-        )
-
-        # ----------------------------------------------------
-        # MESMA OBRA
-        # ----------------------------------------------------
-
-        atividades_outra_obra = [
-            atividade
-            for atividade in atividades
-            if (
-                atividade.obra_id
-                != obra_id
-            )
-        ]
-
-        if atividades_outra_obra:
-
-            raise forms.ValidationError(
-                "Todas as atividades selecionadas devem "
-                "pertencer à mesma obra do suprimento."
-            )
-
-        # ----------------------------------------------------
-        # IMPORTAÇÃO ATIVA
-        # ----------------------------------------------------
-
-        importacao = (
-            obter_importacao_ativa()
-        )
-
-        if importacao is None:
-
-            raise forms.ValidationError(
-                "Não existe uma importação ativa "
-                "do cronograma de obras."
-            )
-
-        (
-            atividades_validas,
-            _,
-        ) = obter_atividades_e_datas(
-            obra_id=obra_id
-        )
-
-        ids_validos = set(
-            atividades_validas
-            .values_list(
-                "id",
-                flat=True,
-            )
-        )
-
-        atividades_invalidas = [
-            atividade
-            for atividade in atividades
-            if (
-                atividade.pk
-                not in ids_validos
-            )
-        ]
-
-        if atividades_invalidas:
-
-            raise forms.ValidationError(
-                "Uma ou mais atividades selecionadas "
-                "não pertencem à base ativa ou não são "
-                "atividades executáveis do cronograma."
-            )
-
+            raise forms.ValidationError("O suprimento de origem não foi informado.")
+        cleaned["titulo"] = item.item
+        if not apropriacao:
+            raise forms.ValidationError("Selecione a apropriação financeira da compra.")
+        if apropriacao.pai_id is None:
+            self.add_error("apropriacao", "Selecione uma apropriação, não apenas a classe financeira.")
         return cleaned
 
 
@@ -832,6 +590,7 @@ ItemCompraAberturaGrandeFornecedorFormSet = formset_factory(
 
 class CompraAvulsaForm(forms.Form):
     obra = forms.ModelChoiceField(queryset=None, label="Obra", empty_label="Selecione a obra")
+    apropriacao = ApropriacaoChoiceField(queryset=PlanoFinanceiro.objects.none(), label="Apropriação financeira", empty_label="Selecione a apropriação")
     titulo = forms.CharField(max_length=255, label="Título da compra")
     comprador = forms.ModelChoiceField(queryset=None, label="Comprador responsável", required=False)
     descricao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}), label="Descrição")
@@ -843,8 +602,19 @@ class CompraAvulsaForm(forms.Form):
         from django.contrib.auth import get_user_model
         User = get_user_model()
         self.fields["obra"].queryset = Obra.objects.all().order_by("nome")
+        self.fields["apropriacao"].queryset = (
+            PlanoFinanceiro.objects.filter(ativo=True, tipo=PlanoFinanceiro.Tipo.DESPESA, pai__isnull=False)
+            .select_related("pai").order_by("pai__codigo", "codigo", "nome")
+        )
         self.fields["comprador"].queryset = User.objects.filter(is_active=True).order_by("first_name", "last_name")
         self.fields["comprador"].label_from_instance = _rotulo_usuario
         for field in self.fields.values():
             classe = field.widget.attrs.get("class", "")
             field.widget.attrs["class"] = f"{classe} cp-input".strip()
+
+    def clean_apropriacao(self):
+        apropriacao = self.cleaned_data["apropriacao"]
+        if apropriacao.pai_id is None:
+            raise forms.ValidationError("Selecione uma apropriação, não apenas a classe financeira.")
+        return apropriacao
+

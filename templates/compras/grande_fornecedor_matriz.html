@@ -1265,6 +1265,44 @@
     </section>
     {% endif %}
 
+
+    <section class="cp-section">
+        <div class="cp-section__head"><strong>Pagamentos de Grande Fornecedor</strong></div>
+        <div class="cp-section__body">
+            <p class="cp-muted" style="margin-top:0">Cada pagamento pode ter beneficiário e vencimento próprios. Os rateios seguem para o Financeiro como contas independentes.</p>
+            {% if pode_editar %}
+            <form method="post" action="{% url 'compras:gf_incluir_parcela' processo.pk %}" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:16px">
+                {% csrf_token %}
+                <div><label class="cp-label">Descrição da parcela</label><input class="cp-input" name="descricao" required placeholder="Ex.: Entrada / Fabricação / Entrega"></div>
+                <div><label class="cp-label">Percentual</label><input class="cp-input" name="percentual" type="number" step="0.01" min="0" placeholder="%"></div>
+                <div><label class="cp-label">Valor</label><input class="cp-input" name="valor" type="number" step="0.01" min="0" placeholder="R$"></div>
+                <div><label class="cp-label">Data base</label><input class="cp-input" name="data_prevista" type="date"></div>
+                <input type="hidden" name="gatilho" value="DATA"><button class="cp-btn cp-btn--primary" type="submit">Adicionar parcela</button>
+            </form>
+            {% endif %}
+            {% for parcela in fluxo.parcelas.all %}
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px"><div><strong>{{ parcela.ordem }}. {{ parcela.descricao }}</strong><div class="cp-muted">{% if parcela.valor %}R$ {{ parcela.valor }}{% elif parcela.percentual %}{{ parcela.percentual }}%{% endif %}{% if parcela.data_prevista %} · Data base {{ parcela.data_prevista|date:'d/m/Y' }}{% endif %}</div></div><span class="cp-badge">{{ parcela.get_status_display }}</span></div>
+                {% for r in parcela.rateios.all %}
+                <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:8px;padding:8px 0;border-top:1px solid #f1f5f9"><span>{{ r.beneficiario_nome|default:r.fornecedor }}</span><span>{{ r.data_vencimento|date:'d/m/Y'|default:'Sem vencimento' }}</span><span>{{ r.forma_pagamento|default:'—' }}</span><span>{{ r.documento|default:'—' }}</span><strong style="text-align:right">R$ {{ r.valor }}</strong></div>
+                {% empty %}<div class="cp-muted">Nenhum beneficiário distribuído nesta parcela.</div>{% endfor %}
+                {% if pode_editar %}
+                <form method="post" action="{% url 'compras:gf_incluir_rateio' processo.pk parcela.pk %}" style="display:grid;grid-template-columns:1.35fr 1.35fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-top:10px">
+                    {% csrf_token %}
+                    <div><label class="cp-label">Fornecedor cadastrado</label><select class="cp-input" name="fornecedor"><option value="">Outro beneficiário</option>{% for forn in fornecedores %}<option value="{{ forn.pk }}">{{ forn }}</option>{% endfor %}</select></div>
+                    <div><label class="cp-label">Beneficiário</label><input class="cp-input" name="beneficiario_nome" placeholder="Nome se não usar fornecedor"></div>
+                    <div><label class="cp-label">Documento</label><input class="cp-input" name="documento" placeholder="CPF/CNPJ"></div>
+                    <div><label class="cp-label">Vencimento</label><input class="cp-input" type="date" name="data_vencimento" required></div>
+                    <div><label class="cp-label">Forma de pagamento</label><select class="cp-input" name="forma_pagamento"><option value="">Selecione</option><option>PIX</option><option>Boleto</option><option>TED</option><option>Transferência</option><option>Cartão</option><option>Dinheiro</option><option>Outro</option></select></div>
+                    <div><label class="cp-label">Valor</label><input class="cp-input" type="number" step="0.01" min="0.01" name="valor" required></div>
+                    <button class="cp-btn cp-btn--primary" type="submit">Adicionar</button>
+                </form>
+                {% endif %}
+            </div>
+            {% empty %}<div class="cp-empty">Nenhuma parcela financeira cadastrada.</div>{% endfor %}
+        </div>
+    </section>
+
     {% if processo.etapa_atual == 'APROVACAO' and pode_aprovar %}
         <section class="cp-section">
             <div class="cp-section__head">

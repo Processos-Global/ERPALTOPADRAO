@@ -9,6 +9,10 @@ from financeiro.services.auditoria import registrar_evento
 def enviar_para_aprovacao(titulo, *, usuario):
     if not titulo.vencimento:
         raise ValidationError("Informe o vencimento antes de enviar para aprovação.")
+    if not (titulo.especificacao_pagamento or "").strip():
+        raise ValidationError("Informe o que está sendo pago antes de enviar para aprovação.")
+    if not titulo.plano_financeiro_id:
+        raise ValidationError("Defina a apropriação financeira antes de enviar para aprovação.")
     if not titulo.beneficiario_exibicao or titulo.beneficiario_exibicao == "Beneficiário não definido":
         raise ValidationError("Defina o beneficiário antes de enviar para aprovação.")
     if titulo.status in {TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO}:

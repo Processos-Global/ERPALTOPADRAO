@@ -1,0 +1,388 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Indicadores financeiros{% endblock %}
+{% block financeiro_content %}
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <div class="fin-eyebrow">Análise financeira</div>
+    <h1 class="fin-title">Indicadores</h1>
+    <div class="fin-sub">Indicadores, gráficos e consolidações do financeiro.</div>
+  </div>
+</header>
+
+<style>
+  .fin-ind-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:14px;
+  }
+
+  .fin-chart-card{
+    border:1px solid var(--fin-line);
+    border-radius:9px;
+    background:#fff;
+    box-shadow:var(--fin-shadow);
+    overflow:hidden;
+  }
+
+  .fin-chart-card__head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 14px;
+    border-bottom:1px solid var(--fin-line-soft);
+    background:#fbfcfc;
+  }
+
+  .fin-chart-card__head h2{
+    margin:0;
+    color:var(--fin-ink);
+    font-size:14px;
+    font-weight:800;
+  }
+
+  .fin-chart-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:30px;
+    min-height:30px;
+    padding:0 8px;
+    border-radius:999px;
+    background:var(--fin-primary-soft);
+    color:var(--fin-primary-dark);
+    font-size:10px;
+    font-weight:800;
+  }
+
+  .fin-chart-card__body{
+    padding:12px 14px 14px;
+  }
+
+  .fin-chart-list{
+    display:grid;
+    gap:10px;
+  }
+
+  .fin-chart-item{
+    min-width:0;
+  }
+
+  .fin-chart-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:5px;
+  }
+
+  .fin-chart-label{
+    min-width:0;
+    color:var(--fin-ink);
+    font-size:11px;
+    font-weight:750;
+    line-height:1.35;
+  }
+
+  .fin-chart-value{
+    flex:0 0 auto;
+    color:var(--fin-ink);
+    font-size:11px;
+    font-weight:800;
+    text-align:right;
+    white-space:nowrap;
+  }
+
+  .fin-chart-meta{
+    margin-top:4px;
+    color:var(--fin-muted);
+    font-size:9px;
+  }
+
+  .fin-chart-track{
+    width:100%;
+    height:9px;
+    border-radius:999px;
+    background:#edf2f4;
+    overflow:hidden;
+  }
+
+  .fin-chart-bar{
+    height:100%;
+    border-radius:999px;
+    background:linear-gradient(90deg, var(--fin-primary), var(--fin-primary-dark));
+  }
+
+  .fin-chart-bar--warning{
+    background:linear-gradient(90deg, #d6a043, #9a6717);
+  }
+
+  .fin-chart-bar--danger{
+    background:linear-gradient(90deg, #d96d6d, #a53f3f);
+  }
+
+  .fin-chart-bar--success{
+    background:linear-gradient(90deg, #2f9f64, #27764a);
+  }
+
+  .fin-ind-wide{
+    margin-bottom:14px;
+  }
+
+  .fin-ind-wide .fin-table{
+    min-width:980px;
+  }
+
+  .fin-ind-wide .fin-table th:nth-child(2),
+  .fin-ind-wide .fin-table td:nth-child(2){
+    width:200px;
+  }
+
+  .fin-ind-wide .fin-table th:last-child,
+  .fin-ind-wide .fin-table td:last-child{
+    text-align:right;
+  }
+
+  @media(max-width:980px){
+    .fin-ind-grid{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<form class="fin-toolbar" method="get">
+  <div class="fin-filter-field"><label>De</label><input class="fin-control" type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
+  <div class="fin-filter-field"><label>Até</label><input class="fin-control" type="date" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
+  <div class="fin-filter-field"><label>Obra</label><select class="fin-control" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label>Classe</label><select class="fin-control" name="classe"><option value="">Todas</option>{% for c in classes_financeiras %}<option value="{{ c.pk }}" {% if filtros.classe == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label>Apropriação</label><select class="fin-control" name="apropriacao"><option value="">Todas</option>{% for a in apropriacoes %}<option value="{{ a.pk }}" {% if filtros.apropriacao == a.pk|stringformat:'s' %}selected{% endif %}>{{ a.pai.nome }} → {{ a.nome }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label>Fornecedor</label><select class="fin-control" name="fornecedor"><option value="">Todos</option>{% for f in fornecedores %}<option value="{{ f.pk }}" {% if filtros.fornecedor == f.pk|stringformat:'s' %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
+  <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary">Aplicar</button><a class="fin-btn" href="{% url 'financeiro:indicadores' %}">Limpar</a></div>
+</form>
+
+<div class="fin-kpis">
+  <div class="fin-kpi fin-kpi--success">
+    <span>Pago no período</span>
+    <strong>{{ total_pago|moeda_br }}</strong>
+    <small>{{ quantidade_pagamentos }} pagamento{{ quantidade_pagamentos|pluralize }}</small>
+  </div>
+  <div class="fin-kpi">
+    <span>Média por pagamento</span>
+    <strong>{{ media_pagamento|moeda_br }}</strong>
+    <small>ticket médio</small>
+  </div>
+  <div class="fin-kpi fin-kpi--warning">
+    <span>Saldo em aberto</span>
+    <strong>{{ total_aberto|moeda_br }}</strong>
+    <small>contas em aberto</small>
+  </div>
+  <div class="fin-kpi">
+    <span>Previsão 30 dias</span>
+    <strong>{{ previsao_30|moeda_br }}</strong>
+    <small>{{ previsoes_extras_30|moeda_br }} em previsões extras</small>
+  </div>
+</div>
+
+<div class="fin-ind-grid">
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Pagamentos por mês</h2>
+      <span class="fin-chart-badge">{{ por_mes|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in por_mes %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.mes|date:"m/Y" }}</span>
+            <span class="fin-chart-value">{{ item.total|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar fin-chart-bar--success" style="width:{% widthratio item.total max_por_mes 100 %}%"></div></div>
+          <div class="fin-chart-meta">{{ item.quantidade }} pagamento{{ item.quantidade|pluralize }}</div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Pagamentos por classe</h2>
+      <span class="fin-chart-badge">{{ por_classe|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in por_classe|slice:":8" %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.titulo__plano_financeiro__pai__codigo }} · {{ item.titulo__plano_financeiro__pai__nome }}</span>
+            <span class="fin-chart-value">{{ item.total|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar" style="width:{% widthratio item.total max_por_classe 100 %}%"></div></div>
+          <div class="fin-chart-meta">{{ item.quantidade }} pagamento{{ item.quantidade|pluralize }}</div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Pagamentos por obra</h2>
+      <span class="fin-chart-badge">{{ por_obra|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in por_obra|slice:":8" %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.titulo__obra__nome }}</span>
+            <span class="fin-chart-value">{{ item.total|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar fin-chart-bar--warning" style="width:{% widthratio item.total max_por_obra 100 %}%"></div></div>
+          <div class="fin-chart-meta">{{ item.quantidade }} pagamento{{ item.quantidade|pluralize }}</div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Pagamentos por fornecedor</h2>
+      <span class="fin-chart-badge">{{ por_fornecedor|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in por_fornecedor|slice:":8" %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.titulo__fornecedor__nome }}</span>
+            <span class="fin-chart-value">{{ item.total|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar fin-chart-bar--danger" style="width:{% widthratio item.total max_por_fornecedor 100 %}%"></div></div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem dados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Em aberto por origem</h2>
+      <span class="fin-chart-badge">{{ por_origem|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in por_origem %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.rotulo }}</span>
+            <span class="fin-chart-value">{{ item.total|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar" style="width:{% widthratio item.total max_por_origem 100 %}%"></div></div>
+          <div class="fin-chart-meta">{{ item.quantidade }} título{{ item.quantidade|pluralize }}</div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem compromissos.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="fin-chart-card">
+    <div class="fin-chart-card__head">
+      <h2>Saídas projetadas</h2>
+      <span class="fin-chart-badge">{{ pontos_desembolso|length }}</span>
+    </div>
+    <div class="fin-chart-card__body">
+      <div class="fin-chart-list">
+        {% for item in pontos_desembolso %}
+        <div class="fin-chart-item">
+          <div class="fin-chart-row">
+            <span class="fin-chart-label">{{ item.rotulo }}</span>
+            <span class="fin-chart-value">{{ item.saida|moeda_br }}</span>
+          </div>
+          <div class="fin-chart-track"><div class="fin-chart-bar fin-chart-bar--warning" style="width:{% widthratio item.saida max_pontos_desembolso 100 %}%"></div></div>
+        </div>
+        {% empty %}
+        <div class="fin-empty">Sem projeções.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<section class="fin-section fin-ind-wide">
+  <div class="fin-section__head">
+    <div><h2>Resumo financeiro por obra</h2></div>
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead>
+        <tr>
+          <th>Obra</th>
+          <th style="text-align:right">Pago</th>
+          <th style="text-align:right">Contas abertas</th>
+          <th style="text-align:right">Previsões extras</th>
+          <th style="text-align:right">Total mapeado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in obras_resumo %}
+        <tr>
+          <td><strong>{{ linha.obra }}</strong></td>
+          <td class="fin-money">{{ linha.pago|moeda_br }}</td>
+          <td class="fin-money">{{ linha.aberto|moeda_br }}</td>
+          <td class="fin-money">{{ linha.previsto|moeda_br }}</td>
+          <td class="fin-money">{{ linha.total|moeda_br }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="fin-empty">Nenhum movimento financeiro.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="fin-section fin-ind-wide">
+  <div class="fin-section__head">
+    <div><h2>Detalhamento por apropriação</h2></div>
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Classe</th>
+          <th>Apropriação</th>
+          <th>Pagamentos</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in por_apropriacao %}
+        <tr>
+          <td>{{ i.titulo__plano_financeiro__codigo }}</td>
+          <td>{{ i.titulo__plano_financeiro__pai__nome|default:"—" }}</td>
+          <td><strong>{{ i.titulo__plano_financeiro__nome }}</strong></td>
+          <td>{{ i.quantidade }}</td>
+          <td class="fin-money">{{ i.total|moeda_br }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="fin-empty">Sem dados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

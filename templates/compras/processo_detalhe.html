@@ -2139,6 +2139,7 @@
                                 <div class="pc-field"><label>{{ linha.frete.label }}</label>{{ linha.frete }}{% for e in linha.frete.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}</div>
                                 <div class="pc-field"><label>{{ linha.prazo.label }}</label>{{ linha.prazo }}{% for e in linha.prazo.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}</div>
                                 <div class="pc-field"><label>{{ linha.pagamento.label }}</label>{{ linha.pagamento }}{% for e in linha.pagamento.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}</div>
+                                <div class="pc-field" data-neg-parcelas><label>{{ linha.parcelas.label }}</label>{{ linha.parcelas }}{% for e in linha.parcelas.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}</div>
                                 <div class="pc-field"><label>{{ linha.observacoes.label }}</label>{{ linha.observacoes }}{% for e in linha.observacoes.errors %}<div class="pc-field-errors">{{ e }}</div>{% endfor %}</div>
                               </div>
                             </details>

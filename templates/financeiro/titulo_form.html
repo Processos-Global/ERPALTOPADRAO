@@ -1,30 +1,172 @@
 {% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
-{% block financeiro_title %}{% if modo == 'novo' %}Nova conta a pagar{% else %}Editar conta{% endif %}{% endblock %}
+{% block financeiro_title %}{% if modo == 'novo' %}Solicitação avulsa{% else %}Editar conta{% endif %}{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">{% if modo == 'novo' %}Lançamento manual{% else %}Manutenção da obrigação{% endif %}</div><h1 class="fin-title">{% if modo == 'novo' %}Nova conta a pagar{% else %}Editar {{ titulo.numero }}{% endif %}</h1><div class="fin-sub">Preencha de cima para baixo. Dados automáticos de Compras, M.O. e Grandes Fornecedores ficam separados dos campos editáveis.</div></div><div class="fin-actions"><a class="fin-btn" href="{% if titulo %}{% url 'financeiro:titulo_detalhe' titulo.pk %}{% else %}{% url 'financeiro:titulos' %}{% endif %}">Voltar</a></div></header>
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <div class="fin-eyebrow">{% if modo == 'novo' %}Pagamento avulso{% else %}Manutenção da obrigação{% endif %}</div>
+    <h1 class="fin-title">{% if modo == 'novo' %}Solicitação avulsa{% else %}Editar {{ titulo.numero }}{% endif %}</h1>
+    <div class="fin-sub">Formulário direto para registrar o pagamento, apropriação, vencimento e beneficiário.</div>
+  </div>
+  <div class="fin-actions"><a class="fin-btn" href="{% if titulo %}{% url 'financeiro:titulo_detalhe' titulo.pk %}{% else %}{% url 'financeiro:titulos' %}{% endif %}">Voltar</a></div>
+</header>
+
 {% if titulo and titulo.integrada %}
-<div class="fin-context"><div class="fin-context__item"><span class="fin-context__label">Origem automática</span><span class="fin-context__value">{{ titulo.get_origem_display }}</span></div><div class="fin-context__item"><span class="fin-context__label">Referência</span><span class="fin-context__value">{{ titulo.origem_detalhe|default:"—" }}</span></div><div class="fin-context__item"><span class="fin-context__label">Parcela</span><span class="fin-context__value">{{ titulo.rotulo_parcela }}</span></div><div class="fin-context__item"><span class="fin-context__label">Gatilho</span><span class="fin-context__value">{{ titulo.gatilho_pagamento|default:"—" }}</span></div><div class="fin-context__item"><span class="fin-context__label">Condição</span><span class="fin-context__value">{{ titulo.condicao_pagamento|default:"—" }}</span></div></div>
+<div class="fin-context">
+  <div class="fin-context__item"><span class="fin-context__label">Origem</span><span class="fin-context__value">{{ titulo.get_origem_display }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Referência</span><span class="fin-context__value">{{ titulo.origem_detalhe|default:"—" }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Parcela</span><span class="fin-context__value">{{ titulo.rotulo_parcela }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Condição</span><span class="fin-context__value">{{ titulo.condicao_pagamento|default:"—" }}</span></div>
+</div>
 {% endif %}
-<form method="post" enctype="multipart/form-data" class="fin-form">{% csrf_token %}
+
+<form method="post" enctype="multipart/form-data" class="fin-form" id="titulo-form">{% csrf_token %}
   {% if form.non_field_errors %}<div class="fin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
-  <section class="fin-form-step"><div class="fin-form-step__intro"><div class="fin-step-number">1</div><h3>Destino do pagamento</h3><p>Primeiro defina a obra e quem receberá.</p></div><div class="fin-form-step__fields"><div class="fin-form-grid fin-form-grid--3">
-    <div class="fin-field"><label for="{{ form.obra.id_for_label }}">{{ form.obra.label }} <span class="fin-required">*</span></label>{{ form.obra }}{% for e in form.obra.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field"><label for="{{ form.fornecedor.id_for_label }}">Beneficiário / fornecedor <span class="fin-required">*</span></label>{{ form.fornecedor }}<small class="fin-help">O favorecido deve estar cadastrado no sistema.</small>{% for e in form.fornecedor.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    {% if titulo and titulo.integrada %}<div class="fin-field"><label for="{{ form.beneficiario_nome.id_for_label }}">{{ form.beneficiario_nome.label }}</label>{{ form.beneficiario_nome }}{% for e in form.beneficiario_nome.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div><div class="fin-field"><label for="{{ form.beneficiario_documento.id_for_label }}">{{ form.beneficiario_documento.label }}</label>{{ form.beneficiario_documento }}{% for e in form.beneficiario_documento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>{% else %}{{ form.beneficiario_nome }}{{ form.beneficiario_documento }}{% endif %}
-    <div class="fin-field"><label for="{{ form.plano_financeiro.id_for_label }}">{{ form.plano_financeiro.label }}</label>{{ form.plano_financeiro }}{% for e in form.plano_financeiro.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-  </div></div></section>
-  <section class="fin-form-step"><div class="fin-form-step__intro"><div class="fin-step-number">2</div><h3>Dados financeiros</h3><p>Informe o que será pago, o valor e quando vence.</p></div><div class="fin-form-step__fields"><div class="fin-form-grid fin-form-grid--3">
-    <div class="fin-field fin-field--full"><label for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }} <span class="fin-required">*</span></label>{{ form.descricao }}{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field"><label for="{{ form.valor_original.id_for_label }}">{{ form.valor_original.label }} <span class="fin-required">*</span></label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field"><label for="{{ form.vencimento.id_for_label }}">{{ form.vencimento.label }} <span class="fin-required">*</span></label>{{ form.vencimento }}{% for e in form.vencimento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field"><label for="{{ form.data_emissao.id_for_label }}">{{ form.data_emissao.label }}</label>{{ form.data_emissao }}{% for e in form.data_emissao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    {% if modo == 'novo' %}<div class="fin-field"><label for="{{ form.quantidade_parcelas.id_for_label }}">{{ form.quantidade_parcelas.label }}</label>{{ form.quantidade_parcelas }}<small class="fin-help">1 = pagamento único. Acima de 1, o valor total é dividido igualmente.</small>{% for e in form.quantidade_parcelas.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div><div class="fin-field"><label for="{{ form.intervalo_dias.id_for_label }}">{{ form.intervalo_dias.label }}</label>{{ form.intervalo_dias }}<small class="fin-help">Conta a partir do primeiro vencimento informado acima.</small>{% for e in form.intervalo_dias.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>{% else %}{{ form.quantidade_parcelas }}{{ form.intervalo_dias }}{% endif %}
-  </div></div></section>
-  <section class="fin-form-step"><div class="fin-form-step__intro"><div class="fin-step-number">3</div><h3>Documento e observação</h3><p>Anexe NF, boleto ou outro documento quando houver.</p></div><div class="fin-form-step__fields"><div class="fin-form-grid">
-    <div class="fin-field"><label for="{{ form.documento_numero.id_for_label }}">{{ form.documento_numero.label }}</label>{{ form.documento_numero }}{% for e in form.documento_numero.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field"><label for="{{ form.arquivo_documento.id_for_label }}">{{ form.arquivo_documento.label }}</label>{{ form.arquivo_documento }}{% for e in form.arquivo_documento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-    <div class="fin-field fin-field--full"><label for="{{ form.observacao.id_for_label }}">{{ form.observacao.label }}</label>{{ form.observacao }}{% for e in form.observacao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-  </div></div></section>
-  <div class="fin-form-footer"><div class="fin-form-footer__hint">Campos com * são essenciais para criar a obrigação.</div><div class="fin-form-footer__actions"><a class="fin-btn" href="{% if titulo %}{% url 'financeiro:titulo_detalhe' titulo.pk %}{% else %}{% url 'financeiro:titulos' %}{% endif %}">Cancelar</a><button class="fin-btn fin-btn--primary">{% if modo == 'novo' %}Criar e enviar para aprovação{% else %}Salvar alterações{% endif %}</button></div></div>
+  {{ form.tipo_pagamento.as_hidden }}{% if titulo and titulo.integrada %}{{ form.materiais.as_hidden }}{% endif %}
+
+  <section class="fin-section">
+    <div class="fin-section__body">
+      <div class="fin-form-grid fin-form-grid--3">
+        <div class="fin-field"><label>Obra</label>{{ form.obra }}{% for e in form.obra.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Fornecedor / beneficiário</label>{{ form.fornecedor }}{% for e in form.fornecedor.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Apropriação</label>{{ form.plano_financeiro }}{% for e in form.plano_financeiro.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+
+      {% if modo == 'novo' or not titulo.integrada %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field">
+          <label>Tipo do pagamento</label>
+          <select class="fin-control" id="tipo-pagamento-ui">
+            <option value="OUTRO" {% if form.tipo_pagamento.value != 'MATERIAL' %}selected{% endif %}>Outro pagamento</option>
+            <option value="MATERIAL" {% if form.tipo_pagamento.value == 'MATERIAL' %}selected{% endif %}>Materiais</option>
+          </select>
+        </div>
+        <div class="fin-field"><label>Valor bruto</label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Primeiro vencimento</label>{{ form.vencimento }}{% for e in form.vencimento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+
+      <div id="bloco-materiais" style="display:none;margin-top:14px">
+        <div class="fin-field fin-field--full">
+          <label>Materiais</label>
+          <div class="fin-combobox fin-combobox--multi" id="materiais-combobox">
+            <input class="fin-control fin-combobox__input" type="text" autocomplete="off" placeholder="Pesquisar ou selecionar materiais">
+            <button class="fin-combobox__toggle" type="button" aria-label="Abrir materiais">▾</button>
+            <div class="fin-combobox__menu" hidden></div>
+            <div class="fin-combobox__chips"></div>
+            <div class="fin-combobox__native" hidden>{{ form.materiais }}</div>
+          </div>
+          <small class="fin-help">Digite para pesquisar ou clique para abrir a lista. Você pode selecionar vários materiais.</small>
+          {% for e in form.materiais.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}
+        </div>
+      </div>
+
+      <div id="bloco-outro" style="margin-top:14px">
+        <div class="fin-form-grid">
+          <div class="fin-field"><label>Descrição do pagamento</label>{{ form.descricao }}<small class="fin-help">O texto será salvo em CAIXA ALTA.</small>{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          <div class="fin-field fin-field--full"><label>O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        </div>
+      </div>
+
+      {% if modo == 'novo' %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field"><label>Quantidade de parcelas</label>{{ form.quantidade_parcelas }}{% for e in form.quantidade_parcelas.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Intervalo entre parcelas (dias)</label>{{ form.intervalo_dias }}{% for e in form.intervalo_dias.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Data de emissão</label>{{ form.data_emissao }}{% for e in form.data_emissao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+      {% else %}{{ form.quantidade_parcelas }}{{ form.intervalo_dias }}{% endif %}
+      {% else %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field"><label>Descrição</label>{{ form.descricao }}{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Valor bruto</label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Vencimento</label>{{ form.vencimento }}{% for e in form.vencimento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field fin-field--full"><label>O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+      {{ form.quantidade_parcelas }}{{ form.intervalo_dias }}
+      {% endif %}
+
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;font-weight:800">Documento e ajustes opcionais</summary>
+        <div class="fin-form-grid fin-form-grid--3" style="margin-top:12px">
+          <div class="fin-field"><label>Documento / NF</label>{{ form.documento_numero }}</div>
+          <div class="fin-field"><label>Anexo</label>{{ form.arquivo_documento }}</div>
+          <div class="fin-field"><label>Desconto</label>{{ form.desconto }}</div>
+          <div class="fin-field"><label>Juros</label>{{ form.juros }}</div>
+          <div class="fin-field"><label>Multa</label>{{ form.multa }}</div>
+          <div class="fin-field"><label>Outros acréscimos</label>{{ form.outros_acrescimos }}</div>
+          <div class="fin-field fin-field--full"><label>Observação</label>{{ form.observacao }}</div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  {{ form.beneficiario_nome }}{{ form.beneficiario_documento }}
+  <div class="fin-form-footer"><div></div><div class="fin-form-footer__actions"><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Cancelar</a><button class="fin-btn fin-btn--primary">{% if modo == 'novo' %}Criar e enviar para aprovação{% else %}Salvar alterações{% endif %}</button></div></div>
 </form>
+
+{% if modo == 'novo' or not titulo.integrada %}
+<script>
+(function(){
+  const realTipo = document.getElementById('id_tipo_pagamento');
+  const uiTipo = document.getElementById('tipo-pagamento-ui');
+  const materiais = document.getElementById('bloco-materiais');
+  const outro = document.getElementById('bloco-outro');
+  const descricao = document.getElementById('id_descricao');
+  const especificacao = document.getElementById('id_especificacao_pagamento');
+  const selectMateriais = document.getElementById('id_materiais');
+  const materiaisBox = document.getElementById('materiais-combobox');
+  function sync(){
+    const tipo = uiTipo.value;
+    realTipo.value = tipo;
+    materiais.style.display = tipo === 'MATERIAL' ? '' : 'none';
+    outro.style.display = tipo === 'MATERIAL' ? 'none' : '';
+    if (descricao) descricao.required = tipo !== 'MATERIAL';
+    if (especificacao) especificacao.required = tipo !== 'MATERIAL';
+  }
+  uiTipo.addEventListener('change', sync); sync();
+  if (descricao) descricao.addEventListener('input', function(){
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    try { this.setSelectionRange(pos, pos); } catch(e) {}
+  });
+  if (materiaisBox && selectMateriais) {
+    const input = materiaisBox.querySelector('.fin-combobox__input');
+    const toggle = materiaisBox.querySelector('.fin-combobox__toggle');
+    const menu = materiaisBox.querySelector('.fin-combobox__menu');
+    const chips = materiaisBox.querySelector('.fin-combobox__chips');
+
+    function selectedValues(){ return new Set([...selectMateriais.selectedOptions].map(o => o.value)); }
+    function render(){
+      const selected = selectedValues();
+      const term = (input.value || '').toLowerCase().trim();
+      menu.innerHTML = '';
+      [...selectMateriais.options].forEach(o => {
+        if (!o.value || selected.has(o.value)) return;
+        if (term && !o.text.toLowerCase().includes(term)) return;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'fin-combobox__option'; btn.textContent = o.text;
+        btn.addEventListener('click', () => { o.selected = true; input.value = ''; refresh(); input.focus(); });
+        menu.appendChild(btn);
+      });
+      if (!menu.children.length) {
+        const empty = document.createElement('div'); empty.className='fin-combobox__empty'; empty.textContent='Nenhum material encontrado'; menu.appendChild(empty);
+      }
+      chips.innerHTML = '';
+      [...selectMateriais.selectedOptions].forEach(o => {
+        const chip = document.createElement('span'); chip.className='fin-combobox__chip';
+        const text = document.createElement('span'); text.textContent=o.text; chip.appendChild(text);
+        const remove = document.createElement('button'); remove.type='button'; remove.innerHTML='×'; remove.setAttribute('aria-label','Remover '+o.text);
+        remove.addEventListener('click', () => { o.selected=false; refresh(); });
+        chip.appendChild(remove); chips.appendChild(chip);
+      });
+    }
+    function open(){ materiaisBox.classList.add('is-open'); menu.hidden=false; render(); }
+    function close(){ materiaisBox.classList.remove('is-open'); menu.hidden=true; }
+    function refresh(){ render(); selectMateriais.dispatchEvent(new Event('change', {bubbles:true})); }
+    input.addEventListener('focus', open); input.addEventListener('click', open); input.addEventListener('input', open);
+    toggle.addEventListener('click', e => { e.preventDefault(); menu.hidden ? open() : close(); });
+    document.addEventListener('click', e => { if (!materiaisBox.contains(e.target)) close(); });
+    render();
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}
