@@ -3,90 +3,22 @@
 {% block page_name %}Ficha Técnica{% endblock %}
 
 {% block extra_css %}
-<style>
-:root{
-  --ft-primary:#1f8fa5;
-  --ft-primary-dark:#12697c;
-  --ft-line:#dce6e9;
-  --ft-text:#17384a;
-  --ft-muted:#74878f;
-  --ft-soft:#f7fafb;
-  --ft-danger:#b42318;
-}
-.ft-page{max-width:1580px;margin:0 auto;padding:20px 24px 38px;color:var(--ft-text)}
-.ft-top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
-.ft-top h1{margin:0;font-size:24px}.ft-top small{display:block;color:var(--ft-muted);margin-top:3px}
-.ft-status{padding:6px 9px;border:1px solid #d7e4e7;border-radius:7px;background:#fff;font-size:10px;font-weight:800;color:#526870}
-.ft-flow{display:flex;gap:6px;overflow:auto;margin-bottom:14px}
-.ft-flow a{white-space:nowrap;text-decoration:none;padding:8px 11px;border:1px solid var(--ft-line);border-radius:8px;background:#fff;color:#5d727a;font-size:11px;font-weight:800}
-.ft-flow a.active{background:#eaf6f8;border-color:#8cc8d2;color:var(--ft-primary-dark)}
-.ft-layout{display:grid;grid-template-columns:minmax(0,1fr) 235px;gap:14px;align-items:start}
-.ft-panel,.ft-side-card,.ft-form-box,.ft-cat-card{background:#fff;border:1px solid var(--ft-line);border-radius:10px}
-.ft-panel-head{padding:15px 17px;border-bottom:1px solid #edf1f2}.ft-panel-head h2{margin:0;font-size:17px}
-.ft-panel-body{padding:16px}
-.ft-form-box{padding:14px;margin-bottom:16px}
-.ft-form-title{font-size:12px;font-weight:900;margin-bottom:10px;color:#315666}
-.ft-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:9px;align-items:end}
-.ft-grid.compact{gap:8px}
-.c2{grid-column:span 2}.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c8{grid-column:span 8}.c9{grid-column:span 9}.c12{grid-column:1/-1}
-.ft-field label{display:block;font-size:10px;font-weight:850;color:#506873;margin-bottom:4px}
-.ft-field input,.ft-field select,.ft-field textarea{width:100%;box-sizing:border-box;border:1px solid #cbd8dd;border-radius:7px;background:#fff;padding:9px 10px;font-size:11px;color:#223f4c;outline:none}
-.ft-field textarea{resize:vertical}.ft-field input:focus,.ft-field select:focus,.ft-field textarea:focus{border-color:#78bcc8;box-shadow:0 0 0 2px rgba(31,143,165,.07)}
-.ft-btn{border:0;border-radius:7px;padding:9px 12px;background:var(--ft-primary);color:#fff;font-size:11px;font-weight:850;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:35px}
-.ft-btn.secondary{background:#fff;color:#35545f;border:1px solid #cbd8dd}.ft-btn.danger,.ft-icon-btn.danger{background:#fff;color:var(--ft-danger);border:1px solid #efc7c1}
-.ft-icon-btn{border-radius:6px;padding:6px 8px;font-size:10px;font-weight:800;cursor:pointer}
-.ft-section-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:16px 0 8px}.ft-section-bar strong{font-size:12px}.ft-section-bar span{font-size:10px;color:var(--ft-muted)}
-.ft-table-wrap{overflow:auto;border:1px solid var(--ft-line);border-radius:9px}.ft-table{width:100%;border-collapse:collapse;min-width:690px}
-.ft-table th,.ft-table td{padding:9px 10px;border-bottom:1px solid #edf2f4;text-align:left;font-size:11px;vertical-align:middle}
-.ft-table th{background:#f7f9fa;color:#687d85;text-transform:uppercase;font-size:9px;letter-spacing:.03em}.ft-table tr:last-child td{border-bottom:0}
-.ft-table-items{min-width:760px}.ft-row-note{display:block;color:#87979d;font-size:9px;margin-top:2px}.ft-spec{max-width:340px}.ft-action-cell{width:68px}
-.ft-empty{padding:20px;text-align:center;color:#82939a;font-size:11px}
-.ft-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.ft-tabs a{display:inline-flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--ft-line);border-radius:7px;background:#fff;color:#56707b;text-decoration:none;font-size:10px;font-weight:800}
-.ft-tabs a.active{background:#eaf6f8;color:var(--ft-primary-dark);border-color:#8bcbd6}
-.ft-tabs a.is-filled{border-color:#b8ddc5;background:#fbfefc}
-.ft-tabs a.is-filled.active{background:#eaf6f8;border-color:#8bcbd6}
-.ft-tab-status{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:#edf8f1;color:#287146;font-size:9px;font-weight:900;line-height:1.2;white-space:nowrap}
-.ft-tab-status .check{font-size:10px;line-height:1}
-.ft-context{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-radius:8px;background:#f7f9fa;border:1px solid #e5ecef;margin-bottom:10px}.ft-context span{font-size:10px;color:#536c76}.ft-context strong{color:#2b4f5f}
-.ft-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ft-cat-wrap{border:1px solid var(--ft-line);border-radius:8px;background:#fff;overflow:hidden}.ft-cat{display:flex;gap:8px;align-items:flex-start;padding:9px;cursor:pointer}.ft-cat input{margin-top:2px}.ft-cat strong{display:block;font-size:11px;color:#284b5b}.ft-cat small{display:block;color:#83949b;font-size:9px;margin-top:2px}.ft-system-choice{padding:0 9px 9px 29px}.ft-system-choice label{display:block;font-size:10px;font-weight:800;color:#506873;margin-bottom:4px}.ft-system-choice select{width:100%;box-sizing:border-box;border:1px solid #cbd8dd;border-radius:7px;background:#fff;padding:8px 9px;font-size:12px;color:#223f4c}
-.ft-side{display:grid;gap:10px;position:sticky;top:14px}.ft-side-card{padding:13px}.ft-side-card h3{margin:0 0 9px;font-size:12px}.ft-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ft-kpi{border:1px solid #e7edef;border-radius:8px;padding:9px}.ft-kpi span{display:block;color:#84959d;font-size:9px}.ft-kpi strong{display:block;font-size:17px;margin-top:2px}
-.ft-review-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.ft-review-card{border:1px solid var(--ft-line);border-radius:8px;padding:10px}.ft-review-card span{font-size:9px;color:#81939b;text-transform:uppercase}.ft-review-card strong{display:block;font-size:17px;margin-top:2px}
-.ft-cat-card{margin-bottom:10px;overflow:hidden}.ft-cat-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:#f8fafb;border-bottom:1px solid #e7edef}.ft-cat-head strong{font-size:12px}.ft-cat-head small{display:block;color:#84959d;font-size:9px;margin-top:2px}
-.ft-chip{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border:1px solid #dce6e9;border-radius:6px;background:#fff;font-size:9px;font-weight:900;color:#607780}
-.ft-add{border-top:1px solid #edf2f4;padding:0 12px 12px}.ft-add summary{cursor:pointer;padding:10px 0 8px;font-size:10px;font-weight:900;color:#315666}.ft-add[open] summary{color:var(--ft-primary-dark)}
-.ft-submit-cell{display:flex;align-items:end}.ft-submit-cell .ft-btn{width:100%}
-.ft-sync{display:inline-flex;padding:4px 6px;border-radius:6px;background:#eef8fa;border:1px solid #cde7eb;color:#12697c;font-size:9px;font-weight:900;white-space:nowrap}.ft-sync.is-linked{background:#edf8f1;border-color:#cae7d5;color:#287146}
-@media(max-width:1050px){.ft-layout{grid-template-columns:1fr}.ft-side{position:static}.ft-cats{grid-template-columns:1fr 1fr}}
-@media(max-width:760px){.ft-page{padding:14px}.ft-top{align-items:flex-start;flex-direction:column}.ft-grid>[class^="c"],.ft-grid>.c2,.ft-grid>.c3,.ft-grid>.c4,.ft-grid>.c5,.ft-grid>.c6,.ft-grid>.c8,.ft-grid>.c9{grid-column:1/-1}.ft-cats{grid-template-columns:1fr}.ft-review-grid{grid-template-columns:1fr 1fr}}
-
-/* revisão de legibilidade e preenchimento */
-
-.ft-layout{grid-template-columns:minmax(0,1fr)}
-.ft-side{display:none}
-.ft-top small,.ft-section-bar span,.ft-context span{font-size:12px}
-.ft-status,.ft-flow a,.ft-field label,.ft-tabs a{font-size:12px}
-.ft-field input,.ft-field select,.ft-field textarea,.ft-btn{font-size:13px}
-.ft-form-title,.ft-section-bar strong{font-size:14px}
-.ft-table th{font-size:11px}.ft-table td{font-size:13px}
-.ft-row-note{font-size:11px}
-.ft-empty{font-size:13px}
-
-</style>
+{% include "obras/_styles.html" %}
 {% endblock %}
 
 {% block content %}
 <div class="ft-page">
   {% if messages %}
     {% for message in messages %}
-      <div style="padding:9px 11px;border:1px solid #dce6e9;border-radius:8px;background:#fff;margin-bottom:10px;font-size:11px">{{ message }}</div>
+      <div class="ft-message">{{ message }}</div>
     {% endfor %}
   {% endif %}
 
   <div class="ft-top">
-    <div>
+    <div class="ft-head-copy">
+      <span class="ft-eyebrow">Ficha Técnica</span>
       <h1>{{ obra.nome }}</h1>
-      <small>{{ obra.codigo }} · Ficha Técnica</small>
+      <small>{{ obra.codigo }} · Estrutura, ambientes, categorias e itens da obra</small>
     </div>
     <span class="ft-status">{{ ficha.get_status_display }}</span>
   </div>
@@ -206,12 +138,12 @@
           </form>
         </div>
 
-        <div class="ft-form-box">
+        <div class="ft-form-box" id="ft-ambiente-panel">
           <div class="ft-form-title">Categorias por ambiente</div>
           <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
           <div class="ft-tabs">
             {% for a in ambientes %}
-              <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">
+              <a data-ambiente-link class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">
                 <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
                 {% if a.total_categorias_ativas %}
                   <span class="ft-tab-status" title="{{ a.total_categorias_ativas }} categoria{{ a.total_categorias_ativas|pluralize }} selecionada{{ a.total_categorias_ativas|pluralize }} neste ambiente">
@@ -319,17 +251,94 @@
 </div>
 <script>
 (function(){
-  const toggle = document.querySelector('[data-ar-sistema-toggle]');
-  const box = document.querySelector('[data-ar-sistema-box]');
-  const select = document.querySelector('[data-ar-sistema-select]');
-  if (!toggle || !box || !select) return;
-  function atualizar(){
-    box.hidden = !toggle.checked;
-    select.required = toggle.checked;
-    if (!toggle.checked) select.value = '';
+  function iniciarArSistema(){
+    const toggle = document.querySelector('[data-ar-sistema-toggle]');
+    const box = document.querySelector('[data-ar-sistema-box]');
+    const select = document.querySelector('[data-ar-sistema-select]');
+    if (!toggle || !box || !select) return;
+
+    function atualizar(){
+      box.hidden = !toggle.checked;
+      select.required = toggle.checked;
+      if (!toggle.checked) select.value = '';
+    }
+
+    toggle.addEventListener('change', atualizar);
+    atualizar();
   }
-  toggle.addEventListener('change', atualizar);
-  atualizar();
+
+  async function trocarAmbiente(link){
+    if (link.dataset.loading === '1') return;
+
+    const blocoAtual = document.querySelector('#ft-ambiente-panel');
+    if (!blocoAtual) {
+      window.location.assign(link.href);
+      return;
+    }
+
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const href = link.href;
+
+    link.dataset.loading = '1';
+    blocoAtual.classList.add('ft-panel-loading');
+
+    try {
+      const resposta = await fetch(href, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'text/html'
+        },
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+
+      if (!resposta.ok) throw new Error('Falha ao carregar o ambiente.');
+
+      const html = await resposta.text();
+      const documento = new DOMParser().parseFromString(html, 'text/html');
+      const novoBloco = documento.querySelector('#ft-ambiente-panel');
+
+      if (!novoBloco) throw new Error('Bloco de categorias do ambiente não encontrado.');
+
+      blocoAtual.replaceWith(novoBloco);
+      history.pushState({ fichaTecnicaAmbiente: true }, '', href);
+      iniciarArSistema();
+
+      requestAnimationFrame(function(){
+        window.scrollTo(scrollX, scrollY);
+      });
+    } catch (erro) {
+      console.error(erro);
+      window.location.assign(href);
+    } finally {
+      const atual = document.querySelector('#ft-ambiente-panel');
+      if (atual) atual.classList.remove('ft-panel-loading');
+    }
+  }
+
+  // Usa capture=true para impedir que qualquer listener global do base.html
+  // transforme o clique em uma navegação completa antes desta rotina.
+  document.addEventListener('click', function(event){
+    const alvo = event.target instanceof Element ? event.target : event.target.parentElement;
+    const link = alvo && alvo.closest('a[data-ambiente-link]');
+    if (!link) return;
+
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    if (typeof event.button === 'number' && event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    trocarAmbiente(link);
+  }, true);
+
+  window.addEventListener('popstate', function(){
+    window.location.reload();
+  });
+
+  iniciarArSistema();
 })();
 </script>
 {% endblock %}

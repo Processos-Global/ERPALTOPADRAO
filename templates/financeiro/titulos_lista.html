@@ -25,7 +25,7 @@
 
 <section class="fin-section"><div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Conta / beneficiário</th><th>Origem</th><th>Obra</th><th style="min-width:310px">Apropriação</th><th>Vencimento</th><th>Status</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody>
 {% for t in page_obj %}
-<tr>
+<tr data-titulo-row="{{ t.pk }}">
   <td class="fin-main-cell"><strong>{{ t.beneficiario_exibicao }}</strong><small>{{ t.numero }} · {{ t.descricao }}{% if t.parcela_total %} · Parcela {{ t.rotulo_parcela }}{% endif %}</small></td>
   <td><strong>{{ t.get_origem_display }}</strong>{% if t.origem_detalhe %}<small class="fin-muted" style="display:block;margin-top:3px">{{ t.origem_detalhe }}</small>{% endif %}</td>
   <td>{{ t.obra|default:"—" }}</td>
@@ -66,9 +66,19 @@
       </form>
     {% endif %}
   </td>
-  <td><span class="fin-badge fin-badge--{{ t.status|status_fin_classe }}">{{ t.get_status_display }}</span>{% if t.esta_vencido %}<small class="fin-danger-text" style="display:block;margin-top:5px;font-weight:700">Vencida há {{ t.dias_em_atraso }} dia{{ t.dias_em_atraso|pluralize }}</small>{% endif %}</td>
+  <td><span class="fin-badge fin-badge--{{ t.status|status_fin_classe }}" data-status-badge>{{ t.get_status_display }}</span>{% if t.esta_vencido %}<small class="fin-danger-text" data-overdue style="display:block;margin-top:5px;font-weight:700">Vencida há {{ t.dias_em_atraso }} dia{{ t.dias_em_atraso|pluralize }}</small>{% endif %}</td>
   <td class="fin-money">{% if t.esta_pago %}{{ t.valor_liquido|moeda_br }}{% else %}{{ t.saldo_aberto|moeda_br }}{% endif %}</td>
-  <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' t.pk %}">Abrir</a></td>
+  <td>
+    <div style="display:flex;align-items:center;gap:7px;white-space:nowrap">
+      <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' t.pk %}">Abrir</a>
+      {% if pode_pagar and t.status == 'APROVADO' and not t.esta_pago %}
+        <form method="post" action="{% url 'financeiro:pagamento_confirmar_direto' t.pk %}" class="fin-confirm-payment-form" style="margin:0">
+          {% csrf_token %}
+          <button class="fin-btn fin-btn--sm fin-btn--primary" type="submit">Confirmar pagamento</button>
+        </form>
+      {% endif %}
+    </div>
+  </td>
 </tr>
 {% empty %}<tr><td colspan="8" class="fin-empty"><strong>Nenhuma conta encontrada</strong>Ajuste os filtros.</td></tr>{% endfor %}
 </tbody></table></div>{% if page_obj.paginator.num_pages > 1 %}<div class="fin-pagination"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><span>{% if page_obj.has_previous %}<a class="fin-btn fin-btn--sm" href="?page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="fin-btn fin-btn--sm" href="?page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</span></div>{% endif %}</section>
@@ -113,6 +123,86 @@
     options.forEach(opt => opt.addEventListener('click', () => choose(opt)));
   });
   document.addEventListener('click', e => { if (!e.target.closest('.fin-combobox')) closeAll(); });
+})();
+</script>
+
+<script>
+(function(){
+  const forms = document.querySelectorAll('.fin-confirm-payment-form');
+
+  function showFeedback(message, type){
+    let box = document.getElementById('fin-payment-feedback');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fin-payment-feedback';
+      box.style.position = 'fixed';
+      box.style.right = '22px';
+      box.style.bottom = '22px';
+      box.style.zIndex = '9999';
+      box.style.maxWidth = '430px';
+      box.style.padding = '13px 16px';
+      box.style.borderRadius = '10px';
+      box.style.boxShadow = '0 10px 30px rgba(15, 35, 45, .18)';
+      box.style.fontWeight = '700';
+      document.body.appendChild(box);
+    }
+    box.textContent = message;
+    box.style.background = type === 'error' ? '#fff1f1' : '#eefaf3';
+    box.style.color = type === 'error' ? '#a83232' : '#17663a';
+    box.style.border = type === 'error' ? '1px solid #f0c2c2' : '1px solid #bfe3ce';
+    box.hidden = false;
+    clearTimeout(box._timer);
+    box._timer = setTimeout(() => { box.hidden = true; }, 4500);
+  }
+
+  forms.forEach(form => {
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+
+      if (!window.confirm('Deseja realmente confirmar o pagamento desta conta?')) return;
+
+      const button = form.querySelector('button[type="submit"]');
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Confirmando...';
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || 'Não foi possível confirmar o pagamento.');
+
+        const row = form.closest('[data-titulo-row]');
+        if (row) {
+          const badge = row.querySelector('[data-status-badge]');
+          if (badge) {
+            badge.textContent = data.status_display || 'Pago';
+            badge.className = 'fin-badge fin-badge--success';
+          }
+          row.querySelector('[data-overdue]')?.remove();
+
+          const configForm = row.querySelector('.fin-config-row:not(.fin-config-row--locked)');
+          if (configForm) {
+            configForm.querySelectorAll('input, select, button').forEach(el => {
+              el.disabled = true;
+            });
+            configForm.style.opacity = '.72';
+          }
+        }
+
+        form.remove();
+        showFeedback(data.message || 'Pagamento confirmado com sucesso.', 'success');
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = originalText;
+        showFeedback(error.message, 'error');
+      }
+    });
+  });
 })();
 </script>
 {% endblock %}

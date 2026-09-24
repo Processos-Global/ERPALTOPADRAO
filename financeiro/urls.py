@@ -24,6 +24,7 @@ urlpatterns = [
     path("previsoes/sincronizar/", views.sincronizar_compras, name="sincronizar_previsoes"),
     path("pagamentos/", views.pagamentos_lista, name="pagamentos"),
     path("pagamentos/titulo/<int:titulo_id>/novo/", views.pagamento_novo, name="pagamento_novo"),
+    path("pagamentos/titulo/<int:titulo_id>/confirmar/", views.pagamento_confirmar_direto, name="pagamento_confirmar_direto"),
     path("pagamentos/<int:pk>/estornar/", views.pagamento_estornar, name="pagamento_estornar"),
     path("gastos/", views.gastos, name="gastos"),
     path("analises/", views.analises, name="analises"),

@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -57,6 +58,34 @@ def pagamento_novo(request, titulo_id):
         form = PagamentoForm()
 
     return render(request, "financeiro/pagamento_form.html", {"form": form, "titulo": titulo})
+
+
+@financeiro_acao_required("PAGAR")
+@require_POST
+def pagamento_confirmar_direto(request, titulo_id):
+    """Confirma integralmente uma conta aprovada direto da listagem de Contas a Pagar."""
+    titulo = get_object_or_404(TituloPagar, pk=titulo_id)
+
+    try:
+        pagamento = registrar_pagamento(
+            titulo=titulo,
+            data_pagamento=timezone.localdate(),
+            forma=Pagamento.Forma.OUTRO,
+            usuario=request.user,
+        )
+    except ValidationError as exc:
+        return JsonResponse(
+            {"ok": False, "message": "; ".join(exc.messages)},
+            status=400,
+        )
+
+    return JsonResponse({
+        "ok": True,
+        "message": f"Pagamento de R$ {pagamento.valor:,.2f} confirmado com sucesso.",
+        "status": TituloPagar.Status.PAGO,
+        "status_display": TituloPagar.Status.PAGO.label,
+        "data_pagamento": pagamento.data_pagamento.strftime("%d/%m/%Y"),
+    })
 
 
 @financeiro_acao_required("PAGAR")
