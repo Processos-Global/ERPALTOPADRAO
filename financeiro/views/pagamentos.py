@@ -39,22 +39,22 @@ def pagamento_novo(request, titulo_id):
     if request.method == "POST":
         form = PagamentoForm(request.POST, request.FILES)
         if form.is_valid():
+            if not form.cleaned_data.get("pago"):
+                messages.info(request, "A conta permanece aprovada e não foi marcada como paga.")
+                return redirect("financeiro:titulos")
             try:
                 pagamento = registrar_pagamento(
                     titulo=titulo,
-                    data_pagamento=form.cleaned_data["data_pagamento"],
-                    forma=form.cleaned_data["forma"],
-                    comprovante=form.cleaned_data.get("comprovante"),
-                    referencia_bancaria=form.cleaned_data.get("referencia_bancaria", ""),
-                    observacao=form.cleaned_data.get("observacao", ""),
+                    data_pagamento=timezone.localdate(),
+                    forma=Pagamento.Forma.OUTRO,
                     usuario=request.user,
                 )
-                messages.success(request, f"Pagamento de R$ {pagamento.valor:,.2f} confirmado.")
+                messages.success(request, f"Pagamento de R$ {pagamento.valor:,.2f} marcado como pago.")
                 return redirect("financeiro:titulos")
             except ValidationError as exc:
                 form.add_error(None, "; ".join(exc.messages))
     else:
-        form = PagamentoForm(initial={"data_pagamento": timezone.localdate()})
+        form = PagamentoForm()
 
     return render(request, "financeiro/pagamento_form.html", {"form": form, "titulo": titulo})
 

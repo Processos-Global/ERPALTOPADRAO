@@ -36,8 +36,9 @@
         <div class="fin-field">
           <label>Tipo do pagamento</label>
           <select class="fin-control" id="tipo-pagamento-ui">
-            <option value="OUTRO" {% if form.tipo_pagamento.value != 'MATERIAL' %}selected{% endif %}>Outro pagamento</option>
+            <option value="OUTRO" {% if form.tipo_pagamento.value == 'OUTRO' or not form.tipo_pagamento.value %}selected{% endif %}>Outro pagamento</option>
             <option value="MATERIAL" {% if form.tipo_pagamento.value == 'MATERIAL' %}selected{% endif %}>Materiais</option>
+            <option value="REEMBOLSO" {% if form.tipo_pagamento.value == 'REEMBOLSO' %}selected{% endif %}>Reembolso</option>
           </select>
         </div>
         <div class="fin-field"><label>Valor bruto</label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
@@ -61,8 +62,8 @@
 
       <div id="bloco-outro" style="margin-top:14px">
         <div class="fin-form-grid">
-          <div class="fin-field"><label>Descrição do pagamento</label>{{ form.descricao }}<small class="fin-help">O texto será salvo em CAIXA ALTA.</small>{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
-          <div class="fin-field fin-field--full"><label>O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          <div class="fin-field" id="campo-descricao-pagamento"><label>Descrição do pagamento</label>{{ form.descricao }}<small class="fin-help">O texto será salvo em CAIXA ALTA.</small>{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          <div class="fin-field fin-field--full"><label id="label-especificacao-pagamento">O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
         </div>
       </div>
 
@@ -112,13 +113,20 @@
   const descricao = document.getElementById('id_descricao');
   const especificacao = document.getElementById('id_especificacao_pagamento');
   const selectMateriais = document.getElementById('id_materiais');
+  const campoDescricao = document.getElementById('campo-descricao-pagamento');
+  const labelEspecificacao = document.getElementById('label-especificacao-pagamento');
   const materiaisBox = document.getElementById('materiais-combobox');
   function sync(){
     const tipo = uiTipo.value;
     realTipo.value = tipo;
     materiais.style.display = tipo === 'MATERIAL' ? '' : 'none';
     outro.style.display = tipo === 'MATERIAL' ? 'none' : '';
-    if (descricao) descricao.required = tipo !== 'MATERIAL';
+    if (campoDescricao) campoDescricao.style.display = tipo === 'REEMBOLSO' ? 'none' : '';
+    if (labelEspecificacao) labelEspecificacao.textContent = tipo === 'REEMBOLSO' ? 'O que está sendo reembolsado' : 'O que está sendo pago';
+    if (descricao) {
+      descricao.required = tipo === 'OUTRO';
+      if (tipo === 'REEMBOLSO') descricao.value = 'REEMBOLSO';
+    }
     if (especificacao) especificacao.required = tipo !== 'MATERIAL';
   }
   uiTipo.addEventListener('change', sync); sync();

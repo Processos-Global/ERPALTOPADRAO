@@ -184,6 +184,70 @@
   </div>
 </div>
 
+<section class="fin-section fin-ind-wide">
+  <div class="fin-section__head">
+    <div><h2>Resumo financeiro por obra</h2></div>
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead>
+        <tr>
+          <th>Obra</th>
+          <th style="text-align:right">Pago</th>
+          <th style="text-align:right">Contas abertas</th>
+          <th style="text-align:right">Previsões extras</th>
+          <th style="text-align:right">Total mapeado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in obras_resumo %}
+        <tr>
+          <td><strong>{{ linha.obra }}</strong></td>
+          <td class="fin-money">{{ linha.pago|moeda_br }}</td>
+          <td class="fin-money">{{ linha.aberto|moeda_br }}</td>
+          <td class="fin-money">{{ linha.previsto|moeda_br }}</td>
+          <td class="fin-money">{{ linha.total|moeda_br }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="fin-empty">Nenhum movimento financeiro.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="fin-section fin-ind-wide">
+  <div class="fin-section__head">
+    <div><h2>Detalhamento por apropriação</h2></div>
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Classe</th>
+          <th>Apropriação</th>
+          <th>Pagamentos</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in por_apropriacao %}
+        <tr>
+          <td>{{ i.titulo__plano_financeiro__codigo }}</td>
+          <td>{{ i.titulo__plano_financeiro__pai__nome|default:"—" }}</td>
+          <td><strong>{{ i.titulo__plano_financeiro__nome }}</strong></td>
+          <td>{{ i.quantidade }}</td>
+          <td class="fin-money">{{ i.total|moeda_br }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="fin-empty">Sem dados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <div class="fin-ind-grid">
   <section class="fin-chart-card">
     <div class="fin-chart-card__head">
@@ -321,68 +385,4 @@
     </div>
   </section>
 </div>
-
-<section class="fin-section fin-ind-wide">
-  <div class="fin-section__head">
-    <div><h2>Resumo financeiro por obra</h2></div>
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead>
-        <tr>
-          <th>Obra</th>
-          <th style="text-align:right">Pago</th>
-          <th style="text-align:right">Contas abertas</th>
-          <th style="text-align:right">Previsões extras</th>
-          <th style="text-align:right">Total mapeado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for linha in obras_resumo %}
-        <tr>
-          <td><strong>{{ linha.obra }}</strong></td>
-          <td class="fin-money">{{ linha.pago|moeda_br }}</td>
-          <td class="fin-money">{{ linha.aberto|moeda_br }}</td>
-          <td class="fin-money">{{ linha.previsto|moeda_br }}</td>
-          <td class="fin-money">{{ linha.total|moeda_br }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="fin-empty">Nenhum movimento financeiro.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="fin-section fin-ind-wide">
-  <div class="fin-section__head">
-    <div><h2>Detalhamento por apropriação</h2></div>
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Classe</th>
-          <th>Apropriação</th>
-          <th>Pagamentos</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for i in por_apropriacao %}
-        <tr>
-          <td>{{ i.titulo__plano_financeiro__codigo }}</td>
-          <td>{{ i.titulo__plano_financeiro__pai__nome|default:"—" }}</td>
-          <td><strong>{{ i.titulo__plano_financeiro__nome }}</strong></td>
-          <td>{{ i.quantidade }}</td>
-          <td class="fin-money">{{ i.total|moeda_br }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="fin-empty">Sem dados.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
 {% endblock %}

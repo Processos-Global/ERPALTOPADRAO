@@ -2,7 +2,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -143,6 +143,21 @@ def ficha_tecnica(request, obra_id):
     ambientes = list(
         AmbienteFichaTecnica.objects.filter(pavimento__ficha=ficha, ativo=True)
         .select_related("pavimento", "tipo_ambiente", "caracteristica")
+        .annotate(
+            total_categorias_ativas=Count(
+                "categorias_gf",
+                filter=Q(categorias_gf__ativo=True),
+                distinct=True,
+            ),
+            total_itens_ativos=Count(
+                "categorias_gf__itens",
+                filter=Q(
+                    categorias_gf__ativo=True,
+                    categorias_gf__itens__ativo=True,
+                ),
+                distinct=True,
+            ),
+        )
         .order_by("pavimento__ordem", "ordem", "identificacao")
     )
     ambiente_selecionado = None

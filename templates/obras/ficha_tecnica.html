@@ -41,7 +41,13 @@
 .ft-table th{background:#f7f9fa;color:#687d85;text-transform:uppercase;font-size:9px;letter-spacing:.03em}.ft-table tr:last-child td{border-bottom:0}
 .ft-table-items{min-width:760px}.ft-row-note{display:block;color:#87979d;font-size:9px;margin-top:2px}.ft-spec{max-width:340px}.ft-action-cell{width:68px}
 .ft-empty{padding:20px;text-align:center;color:#82939a;font-size:11px}
-.ft-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.ft-tabs a{padding:7px 9px;border:1px solid var(--ft-line);border-radius:7px;background:#fff;color:#56707b;text-decoration:none;font-size:10px;font-weight:800}.ft-tabs a.active{background:#eaf6f8;color:var(--ft-primary-dark);border-color:#8bcbd6}
+.ft-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.ft-tabs a{display:inline-flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--ft-line);border-radius:7px;background:#fff;color:#56707b;text-decoration:none;font-size:10px;font-weight:800}
+.ft-tabs a.active{background:#eaf6f8;color:var(--ft-primary-dark);border-color:#8bcbd6}
+.ft-tabs a.is-filled{border-color:#b8ddc5;background:#fbfefc}
+.ft-tabs a.is-filled.active{background:#eaf6f8;border-color:#8bcbd6}
+.ft-tab-status{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:#edf8f1;color:#287146;font-size:9px;font-weight:900;line-height:1.2;white-space:nowrap}
+.ft-tab-status .check{font-size:10px;line-height:1}
 .ft-context{display:flex;flex-wrap:wrap;gap:6px;padding:8px 10px;border-radius:8px;background:#f7f9fa;border:1px solid #e5ecef;margin-bottom:10px}.ft-context span{font-size:10px;color:#536c76}.ft-context strong{color:#2b4f5f}
 .ft-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.ft-cat-wrap{border:1px solid var(--ft-line);border-radius:8px;background:#fff;overflow:hidden}.ft-cat{display:flex;gap:8px;align-items:flex-start;padding:9px;cursor:pointer}.ft-cat input{margin-top:2px}.ft-cat strong{display:block;font-size:11px;color:#284b5b}.ft-cat small{display:block;color:#83949b;font-size:9px;margin-top:2px}.ft-system-choice{padding:0 9px 9px 29px}.ft-system-choice label{display:block;font-size:10px;font-weight:800;color:#506873;margin-bottom:4px}.ft-system-choice select{width:100%;box-sizing:border-box;border:1px solid #cbd8dd;border-radius:7px;background:#fff;padding:8px 9px;font-size:12px;color:#223f4c}
 .ft-side{display:grid;gap:10px;position:sticky;top:14px}.ft-side-card{padding:13px}.ft-side-card h3{margin:0 0 9px;font-size:12px}.ft-kpis{display:grid;grid-template-columns:1fr 1fr;gap:6px}.ft-kpi{border:1px solid #e7edef;border-radius:8px;padding:9px}.ft-kpi span{display:block;color:#84959d;font-size:9px}.ft-kpi strong{display:block;font-size:17px;margin-top:2px}
@@ -204,7 +210,18 @@
           <div class="ft-form-title">Categorias por ambiente</div>
           <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
           <div class="ft-tabs">
-            {% for a in ambientes %}<a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">{{ a.pavimento.nome }} · {{ a.identificacao }}</a>{% empty %}<span class="ft-empty">Cadastre os ambientes primeiro.</span>{% endfor %}
+            {% for a in ambientes %}
+              <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">
+                <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
+                {% if a.total_categorias_ativas %}
+                  <span class="ft-tab-status" title="{{ a.total_categorias_ativas }} categoria{{ a.total_categorias_ativas|pluralize }} selecionada{{ a.total_categorias_ativas|pluralize }} neste ambiente">
+                    <span class="check">✓</span> {{ a.total_categorias_ativas }}
+                  </span>
+                {% endif %}
+              </a>
+            {% empty %}
+              <span class="ft-empty">Cadastre os ambientes primeiro.</span>
+            {% endfor %}
           </div>
 
           {% if ambiente_selecionado %}
@@ -235,7 +252,16 @@
       <div class="ft-panel-body">
         <div class="ft-tabs">
           <a class="{% if not ambiente_selecionado %}active{% endif %}" href="?etapa=4">Gerais</a>
-          {% for a in ambientes %}<a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}" href="?etapa=4&ambiente={{ a.pk }}">{{ a.pavimento.nome }} · {{ a.identificacao }}</a>{% endfor %}
+          {% for a in ambientes %}
+            <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_itens_ativos %} is-filled{% endif %}" href="?etapa=4&ambiente={{ a.pk }}">
+              <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
+              {% if a.total_itens_ativos %}
+                <span class="ft-tab-status" title="{{ a.total_itens_ativos }} item{{ a.total_itens_ativos|pluralize }} cadastrado{{ a.total_itens_ativos|pluralize }} neste ambiente">
+                  <span class="check">✓</span> {{ a.total_itens_ativos }}
+                </span>
+              {% endif %}
+            </a>
+          {% endfor %}
         </div>
 
         {% if ambiente_selecionado %}

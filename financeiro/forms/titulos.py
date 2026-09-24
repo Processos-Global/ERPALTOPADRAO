@@ -11,7 +11,7 @@ class TituloPagarForm(ERPModelForm):
     """Formulário enxuto para solicitação avulsa e manutenção de contas."""
 
     tipo_pagamento = forms.ChoiceField(
-        choices=(("OUTRO", "Outro pagamento"), ("MATERIAL", "Materiais")),
+        choices=(("OUTRO", "Outro pagamento"), ("MATERIAL", "Materiais"), ("REEMBOLSO", "Reembolso")),
         initial="OUTRO",
         label="Tipo do pagamento",
     )
@@ -101,6 +101,8 @@ class TituloPagarForm(ERPModelForm):
 
         if self.instance and self.instance.pk and self.instance.materiais.exists():
             self.fields["tipo_pagamento"].initial = "MATERIAL"
+        elif self.instance and self.instance.pk and (self.instance.descricao or "").strip().upper() == "REEMBOLSO":
+            self.fields["tipo_pagamento"].initial = "REEMBOLSO"
         else:
             self.fields["tipo_pagamento"].initial = "OUTRO"
 
@@ -150,6 +152,12 @@ class TituloPagarForm(ERPModelForm):
                     nomes = [str(material).strip() for material in materiais]
                     cleaned["descricao"] = "MATERIAIS"
                     cleaned["especificacao_pagamento"] = "\n".join(nomes)
+            elif tipo == "REEMBOLSO":
+                especificacao = (cleaned.get("especificacao_pagamento") or "").strip()
+                cleaned["descricao"] = "REEMBOLSO"
+                if not especificacao:
+                    self.add_error("especificacao_pagamento", "Informe o que está sendo reembolsado.")
+                cleaned["materiais"] = Material.objects.none()
             else:
                 descricao = (cleaned.get("descricao") or "").strip()
                 especificacao = (cleaned.get("especificacao_pagamento") or "").strip()
@@ -194,31 +202,10 @@ class PrevisaoFinanceiraForm(ERPModelForm):
             field.widget.attrs["class"] = (cls + " fin-control").strip()
 
 
-class PagamentoForm(ERPModelForm):
-    class Meta:
-        model = Pagamento
-        fields = (
-            "data_pagamento",
-            "forma",
-            "referencia_bancaria",
-            "comprovante",
-            "observacao",
-        )
-        widgets = {
-            "data_pagamento": forms.DateInput(attrs={"type": "date"}),
-            "especificacao_pagamento": forms.Textarea(attrs={"rows": 3, "placeholder": "Descreva o serviço, taxa ou outro pagamento."}),
-            "observacao": forms.Textarea(attrs={"rows": 3}),
-        }
-        labels = {
-            "referencia_bancaria": "Referência / autenticação",
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["comprovante"].required = True
-        for field in self.fields.values():
-            cls = field.widget.attrs.get("class", "")
-            field.widget.attrs["class"] = (cls + " fin-control").strip()
-
-    def clean_comprovante(self):
-        return validar_documento_upload(self.cleaned_data.get("comprovante"))
+class PagamentoForm(forms.Form):
+    pago = forms.BooleanField(
+        required=False,
+        label="Pago",
+        help_text="Marque esta opção somente quando o pagamento já tiver sido realizado.",
+        widget=forms.CheckboxInput(attrs={"class": "fin-check"}),
+    )

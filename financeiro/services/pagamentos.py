@@ -7,7 +7,7 @@ from financeiro.services.auditoria import registrar_evento
 
 
 @transaction.atomic
-def registrar_pagamento(*, titulo, data_pagamento, forma, usuario, comprovante=None, referencia_bancaria="", observacao=""):
+def registrar_pagamento(*, titulo, data_pagamento=None, forma=None, usuario, comprovante=None, referencia_bancaria="", observacao=""):
     """Confirma o pagamento integral de um título exatamente uma vez."""
     titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
 
@@ -18,8 +18,8 @@ def registrar_pagamento(*, titulo, data_pagamento, forma, usuario, comprovante=N
     if (pagamento_existente and pagamento_existente.status == Pagamento.Status.EFETIVADO) or titulo.status == TituloPagar.Status.PAGO:
         raise ValidationError("Este título já possui pagamento registrado.")
 
-    if not comprovante:
-        raise ValidationError("Anexe o comprovante para confirmar o pagamento.")
+    data_pagamento = data_pagamento or timezone.localdate()
+    forma = forma or Pagamento.Forma.OUTRO
 
     valor = titulo.valor_liquido
     if valor <= 0:
