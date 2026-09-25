@@ -6,6 +6,7 @@ from .gastos import gastos
 from .indicadores import indicadores
 from .pagamentos import pagamento_confirmar_direto, pagamento_estornar, pagamento_novo, pagamentos_lista
 from .previsoes import previsao_nova, previsoes_lista, sincronizar_compras
+from .relatorios import relatorio_pagamento_emitir, relatorio_pagamento_excel, relatorios_pagamento
 from .titulos import (
     titulo_cancelar,
     titulo_configurar,

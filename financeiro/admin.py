@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from financeiro.models import DespesaRecorrente, Pagamento, PlanoFinanceiro, PrevisaoFinanceira, TituloPagar
+from financeiro.models import DespesaRecorrente, Pagamento, PlanoFinanceiro, PrevisaoFinanceira, RelatorioPagamento, TituloPagar
 
 
 @admin.register(TituloPagar)
@@ -15,3 +15,5 @@ admin.site.register(PlanoFinanceiro)
 admin.site.register(PrevisaoFinanceira)
 admin.site.register(DespesaRecorrente)
 admin.site.register(Pagamento)
+
+admin.site.register(RelatorioPagamento)

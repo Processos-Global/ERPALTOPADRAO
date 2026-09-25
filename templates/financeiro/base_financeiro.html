@@ -14,6 +14,7 @@
     {% if fin_pode_aprovar %}<a href="{% url 'financeiro:aprovacoes' %}" class="{% if request.resolver_match.url_name == 'aprovacoes' %}is-active{% endif %}">Aprovações</a>{% endif %}
     {% if fin_pode_lancar %}<a href="{% url 'financeiro:titulo_novo' %}" class="{% if request.resolver_match.url_name == 'titulo_novo' %}is-active{% endif %}">Solicitação avulsa</a>{% endif %}
     <a href="{% url 'financeiro:indicadores' %}" class="{% if request.resolver_match.url_name == 'indicadores' %}is-active{% endif %}">Indicadores</a>
+    <a href="{% url 'financeiro:relatorios_pagamento' %}" class="{% if 'relatorio_pagamento' in request.resolver_match.url_name or request.resolver_match.url_name == 'relatorios_pagamento' %}is-active{% endif %}">Relatórios</a>
     {% if fin_pode_admin %}<a href="{% url 'financeiro:plano_financeiro' %}" class="{% if 'plano_financeiro' in request.resolver_match.url_name %}is-active{% endif %}">Apropriações</a>{% endif %}
   </nav>
   {% block financeiro_content %}{% endblock %}

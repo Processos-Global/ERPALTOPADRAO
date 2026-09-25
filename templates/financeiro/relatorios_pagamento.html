@@ -1,0 +1,89 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Relatórios de pagamento{% endblock %}
+{% block financeiro_content %}
+{% pode_financeiro "PAGAR" as pode_emitir_relatorio %}
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <div class="fin-eyebrow">Fechamento para pagamento</div>
+    <h1 class="fin-title">Relatórios de pagamento</h1>
+    <div class="fin-sub">Selecione o período em que as contas foram aprovadas, confira o fechamento e emita a planilha para o setor financeiro.</div>
+  </div>
+</header>
+
+<section class="fin-section">
+  <div class="fin-section__head">
+    <div><h2>Novo relatório</h2><p>O período considera a data e hora em que cada conta recebeu a aprovação.</p></div>
+  </div>
+  <div class="fin-section__body">
+    <form method="get" class="fin-toolbar" style="margin:0">
+      <div class="fin-filter-field"><label>Início do período</label><input class="fin-control" type="date" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}" required></div>
+      <div class="fin-filter-field"><label>Fim do período</label><input class="fin-control" type="date" name="fim" value="{{ data_fim|date:'Y-m-d' }}" required></div>
+      <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Consultar período</button></div>
+    </form>
+  </div>
+</section>
+
+<div class="fin-kpis" style="margin-top:16px">
+  <div class="fin-kpi"><span>Pagamentos disponíveis</span><strong>{{ itens_preview|length }}</strong></div>
+  <div class="fin-kpi"><span>Valor do fechamento</span><strong>{{ total_preview|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Período</span><strong style="font-size:17px">{{ data_inicio|date:"d/m/Y" }} — {{ data_fim|date:"d/m/Y" }}</strong></div>
+</div>
+
+<section class="fin-section">
+  <div class="fin-section__head">
+    <div><h2>Prévia do fechamento</h2><p>Você pode usar o mesmo período quantas vezes precisar. Cada nova emissão inclui somente aprovações novas que ainda não foram enviadas em outro relatório.</p></div>
+    {% if itens_preview and pode_emitir_relatorio %}
+    <form method="post" action="{% url 'financeiro:relatorio_pagamento_emitir' %}" onsubmit="return confirm('Emitir este relatório? As aprovações deste fechamento ficarão registradas no histórico. Se houver novas aprovações nas mesmas datas, você poderá emitir outro relatório para o mesmo período.')">
+      {% csrf_token %}
+      <input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}">
+      <input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}">
+      <button class="fin-btn fin-btn--primary" type="submit">Emitir relatório Excel</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th>Aprovação</th><th>Conta / beneficiário</th><th>Obra</th><th>Apropriação</th><th>Vencimento</th><th>Origem</th><th style="text-align:right">Valor</th></tr></thead>
+      <tbody>
+      {% for item in itens_preview %}
+        <tr>
+          <td class="fin-date">{{ item.aprovacao.criado_em|date:"d/m/Y H:i" }}<small class="fin-muted" style="display:block;margin-top:3px">{% if item.aprovacao.usuario %}{{ item.aprovacao.usuario.get_full_name|default:item.aprovacao.usuario.username }}{% else %}—{% endif %}</small></td>
+          <td class="fin-main-cell"><strong>{{ item.titulo.beneficiario_exibicao }}</strong><small>{{ item.titulo.numero }} · {{ item.titulo.descricao }}{% if item.titulo.parcela_total %} · Parcela {{ item.titulo.rotulo_parcela }}{% endif %}</small></td>
+          <td>{{ item.titulo.obra|default:"—" }}</td>
+          <td>{% if item.titulo.plano_financeiro %}{{ item.titulo.plano_financeiro.caminho }}{% else %}—{% endif %}</td>
+          <td>{{ item.titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>
+          <td>{{ item.titulo.get_origem_display }}</td>
+          <td class="fin-money">{{ item.valor|moeda_br }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="fin-empty"><strong>Nenhuma aprovação nova disponível</strong>Este período pode ser utilizado novamente, mas neste momento não existem novas contas aprovadas que ainda não tenham sido incluídas em relatório. Para baixar novamente um relatório já emitido, use o histórico abaixo.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="fin-section">
+  <div class="fin-section__head"><div><h2>Histórico de emissões</h2><p>Relatórios anteriores permanecem disponíveis para consulta e novo download da mesma planilha.</p></div></div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th>Relatório</th><th>Período das aprovações</th><th>Emissão</th><th>Emitido por</th><th>Itens</th><th style="text-align:right">Total</th><th></th></tr></thead>
+      <tbody>
+      {% for rel in historico %}
+        <tr>
+          <td><strong>{{ rel.numero }}</strong></td>
+          <td>{{ rel.periodo_inicio|date:"d/m/Y" }} — {{ rel.periodo_fim|date:"d/m/Y" }}</td>
+          <td>{{ rel.emitido_em|date:"d/m/Y H:i" }}</td>
+          <td>{% if rel.emitido_por %}{{ rel.emitido_por.get_full_name|default:rel.emitido_por.username }}{% else %}—{% endif %}</td>
+          <td>{{ rel.quantidade_itens }}</td>
+          <td class="fin-money">{{ rel.valor_total|moeda_br }}</td>
+          <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}">Baixar Excel</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="fin-empty"><strong>Nenhum relatório emitido</strong>O histórico será criado a partir da primeira emissão.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

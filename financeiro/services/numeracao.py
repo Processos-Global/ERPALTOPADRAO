@@ -7,6 +7,7 @@ from financeiro.models import SequenciaFinanceira
 PREFIXOS = {
     "TITULO": "FIN",
     "LOTE": "PAG",
+    "RELATORIO_PAGAMENTO": "RPG",
 }
 
 
