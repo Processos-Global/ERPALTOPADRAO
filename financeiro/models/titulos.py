@@ -61,6 +61,12 @@ class TituloPagar(models.Model):
     )
     beneficiario_nome = models.CharField(max_length=255, blank=True, db_index=True)
     beneficiario_documento = models.CharField(max_length=40, blank=True)
+    beneficiario_banco = models.CharField(max_length=120, blank=True)
+    beneficiario_agencia = models.CharField(max_length=30, blank=True)
+    beneficiario_conta_corrente = models.CharField(max_length=40, blank=True)
+    beneficiario_operacao = models.CharField(max_length=30, blank=True)
+    beneficiario_pix = models.CharField(max_length=255, blank=True)
+    beneficiario_titular = models.CharField(max_length=255, blank=True)
 
     obra = models.ForeignKey(
         "obras.Obra",

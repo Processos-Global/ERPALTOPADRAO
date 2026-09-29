@@ -75,6 +75,12 @@ class FornecedorForm(FormBaseMixin, forms.ModelForm):
             "cidade",
             "estado",
             "avaliacao",
+            "banco",
+            "agencia",
+            "conta_corrente",
+            "operacao_bancaria",
+            "pix",
+            "titular_conta",
             "observacao",
             "ativo",
         ]

@@ -73,6 +73,8 @@ def _dados_item(aprovacao):
         centro_custo_codigo = titulo.plano_financeiro.codigo or ""
         centro_custo_descricao = titulo.plano_financeiro.nome or ""
 
+    fornecedor = titulo.fornecedor if titulo.fornecedor_id else None
+
     return {
         "aprovacao": aprovacao,
         "titulo": titulo,
@@ -81,7 +83,13 @@ def _dados_item(aprovacao):
         "pedido_numero": pedido_numero,
         "obra_nome": str(titulo.obra) if titulo.obra_id else "",
         "beneficiario_nome": titulo.beneficiario_exibicao,
-        "beneficiario_documento": titulo.beneficiario_documento or "",
+        "beneficiario_documento": titulo.beneficiario_documento or (fornecedor.documento if fornecedor else "") or "",
+        "beneficiario_banco": titulo.beneficiario_banco or (fornecedor.banco if fornecedor else "") or "",
+        "beneficiario_agencia": titulo.beneficiario_agencia or (fornecedor.agencia if fornecedor else "") or "",
+        "beneficiario_conta_corrente": titulo.beneficiario_conta_corrente or (fornecedor.conta_corrente if fornecedor else "") or "",
+        "beneficiario_operacao": titulo.beneficiario_operacao or (fornecedor.operacao_bancaria if fornecedor else "") or "",
+        "beneficiario_pix": titulo.beneficiario_pix or (fornecedor.pix if fornecedor else "") or "",
+        "beneficiario_titular": titulo.beneficiario_titular or (fornecedor.titular_conta if fornecedor else "") or "",
         "descricao": titulo.descricao,
         "especificacao_pagamento": titulo.especificacao_pagamento or "",
         "apropriacao": apropriacao,
@@ -240,6 +248,16 @@ def relatorio_pagamento_excel(request, pk):
         competencia_texto = competencia.strftime("%b/%y").lower() if competencia else ""
         parcela = item.parcela or "ÚNICA"
 
+        dados_beneficiario = "\n".join([
+            f"Banco: {item.beneficiario_banco or ''}",
+            f"AGÊNCIA: {item.beneficiario_agencia or ''}",
+            f"CONTA CORRENTE: {item.beneficiario_conta_corrente or ''}",
+            f"OPERAÇÃO: {item.beneficiario_operacao or ''}",
+            f"CNPJ: {item.beneficiario_documento or ''}",
+            f"PIX: {item.beneficiario_pix or ''}",
+            f"TITULAR: {item.beneficiario_titular or ''}",
+        ])
+
         valores = [
             item.conta_numero,
             parcela,
@@ -255,7 +273,7 @@ def relatorio_pagamento_excel(request, pk):
             "Previsto",
             item.forma_pagamento,
             item.observacao,
-            item.beneficiario_documento,
+            dados_beneficiario,
         ]
 
         for coluna, valor in enumerate(valores, 1):
@@ -274,12 +292,13 @@ def relatorio_pagamento_excel(request, pk):
         ws.cell(row=linha, column=9).number_format = 'R$ #,##0.00'
         ws.cell(row=linha, column=10).number_format = 'R$ #,##0.00'
         ws.cell(row=linha, column=11).number_format = 'R$ #,##0.00'
+        ws.row_dimensions[linha].height = 96
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = f"A1:O{max(1, len(itens) + 1)}"
     ws.row_dimensions[1].height = 28
 
-    larguras = [18, 16, 16, 16, 14, 32, 15, 42, 18, 21, 21, 16, 20, 34, 24]
+    larguras = [18, 16, 16, 16, 14, 32, 15, 42, 18, 21, 21, 16, 20, 34, 38]
     for idx, largura in enumerate(larguras, 1):
         ws.column_dimensions[get_column_letter(idx)].width = largura
 

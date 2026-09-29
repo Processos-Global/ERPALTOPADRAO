@@ -84,6 +84,28 @@
       {{ form.quantidade_parcelas }}{{ form.intervalo_dias }}
       {% endif %}
 
+      {% if modo == 'novo' or not titulo.integrada %}
+      <div class="fin-section" style="margin-top:16px">
+        <div class="fin-section__head">
+          <div>
+            <h2>Dados do beneficiário</h2>
+            <p>Ao selecionar um fornecedor, os dados cadastrados são preenchidos automaticamente. Você pode alterá-los somente para esta solicitação.</p>
+          </div>
+        </div>
+        <div class="fin-section__body">
+          <div class="fin-form-grid fin-form-grid--3">
+            <div class="fin-field"><label>CPF / CNPJ</label>{{ form.beneficiario_documento }}{% for e in form.beneficiario_documento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Banco</label>{{ form.beneficiario_banco }}{% for e in form.beneficiario_banco.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Agência</label>{{ form.beneficiario_agencia }}{% for e in form.beneficiario_agencia.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Conta corrente</label>{{ form.beneficiario_conta_corrente }}{% for e in form.beneficiario_conta_corrente.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Operação</label>{{ form.beneficiario_operacao }}{% for e in form.beneficiario_operacao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>PIX</label>{{ form.beneficiario_pix }}{% for e in form.beneficiario_pix.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field fin-field--full"><label>Titular</label>{{ form.beneficiario_titular }}{% for e in form.beneficiario_titular.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <details style="margin-top:16px">
         <summary style="cursor:pointer;font-weight:800">Documento e ajustes opcionais</summary>
         <div class="fin-form-grid fin-form-grid--3" style="margin-top:12px">
@@ -99,11 +121,12 @@
     </div>
   </section>
 
-  {{ form.beneficiario_nome }}{{ form.beneficiario_documento }}
+  {{ form.beneficiario_nome }}
   <div class="fin-form-footer"><div></div><div class="fin-form-footer__actions"><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Cancelar</a><button class="fin-btn fin-btn--primary">{% if modo == 'novo' %}Criar e enviar para aprovação{% else %}Salvar alterações{% endif %}</button></div></div>
 </form>
 
 {% if modo == 'novo' or not titulo.integrada %}
+{{ fornecedores_bancarios|json_script:"fornecedores-bancarios" }}
 <script>
 (function(){
   const realTipo = document.getElementById('id_tipo_pagamento');
@@ -116,6 +139,26 @@
   const campoDescricao = document.getElementById('campo-descricao-pagamento');
   const labelEspecificacao = document.getElementById('label-especificacao-pagamento');
   const materiaisBox = document.getElementById('materiais-combobox');
+  const fornecedorSelect = document.getElementById('id_fornecedor');
+  const fornecedoresDadosNode = document.getElementById('fornecedores-bancarios');
+  const fornecedoresDados = fornecedoresDadosNode ? JSON.parse(fornecedoresDadosNode.textContent || '{}') : {};
+  const camposBancarios = {
+    documento: document.getElementById('id_beneficiario_documento'),
+    banco: document.getElementById('id_beneficiario_banco'),
+    agencia: document.getElementById('id_beneficiario_agencia'),
+    conta_corrente: document.getElementById('id_beneficiario_conta_corrente'),
+    operacao: document.getElementById('id_beneficiario_operacao'),
+    pix: document.getElementById('id_beneficiario_pix'),
+    titular: document.getElementById('id_beneficiario_titular')
+  };
+  function preencherDadosFornecedor(){
+    if (!fornecedorSelect) return;
+    const dados = fornecedoresDados[String(fornecedorSelect.value)] || {};
+    Object.entries(camposBancarios).forEach(([chave, campo]) => {
+      if (campo) campo.value = dados[chave] || '';
+    });
+  }
+  if (fornecedorSelect) fornecedorSelect.addEventListener('change', preencherDadosFornecedor);
   function sync(){
     const tipo = uiTipo.value;
     realTipo.value = tipo;

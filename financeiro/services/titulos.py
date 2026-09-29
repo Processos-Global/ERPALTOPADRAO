@@ -82,7 +82,9 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
     dados.pop("tipo_pagamento", None)
     criticos = {
         "valor_original", "desconto", "juros", "multa", "outros_acrescimos",
-        "vencimento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento", "obra",
+        "vencimento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento",
+        "beneficiario_banco", "beneficiario_agencia", "beneficiario_conta_corrente",
+        "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular", "obra",
     }
     alterou_critico = False
     for campo, valor in dados.items():

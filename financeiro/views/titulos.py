@@ -19,6 +19,24 @@ from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar
 from obras.models import Obra
 
 
+def _fornecedores_bancarios():
+    return {
+        str(fornecedor["id"]): {
+            "documento": fornecedor["documento"] or "",
+            "banco": fornecedor["banco"] or "",
+            "agencia": fornecedor["agencia"] or "",
+            "conta_corrente": fornecedor["conta_corrente"] or "",
+            "operacao": fornecedor["operacao_bancaria"] or "",
+            "pix": fornecedor["pix"] or "",
+            "titular": fornecedor["titular_conta"] or "",
+        }
+        for fornecedor in Fornecedor.objects.filter(ativo=True).values(
+            "id", "documento", "banco", "agencia", "conta_corrente",
+            "operacao_bancaria", "pix", "titular_conta"
+        )
+    }
+
+
 @financeiro_acao_required("VISUALIZAR")
 def titulos_lista(request):
     hoje = timezone.localdate()
@@ -117,7 +135,11 @@ def titulo_novo(request):
             return redirect("financeiro:titulos")
     else:
         form = TituloPagarForm()
-    return render(request, "financeiro/titulo_form.html", {"form": form, "modo": "novo"})
+    return render(request, "financeiro/titulo_form.html", {
+        "form": form,
+        "modo": "novo",
+        "fornecedores_bancarios": _fornecedores_bancarios(),
+    })
 
 
 @financeiro_acao_required("VISUALIZAR")
@@ -159,7 +181,12 @@ def titulo_editar(request, pk):
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:
         form = TituloPagarForm(instance=titulo, titulo_integrado=titulo)
-    return render(request, "financeiro/titulo_form.html", {"form": form, "modo": "editar", "titulo": titulo})
+    return render(request, "financeiro/titulo_form.html", {
+        "form": form,
+        "modo": "editar",
+        "titulo": titulo,
+        "fornecedores_bancarios": _fornecedores_bancarios(),
+    })
 
 
 @financeiro_acao_required("EDITAR_TITULOS")

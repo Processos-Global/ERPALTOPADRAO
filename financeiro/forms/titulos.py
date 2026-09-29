@@ -45,6 +45,12 @@ class TituloPagarForm(ERPModelForm):
             "fornecedor",
             "beneficiario_nome",
             "beneficiario_documento",
+            "beneficiario_banco",
+            "beneficiario_agencia",
+            "beneficiario_conta_corrente",
+            "beneficiario_operacao",
+            "beneficiario_pix",
+            "beneficiario_titular",
             "plano_financeiro",
             "materiais",
             "descricao",
@@ -70,6 +76,12 @@ class TituloPagarForm(ERPModelForm):
             "fornecedor": "Fornecedor cadastrado",
             "beneficiario_nome": "Beneficiário / favorecido",
             "beneficiario_documento": "CPF / CNPJ do beneficiário",
+            "beneficiario_banco": "Banco",
+            "beneficiario_agencia": "Agência",
+            "beneficiario_conta_corrente": "Conta corrente",
+            "beneficiario_operacao": "Operação",
+            "beneficiario_pix": "PIX",
+            "beneficiario_titular": "Titular",
             "plano_financeiro": "Apropriação financeira",
             "descricao": "Descrição do pagamento",
             "especificacao_pagamento": "O que está sendo pago",
@@ -109,7 +121,6 @@ class TituloPagarForm(ERPModelForm):
         if not (titulo_integrado and titulo_integrado.integrada):
             self.fields["fornecedor"].required = True
             self.fields["beneficiario_nome"].widget = forms.HiddenInput()
-            self.fields["beneficiario_documento"].widget = forms.HiddenInput()
 
         if self.instance and self.instance.pk:
             self.fields["quantidade_parcelas"].widget = forms.HiddenInput()
@@ -122,7 +133,12 @@ class TituloPagarForm(ERPModelForm):
         if titulo_integrado and titulo_integrado.integrada:
             # Dados estruturais vindos da origem não podem ser trocados no Financeiro.
             # Vencimento e apropriação permanecem editáveis para completar a solicitação.
-            for campo in ("fornecedor", "beneficiario_nome", "beneficiario_documento", "valor_original"):
+            for campo in (
+                "fornecedor", "beneficiario_nome", "beneficiario_documento",
+                "beneficiario_banco", "beneficiario_agencia", "beneficiario_conta_corrente",
+                "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular",
+                "valor_original",
+            ):
                 self.fields[campo].disabled = True
             self.fields["tipo_pagamento"].widget = forms.HiddenInput()
             self.fields["materiais"].widget = forms.HiddenInput()
@@ -141,6 +157,8 @@ class TituloPagarForm(ERPModelForm):
             raise ValidationError("A conta integrada precisa possuir um beneficiário identificado na origem.")
         if fornecedor and not beneficiario:
             cleaned["beneficiario_nome"] = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
+        if fornecedor and not (cleaned.get("beneficiario_documento") or "").strip():
+            cleaned["beneficiario_documento"] = (getattr(fornecedor, "documento", "") or "").strip()
 
         if not self.titulo_integrado or not self.titulo_integrado.integrada:
             tipo = cleaned.get("tipo_pagamento") or "OUTRO"
