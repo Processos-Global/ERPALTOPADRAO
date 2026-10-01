@@ -1,7 +1,7 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
     <meta charset="UTF-8">
 
@@ -12,10 +12,38 @@
 
     <meta
         name="theme-color"
-        content="#1D91A6"
+        content="#453330"
+        id="saari-theme-color"
     >
 
+    <script>
+        /* Aplica o tema antes da pintura da página e evita clarão na navegação. */
+        (function () {
+            const STORAGE_KEY = 'saari-theme';
+            let theme = 'light';
 
+            try {
+                const saved = window.localStorage.getItem(STORAGE_KEY);
+                if (saved === 'dark' || saved === 'light') {
+                    theme = saved;
+                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    theme = 'dark';
+                }
+            } catch (error) {
+                theme = 'light';
+            }
+
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
+
+    <title>{% block title %}SAARI ERP{% endblock %}</title>
+
+    <link rel="icon" type="image/png" href="{% static 'img/saari/saari-simbolo-gold.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/saari/saari-simbolo-gold.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap" rel="stylesheet">
     <link
         rel="stylesheet"
         href="{% static 'css/base.css' %}"
@@ -23,12 +51,12 @@
 
     <style>
         :root {
-            /* Azul Opala Tropical - alinhado ao base.css */
-            --opal-blue: #1D91A6;
-            --opal-blue-dark: #0E5268;
-            --opal-blue-deep: #0A4054;
-            --opal-blue-soft: #DDF3F6;
-            --opal-blue-border: #BDE6EC;
+            /* Identidade visual SAARI */
+            --opal-blue: #b9aa72;
+            --opal-blue-dark: #453330;
+            --opal-blue-deep: #2d201c;
+            --opal-blue-soft: #eee8d6;
+            --opal-blue-border: #ded7c8;
         }
 
         .sidebar {
@@ -463,14 +491,14 @@
             border: 0;
             border-radius: .6rem;
             background: transparent;
-            color: #526875;
+            color: #756861;
             cursor: pointer;
             transition: background .16s ease, color .16s ease;
         }
 
         .notification-center__button:hover,
         .notification-center.is-open .notification-center__button {
-            background: #F1F5F9;
+            background: #f1ece4;
             color: var(--opal-blue-dark);
         }
 
@@ -505,10 +533,10 @@
             z-index: 1200;
             width: min(360px, calc(100vw - 24px));
             overflow: hidden;
-            border: 1px solid #E2E8F0;
+            border: 1px solid #ded7c8;
             border-radius: .75rem;
             background: #ffffff;
-            box-shadow: 0 18px 45px rgba(15, 23, 42, .14);
+            box-shadow: 0 18px 45px rgba(45,32,28, .14);
             opacity: 0;
             visibility: hidden;
             transform: translateY(-6px);
@@ -527,16 +555,16 @@
             justify-content: space-between;
             gap: .75rem;
             padding: .9rem 1rem;
-            border-bottom: 1px solid #EEF2F7;
+            border-bottom: 1px solid #ece6dc;
         }
 
         .notification-center__header strong {
-            color: #10243E;
+            color: #453330;
             font-size: .84rem;
         }
 
         .notification-center__header span {
-            color: #64748B;
+            color: #85776f;
             font-size: .69rem;
         }
 
@@ -550,13 +578,13 @@
             grid-template-columns: 8px minmax(0, 1fr);
             gap: .65rem;
             padding: .8rem 1rem;
-            border-bottom: 1px solid #F1F5F9;
+            border-bottom: 1px solid #f1ece4;
             color: inherit;
             text-decoration: none;
         }
 
         .notification-center__item:hover {
-            background: #F8FAFC;
+            background: #f8f4ed;
         }
 
         .notification-center__dot {
@@ -574,7 +602,7 @@
         .notification-center__content strong {
             display: block;
             margin-bottom: .18rem;
-            color: #10243E;
+            color: #453330;
             font-size: .76rem;
             line-height: 1.35;
         }
@@ -582,20 +610,20 @@
         .notification-center__content span,
         .notification-center__content small {
             display: block;
-            color: #64748B;
+            color: #85776f;
             font-size: .68rem;
             line-height: 1.4;
         }
 
         .notification-center__content small {
             margin-top: .3rem;
-            color: #94A3B8;
+            color: #a39890;
         }
 
         .notification-center__empty {
             padding: 1.4rem 1rem;
             text-align: center;
-            color: #64748B;
+            color: #85776f;
             font-size: .74rem;
         }
 
@@ -605,7 +633,7 @@
             justify-content: center;
             min-height: 2.7rem;
             padding: .35rem;
-            border-top: 1px solid #EEF2F7;
+            border-top: 1px solid #ece6dc;
         }
 
         .notification-center__footer a {
@@ -625,9 +653,43 @@
             }
         }
 
+        /* Ajustes finais da identidade SAARI */
+        .brand__content strong {
+            font-family: "Source Serif 4", Georgia, serif;
+            color: #ffffff;
+            letter-spacing: .08em;
+            font-weight: 500;
+        }
+
+        .brand__content small {
+            color: rgba(255, 255, 255, .62);
+            letter-spacing: .18em;
+        }
+
+        .brand__mark img,
+        .page-transition__mark img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .brand__mark {
+            border-color: rgba(185, 170, 114, .58);
+        }
+
+        .page-transition__mark {
+            border-color: rgba(185, 170, 114, .58);
+        }
+
+        .topbar__status {
+            background: #b9aa72 !important;
+        }
+
     </style>
 
     {% block extra_css %}{% endblock %}
+    {% include "components/saari_theme.html" %}
 </head>
 
 <body class="app-body">
@@ -639,9 +701,7 @@
         aria-hidden="true"
     >
         <div class="page-transition__mark">
-            <svg class="icon" aria-hidden="true">
-                <use href="#icon-building"></use>
-            </svg>
+            <img src="{% static 'img/saari/saari-simbolo-gold.png' %}" alt="" aria-hidden="true">
         </div>
     </div>
 
@@ -656,16 +716,14 @@
                     href="{% url 'core:index' %}"
                     class="brand"
                     data-transition-link
-                    aria-label="ALTO PADRÃO"
+                    aria-label="SAARI ERP"
                 >
                     <span class="brand__mark" aria-hidden="true">
-                        <svg class="icon">
-                            <use href="#icon-building"></use>
-                        </svg>
+                        <img src="{% static 'img/saari/saari-simbolo-gold.png' %}" alt="">
                     </span>
 
                     <span class="brand__content">
-                        <strong>ALTO PADRÃO</strong>
+                        <strong>SAARI</strong>
                         <small>ERP</small>
                     </span>
                 </a>
@@ -900,13 +958,15 @@
                     method="post"
                     action="{% url 'usuarios:logout' %}"
                     class="logout-form"
+                    data-logout-form
                 >
                     {% csrf_token %}
 
                     <button
                         type="submit"
                         class="sidebar-logout"
-                        title="Sair do sistema"
+                        title="Sair"
+                        data-logout-open
                     >
                         <svg class="icon">
                             <use href="#icon-exit"></use>
@@ -945,6 +1005,22 @@
                 </div>
 
                 <div class="topbar__account">
+
+                    <button
+                        type="button"
+                        class="theme-toggle"
+                        data-theme-toggle
+                        aria-label="Ativar modo noturno"
+                        title="Modo noturno"
+                    >
+                        <svg class="theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path>
+                        </svg>
+                        <svg class="theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"></path>
+                        </svg>
+                    </button>
 
                     <div class="notification-center" data-notification-center>
                         <button
@@ -1011,18 +1087,22 @@
             {% if messages %}
                 <div class="messages">
                     {% for message in messages %}
-                        <div class="message message--{{ message.tags }}">
-                            <span>{{ message }}</span>
-
-                            <button
-                                type="button"
-                                class="message__close"
-                                data-message-close
-                                aria-label="Fechar mensagem"
-                            >
-                                <svg class="icon">
-                                    <use href="#icon-close"></use>
-                                </svg>
+                        <div class="message message--{{ message.tags }}" role="status">
+                            <span class="message__icon" aria-hidden="true">
+                                {% if 'error' in message.tags or 'danger' in message.tags %}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg>
+                                {% elif 'warning' in message.tags %}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.8 19h18.4L12 3Z"></path><path d="M12 9v4"></path><path d="M12 16h.01"></path></svg>
+                                {% else %}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8.5 12 2.2 2.2 4.8-5"></path></svg>
+                                {% endif %}
+                            </span>
+                            <span class="message__copy">
+                                <strong>{% if 'error' in message.tags or 'danger' in message.tags %}Não foi possível concluir{% elif 'warning' in message.tags %}Atenção{% else %}Atualização concluída{% endif %}</strong>
+                                <span>{{ message }}</span>
+                            </span>
+                            <button type="button" class="message__close" data-message-close aria-label="Fechar mensagem">
+                                <svg class="icon"><use href="#icon-close"></use></svg>
                             </button>
                         </div>
                     {% endfor %}
@@ -1035,7 +1115,38 @@
         </section>
     </div>
 
+    <div class="logout-dialog" data-logout-dialog aria-hidden="true">
+        <div class="logout-dialog__backdrop" data-logout-cancel></div>
+        <div class="logout-dialog__card" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
+            <div class="logout-dialog__top">
+                <span class="logout-dialog__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path></svg>
+                </span>
+                <div class="logout-dialog__copy">
+                    <h2 id="logout-dialog-title">Encerrar sessão?</h2>
+                    <p>Você será desconectado da SAARI ERP e voltará para a tela de login.</p>
+                </div>
+            </div>
+            <div class="logout-dialog__actions">
+                <button type="button" class="logout-dialog__btn" data-logout-cancel>Cancelar</button>
+                <button type="button" class="logout-dialog__btn logout-dialog__btn--primary" data-logout-confirm>Sair</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        (function(){
+            const form=document.querySelector('[data-logout-form]');
+            const dialog=document.querySelector('[data-logout-dialog]');
+            if(!form||!dialog) return;
+            const open=()=>{dialog.classList.add('is-open');dialog.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>dialog.querySelector('[data-logout-confirm]')?.focus(),20)};
+            const close=()=>{dialog.classList.remove('is-open');dialog.setAttribute('aria-hidden','true');document.body.style.overflow=''};
+            form.addEventListener('submit',function(e){if(form.dataset.logoutConfirmed==='1') return;e.preventDefault();open()});
+            dialog.querySelectorAll('[data-logout-cancel]').forEach(el=>el.addEventListener('click',close));
+            dialog.querySelector('[data-logout-confirm]')?.addEventListener('click',()=>{form.dataset.logoutConfirmed='1';form.submit()});
+            document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('is-open')) close()});
+        })();
+
         /*
          * TRANSIÇÃO DE PÁGINA — CONTROLADA QUADRO A QUADRO
          * ------------------------------------------------
@@ -1425,6 +1536,65 @@
                 }
             });
         });
+    </script>
+
+
+    <script>
+        (function () {
+            const STORAGE_KEY = 'saari-theme';
+            const root = document.documentElement;
+            const toggle = document.querySelector('[data-theme-toggle]');
+            const themeMeta = document.getElementById('saari-theme-color');
+
+            function setTheme(theme, persist) {
+                const normalized = theme === 'dark' ? 'dark' : 'light';
+                root.dataset.theme = normalized;
+
+                if (themeMeta) {
+                    themeMeta.setAttribute('content', normalized === 'dark' ? '#171311' : '#453330');
+                }
+
+                if (toggle) {
+                    const dark = normalized === 'dark';
+                    toggle.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo noturno');
+                    toggle.setAttribute('title', dark ? 'Modo claro' : 'Modo noturno');
+                    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+                }
+
+                if (persist) {
+                    try {
+                        window.localStorage.setItem(STORAGE_KEY, normalized);
+                    } catch (error) {
+                        /* Navegação privada/restrita: o tema segue funcional na página atual. */
+                    }
+                }
+            }
+
+            setTheme(root.dataset.theme || 'light', false);
+
+            if (toggle) {
+                toggle.addEventListener('click', function () {
+                    setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
+                });
+            }
+
+            /* Se o usuário ainda não escolheu manualmente, acompanha o sistema operacional. */
+            if (window.matchMedia) {
+                const media = window.matchMedia('(prefers-color-scheme: dark)');
+                const followSystem = function (event) {
+                    try {
+                        if (window.localStorage.getItem(STORAGE_KEY)) return;
+                    } catch (error) {
+                        return;
+                    }
+                    setTheme(event.matches ? 'dark' : 'light', false);
+                };
+
+                if (media.addEventListener) {
+                    media.addEventListener('change', followSystem);
+                }
+            }
+        })();
     </script>
 
 

@@ -1,28 +1,50 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#071c25">
-    <title>Entrar | ERP Alto Padrão</title>
+    <meta name="theme-color" content="#f5f1e9" id="saari-login-theme-color">
+    <script>
+        (function () {
+            const key = 'saari-theme';
+            let theme = 'light';
+            try {
+                const saved = localStorage.getItem(key);
+                if (saved === 'dark' || saved === 'light') theme = saved;
+                else if (matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
+            } catch (e) {}
+            document.documentElement.dataset.theme = theme;
+        })();
+    </script>
+
+    <title>Entrar | SAARI</title>
+
+    <link rel="icon" type="image/png" href="{% static 'img/saari/saari-simbolo-gold.png' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'img/saari/saari-simbolo-gold.png' %}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap"
+        rel="stylesheet"
+    >
 
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
     <style>
         :root {
-            --bg-1: #06161d;
-            --bg-2: #0a2732;
-            --bg-3: #0f4250;
-            --cyan: #24c2d1;
-            --cyan-soft: #73d9e1;
-            --line: rgba(109, 222, 233, .22);
-            --glass: rgba(8, 31, 40, .68);
-            --glass-strong: rgba(8, 29, 37, .84);
-            --white: #f5fbfc;
-            --muted: #a8bec4;
-            --border: rgba(162, 227, 233, .28);
-            --danger: #ff9f92;
+            --saari-brown: #453330;
+            --saari-brown-dark: #2d201c;
+            --saari-brown-soft: #77655c;
+
+            --saari-offwhite: #fbf9f4;
+            --saari-background: #f5f1e9;
+            --saari-line: #ded7c8;
+
+            --saari-gold: #b9aa72;
+            --saari-text: #4b3a35;
+            --saari-danger: #9a463e;
         }
 
         * {
@@ -39,193 +61,141 @@
         body.login-body {
             min-height: 100vh;
             overflow: hidden;
-            font-family: "Segoe UI", Inter, Arial, sans-serif;
-            color: var(--white);
-            background:
-                radial-gradient(circle at 50% 10%, rgba(42, 177, 193, .22), transparent 34%),
-                radial-gradient(circle at 78% 40%, rgba(17, 118, 135, .20), transparent 28%),
-                linear-gradient(135deg, var(--bg-1) 0%, #081d25 42%, #0a2f3a 100%);
+            color: var(--saari-text);
+            background: var(--saari-background);
+            font-family: "Plus Jakarta Sans", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
 
-        .login-body::before,
-        .login-body::after {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .login-body::before {
-            background:
-                linear-gradient(90deg, transparent 0 14%, rgba(36, 194, 209, .16) 14% 14.08%, transparent 14.08% 18%, rgba(36, 194, 209, .10) 18% 18.06%, transparent 18.06%),
-                linear-gradient(180deg, transparent 0 26%, rgba(255,255,255,.025) 26% 26.1%, transparent 26.1%);
-            opacity: .9;
-        }
-
-        .login-body::after {
-            background:
-                linear-gradient(118deg, rgba(255,255,255,.018) 0 28%, transparent 28% 100%),
-                linear-gradient(90deg, rgba(2, 13, 18, .78) 0 15%, transparent 15% 76%, rgba(1, 10, 14, .42) 76% 100%);
-        }
-
-        .login-shell {
-            position: relative;
-            z-index: 2;
+        .login-page {
             min-height: 100vh;
             display: grid;
-            place-items: center;
-            padding: 28px 18px;
+            grid-template-columns: minmax(440px, 43%) 1fr;
+            background: var(--saari-background);
         }
 
-        .scene-line {
-            position: fixed;
-            pointer-events: none;
-            border: 1px solid rgba(39, 206, 219, .20);
-            border-radius: 50%;
-            width: 560px;
-            height: 560px;
-            left: -240px;
-            top: -110px;
-            z-index: 1;
-        }
+        /* =========================================================
+           PAINEL DE LOGIN
+        ========================================================== */
 
-        .scene-line::before {
-            content: "";
-            position: absolute;
-            inset: 34px;
-            border: 1px solid rgba(39, 206, 219, .08);
-            border-radius: 50%;
-        }
-
-        .scene-glow {
-            position: fixed;
-            width: 2px;
-            height: 68vh;
-            left: 14.6%;
-            bottom: 0;
-            background: linear-gradient(180deg, transparent, rgba(38, 220, 229, .9), transparent);
-            box-shadow: 0 0 22px rgba(36, 194, 209, .6);
-            opacity: .75;
-            z-index: 1;
-        }
-
-        .login-card {
+        .login-panel {
             position: relative;
-            width: min(100%, 525px);
-            padding: 34px 38px 30px;
-            border: 1px solid var(--border);
-            border-radius: 25px;
+            z-index: 20;
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 52px 72px;
+
             background:
-                linear-gradient(180deg, rgba(17, 55, 67, .62), rgba(5, 24, 32, .80));
-            box-shadow:
-                0 28px 70px rgba(0, 0, 0, .36),
-                0 0 42px rgba(22, 166, 182, .09),
-                inset 0 1px 0 rgba(255,255,255,.05);
-            backdrop-filter: blur(22px);
-            -webkit-backdrop-filter: blur(22px);
-            overflow: hidden;
+                radial-gradient(
+                    circle at 10% 0%,
+                    rgba(185, 170, 114, .055),
+                    transparent 34%
+                ),
+                linear-gradient(
+                    180deg,
+                    #fbf9f5 0%,
+                    #f4efe7 100%
+                );
         }
 
-        .login-card::before {
+        .login-panel::after {
             content: "";
             position: absolute;
-            inset: 0;
-            background:
-                linear-gradient(120deg, rgba(255,255,255,.045), transparent 20% 74%, rgba(47,201,214,.035));
-            pointer-events: none;
+            top: 0;
+            right: 0;
+            width: 1px;
+            height: 100%;
+            background: rgba(69, 51, 48, .09);
         }
 
-        .login-card::after {
-            content: "";
-            position: absolute;
-            left: 13%;
-            right: 13%;
-            bottom: -14px;
-            height: 24px;
-            background: rgba(26, 201, 216, .20);
-            filter: blur(18px);
-            border-radius: 50%;
-            pointer-events: none;
+        .login-content {
+            width: min(100%, 510px);
+            opacity: 0;
+            transform: translate3d(0, 14px, 0);
+
+            animation:
+                formEnter
+                .85s
+                cubic-bezier(.22, .75, .24, 1)
+                .72s
+                forwards;
         }
 
         .login-brand {
-            position: relative;
-            z-index: 1;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
+            justify-content: flex-start;
+            margin-bottom: 48px;
         }
 
-        .login-brand__mark {
-            width: 62px;
-            height: 62px;
-            display: grid;
-            place-items: center;
-            margin-bottom: 11px;
-            color: #d8f9fb;
-            filter: drop-shadow(0 0 12px rgba(76, 218, 230, .28));
-        }
-
-        .login-brand__mark .icon {
-            width: 44px;
-            height: 44px;
-        }
-
-        .login-brand__text {
-            text-align: center;
-            line-height: 1;
-        }
-
-        .login-brand__text strong {
+        .login-brand__logo {
             display: block;
-            font-size: 29px;
-            font-weight: 500;
-            letter-spacing: .12em;
-            color: #f3fbfc;
+            width: 250px;
+            max-width: 74%;
+            height: auto;
         }
 
-        .login-brand__text small {
-            display: block;
-            margin-top: 8px;
-            font-size: 12px;
-            letter-spacing: .44em;
-            color: var(--muted);
-            transform: translateX(.22em);
+        .login-card {
+            width: 100%;
+            padding: 0;
+
+            border: 0;
+            border-radius: 0;
+
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
         }
 
         .login-heading {
-            position: relative;
-            z-index: 1;
-            margin: 0 0 24px;
+            margin: 0 0 34px;
         }
 
         .login-heading h1 {
-            margin: 0;
-            font-size: 31px;
-            line-height: 1;
-            font-weight: 700;
-            letter-spacing: -.025em;
-            color: var(--white);
+            margin: 0 0 8px;
+
+            color: var(--saari-brown);
+            font-family: "Source Serif 4", serif;
+            font-size: clamp(31px, 2.3vw, 42px);
+            font-weight: 400;
+            line-height: 1.05;
+            letter-spacing: -.035em;
+            text-transform: none;
         }
 
+        .login-heading p {
+            margin: 0;
+            color: #85776f;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        /* =========================================================
+           CAMPOS
+        ========================================================== */
+
         .login-form {
-            position: relative;
-            z-index: 1;
             display: grid;
-            gap: 16px;
+            gap: 19px;
         }
 
         .login-field {
             display: grid;
-            gap: 8px;
+            gap: 9px;
         }
 
         .login-field > label {
-            font-size: 13px;
-            font-weight: 500;
-            color: #d6e5e8;
+            color: var(--saari-brown);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .045em;
         }
 
         .login-field__control {
@@ -234,76 +204,100 @@
 
         .login-field__control input {
             width: 100% !important;
-            height: 52px !important;
+            height: 56px !important;
             margin: 0 !important;
-            padding: 0 48px 0 47px !important;
-            border: 1px solid rgba(184, 228, 233, .31) !important;
-            border-radius: 11px !important;
+            padding: 0 50px !important;
+
+            border: 1px solid rgba(69, 51, 48, .15) !important;
+            border-radius: 8px !important;
             outline: none !important;
-            background: rgba(8, 35, 44, .48) !important;
-            color: #f7fcfd !important;
+
+            background: rgba(255, 255, 255, .44) !important;
+            color: var(--saari-brown) !important;
+
+            font-family: "Plus Jakarta Sans", sans-serif !important;
             font-size: 14px !important;
-            caret-color: var(--cyan-soft);
-            box-shadow:
-                inset 0 1px 0 rgba(255,255,255,.025),
-                0 8px 22px rgba(0,0,0,.06) !important;
-            transition: .2s ease;
+            font-weight: 400 !important;
+
+            box-shadow: none !important;
+
+            transition:
+                border-color .22s ease,
+                background .22s ease,
+                box-shadow .22s ease;
+        }
+
+        .login-field__control input::placeholder {
+            color: #aca39b;
+            font-weight: 300;
         }
 
         .login-field__control input:hover {
-            border-color: rgba(108, 218, 228, .46) !important;
-            background: rgba(10, 42, 52, .62) !important;
+            border-color: rgba(69, 51, 48, .26) !important;
+            background: rgba(255, 255, 255, .64) !important;
         }
 
         .login-field__control input:focus {
-            border-color: rgba(76, 226, 236, .78) !important;
-            background: rgba(8, 38, 48, .76) !important;
+            border-color: rgba(185, 170, 114, .92) !important;
+            background: rgba(255, 255, 255, .90) !important;
+
             box-shadow:
-                0 0 0 3px rgba(38, 205, 217, .09),
-                0 0 24px rgba(32, 188, 202, .08) !important;
+                0 0 0 3px rgba(185, 170, 114, .085) !important;
         }
 
         .login-field__icon {
             position: absolute;
             z-index: 2;
-            left: 16px;
+            left: 17px;
             top: 50%;
+
             width: 18px;
             height: 18px;
+
             transform: translateY(-50%);
-            color: #d7e9ec;
+            color: #7f7068;
             pointer-events: none;
-            opacity: .92;
+
+            transition: color .2s ease;
         }
 
         .login-field__control:focus-within .login-field__icon {
-            color: var(--cyan-soft);
+            color: var(--saari-brown);
         }
 
         .password-toggle {
             position: absolute !important;
             z-index: 3;
-            top: 7px !important;
-            right: 7px !important;
-            width: 38px !important;
-            height: 38px !important;
-            min-width: 38px !important;
+
+            top: 8px !important;
+            right: 8px !important;
+
+            width: 40px !important;
+            height: 40px !important;
+
             display: grid !important;
             place-items: center;
+
             margin: 0 !important;
             padding: 0 !important;
+
             border: 0 !important;
-            border-radius: 9px !important;
+            border-radius: 50% !important;
+
             background: transparent !important;
-            color: #d5e9eb !important;
+            color: #76665f !important;
+
             cursor: pointer;
             box-shadow: none !important;
-            transition: .2s ease;
+
+            transition:
+                background .18s ease,
+                color .18s ease;
         }
 
         .password-toggle:hover {
-            color: #ffffff !important;
-            background: rgba(37, 196, 209, .10) !important;
+            background: rgba(69, 51, 48, .045) !important;
+            color: var(--saari-brown) !important;
         }
 
         .password-toggle .icon {
@@ -324,55 +318,65 @@
         }
 
         .login-recovery {
-            margin-top: -3px;
+            margin-top: -4px;
             display: flex;
             justify-content: flex-end;
         }
 
         .login-recovery a {
-            color: #57d9e3;
+            color: var(--saari-brown-soft);
             font-size: 12px;
             font-weight: 500;
             text-decoration: none;
-            transition: .18s ease;
         }
 
         .login-recovery a:hover {
-            color: #9af6fb;
+            color: var(--saari-brown-dark);
+            text-decoration: underline;
+            text-underline-offset: 4px;
         }
 
         .login-submit {
-            position: relative;
             width: 100% !important;
-            height: 52px !important;
+            height: 56px !important;
+
             margin: 7px 0 0 !important;
-            padding: 0 18px !important;
+            padding: 0 22px !important;
+
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            gap: 9px;
-            border: 1px solid rgba(83, 231, 240, .62) !important;
-            border-radius: 10px !important;
-            background:
-                linear-gradient(180deg, #28b8c5 0%, #0d7584 100%) !important;
-            color: white !important;
-            font-size: 15px !important;
-            font-weight: 700 !important;
-            letter-spacing: .01em;
+
+            gap: 12px;
+
+            border: 1px solid #443128 !important;
+            border-radius: 8px !important;
+
+            background: #49352d !important;
+            color: #f8f3ea !important;
+
+            font-family: "Plus Jakarta Sans", sans-serif !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+
+            letter-spacing: .055em;
+
             cursor: pointer;
+
             box-shadow:
-                0 12px 24px rgba(0, 131, 148, .22),
-                inset 0 1px 0 rgba(255,255,255,.16) !important;
-            transition: .2s ease;
+                0 9px 22px rgba(45, 32, 28, .13) !important;
+
+            transition:
+                transform .2s ease,
+                box-shadow .2s ease,
+                background .2s ease;
         }
 
         .login-submit:hover {
             transform: translateY(-1px);
-            background:
-                linear-gradient(180deg, #32c8d4 0%, #0f8492 100%) !important;
+            background: #3f2d27 !important;
             box-shadow:
-                0 14px 30px rgba(0, 153, 170, .28),
-                0 0 22px rgba(27, 201, 215, .12) !important;
+                0 12px 28px rgba(45, 32, 28, .17) !important;
         }
 
         .login-submit:active {
@@ -380,8 +384,8 @@
         }
 
         .login-submit .icon {
-            width: 15px;
-            height: 15px;
+            width: 16px;
+            height: 16px;
         }
 
         .login-submit__loading {
@@ -396,222 +400,1033 @@
             display: inline;
         }
 
-        .login-messages,
-        .form-errors {
-            position: relative;
-            z-index: 1;
-            margin: 0 0 16px;
-            padding: 12px 14px;
-            border: 1px solid rgba(255, 147, 132, .24);
-            border-radius: 10px;
-            background: rgba(133, 38, 28, .18);
-            color: #ffd6cf;
+        /* =========================================================
+           MENSAGENS
+        ========================================================== */
+
+        .login-messages {
+            display: grid;
+            gap: 10px;
+            margin: 0 0 22px;
+        }
+
+        .login-message {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            min-height: 48px;
+            padding: 10px 12px;
+
+            border: 1px solid rgba(80, 59, 48, .10);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, .58);
+            box-shadow: 0 8px 22px rgba(63, 45, 39, .045);
+
+            color: #4e3b32;
             font-size: 12px;
             line-height: 1.45;
         }
 
-        .login-messages .message,
+        .login-message__icon {
+            width: 30px;
+            height: 30px;
+            flex: 0 0 30px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: rgba(174, 132, 74, .10);
+            color: #8b6735;
+        }
+
+        .login-message__icon svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .login-message__content {
+            min-width: 0;
+        }
+
+        .login-message__title {
+            display: block;
+            margin: 0;
+            color: #3e2d26;
+            font-weight: 600;
+            letter-spacing: .01em;
+        }
+
+        .login-message__text {
+            display: block;
+            margin-top: 1px;
+            color: #806e63;
+        }
+
+        .login-message--logout {
+            min-height: 44px;
+            padding: 8px 10px;
+            border-color: rgba(174, 132, 74, .14);
+            background: rgba(248, 243, 235, .72);
+            box-shadow: none;
+        }
+
+        .login-message--logout .login-message__icon {
+            width: 28px;
+            height: 28px;
+            flex-basis: 28px;
+            background: rgba(174, 132, 74, .12);
+        }
+
+        .form-errors {
+            margin: 0 0 22px;
+            padding: 11px 13px;
+            border: 1px solid rgba(154, 70, 62, .16);
+            border-radius: 10px;
+            background: rgba(154, 70, 62, .035);
+            color: #7f3933;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
         .form-errors p {
             margin: 0;
         }
 
         .field-error {
-            color: var(--danger);
+            color: var(--saari-danger);
             font-size: 11px;
         }
 
-        .login-footer {
+        /* =========================================================
+           PAINEL VISUAL
+           A imagem continua nascendo do símbolo, mas sem partículas,
+           raios, anéis ou fachos.
+        ========================================================== */
+
+        .login-visual {
             position: relative;
-            z-index: 1;
-            margin-top: 27px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            color: #8ca4aa;
-            font-size: 9px;
-            font-weight: 600;
-            letter-spacing: .42em;
-            text-transform: uppercase;
+            min-height: 100vh;
+
+            overflow: hidden;
+            isolation: isolate;
+
+            background: #241916;
         }
 
-        .login-footer::before,
-        .login-footer::after {
-            content: "";
-            width: 76px;
+        .login-visual__base {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+
+            background:
+                radial-gradient(
+                    circle at 50% 47%,
+                    rgba(116, 80, 48, .19),
+                    transparent 31%
+                ),
+                linear-gradient(
+                    180deg,
+                    #30221e 0%,
+                    #1f1613 100%
+                );
+        }
+
+        .login-visual__image {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+
+            overflow: hidden;
+
+            clip-path: circle(0% at 50% 47%);
+
+            animation:
+                sceneReveal
+                1.85s
+                cubic-bezier(.66, 0, .20, 1)
+                .42s
+                forwards;
+        }
+
+        .login-visual__image-inner {
+            position: absolute;
+            inset: -2%;
+
+            background-image:
+                url("{% static 'img/saari/saari_login_atrio.jpg' %}");
+
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center center;
+
+            filter:
+                brightness(.73)
+                saturate(.74)
+                contrast(1.02);
+
+            transform:
+                scale(1.055);
+
+            animation:
+                sceneSettle
+                2.35s
+                cubic-bezier(.17, .77, .22, 1)
+                .36s
+                forwards,
+
+                sceneBreath
+                24s
+                ease-in-out
+                3s
+                infinite
+                alternate;
+
+            will-change:
+                transform,
+                filter;
+        }
+
+        /*
+         * Véu escuro que sai com suavidade e ajuda a sensação de
+         * "revelação" sem virar efeito chamativo.
+         */
+        .login-visual__veil {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(25, 17, 14, .20) 0%,
+                    rgba(25, 17, 14, .05) 34%,
+                    transparent 58%
+                ),
+                linear-gradient(
+                    180deg,
+                    rgba(18, 12, 10, .16) 0%,
+                    transparent 28%,
+                    transparent 72%,
+                    rgba(18, 12, 10, .22) 100%
+                );
+
+            opacity: 1;
+            pointer-events: none;
+        }
+
+        /*
+         * Um único halo, muito discreto, ligado ao símbolo.
+         */
+        .login-visual__halo {
+            position: absolute;
+            z-index: 5;
+
+            left: 50%;
+            top: 47%;
+
+            width: min(42vw, 520px);
+            aspect-ratio: 1;
+
+            transform:
+                translate(-50%, -50%)
+                scale(.55);
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(
+                    circle,
+                    rgba(222, 196, 126, .17) 0%,
+                    rgba(222, 196, 126, .065) 32%,
+                    transparent 67%
+                );
+
+            filter: blur(18px);
+
+            opacity: 0;
+
+            animation:
+                haloOpen
+                1.65s
+                ease-out
+                .32s
+                forwards;
+
+            pointer-events: none;
+        }
+
+        /*
+         * O símbolo ainda inicia a transição, porém de maneira mais
+         * editorial: menos glow, menos escala e desaparecimento lento.
+         */
+        .login-visual__symbol {
+            position: absolute;
+            z-index: 7;
+
+            left: 50%;
+            top: 47%;
+
+            width: min(28%, 265px);
+            height: auto;
+
+            transform:
+                translate(-50%, -50%)
+                scale(.93);
+
+            opacity: 0;
+
+            filter:
+                drop-shadow(
+                    0 10px 34px
+                    rgba(24, 16, 13, .20)
+                );
+
+            animation:
+                symbolBirth
+                .82s
+                cubic-bezier(.18, .78, .22, 1)
+                .10s
+                forwards,
+
+                symbolMerge
+                .95s
+                cubic-bezier(.4, 0, .2, 1)
+                1.55s
+                forwards;
+
+            pointer-events: none;
+        }
+
+        /*
+         * Pequena linha arquitetônica que dá acabamento à abertura.
+         */
+        .login-visual__line {
+            position: absolute;
+            z-index: 6;
+
+            left: 50%;
+            top: 47%;
+
+            width: 1px;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(128, 198, 205, .45));
+
+            background: rgba(237, 224, 160, .72);
+
+            transform: translate(-50%, -50%);
+            opacity: 0;
+
+            box-shadow: 0 0 18px rgba(237, 224, 160, .16);
+
+            animation:
+                lineOpen
+                1.35s
+                cubic-bezier(.65, 0, .25, 1)
+                .42s
+                forwards;
+
+            pointer-events: none;
         }
 
-        .login-footer::after {
-            background: linear-gradient(90deg, rgba(128, 198, 205, .45), transparent);
+        /* =========================================================
+           KEYFRAMES
+        ========================================================== */
+
+        @keyframes formEnter {
+            from {
+                opacity: 0;
+                transform: translate3d(0, 14px, 0);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
         }
 
-        @media (max-width: 620px) {
+        @keyframes symbolBirth {
+            0% {
+                opacity: 0;
+                transform:
+                    translate(-50%, -50%)
+                    scale(.88);
+                filter:
+                    blur(7px)
+                    drop-shadow(
+                        0 8px 30px
+                        rgba(24, 16, 13, .12)
+                    );
+            }
+
+            100% {
+                opacity: 1;
+                transform:
+                    translate(-50%, -50%)
+                    scale(1);
+                filter:
+                    blur(0)
+                    drop-shadow(
+                        0 10px 34px
+                        rgba(24, 16, 13, .20)
+                    );
+            }
+        }
+
+        @keyframes symbolMerge {
+            from {
+                opacity: 1;
+                transform:
+                    translate(-50%, -50%)
+                    scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform:
+                    translate(-50%, -50%)
+                    scale(1.018);
+            }
+        }
+
+        @keyframes sceneReveal {
+            0% {
+                clip-path:
+                    circle(
+                        0%
+                        at
+                        50%
+                        47%
+                    );
+            }
+
+            38% {
+                clip-path:
+                    circle(
+                        18%
+                        at
+                        50%
+                        47%
+                    );
+            }
+
+            100% {
+                clip-path:
+                    circle(
+                        145%
+                        at
+                        50%
+                        47%
+                    );
+            }
+        }
+
+        @keyframes sceneSettle {
+            0% {
+                transform: scale(1.055);
+
+                filter:
+                    brightness(.73)
+                    saturate(.74)
+                    contrast(1.02);
+            }
+
+            100% {
+                transform: scale(1);
+
+                filter:
+                    brightness(.94)
+                    saturate(.87)
+                    contrast(1);
+            }
+        }
+
+        @keyframes sceneBreath {
+            from {
+                transform:
+                    scale(1)
+                    translate3d(0, 0, 0);
+            }
+
+            to {
+                transform:
+                    scale(1.014)
+                    translate3d(-.12%, -.08%, 0);
+            }
+        }
+
+        @keyframes haloOpen {
+            0% {
+                opacity: 0;
+                transform:
+                    translate(-50%, -50%)
+                    scale(.55);
+            }
+
+            48% {
+                opacity: .72;
+            }
+
+            100% {
+                opacity: .14;
+                transform:
+                    translate(-50%, -50%)
+                    scale(1.04);
+            }
+        }
+
+        @keyframes lineOpen {
+            0% {
+                opacity: 0;
+                height: 1px;
+            }
+
+            22% {
+                opacity: .62;
+            }
+
+            70% {
+                opacity: .26;
+                height: 58%;
+            }
+
+            100% {
+                opacity: 0;
+                height: 82%;
+            }
+        }
+
+        /* =========================================================
+           RESPONSIVO
+        ========================================================== */
+
+        @media (max-width: 980px) {
             body.login-body {
                 overflow-y: auto;
             }
 
-            .scene-line,
-            .scene-glow {
-                opacity: .35;
+            .login-page {
+                grid-template-columns: 1fr;
             }
 
-            .login-shell {
-                padding: 20px 14px;
+            .login-visual {
+                order: -1;
+                min-height: 39vh;
             }
 
-            .login-card {
-                width: 100%;
-                padding: 30px 22px 26px;
-                border-radius: 21px;
+            .login-panel {
+                min-height: auto;
+                padding: 46px 26px 52px;
             }
 
-            .login-brand__text strong {
-                font-size: 24px;
+            .login-panel::after {
+                display: none;
+            }
+
+            .login-content {
+                width: min(100%, 560px);
+            }
+
+            .login-brand {
+                justify-content: center;
+                margin-bottom: 38px;
+            }
+
+            .login-brand__logo {
+                width: 235px;
+            }
+
+            .login-heading {
+                text-align: center;
+            }
+
+            .login-visual__image-inner {
+                background-position: center 42%;
+            }
+
+            .login-visual__symbol {
+                width: min(24%, 170px);
+            }
+
+            .login-visual__halo {
+                width: min(42vw, 280px);
+            }
+        }
+
+        @media (max-width: 620px) {
+            .login-panel {
+                padding:
+                    38px
+                    18px
+                    42px;
+            }
+
+            .login-brand {
+                margin-bottom: 32px;
+            }
+
+            .login-brand__logo {
+                width: 215px;
             }
 
             .login-heading h1 {
-                font-size: 28px;
+                font-size: 31px;
             }
 
-            .login-footer::before,
-            .login-footer::after {
-                width: 48px;
+            .login-visual {
+                min-height: 32vh;
+            }
+
+            .login-visual__image-inner {
+                background-position: center 38%;
             }
         }
 
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                transition: none !important;
+            *,
+            *::before,
+            *::after {
                 animation: none !important;
+                transition: none !important;
+            }
+
+            .login-content {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+
+            .login-visual__image {
+                clip-path: none !important;
+            }
+
+            .login-visual__image-inner {
+                transform: none !important;
+            }
+
+            .login-visual__symbol,
+            .login-visual__halo,
+            .login-visual__line {
+                display: none !important;
             }
         }
+
+
+        /* =========================================================
+           SAARI — MODO NOTURNO DA AUTENTICAÇÃO
+        ========================================================== */
+        .login-theme-toggle {
+            position: absolute;
+            z-index: 40;
+            top: 24px;
+            left: 28px;
+            width: 38px;
+            height: 38px;
+            border: 1px solid rgba(69, 51, 48, .14);
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 253, 250, .72);
+            color: var(--saari-brown);
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            transition: background .18s ease, border-color .18s ease, transform .18s ease;
+        }
+        .login-theme-toggle:hover { transform: translateY(-1px); border-color: var(--saari-gold); }
+        .login-theme-toggle svg { width: 17px; height: 17px; }
+        .login-theme-toggle__sun { display: none; }
+        html[data-theme="dark"] .login-theme-toggle__moon { display: none; }
+        html[data-theme="dark"] .login-theme-toggle__sun { display: block; }
+
+        html[data-theme="dark"] {
+            color-scheme: dark;
+            --saari-brown: #f0e8e0;
+            --saari-brown-dark: #171311;
+            --saari-brown-soft: #c0b3a8;
+            --saari-offwhite: #191512;
+            --saari-background: #171311;
+            --saari-line: #44382f;
+            --saari-gold: #c0a264;
+            --saari-text: #eee6df;
+            --saari-danger: #e17a6d;
+        }
+        html[data-theme="dark"] body.login-body,
+        html[data-theme="dark"] .login-page { background: #171311; color: #eee6df; }
+        html[data-theme="dark"] .login-panel {
+            background:
+                radial-gradient(circle at 10% 0%, rgba(192, 162, 100, .07), transparent 34%),
+                linear-gradient(180deg, #201a17 0%, #171311 100%);
+        }
+        html[data-theme="dark"] .login-panel::after { background: rgba(244,239,232,.08); }
+        html[data-theme="dark"] .login-brand__logo { filter: brightness(0) invert(82%) sepia(21%) saturate(630%) hue-rotate(356deg) brightness(91%) contrast(89%); }
+        html[data-theme="dark"] .login-heading h1,
+        html[data-theme="dark"] .login-field > label { color: #f4efe8; }
+        html[data-theme="dark"] .login-heading p,
+        html[data-theme="dark"] .login-recovery a { color: #b8aca2; }
+        html[data-theme="dark"] .login-field__control input {
+            background: rgba(42,34,29,.78) !important;
+            border-color: #4b3e35 !important;
+            color: #f1eae3 !important;
+        }
+        html[data-theme="dark"] .login-field__control input:hover { background: rgba(49,40,34,.92) !important; border-color: #655348 !important; }
+        html[data-theme="dark"] .login-field__control input:focus { background: #2a221d !important; border-color: #c0a264 !important; box-shadow: 0 0 0 3px rgba(192,162,100,.12) !important; }
+        html[data-theme="dark"] .login-field__control input::placeholder { color: #8d8076; }
+        html[data-theme="dark"] .login-field__icon,
+        html[data-theme="dark"] .password-toggle { color: #b8aca2 !important; }
+        html[data-theme="dark"] .login-message { background: rgba(34,28,24,.92) !important; border-color: #44382f !important; color: #eee6df !important; box-shadow: 0 14px 38px rgba(0,0,0,.28) !important; }
+        html[data-theme="dark"] .login-message__title { color: #f4efe8 !important; }
+        html[data-theme="dark"] .login-message__text { color: #c9bdb3 !important; }
+        html[data-theme="dark"] .form-errors { background: #30201e !important; border-color: #653e38 !important; color: #f0b0a8 !important; }
+        html[data-theme="dark"] .login-submit { background: #735a47 !important; border-color: #735a47 !important; color: #fff !important; }
+        html[data-theme="dark"] .login-submit:hover { background: #866a52 !important; }
+        html[data-theme="dark"] .login-theme-toggle { background: rgba(34,28,24,.84); border-color: #44382f; color: #eee6df; }
+        html[data-theme="dark"] .login-theme-toggle:hover { background: #2d251f; border-color: #c0a264; color: #fff; }
+        html[data-theme="dark"] .login-visual__veil { background: linear-gradient(90deg, rgba(23,19,17,.50), rgba(23,19,17,.16)) !important; }
     </style>
 </head>
 
 <body class="login-body">
+
     {% include "components/icons.html" %}
 
-    <div class="scene-line" aria-hidden="true"></div>
-    <div class="scene-glow" aria-hidden="true"></div>
+    <button type="button" class="login-theme-toggle" data-login-theme-toggle aria-label="Ativar modo noturno" title="Modo noturno">
+        <svg class="login-theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>
+        <svg class="login-theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"></path></svg>
+    </button>
 
-    <main class="login-shell">
-        <section class="login-card" aria-labelledby="login-title">
-            <div class="login-brand">
-                <span class="login-brand__mark" aria-hidden="true">
-                    <svg class="icon"><use href="#icon-building"></use></svg>
-                </span>
+    <main class="login-page">
 
-                <span class="login-brand__text">
-                    <strong>ALTO PADRÃO</strong>
-                    <small>ERP</small>
-                </span>
-            </div>
+        <section
+            class="login-panel"
+            aria-labelledby="login-title"
+        >
+            <div class="login-content">
 
-            <header class="login-heading">
-                <h1 id="login-title">Entrar</h1>
-            </header>
-
-            {% if messages %}
-                <div class="login-messages">
-                    {% for message in messages %}
-                        <div class="message message--{{ message.tags }}">{{ message }}</div>
-                    {% endfor %}
+                <div class="login-brand">
+                    <img
+                        src="{% static 'img/saari/saari-logo-marrom.svg' %}"
+                        alt="SAARI"
+                        class="login-brand__logo"
+                    >
                 </div>
-            {% endif %}
 
-            {% if form.non_field_errors %}
-                <div class="form-errors">
-                    {% for error in form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                <div class="login-card">
 
-            <form method="post" class="login-form" data-login-form>
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ next }}">
+                    <header class="login-heading">
+                
+                    </header>
 
-                <div class="login-field">
-                    <label for="{{ form.username.id_for_label }}">Usuário</label>
+                    {% if messages %}
+                        <div class="login-messages" data-login-messages>
+                            {% for message in messages %}
+                                <div class="login-message message--{{ message.tags }}" data-login-message>
+                                    <span class="login-message__icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M20 6 9 17l-5-5"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="login-message__content">
+                                        <span class="login-message__title" data-message-title>Aviso</span>
+                                        <span class="login-message__text" data-message-text>{{ message }}</span>
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
 
-                    <div class="login-field__control">
-                        <svg class="login-field__icon icon" aria-hidden="true">
-                            <use href="#icon-user"></use>
-                        </svg>
+                    {% if form.non_field_errors %}
+                        <div class="form-errors">
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form
+                        method="post"
+                        class="login-form"
+                        data-login-form
+                    >
+                        {% csrf_token %}
 
                         <input
-                            type="text"
-                            name="username"
-                            id="{{ form.username.id_for_label }}"
-                            value="{{ form.username.value|default:'' }}"
-                            autocomplete="username"
-                            autofocus
-                            required
+                            type="hidden"
+                            name="next"
+                            value="{{ next }}"
                         >
-                    </div>
 
-                    {% for error in form.username.errors %}
-                        <small class="field-error">{{ error }}</small>
-                    {% endfor %}
-                </div>
+                        <div class="login-field">
+                            <label for="{{ form.username.id_for_label }}">
+                                Usuário
+                            </label>
 
-                <div class="login-field">
-                    <label for="{{ form.password.id_for_label }}">Senha</label>
+                            <div class="login-field__control">
 
-                    <div class="login-field__control">
-                        <svg class="login-field__icon icon" aria-hidden="true">
-                            <use href="#icon-lock"></use>
-                        </svg>
+                                <svg
+                                    class="login-field__icon icon"
+                                    aria-hidden="true"
+                                >
+                                    <use href="#icon-user"></use>
+                                </svg>
 
-                        <input
-                            type="password"
-                            name="password"
-                            id="{{ form.password.id_for_label }}"
-                            autocomplete="current-password"
-                            required
-                            data-password-input
-                        >
+                                <input
+                                    type="text"
+                                    name="username"
+                                    id="{{ form.username.id_for_label }}"
+                                    value="{{ form.username.value|default:'' }}"
+                                    autocomplete="username"
+                                    placeholder="Seu usuário"
+                                    autofocus
+                                    required
+                                >
+
+                            </div>
+
+                            {% for error in form.username.errors %}
+                                <small class="field-error">
+                                    {{ error }}
+                                </small>
+                            {% endfor %}
+                        </div>
+
+                        <div class="login-field">
+                            <label for="{{ form.password.id_for_label }}">
+                                Senha
+                            </label>
+
+                            <div class="login-field__control">
+
+                                <svg
+                                    class="login-field__icon icon"
+                                    aria-hidden="true"
+                                >
+                                    <use href="#icon-lock"></use>
+                                </svg>
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="{{ form.password.id_for_label }}"
+                                    autocomplete="current-password"
+                                    placeholder="Sua senha"
+                                    required
+                                    data-password-input
+                                >
+
+                                <button
+                                    type="button"
+                                    class="password-toggle"
+                                    data-password-toggle
+                                    aria-label="Exibir senha"
+                                >
+                                    <svg
+                                        class="icon password-toggle__show"
+                                        aria-hidden="true"
+                                    >
+                                        <use href="#icon-eye"></use>
+                                    </svg>
+
+                                    <svg
+                                        class="icon password-toggle__hide"
+                                        aria-hidden="true"
+                                    >
+                                        <use href="#icon-eye-off"></use>
+                                    </svg>
+                                </button>
+
+                            </div>
+
+                            {% for error in form.password.errors %}
+                                <small class="field-error">
+                                    {{ error }}
+                                </small>
+                            {% endfor %}
+                        </div>
+
+                        <div class="login-recovery">
+                            <a href="{% url 'usuarios:password_reset' %}">
+                                Esqueci minha senha
+                            </a>
+                        </div>
 
                         <button
-                            type="button"
-                            class="password-toggle"
-                            data-password-toggle
-                            aria-label="Exibir senha"
+                            type="submit"
+                            class="login-submit"
+                            data-login-submit
                         >
-                            <svg class="icon password-toggle__show" aria-hidden="true">
-                                <use href="#icon-eye"></use>
-                            </svg>
+                            <span class="login-submit__text">
+                                Entrar
+                            </span>
 
-                            <svg class="icon password-toggle__hide" aria-hidden="true">
-                                <use href="#icon-eye-off"></use>
+                            <span class="login-submit__loading">
+                                Entrando...
+                            </span>
+
+                            <svg
+                                class="icon"
+                                aria-hidden="true"
+                            >
+                                <use href="#icon-arrow"></use>
                             </svg>
                         </button>
-                    </div>
 
-                    {% for error in form.password.errors %}
-                        <small class="field-error">{{ error }}</small>
-                    {% endfor %}
+                    </form>
+
                 </div>
 
-                <div class="login-recovery">
-                    <a href="{% url 'usuarios:password_reset' %}">Esqueci minha senha</a>
-                </div>
-
-                <button type="submit" class="login-submit" data-login-submit>
-                    <span class="login-submit__text">Entrar</span>
-                    <span class="login-submit__loading">Entrando...</span>
-                    <svg class="icon" aria-hidden="true">
-                        <use href="#icon-arrow"></use>
-                    </svg>
-                </button>
-            </form>
-
-            <footer class="login-footer">GLOBAL ENGENHARIA</footer>
+            </div>
         </section>
+
+        <aside
+            class="login-visual"
+            aria-hidden="true"
+        >
+            <div class="login-visual__base"></div>
+
+            <div class="login-visual__halo"></div>
+
+            <div class="login-visual__image">
+                <div class="login-visual__image-inner"></div>
+            </div>
+
+            <div class="login-visual__veil"></div>
+
+            <div class="login-visual__line"></div>
+
+            <img
+                src="{% static 'img/saari/saari-simbolo-gold.png' %}"
+                class="login-visual__symbol"
+                alt=""
+            >
+        </aside>
+
     </main>
 
+    <script>
+        (function () {
+            const key = 'saari-theme';
+            const root = document.documentElement;
+            const button = document.querySelector('[data-login-theme-toggle]');
+            const meta = document.getElementById('saari-login-theme-color');
+
+            function apply(theme, persist) {
+                const dark = theme === 'dark';
+                root.dataset.theme = dark ? 'dark' : 'light';
+                if (meta) meta.setAttribute('content', dark ? '#171311' : '#f5f1e9');
+                if (button) {
+                    button.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo noturno');
+                    button.setAttribute('title', dark ? 'Modo claro' : 'Modo noturno');
+                    button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+                }
+                if (persist) {
+                    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
+                }
+            }
+
+            apply(root.dataset.theme, false);
+            if (button) button.addEventListener('click', () => apply(root.dataset.theme === 'dark' ? 'light' : 'dark', true));
+        })();
+    </script>
+
     <script src="{% static 'js/app.js' %}"></script>
+
+    <script>
+        (() => {
+
+            const input =
+                document.querySelector(
+                    "[data-password-input]"
+                );
+
+            const toggle =
+                document.querySelector(
+                    "[data-password-toggle]"
+                );
+
+            const form =
+                document.querySelector(
+                    "[data-login-form]"
+                );
+
+            const submit =
+                document.querySelector(
+                    "[data-login-submit]"
+                );
+
+            document
+                .querySelectorAll("[data-login-message]")
+                .forEach((message) => {
+                    const textNode = message.querySelector("[data-message-text]");
+                    const titleNode = message.querySelector("[data-message-title]");
+
+                    if (!textNode || !titleNode) return;
+
+                    const text = textNode.textContent.trim().toLowerCase();
+
+                    if (
+                        text.includes("saiu do sistema") ||
+                        text.includes("logout") ||
+                        text.includes("sessão encerrada")
+                    ) {
+                        message.classList.add("login-message--logout");
+                        titleNode.textContent = "Sessão encerrada";
+                        textNode.textContent = "Até breve.";
+                    } else if (message.classList.contains("message--error")) {
+                        titleNode.textContent = "Não foi possível entrar";
+                    } else if (message.classList.contains("message--warning")) {
+                        titleNode.textContent = "Atenção";
+                    } else if (message.classList.contains("message--success")) {
+                        titleNode.textContent = "Concluído";
+                    }
+                });
+
+            if (
+                input &&
+                toggle
+            ) {
+                toggle.addEventListener(
+                    "click",
+                    () => {
+
+                        const visible =
+                            input.type === "text";
+
+                        input.type =
+                            visible
+                                ? "password"
+                                : "text";
+
+                        toggle.classList.toggle(
+                            "is-visible",
+                            !visible
+                        );
+
+                        toggle.setAttribute(
+                            "aria-label",
+                            visible
+                                ? "Exibir senha"
+                                : "Ocultar senha"
+                        );
+                    }
+                );
+            }
+
+            if (
+                form &&
+                submit
+            ) {
+                form.addEventListener(
+                    "submit",
+                    () => {
+
+                        submit.classList.add(
+                            "is-loading"
+                        );
+
+                        submit.disabled = true;
+                    }
+                );
+            }
+
+        })();
+    </script>
+
 </body>
 </html>

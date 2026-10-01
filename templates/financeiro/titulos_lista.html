@@ -32,14 +32,14 @@
   <td colspan="2">
     {% if t.esta_pago %}
       <div class="fin-config-row fin-config-row--locked">
-        <div class="fin-control fin-control--locked" style="display:flex;align-items:center;background:#f4f7f7;color:#536875;cursor:default;">
+        <div class="fin-control fin-control--locked" style="display:flex;align-items:center;background:#f4f7f7;color:#453330;cursor:default;">
           {% if t.plano_financeiro %}
             {{ t.plano_financeiro.pai.nome }} → {{ t.plano_financeiro.nome }}
           {% else %}
             Sem apropriação
           {% endif %}
         </div>
-        <div class="fin-control fin-control--locked" style="display:flex;align-items:center;background:#f4f7f7;color:#536875;cursor:default;">
+        <div class="fin-control fin-control--locked" style="display:flex;align-items:center;background:#f4f7f7;color:#453330;cursor:default;">
           {{ t.vencimento|date:"d/m/Y"|default:"Sem vencimento" }}
         </div>
         <span class="fin-badge fin-badge--success" style="min-height:30px;justify-content:center;">Travado</span>
@@ -142,14 +142,14 @@
       box.style.maxWidth = '430px';
       box.style.padding = '13px 16px';
       box.style.borderRadius = '10px';
-      box.style.boxShadow = '0 10px 30px rgba(15, 35, 45, .18)';
+      box.style.boxShadow = '0 10px 30px rgba(45,32,28, .18)';
       box.style.fontWeight = '700';
       document.body.appendChild(box);
     }
     box.textContent = message;
-    box.style.background = type === 'error' ? '#fff1f1' : '#eefaf3';
-    box.style.color = type === 'error' ? '#a83232' : '#17663a';
-    box.style.border = type === 'error' ? '1px solid #f0c2c2' : '1px solid #bfe3ce';
+    box.style.background = type === 'error' ? '#fff1f1' : '#f5f1e9';
+    box.style.color = type === 'error' ? '#a83232' : '#453330';
+    box.style.border = type === 'error' ? '1px solid #f0c2c2' : '1px solid #eee8d6';
     box.hidden = false;
     clearTimeout(box._timer);
     box._timer = setTimeout(() => { box.hidden = true; }, 4500);

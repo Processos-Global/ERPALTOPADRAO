@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 
 {% block title %}
-Projetos | ERP Alto Padrão
+Projetos | SAARI ERP
 {% endblock %}
 
 {% block page_name %}
@@ -11,12 +11,12 @@ Projetos
 {% block extra_css %}
 <style>
     .projetos-menu {
-        --pm-primary: #1D91A6;
-        --pm-primary-dark: #0E5268;
-        --pm-primary-soft: #EAF7F9;
-        --pm-border: #D7E6EA;
-        --pm-text: #10243E;
-        --pm-muted: #64748B;
+        --pm-primary: #b9aa72;
+        --pm-primary-dark: #453330;
+        --pm-primary-soft: #f5f1e9;
+        --pm-border: #eee8d6;
+        --pm-text: #453330;
+        --pm-muted: #85776f;
         --pm-card: #FFFFFF;
     }
 
@@ -36,10 +36,10 @@ Projetos
             linear-gradient(
                 135deg,
                 #FFFFFF 0%,
-                #FBFEFE 62%,
-                #EEF9FA 100%
+                #fcfaf6 62%,
+                #f3ecdc 100%
             );
-        box-shadow: 0 14px 38px rgba(28, 67, 80, .07);
+        box-shadow: 0 14px 38px rgba(69,51,48, .07);
     }
 
     .projetos-menu__hero::before {
@@ -62,7 +62,7 @@ Projetos
         width: 220px;
         height: 220px;
         border-radius: 50%;
-        background: rgba(29, 145, 166, .06);
+        background: rgba(119,101,92, .06);
         pointer-events: none;
     }
 
@@ -149,8 +149,8 @@ Projetos
 
     .projetos-menu__card:hover {
         transform: translateY(-2px);
-        border-color: #A9D7DE;
-        box-shadow: 0 12px 28px rgba(16, 36, 62, .07);
+        border-color: #d9d0c2;
+        box-shadow: 0 12px 28px rgba(45,32,28, .07);
     }
 
     .projetos-menu__card--disabled {
@@ -177,9 +177,9 @@ Projetos
         height: 46px;
         align-items: center;
         justify-content: center;
-        border: 1px solid #BFDDE2;
+        border: 1px solid #eee8d6;
         border-radius: 12px;
-        background: #F9FDFE;
+        background: #fffdfa;
         color: var(--pm-primary-dark);
     }
 

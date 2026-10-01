@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 {% load static %}
 
-{% block title %}Suprimentos | ERP Alto Padrão{% endblock %}
+{% block title %}Suprimentos | SAARI ERP{% endblock %}
 {% block page_name %}Suprimentos{% endblock %}
 
 {% block extra_css %}
@@ -9,10 +9,10 @@
 
 <style>
   :root {
-    --opal-blue: #2F6F7E;
-    --opal-blue-dark: #1F4F5B;
-    --opal-blue-soft: #EAF4F6;
-    --opal-blue-border: #BFD6DB;
+    --opal-blue: #453330;
+    --opal-blue-dark: #453330;
+    --opal-blue-soft: #f5f1e9;
+    --opal-blue-border: #d9d0c2;
   }
 
   .module-menu {
@@ -44,7 +44,7 @@
     line-height: 1.04;
     letter-spacing: -.04em;
     font-weight: 700;
-    color: #1b2528;
+    color: #2d201c;
   }
 
   .module-menu .dashboard-heading__content h1 em {
@@ -55,7 +55,7 @@
   .module-menu .dashboard-heading__content p {
     margin: 12px 0 0;
     max-width: 720px;
-    color: #6c7a80;
+    color: #77655c;
     font-size: 1rem;
     line-height: 1.65;
   }
@@ -66,13 +66,13 @@
 
   .module-menu .modules__header h2,
   .module-menu .module-card__content h3 {
-    color: #1b2528;
+    color: #2d201c;
     font-weight: 700;
     letter-spacing: -.02em;
   }
 
   .module-menu .module-card__content p {
-    color: #6c7a80;
+    color: #77655c;
   }
 
   .module-menu .module-card__icon {
@@ -103,19 +103,19 @@
     padding: 20px 22px;
     overflow: hidden;
 
-    border: 1px solid #dce6e8;
+    border: 1px solid #eee8d6;
     border-radius: 16px;
 
     background:
       linear-gradient(
         135deg,
-        rgba(47, 111, 126, .055),
+        rgba(69,51,48, .055),
         rgba(255, 255, 255, .95) 55%
       );
 
     box-shadow:
-      0 1px 2px rgba(16, 24, 40, .025),
-      0 8px 24px rgba(16, 24, 40, .035);
+      0 1px 2px rgba(45,32,28, .025),
+      0 8px 24px rgba(45,32,28, .035);
   }
 
   .module-menu__flow::before {
@@ -161,7 +161,7 @@
 
   .module-menu__flow-title {
     margin: 0;
-    color: #1b2528;
+    color: #2d201c;
     font-size: .92rem;
     font-weight: 700;
     letter-spacing: -.01em;
@@ -169,7 +169,7 @@
 
   .module-menu__flow-text {
     margin: 4px 0 0;
-    color: #6c7a80;
+    color: #77655c;
     font-size: .82rem;
     line-height: 1.55;
   }
@@ -191,11 +191,11 @@
     min-height: 27px;
     padding: 5px 10px;
 
-    border: 1px solid #d5e3e6;
+    border: 1px solid #eee8d6;
     border-radius: 999px;
 
     background: rgba(255, 255, 255, .85);
-    color: #53666c;
+    color: #453330;
 
     font-size: .7rem;
     line-height: 1;
@@ -208,7 +208,7 @@
     align-items: center;
     justify-content: center;
 
-    color: #9eafb4;
+    color: #b9aa72;
   }
 
   .module-menu__flow-arrow .icon {
@@ -227,9 +227,28 @@
   }
 
 /* 2026 refresh: destaque do titulo do modulo */
-.module-menu .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:26px 28px;border:1px solid #d7e6ea;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fbfefe 62%,#eef9fa 100%);box-shadow:0 14px 38px rgba(28,67,80,.07)}.module-menu .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#1d91a6,#0a4054)}.module-menu .dashboard-heading::after{content:"";position:absolute;right:-88px;top:-120px;width:210px;height:210px;border-radius:50%;background:rgba(29,145,166,.06);pointer-events:none}.module-menu .dashboard-heading__content{position:relative;z-index:1}.module-menu .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.4rem)}
+.module-menu .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:26px 28px;border:1px solid #ded7c8;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 62%,#f3ecdc 100%);box-shadow:0 14px 38px rgba(69,51,48,.07)}.module-menu .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.module-menu .dashboard-heading::after{content:"";position:absolute;right:-88px;top:-120px;width:210px;height:210px;border-radius:50%;background:rgba(119,101,92,.06);pointer-events:none}.module-menu .dashboard-heading__content{position:relative;z-index:1}.module-menu .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.4rem)}
 @media(max-width:720px){.module-menu .dashboard-heading{padding:21px 19px 21px 23px;border-radius:15px}.module-menu .dashboard-heading::after{display:none}.module-menu .dashboard-heading__content h1{font-size:2.1rem}}
 
+
+
+/* Ajustes SAARI — mesmo padrão visual do menu de Planejamento */
+.module-menu{font-family:var(--font-sans)!important}
+.module-menu .dashboard-heading__content h1,
+.module-menu .module-card__content h3{font-family:var(--font-serif)!important;font-weight:400!important}
+.module-menu .dashboard-heading__content h1,
+.module-menu .dashboard-heading__content h1 em{color:var(--saari-brown)!important}
+.module-menu .dashboard-heading__content h1 em{font-family:inherit!important;font-weight:400!important}
+.module-menu .module-card:not(.module-card--disabled):hover{background:var(--saari-brown)!important;border-color:var(--saari-brown)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__number,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__content h3,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__content p,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer span,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer .icon{color:#fff!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__icon{color:#fff!important;border-color:rgba(255,255,255,.28)!important;background:rgba(255,255,255,.08)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__permission{color:#fff!important;background:rgba(255,255,255,.12)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__accent{background:var(--saari-gold)!important}
 </style>
 {% endblock %}
 

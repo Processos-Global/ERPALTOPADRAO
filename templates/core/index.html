@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-    Painel Geral | ERP Alto Padrão
+    Painel Geral | SAARI ERP
 {% endblock %}
 
 {% block page_name %}
@@ -17,10 +17,25 @@
 
     <style>
         :root {
-            --opal-blue: #2F6F7E;
-            --opal-blue-dark: #1F4F5B;
-            --opal-blue-soft: #EAF4F6;
-            --opal-blue-border: #BFD6DB;
+            --saari-brown: #453330;
+            --saari-brown-deep: #2d201c;
+            --saari-brown-soft: #6d5750;
+            --saari-gold: #b9aa72;
+            --saari-gold-deep: #9d8e58;
+            --saari-cream: #f6f1e8;
+            --saari-surface: #fffdf9;
+            --saari-border: #ded7c8;
+            --saari-muted: #7b6e68;
+
+            /* aliases antigos mantidos só para compatibilidade com dashboard.css */
+            --opal-blue: var(--saari-gold);
+            --opal-blue-dark: var(--saari-brown);
+            --opal-blue-soft: #f1ecdf;
+            --opal-blue-border: var(--saari-border);
+            --petrol-50: #f1ecdf;
+            --petrol-700: var(--saari-gold-deep);
+            --petrol-800: var(--saari-brown);
+            --petrol-900: var(--saari-brown-deep);
         }
 
         .dashboard-home,
@@ -31,7 +46,7 @@
         .dashboard-home span,
         .dashboard-home strong,
         .dashboard-home em {
-            font-family: "Segoe UI", "Inter", Arial, sans-serif;
+            font-family: "Plus Jakarta Sans", Arial, sans-serif;
         }
 
         .dashboard-home .dashboard-heading__content h1 {
@@ -39,7 +54,7 @@
             line-height: 1.02;
             letter-spacing: -0.04em;
             font-weight: 700;
-            color: #1b2528;
+            color: var(--saari-brown);
         }
 
         .dashboard-home .dashboard-heading__content h1 em {
@@ -52,12 +67,12 @@
         .dashboard-home .module-card__content h3 {
             font-weight: 700;
             letter-spacing: -0.02em;
-            color: #1b2528;
+            color: var(--saari-brown);
         }
 
         .dashboard-home .dashboard-heading__content p,
         .dashboard-home .module-card__content p {
-            color: #6c7a80;
+            color: var(--saari-muted);
         }
 
         .dashboard-home .dashboard-heading__eyebrow,
@@ -86,9 +101,124 @@
         }
     
 /* 2026 refresh: card de boas-vindas como ancora visual da pagina */
-.dashboard-home .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:28px 30px;border:1px solid #d7e6ea;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fbfefe 62%,#eef9fa 100%);box-shadow:0 14px 38px rgba(28,67,80,.07)}
-.dashboard-home .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#1d91a6,#0a4054)}.dashboard-home .dashboard-heading::after{content:"";position:absolute;right:-90px;top:-125px;width:220px;height:220px;border-radius:50%;background:rgba(29,145,166,.06);pointer-events:none}.dashboard-home .dashboard-heading__content{position:relative;z-index:1}.dashboard-home .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.65rem);line-height:1.03}
+.dashboard-home .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:28px 30px;border:1px solid #ded7c8;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 62%,#f3ecdc 100%);box-shadow:0 14px 38px rgba(69,51,48,.08)}
+.dashboard-home .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.dashboard-home .dashboard-heading::after{content:"";position:absolute;right:-90px;top:-125px;width:220px;height:220px;border-radius:50%;background:rgba(185,170,114,.10);pointer-events:none}.dashboard-home .dashboard-heading__content{position:relative;z-index:1}.dashboard-home .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.65rem);line-height:1.03}
 @media(max-width:720px){.dashboard-home .dashboard-heading{padding:22px 20px 22px 24px;border-radius:15px}.dashboard-home .dashboard-heading::after{display:none}.dashboard-home .dashboard-heading__content h1{font-size:2.15rem}}
+
+
+        /* Tipografia da identidade SAARI */
+        .dashboard-home .dashboard-heading__content h1,
+        .dashboard-home .modules__header h2,
+        .dashboard-home .module-card__content h3 {
+            font-family: "Source Serif 4", Georgia, serif;
+        }
+
+        .dashboard-home .dashboard-heading__content h1 {
+            color: var(--saari-brown);
+            font-weight: 500;
+        }
+
+        .dashboard-home .dashboard-heading__content h1 em {
+            color: var(--saari-gold-deep);
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .dashboard-home .module-card {
+            background: var(--saari-surface);
+            border-color: var(--saari-border);
+        }
+
+        .dashboard-home .module-card::before {
+            background: linear-gradient(145deg, #4f3a35 0%, #2d201c 100%);
+        }
+
+        .dashboard-home .module-card__number,
+        .dashboard-home .module-card__footer {
+            color: var(--saari-gold-deep);
+        }
+
+        .dashboard-home .module-card__icon {
+            color: var(--saari-gold-deep);
+            border-color: #d8cfbb;
+        }
+
+        .dashboard-home .module-card__permission {
+            background: #f1ecdf;
+            color: #6d5f58;
+        }
+
+        .dashboard-home .module-card__accent {
+            background: var(--saari-gold);
+        }
+
+        .dashboard-home .module-card:not(.module-card--disabled):hover {
+            border-color: var(--saari-gold) !important;
+            box-shadow: 0 22px 55px rgba(45, 32, 28, .18) !important;
+            color: #ffffff !important;
+        }
+
+        /* Garante que TODO o texto do card fique claro no hover. */
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__content h3,
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__content p,
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__number,
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__footer,
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__footer span,
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__icon {
+            color: #ffffff !important;
+        }
+
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__content p {
+            color: rgba(255, 255, 255, .78) !important;
+        }
+
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__permission {
+            background: rgba(255, 255, 255, .10) !important;
+            color: rgba(255, 255, 255, .82) !important;
+        }
+
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__icon {
+            border-color: rgba(255, 255, 255, .30) !important;
+        }
+
+        .dashboard-home .module-card:not(.module-card--disabled):hover .module-card__accent {
+            background: var(--saari-gold) !important;
+        }
+
+
+
+        /* SAARI dark editorial — ajuste específico da home */
+        html[data-theme="dark"] .dashboard-home .dashboard-heading {
+            background: linear-gradient(135deg, #342a23 0%, #2a231e 64%, #3a3026 100%) !important;
+            border-color: rgba(235, 222, 205, .07) !important;
+            box-shadow: 0 18px 48px rgba(0,0,0,.18) !important;
+        }
+        html[data-theme="dark"] .dashboard-home .dashboard-heading::before {
+            background: linear-gradient(180deg, #b89b5c, #6f5738) !important;
+        }
+        html[data-theme="dark"] .dashboard-home .dashboard-heading::after { background: rgba(184,155,92,.085) !important; }
+        html[data-theme="dark"] .dashboard-home .dashboard-heading__content h1 { color: #f1ebe4 !important; }
+        html[data-theme="dark"] .dashboard-home .dashboard-heading__content h1 em { color: #c5a96c !important; }
+        html[data-theme="dark"] .dashboard-home .module-card {
+            background: linear-gradient(180deg, #2c2520 0%, #28221e 100%) !important;
+            border-color: rgba(235,222,205,.065) !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,.10) !important;
+        }
+        html[data-theme="dark"] .dashboard-home .module-card__content h3 { color: #eee7df !important; }
+        html[data-theme="dark"] .dashboard-home .module-card__content p { color: #a99d94 !important; }
+        html[data-theme="dark"] .dashboard-home .module-card__permission {
+            background: rgba(235,222,205,.065) !important;
+            color: #b9ada4 !important;
+        }
+        html[data-theme="dark"] .dashboard-home .module-card__icon {
+            border-color: rgba(184,155,92,.28) !important;
+            background: rgba(184,155,92,.035) !important;
+        }
+        html[data-theme="dark"] .dashboard-home .module-card:not(.module-card--disabled):hover {
+            background: linear-gradient(145deg,#43362e 0%,#352b26 100%) !important;
+            border-color: rgba(184,155,92,.34) !important;
+            box-shadow: 0 18px 46px rgba(0,0,0,.20) !important;
+        }
 
 </style>
 {% endblock %}

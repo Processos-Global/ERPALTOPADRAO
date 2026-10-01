@@ -37,7 +37,7 @@
           <td><a class="ft-btn" href="{% url 'obras:ficha_tecnica' linha.obra.pk %}">{% if linha.ficha %}Abrir{% else %}Criar{% endif %}</a></td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" style="padding:22px;text-align:center;color:#81939b">Nenhuma obra ativa encontrada.</td></tr>
+        <tr><td colspan="5" style="padding:22px;text-align:center;color:#77655c">Nenhuma obra ativa encontrada.</td></tr>
         {% endfor %}
       </tbody>
     </table>
