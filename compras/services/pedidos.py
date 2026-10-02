@@ -678,6 +678,12 @@ def registrar_recebimento(
             "excedentes": excedentes,
         },
     )
+
+    # Um recebimento físico comprova que o pedido já ultrapassou o aceite do
+    # fornecedor, mesmo que CONFIRMADO não tenha sido marcado manualmente.
+    # ENTREGA_PARCIAL e ENTREGUE já contam como status confirmados na regra
+    # de contratação; por isso o processo precisa ser recalculado aqui.
+    _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
     return recebimento
 
 
@@ -697,4 +703,9 @@ def cancelar_pedido(*, pedido, usuario, motivo):
     p.motivo_cancelamento = motivo
     p.save(update_fields=["status", "cancelado_por", "cancelado_em", "motivo_cancelamento", "atualizado_em"])
     registrar_evento(p.processo, "PEDIDO_CANCELADO", usuario, f"Pedido {p.numero} cancelado: {motivo}", {"pedido_id": p.pk})
+
+    # Cancelar um pedido pode invalidar uma contratação já concluída.
+    # Recalcular evita processo CONTRATADO/Finalizado sem pedido ativo
+    # confirmado para todos os fornecedores adjudicados.
+    _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
     return p
