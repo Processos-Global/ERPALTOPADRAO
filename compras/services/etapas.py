@@ -231,7 +231,27 @@ def _criar_adjudicacoes_da_aprovacao(*, processo, usuario, selecoes):
             )
         totais[item.necessidade_id] = totais.get(item.necessidade_id, Decimal("0")) + quantidade
 
-    for necessidade in processo.necessidades.filter(situacao="ATIVA"):
+    # Repete no service a mesma regra defensiva do formulário: somente
+    # necessidades que possuem alguma oferta elegível para esta rodada precisam
+    # fechar exatamente a quantidade solicitada. Itens sem qualquer oferta
+    # elegível não podem ser selecionados na interface e não devem impedir a
+    # aprovação dos demais itens.
+    itens_elegiveis = queryset_itens_elegiveis_comercial(
+        CotacaoFornecedorItem.objects.filter(
+            cotacao__processo=processo,
+            cotacao__enviada_aprovacao_em__isnull=False,
+            necessidade__situacao="ATIVA",
+        ),
+        processo,
+    )
+    necessidades_com_oferta_elegivel = set(
+        itens_elegiveis.values_list("necessidade_id", flat=True)
+    )
+
+    for necessidade in processo.necessidades.filter(
+        situacao="ATIVA",
+        pk__in=necessidades_com_oferta_elegivel,
+    ):
         esperado = necessidade.quantidade_incluida or Decimal("0")
         total = totais.get(necessidade.pk, Decimal("0"))
         if total != esperado:

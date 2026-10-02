@@ -869,7 +869,18 @@ class AprovacaoForm(forms.Form):
         for item in selecionados:
             totais[item.necessidade_id] += item.quantidade or Decimal("0")
 
-        for necessidade in self.processo.necessidades.filter(situacao="ATIVA"):
+        # Só é possível exigir seleção para necessidades que realmente possuem
+        # ao menos uma oferta elegível nesta rodada de aprovação. Necessidades
+        # sem nenhuma oferta cotada/elegível aparecem no mapa como "Não cotado"
+        # e, portanto, não podem bloquear a aprovação dos demais itens.
+        necessidades_com_oferta_elegivel = {
+            item.necessidade_id for item in self.itens_elegiveis
+        }
+
+        for necessidade in self.processo.necessidades.filter(
+            situacao="ATIVA",
+            pk__in=necessidades_com_oferta_elegivel,
+        ):
             total = totais[necessidade.pk]
             esperado = necessidade.quantidade_incluida or Decimal("0")
             if total != esperado:
