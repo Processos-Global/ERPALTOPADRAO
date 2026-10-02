@@ -1,0 +1,122 @@
+/* Alto Padrão ERP — camada visual progressiva.
+   Não altera base/index, apenas melhora os componentes do formulário de compra. */
+:root{
+  --ui-ink:#183746;
+  --ui-muted:#71868f;
+  --ui-line:#dce6e9;
+  --ui-line-soft:#eaf0f2;
+  --ui-bg:#f6f9fa;
+  --ui-card:#fff;
+  --ui-accent:#078fa5;
+  --ui-accent-strong:#06788c;
+  --ui-accent-soft:#eef8fa;
+  --ui-danger:#a44747;
+  --ui-radius:14px;
+  --ui-shadow:0 10px 30px rgba(31,64,78,.055);
+}
+
+/* Página / hierarquia */
+.pc-open{padding-top:22px!important}
+.pc-hero{
+  border-color:var(--ui-line)!important;
+  border-radius:16px!important;
+  box-shadow:var(--ui-shadow)!important;
+  background:linear-gradient(180deg,#fff 0%,#fcfefe 100%)!important;
+}
+.pc-open-head{margin-bottom:12px!important;padding-bottom:12px!important}
+.pc-open-head__icon{
+  width:38px!important;height:38px!important;flex-basis:38px!important;
+  border-radius:11px!important;background:var(--ui-accent-soft)!important;
+  box-shadow:inset 0 0 0 1px rgba(7,143,165,.07);
+}
+.pc-open-head h1{font-size:25px!important;font-weight:800!important;letter-spacing:-.035em!important}
+.pc-origin{border-radius:11px!important;background:#fbfdfd!important}
+
+/* Área de formulário: um card principal elegante */
+.pc-form-layout{
+  gap:0!important;padding:4px 20px 2px!important;
+  border:1px solid var(--ui-line)!important;border-radius:16px!important;
+  background:var(--ui-card)!important;box-shadow:var(--ui-shadow)!important;
+}
+.pc-section{padding:20px 0!important}
+.pc-section__head{margin-bottom:13px!important}
+.pc-section__head h2{font-size:14px!important;font-weight:850!important;letter-spacing:-.015em!important}
+
+/* Campos */
+.pc-field label{margin-bottom:5px!important;font-size:10px!important;letter-spacing:.015em!important;color:#607781!important}
+.pc-field input:not([type=checkbox]):not([type=radio]),
+.pc-field select,.pc-field textarea,
+.pc-search input,.pc-dropdown__toggle{
+  min-height:43px!important;border-color:#d2dee2!important;border-radius:10px!important;
+  background:#fff!important;color:#244853!important;font-size:12px!important;
+  box-shadow:0 1px 1px rgba(20,55,68,.02)!important;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease,background .16s ease!important;
+}
+.pc-field input:hover,.pc-field select:hover,.pc-field textarea:hover,.pc-search input:hover,.pc-dropdown__toggle:hover{
+  border-color:#afc8cf!important;background:#fefefe!important;
+}
+.pc-field input:focus,.pc-field select:focus,.pc-field textarea:focus,.pc-search input:focus,.pc-dropdown__toggle:focus,.pc-dropdown__toggle.is-open{
+  border-color:#59abba!important;box-shadow:0 0 0 3px rgba(7,143,165,.08)!important;outline:0!important;
+}
+.pc-field textarea{line-height:1.45!important}
+.pc-field-counter{font-size:9px!important;color:#95a6ac!important}
+
+/* Itens */
+.pc-items{gap:10px!important}
+.pc-item{
+  border-color:#e0e9ec!important;border-radius:12px!important;background:#fcfefe!important;
+  box-shadow:0 1px 2px rgba(31,64,78,.018)!important;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease!important;
+}
+.pc-item:hover{border-color:#cbdde2!important;box-shadow:0 7px 18px rgba(31,64,78,.045)!important;transform:translateY(-1px)}
+.pc-item__num{background:var(--ui-accent-soft)!important;color:var(--ui-accent-strong)!important}
+
+/* Atividades / tabelas */
+.pc-activity-table-wrap{border-color:#dde7ea!important;border-radius:12px!important;background:#fff!important}
+.pc-activity-table th{background:#f7fafb!important;color:#71858d!important;letter-spacing:.04em!important}
+.pc-activity-table tbody tr{transition:background .14s ease!important}
+.pc-activity-table tbody tr:hover{background:#fbfdfd!important}
+.pc-chip,.pc-supplier-chip{border-color:#d9e6e9!important;background:#f8fbfc!important;border-radius:8px!important}
+
+/* Fornecedor dropdown */
+.pc-dropdown__panel{
+  border-color:#d8e4e7!important;border-radius:13px!important;
+  box-shadow:0 18px 44px rgba(25,60,72,.14)!important;
+  transform-origin:top center;animation:uiDropdownIn .16s ease-out;
+}
+.pc-dropdown__option{transition:border-color .14s ease,background .14s ease,transform .14s ease!important}
+.pc-dropdown__option:hover{transform:translateX(2px)}
+
+/* Botões */
+.pc-btn{
+  min-height:39px!important;border-radius:9px!important;
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease!important;
+}
+.pc-btn:hover{transform:translateY(-1px)}
+.pc-btn:active{transform:translateY(0) scale(.985)}
+.pc-btn--primary{box-shadow:0 6px 14px rgba(7,143,165,.16)!important}
+.pc-btn--primary:hover{box-shadow:0 9px 20px rgba(7,143,165,.21)!important}
+.pc-icon-btn{transition:transform .14s ease,background .14s ease,border-color .14s ease!important}
+.pc-icon-btn:hover{transform:scale(1.05)}
+
+/* Barra inferior mantém sua navegação/transição atual */
+.pc-sticky{
+  border-top-color:#d9e4e7!important;background:rgba(255,255,255,.96)!important;
+  box-shadow:0 -10px 30px rgba(28,64,78,.055)!important;
+}
+
+/* Entrada sutil do conteúdo — não depende de JS */
+.pc-hero,.pc-form-layout{animation:uiPanelIn .28s ease-out both}
+.pc-form-layout{animation-delay:.035s}
+
+@keyframes uiPanelIn{from{opacity:.001;transform:translateY(7px)}to{opacity:1;transform:none}}
+@keyframes uiDropdownIn{from{opacity:.001;transform:translateY(-4px) scale(.995)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .pc-hero,.pc-form-layout,.pc-dropdown__panel{animation:none!important}
+  .pc-item,.pc-btn,.pc-icon-btn,.pc-dropdown__option{transition:none!important;transform:none!important}
+}
+
+@media(max-width:820px){
+  .pc-form-layout{padding:2px 14px!important}
+}

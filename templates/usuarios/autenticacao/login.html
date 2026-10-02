@@ -550,39 +550,64 @@
         .login-visual__image-inner {
             position: absolute;
             inset: -2%;
-
-            background-image:
-                url("{% static 'img/saari/saari_login_atrio.jpg' %}");
-
-            background-repeat: no-repeat;
-            background-size: cover;
-            background-position: center center;
+            overflow: hidden;
 
             filter:
                 brightness(.73)
                 saturate(.74)
                 contrast(1.02);
 
-            transform:
-                scale(1.055);
+            transform: scale(1.055);
 
             animation:
                 sceneSettle
                 2.35s
                 cubic-bezier(.17, .77, .22, 1)
                 .36s
-                forwards,
-
-                sceneBreath
-                24s
-                ease-in-out
-                3s
-                infinite
-                alternate;
+                forwards;
 
             will-change:
                 transform,
                 filter;
+        }
+
+        .login-visual__slide {
+            position: absolute;
+            inset: 0;
+
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center center;
+
+            opacity: 0;
+            transform: scale(1.025) translate3d(0, 0, 0);
+
+            transition:
+                opacity 1.45s cubic-bezier(.4, 0, .2, 1),
+                transform 8.5s ease-out;
+
+            will-change: opacity, transform;
+        }
+
+        .login-visual__slide.is-active {
+            opacity: 1;
+            transform: scale(1.055) translate3d(-.18%, -.10%, 0);
+        }
+
+        .login-visual__slide:nth-child(1) {
+            background-image: url("{% static 'img/saari/login-slides/login-01.jpg' %}");
+        }
+
+        .login-visual__slide:nth-child(2) {
+            background-image: url("{% static 'img/saari/login-slides/login-02.jpg' %}");
+        }
+
+        .login-visual__slide:nth-child(3) {
+            background-image: url("{% static 'img/saari/login-slides/login-03.jpg' %}");
+        }
+
+        .login-visual__slide:nth-child(4) {
+            background-image: url("{% static 'img/saari/login-slides/login-04.jpg' %}");
         }
 
         /*
@@ -937,7 +962,7 @@
                 text-align: center;
             }
 
-            .login-visual__image-inner {
+            .login-visual__slide {
                 background-position: center 42%;
             }
 
@@ -974,7 +999,7 @@
                 min-height: 32vh;
             }
 
-            .login-visual__image-inner {
+            .login-visual__slide {
                 background-position: center 38%;
             }
         }
@@ -996,8 +1021,17 @@
                 clip-path: none !important;
             }
 
-            .login-visual__image-inner {
+            .login-visual__image-inner,
+            .login-visual__slide {
                 transform: none !important;
+            }
+
+            .login-visual__slide {
+                opacity: 0 !important;
+            }
+
+            .login-visual__slide.is-active {
+                opacity: 1 !important;
             }
 
             .login-visual__symbol,
@@ -1283,7 +1317,12 @@
             <div class="login-visual__halo"></div>
 
             <div class="login-visual__image">
-                <div class="login-visual__image-inner"></div>
+                <div class="login-visual__image-inner" data-login-slideshow>
+                    <div class="login-visual__slide is-active"></div>
+                    <div class="login-visual__slide"></div>
+                    <div class="login-visual__slide"></div>
+                    <div class="login-visual__slide"></div>
+                </div>
             </div>
 
             <div class="login-visual__veil"></div>
@@ -1322,6 +1361,29 @@
 
             apply(root.dataset.theme, false);
             if (button) button.addEventListener('click', () => apply(root.dataset.theme === 'dark' ? 'light' : 'dark', true));
+        })();
+    </script>
+
+    <script>
+        (() => {
+            const slideshow = document.querySelector('[data-login-slideshow]');
+            if (!slideshow) return;
+
+            const slides = Array.from(slideshow.querySelectorAll('.login-visual__slide'));
+            if (slides.length < 2) return;
+
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduceMotion) return;
+
+            let current = 0;
+            const interval = 3000;
+
+            window.setInterval(() => {
+                const next = (current + 1) % slides.length;
+                slides[next].classList.add('is-active');
+                slides[current].classList.remove('is-active');
+                current = next;
+            }, interval);
         })();
     </script>
 
