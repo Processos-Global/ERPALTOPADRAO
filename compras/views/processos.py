@@ -679,35 +679,32 @@ def dashboard(request):
     )
 
     hoje = timezone.localdate()
+    processos = list(qs)
 
-    # Estados terminais não devem ser considerados processos ativos.
-    ativos = qs.exclude(
-        status__in=[
-            ProcessoCompra.Status.CONTRATADO,
-            ProcessoCompra.Status.REPROVADO,
-            ProcessoCompra.Status.CANCELADO,
-        ]
-    )
-
-    atrasados = ativos.filter(
-        item_cronograma__prazo_limite_contratacao__lt=hoje,
-        data_contratacao_concluida__isnull=True,
-    )
-
-    aguardando = qs.filter(
-        status=ProcessoCompra.Status.AGUARDANDO_APROVACAO
-    )
-
-    ajustes = qs.filter(
-        status=ProcessoCompra.Status.AJUSTE_SOLICITADO
-    )
-
-    contratados = qs.filter(
-        status=ProcessoCompra.Status.CONTRATADO,
-        data_contratacao_concluida__date__gte=(
-            hoje - timedelta(days=30)
-        ),
-    )
+    # A mesma consulta alimenta KPIs e colunas. Antes, cada filtro abaixo
+    # disparava uma nova consulta complexa com os COUNTs anotados.
+    status_terminais = {
+        ProcessoCompra.Status.CONTRATADO,
+        ProcessoCompra.Status.REPROVADO,
+        ProcessoCompra.Status.CANCELADO,
+    }
+    ativos = [p for p in processos if p.status not in status_terminais]
+    atrasados = [
+        p for p in ativos
+        if p.item_cronograma_id
+        and p.item_cronograma.prazo_limite_contratacao
+        and p.item_cronograma.prazo_limite_contratacao < hoje
+        and p.data_contratacao_concluida is None
+    ]
+    aguardando = [p for p in processos if p.status == ProcessoCompra.Status.AGUARDANDO_APROVACAO]
+    ajustes = [p for p in processos if p.status == ProcessoCompra.Status.AJUSTE_SOLICITADO]
+    limite_contratados = hoje - timedelta(days=30)
+    contratados = [
+        p for p in processos
+        if p.status == ProcessoCompra.Status.CONTRATADO
+        and p.data_contratacao_concluida
+        and p.data_contratacao_concluida.date() >= limite_contratados
+    ]
 
     # O Kanban é organizado pelos STATUS reais do processo.
     # Isso é importante porque alguns estados relevantes, como
@@ -795,16 +792,20 @@ def dashboard(request):
         ),
     ]
 
+    processos_por_status = defaultdict(list)
+    for processo_item in processos:
+        processos_por_status[processo_item.status].append(processo_item)
+
     colunas = [
         {
             "chave": chave,
             "titulo": titulo,
             "descricao": descricao,
-            "processos": list(
-                qs.filter(
-                    status__in=statuses
-                )
-            ),
+            "processos": [
+                processo_item
+                for status in statuses
+                for processo_item in processos_por_status.get(status, [])
+            ],
         }
         for (
             chave,
@@ -818,11 +819,11 @@ def dashboard(request):
         request,
         "compras/dashboard.html",
         {
-            "ativos": ativos.count(),
-            "atrasados": atrasados.count(),
-            "aguardando": aguardando.count(),
-            "ajustes": ajustes.count(),
-            "contratados": contratados.count(),
+            "ativos": len(ativos),
+            "atrasados": len(atrasados),
+            "aguardando": len(aguardando),
+            "ajustes": len(ajustes),
+            "contratados": len(contratados),
             "colunas": colunas,
             "obras": (
                 Obra.objects
@@ -987,6 +988,7 @@ def detalhe_processo(
         .necessidades
         .select_related(
             "atividade_origem",
+            "material__unidade",
         )
         .order_by(
             "descricao",
@@ -994,15 +996,26 @@ def detalhe_processo(
         )
     )
 
-    for necessidade in necessidades:
-        necessidade.form_edicao = NecessidadeCompraForm(
-            processo=processo,
-            initial={
-                "material": necessidade.material_id,
-                "quantidade": necessidade.quantidade_incluida,
-                "observacao": necessidade.observacao,
-            },
-        )
+    pode_editar_itens = (
+        processo.etapa_atual == ProcessoCompra.Etapa.COTACAO
+        and permissoes_compras["pode_solicitar"]
+    )
+    form_necessidade = None
+    if pode_editar_itens:
+        form_necessidade = NecessidadeCompraForm(processo=processo)
+        material_choices = list(form_necessidade.fields["material"].choices)
+        form_necessidade.fields["material"].choices = material_choices
+
+        for necessidade in necessidades:
+            necessidade.form_edicao = NecessidadeCompraForm(
+                processo=processo,
+                initial={
+                    "material": necessidade.material_id,
+                    "quantidade": necessidade.quantidade_incluida,
+                    "observacao": necessidade.observacao,
+                },
+            )
+            necessidade.form_edicao.fields["material"].choices = material_choices
 
     itens_prefetch = Prefetch(
         "itens",
@@ -1011,6 +1024,7 @@ def detalhe_processo(
             .select_related(
                 "necessidade",
                 "negociacao",
+                "cotacao__fornecedor",
             )
             .prefetch_related(
                 "compatibilizacoes"
@@ -1031,7 +1045,8 @@ def detalhe_processo(
         processo
         .cotacoes
         .select_related(
-            "fornecedor"
+            "fornecedor",
+            "criado_por",
         )
         .prefetch_related(
             itens_prefetch
@@ -1170,6 +1185,7 @@ def detalhe_processo(
             "form": PropostaCompletaForm(
                 processo=processo,
                 cotacao=cotacao,
+                necessidades=necessidades,
             ),
         }
         for cotacao in cotacoes
@@ -1191,6 +1207,7 @@ def detalhe_processo(
     if pode_editar and fase_comercial_aberta:
         form_proposta_nova = PropostaCompletaForm(
             processo=processo,
+            necessidades=necessidades,
         )
         pode_cadastrar_nova_proposta = form_proposta_nova.fields["fornecedor"].queryset.exists()
     if pode_editar and fase_analise_aberta:
@@ -1208,6 +1225,7 @@ def detalhe_processo(
                     "form": AnaliseTecnicaLoteForm(
                         processo=processo,
                         cotacao=cotacao,
+                        itens=list(cotacao.itens.all()),
                     ),
                 }
                 for cotacao in cotacoes_para_compatibilizar
@@ -1287,13 +1305,7 @@ def detalhe_processo(
         "form_analise_lote": form_analise_lote,
         "form_decisao_lote": form_decisao_lote,
 
-        "form_necessidade": (
-            NecessidadeCompraForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
+        "form_necessidade": form_necessidade,
 
         "form_cotacao": (
             CotacaoFornecedorForm(

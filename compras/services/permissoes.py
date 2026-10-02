@@ -53,7 +53,11 @@ def _permissao_modulo_compras(usuario):
     if not usuario.is_authenticated:
         return None
 
-    return (
+    cache_attr = "_compras_permissao_modulo_cache"
+    if hasattr(usuario, cache_attr):
+        return getattr(usuario, cache_attr)
+
+    permissao = (
         PermissaoModulo.objects
         .filter(
             usuario=usuario,
@@ -63,20 +67,27 @@ def _permissao_modulo_compras(usuario):
         .only("nivel")
         .first()
     )
+    setattr(usuario, cache_attr, permissao)
+    return permissao
 
 
 def obter_permissao_compras(usuario):
     if not usuario.is_authenticated:
         return None
 
+    cache_attr = "_compras_permissao_granular_cache"
+    if hasattr(usuario, cache_attr):
+        return getattr(usuario, cache_attr)
+
     try:
         permissao = usuario.permissao_compras_erp
     except PermissaoCompras.DoesNotExist:
         permissao = None
 
-    if permissao is None or not permissao.ativo:
-        return None
+    if permissao is not None and not permissao.ativo:
+        permissao = None
 
+    setattr(usuario, cache_attr, permissao)
     return permissao
 
 

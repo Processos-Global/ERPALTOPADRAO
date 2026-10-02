@@ -287,9 +287,10 @@ class PropostaCompletaForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Informações gerais da proposta"}),
     )
 
-    def __init__(self, *args, processo, cotacao=None, **kwargs):
+    def __init__(self, *args, processo, cotacao=None, necessidades=None, **kwargs):
         self.processo = processo
         self.cotacao = cotacao
+        self.necessidades_precarregadas = necessidades
         super().__init__(*args, **kwargs)
 
         fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome")
@@ -335,15 +336,21 @@ class PropostaCompletaForm(forms.Form):
 
         itens_existentes = {}
         if cotacao:
+            itens_cache = getattr(cotacao, "_prefetched_objects_cache", {}).get("itens")
+            if itens_cache is None:
+                itens_cache = cotacao.itens.select_related("necessidade").all()
             itens_existentes = {
                 item.necessidade_id: item
-                for item in cotacao.itens.select_related("necessidade").all()
+                for item in itens_cache
             }
 
         self.linhas = []
-        necessidades = list(
-            processo.necessidades.filter(situacao="ATIVA").order_by("descricao", "id")
-        )
+        if self.necessidades_precarregadas is not None:
+            necessidades = [n for n in self.necessidades_precarregadas if n.situacao == "ATIVA"]
+        else:
+            necessidades = list(
+                processo.necessidades.filter(situacao="ATIVA").order_by("descricao", "id")
+            )
         for necessidade in necessidades:
             item = itens_existentes.get(necessidade.pk)
             sufixo = str(necessidade.pk)
@@ -522,24 +529,33 @@ class CompatibilizacaoForm(forms.Form):
 class AnaliseTecnicaLoteForm(forms.Form):
     """Decisões técnicas inline, agrupadas por necessidade."""
 
-    def __init__(self, *args, processo, cotacao=None, **kwargs):
+    def __init__(self, *args, processo, cotacao=None, itens=None, **kwargs):
         self.processo = processo
         self.cotacao = cotacao
         super().__init__(*args, **kwargs)
 
-        filtro = {
-            "cotacao__processo": processo,
-            "cotacao__enviada_compatibilizacao_em__isnull": False,
-        }
-        if cotacao is not None:
-            filtro["cotacao"] = cotacao
+        if itens is None:
+            filtro = {
+                "cotacao__processo": processo,
+                "cotacao__enviada_compatibilizacao_em__isnull": False,
+            }
+            if cotacao is not None:
+                filtro["cotacao"] = cotacao
 
-        itens = list(
-            CotacaoFornecedorItem.objects.filter(**filtro)
-            .select_related("cotacao__fornecedor", "necessidade")
-            .prefetch_related("compatibilizacoes")
-            .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
-        )
+            itens = list(
+                CotacaoFornecedorItem.objects.filter(**filtro)
+                .select_related("cotacao__fornecedor", "necessidade")
+                .prefetch_related("compatibilizacoes")
+                .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
+            )
+        else:
+            itens = sorted(
+                list(itens),
+                key=lambda item: (
+                    item.necessidade.descricao or "",
+                    item.cotacao.fornecedor.nome or "",
+                ),
+            )
         grupos = defaultdict(list)
         self.linhas = []
         for item in itens:

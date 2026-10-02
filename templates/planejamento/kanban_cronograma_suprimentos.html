@@ -262,7 +262,7 @@
   .kb-board {
     min-width:1110px;
     display:grid;
-    grid-template-columns:repeat(5,minmax(210px,1fr));
+    grid-template-columns:repeat(6,minmax(210px,1fr));
     align-items:stretch;
   }
 
@@ -915,6 +915,7 @@
         <option value="COTACAO" {% if request.GET.etapa == "COTACAO" %}selected{% endif %}>Cotação</option>
         <option value="COMPATIBILIZACAO" {% if request.GET.etapa == "COMPATIBILIZACAO" %}selected{% endif %}>Compatibilização</option>
         <option value="NEGOCIACAO" {% if request.GET.etapa == "NEGOCIACAO" %}selected{% endif %}>Negociação</option>
+        <option value="APROVACAO" {% if request.GET.etapa == "APROVACAO" %}selected{% endif %}>Aprovação</option>
         <option value="CONTRATACAO" {% if request.GET.etapa == "CONTRATACAO" %}selected{% endif %}>Contratação</option>
         <option value="CONCLUIDO" {% if request.GET.etapa == "CONCLUIDO" %}selected{% endif %}>Concluído</option>
       </select>
@@ -975,7 +976,7 @@
   <div class="kb-board-toolbar">
     <div class="kb-board-toolbar-left">
       <strong>Fluxo do suprimento</strong>
-      <span>Cotação → Compatibilização → Negociação → Contratação → Concluído</span>
+      <span>Cotação → Compatibilização → Negociação → Aprovação → Contratação → Concluído</span>
     </div>
     <span class="kb-filter-active" id="kb-active-stage-filter"></span>
   </div>
@@ -1014,6 +1015,19 @@
           <div class="kb-column-title">
             <span class="kb-column-dot"></span>
             Negociação
+          </div>
+          <span class="kb-count">0</span>
+        </header>
+        <div class="kb-column-body">
+          <div class="kb-empty-col">Nenhum suprimento nesta etapa.</div>
+        </div>
+      </section>
+
+      <section class="kb-column" data-stage="APROVACAO">
+        <header class="kb-column-head">
+          <div class="kb-column-title">
+            <span class="kb-column-dot"></span>
+            Aprovação
           </div>
           <span class="kb-count">0</span>
         </header>
@@ -1362,13 +1376,34 @@
     COTACAO: 'Cotação',
     COMPATIBILIZACAO: 'Compatibilização',
     NEGOCIACAO: 'Negociação',
+    APROVACAO: 'Aprovação',
     CONTRATACAO: 'Contratação',
     CONCLUIDO: 'Concluído'
   };
 
   const normalizeStage = (value) => {
-    const stage = (value || '').trim().toUpperCase();
-    return stageLabels[stage] ? stage : 'COTACAO';
+    const raw = (value || '').trim().toUpperCase();
+    if (stageLabels[raw]) return raw;
+
+    const aliases = {
+      RASCUNHO: 'COTACAO',
+      PEDIDO_ENVIADO: 'COTACAO',
+      SOLICITACAO_COTACAO: 'COTACAO',
+      AGUARDANDO_COTACAO: 'COTACAO',
+      EM_COTACAO: 'COTACAO',
+      AGUARDANDO_COMPATIBILIZACAO: 'COMPATIBILIZACAO',
+      EM_COMPATIBILIZACAO: 'COMPATIBILIZACAO',
+      EM_NEGOCIACAO: 'NEGOCIACAO',
+      AJUSTE_SOLICITADO: 'NEGOCIACAO',
+      AGUARDANDO_APROVACAO: 'APROVACAO',
+      APROVADO: 'CONTRATACAO',
+      EM_CONTRATACAO: 'CONTRATACAO',
+      CONTRATADO: 'CONCLUIDO',
+      REPROVADO: 'CONCLUIDO',
+      CANCELADO: 'CONCLUIDO'
+    };
+
+    return aliases[raw] || 'COTACAO';
   };
 
   /*

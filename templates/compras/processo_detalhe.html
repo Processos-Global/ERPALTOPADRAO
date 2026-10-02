@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load l10n %}
 
 {% block extra_css %}
   {% include "compras/_styles.html" %}
@@ -2271,7 +2272,7 @@
                       <th class="qty-col"><span class="pc-head-label">Qtd.</span></th>
                       {% for cotacao in cotacoes %}
                         <th>
-                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" data-supplier-discount="{{ cotacao.desconto_proposta|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
+                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk|unlocalize }}" data-supplier-name="{{ cotacao.fornecedor.nome|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" data-supplier-discount="{{ cotacao.desconto_proposta|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
                             <strong class="pc-approval-supplier__name">{{ cotacao.fornecedor.nome }}</strong>
                             {% if cotacao.enviada_aprovacao_em %}
                               <button type="submit" class="cp-btn cp-btn--sm pc-approval-supplier__return" data-return-negotiation formaction="{% url 'compras:devolver_cotacao_negociacao' processo.pk cotacao.pk %}" formmethod="post">Voltar à negociação</button>
@@ -2297,7 +2298,7 @@
                             {% if oferta.item and oferta.cotado_valido %}
                               {% if oferta.elegivel_aprovacao %}
                                 <label class="pc-approval-offer{% if oferta.menor_valor_final %} is-best-price{% endif %}">
-                                  <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk }}" class="pc-map-choice-input" data-approval-choice data-supplier-id="{{ oferta.item.cotacao.fornecedor.pk }}" data-supplier-name="{{ oferta.item.cotacao.fornecedor.nome|escape }}" data-item-total="{{ oferta.total_final }}" data-item-unit="{{ oferta.valor_final }}">
+                                  <input type="checkbox" name="itens_selecionados" value="{{ oferta.item.pk|unlocalize }}" class="pc-map-choice-input" data-approval-choice data-supplier-id="{{ oferta.item.cotacao.fornecedor.pk|unlocalize }}" data-supplier-name="{{ oferta.item.cotacao.fornecedor.nome|escape }}" data-item-total="{{ oferta.total_final }}" data-item-unit="{{ oferta.valor_final }}">
                                   <span class="pc-approval-check">✓</span>
                                   <strong class="pc-approval-offer__total">R$ {{ oferta.total_final|floatformat:2 }}</strong>
                                   <span class="pc-approval-offer__unit">R$ {{ oferta.valor_final|floatformat:2 }}/un.</span>
