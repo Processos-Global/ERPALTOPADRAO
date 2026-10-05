@@ -5,7 +5,7 @@ from pathlib import Path
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 
-from financeiro.models import Pagamento, TituloPagar
+from financeiro.models import AnexoTituloPagar, Pagamento, TituloPagar
 from financeiro.services.permissoes import financeiro_acao_required
 
 
@@ -31,6 +31,12 @@ def _responder_arquivo(campo):
 def baixar_documento_titulo(request, pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
     return _responder_arquivo(titulo.arquivo_documento)
+
+
+@financeiro_acao_required("VISUALIZAR")
+def baixar_anexo_titulo(request, titulo_pk, anexo_pk):
+    anexo = get_object_or_404(AnexoTituloPagar, pk=anexo_pk, titulo_id=titulo_pk)
+    return _responder_arquivo(anexo.arquivo)
 
 
 @financeiro_acao_required("VISUALIZAR")

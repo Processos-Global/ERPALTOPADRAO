@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from cadastros.models import Fornecedor
 from financeiro.forms import TituloPagarForm
+from financeiro.models import AnexoTituloPagar
 from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
 from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
 from financeiro.services.notificacoes import notificar_aprovadores
@@ -18,6 +19,30 @@ from financeiro.services.permissoes import financeiro_acao_required, possui_acao
 from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulos_manuais
 from obras.models import Obra
 
+
+
+def _salvar_anexos(titulos, arquivos, usuario):
+    arquivos = arquivos or []
+    if not arquivos:
+        return
+
+    # Preserva o conteúdo para permitir que os mesmos comprovantes acompanhem
+    # todas as parcelas criadas no mesmo lançamento manual.
+    copias = []
+    for arquivo in arquivos:
+        arquivo.seek(0)
+        copias.append((arquivo.name, arquivo.read(), getattr(arquivo, "content_type", None)))
+
+    from django.core.files.base import ContentFile
+    for titulo in titulos:
+        for nome, conteudo, _content_type in copias:
+            anexo = AnexoTituloPagar(
+                titulo=titulo,
+                nome_original=nome,
+                enviado_por=usuario,
+            )
+            anexo.arquivo.save(nome, ContentFile(conteudo), save=False)
+            anexo.save()
 
 def _fornecedores_bancarios():
     return {
@@ -118,6 +143,7 @@ def titulo_novo(request):
         form = TituloPagarForm(request.POST, request.FILES)
         if form.is_valid():
             dados = dict(form.cleaned_data)
+            anexos = dados.pop("anexos", [])
             quantidade = dados.pop("quantidade_parcelas", 1) or 1
             intervalo = dados.pop("intervalo_dias", 30) or 30
             titulos = criar_titulos_manuais(
@@ -126,6 +152,7 @@ def titulo_novo(request):
                 intervalo_dias=intervalo,
                 **dados,
             )
+            _salvar_anexos(titulos, anexos, request.user)
             for titulo in titulos:
                 notificar_aprovadores(titulo)
             if len(titulos) == 1:
@@ -147,7 +174,7 @@ def titulo_detalhe(request, pk):
     titulo = get_object_or_404(
         TituloPagar.objects.select_related(
             "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
-        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais"),
+        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais", "anexos"),
         pk=pk,
     )
     recebimentos = []
@@ -176,7 +203,10 @@ def titulo_editar(request, pk):
     if request.method == "POST":
         form = TituloPagarForm(request.POST, request.FILES, instance=titulo, titulo_integrado=titulo)
         if form.is_valid():
-            atualizar_titulo(titulo, usuario=request.user, dados=form.cleaned_data)
+            dados = dict(form.cleaned_data)
+            anexos = dados.pop("anexos", [])
+            atualizar_titulo(titulo, usuario=request.user, dados=dados)
+            _salvar_anexos([titulo], anexos, request.user)
             messages.success(request, "Conta a Pagar atualizada.")
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:

@@ -2,6 +2,6 @@ from .cadastros import DespesaRecorrente, PlanoFinanceiro, SequenciaFinanceira
 from .pagamentos import Pagamento
 from .previsoes import PrevisaoFinanceira
 from .relatorios import ItemRelatorioPagamento, RelatorioPagamento
-from .titulos import AprovacaoTituloFinanceiro, HistoricoTituloFinanceiro, TituloPagar
+from .titulos import AnexoTituloPagar, AprovacaoTituloFinanceiro, HistoricoTituloFinanceiro, TituloPagar
 
 __all__ = [name for name in globals() if not name.startswith("_")]

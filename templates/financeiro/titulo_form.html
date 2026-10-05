@@ -110,7 +110,7 @@
         <summary style="cursor:pointer;font-weight:800">Documento e ajustes opcionais</summary>
         <div class="fin-form-grid fin-form-grid--3" style="margin-top:12px">
           <div class="fin-field"><label>Documento / NF</label>{{ form.documento_numero }}</div>
-          <div class="fin-field"><label>Anexo</label>{{ form.arquivo_documento }}</div>
+          <div class="fin-field fin-field--full"><label>Anexos</label>{{ form.anexos }}<small class="fin-help">Selecione um ou vários documentos (NF, boleto, comprovante, imagem ou PDF) de uma só vez.</small>{% for e in form.anexos.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}{% if titulo and titulo.arquivo_documento or titulo and titulo.anexos.exists %}<small class="fin-help">Os anexos já salvos são mantidos. Novos arquivos serão acrescentados à conta.</small>{% endif %}</div>
           <div class="fin-field"><label>Desconto</label>{{ form.desconto }}</div>
           <div class="fin-field"><label>Juros</label>{{ form.juros }}</div>
           <div class="fin-field"><label>Multa</label>{{ form.multa }}</div>

@@ -328,7 +328,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   updateCounters();
 
   /* ITENS / FORMSET */
-  const items=qs('#items-container'),addItem=qs('#d9d0c2-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),template=qs('#empty-form-template');
+  const items=qs('#items-container'),addItem=qs('#add-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),template=qs('#empty-form-template');
   function rowDeleted(row){const d=qs('input[type="checkbox"][name$="-DELETE"]',row);return row.classList.contains('purchase-row-hidden')||(d&&d.checked)}
   function updateRows(){let n=0;qsa('[data-form-row]',items).forEach(row=>{if(!rowDeleted(row)){n++;const num=qs('[data-row-number]',row);if(num)num.textContent=n}})}
   function bindMaterialSearch(row){
@@ -427,7 +427,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   function bindRow(row){bindMaterialSearch(row);qs('[data-remove]',row)?.addEventListener('click',()=>{const d=qs('input[type="checkbox"][name$="-DELETE"]',row),active=qsa('[data-form-row]',items).filter(r=>!rowDeleted(r));if(active.length<=1){qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');return}if(d){d.checked=true;row.classList.add('purchase-row-hidden')}else row.remove();updateRows()})}
   qsa('[data-form-row]',items).forEach(bindRow);addItem?.addEventListener('click',()=>{if(!template||!totalForms)return;const i=Number(totalForms.value||0),markup=template.innerHTML.replace(/__prefix__/g,String(i)),holder=document.createElement('div');holder.innerHTML=markup.trim();const row=holder.firstElementChild;items.appendChild(row);totalForms.value=String(i+1);bindRow(row);updateRows();qs('input,select,textarea',row)?.focus()});
 
-  updateRows();renderActivities();renderSupplierSummary();
+  updateRows();
 })();
 </script>
 {% endblock %}

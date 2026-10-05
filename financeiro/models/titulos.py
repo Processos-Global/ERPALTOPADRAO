@@ -284,3 +284,32 @@ class AprovacaoTituloFinanceiro(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["titulo", "ciclo"], name="fin_aprov_tit_ciclo_uniq"),
         ]
+
+
+class AnexoTituloPagar(models.Model):
+    """Documento adicional vinculado a uma Conta a Pagar."""
+
+    titulo = models.ForeignKey(
+        TituloPagar,
+        on_delete=models.CASCADE,
+        related_name="anexos",
+    )
+    arquivo = models.FileField(
+        storage=private_media_storage,
+        upload_to="financeiro/documentos_adicionais/%Y/%m/",
+    )
+    nome_original = models.CharField(max_length=255, blank=True)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="anexos_titulos_financeiros_enviados",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("criado_em", "id")
+
+    def __str__(self):
+        return self.nome_original or self.arquivo.name

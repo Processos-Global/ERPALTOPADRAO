@@ -1,11 +1,16 @@
 from datetime import datetime, time
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
+import re
+import shutil
+import tempfile
+import zipfile
 
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Sum
-from django.http import HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -196,7 +201,7 @@ def relatorio_pagamento_excel(request, pk):
         RelatorioPagamento.objects.select_related("emitido_por"),
         pk=pk,
     )
-    itens = list(relatorio.itens.all().order_by("data_aprovacao", "id"))
+    itens = list(relatorio.itens.select_related("titulo", "titulo__pedido").prefetch_related("titulo__anexos").order_by("data_aprovacao", "id"))
 
     try:
         from openpyxl import Workbook
@@ -324,10 +329,72 @@ def relatorio_pagamento_excel(request, pk):
     wb.save(buffer)
     buffer.seek(0)
 
-    response = HttpResponse(
-        buffer.getvalue(),
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    def nome_seguro(valor, padrao="SEM_IDENTIFICACAO"):
+        texto = re.sub(r"[^A-Za-z0-9._-]+", "_", str(valor or "").strip())
+        return texto.strip("._-")[:90] or padrao
+
+    pacote = tempfile.SpooledTemporaryFile(max_size=10 * 1024 * 1024, mode="w+b")
+    incluidos = 0
+    with zipfile.ZipFile(pacote, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(f"{nome_seguro(relatorio.numero)}.xlsx", buffer.getvalue())
+
+        instrucoes = [
+            f"Relatório: {relatorio.numero}",
+            "",
+            "A pasta DOCUMENTOS contém os anexos das Contas a Pagar incluídas neste relatório.",
+            "Cada subpasta é identificada por PEDIDO + CONTA + BENEFICIÁRIO para facilitar a rastreabilidade.",
+            "Quando não existe pedido vinculado, a identificação começa por SEM_PEDIDO.",
+        ]
+        zf.writestr("LEIA-ME.txt", "\n".join(instrucoes).encode("utf-8"))
+
+        for item in itens:
+            titulo = item.titulo
+            pedido = item.pedido_numero or (getattr(titulo.pedido, "numero", "") if titulo.pedido_id else "") or "SEM_PEDIDO"
+            pasta = "DOCUMENTOS/{pedido}__{conta}__{beneficiario}".format(
+                pedido=nome_seguro(pedido, "SEM_PEDIDO"),
+                conta=nome_seguro(item.conta_numero, "SEM_CONTA"),
+                beneficiario=nome_seguro(item.beneficiario_nome, "SEM_BENEFICIARIO"),
+            )
+
+            campos = []
+            if titulo.arquivo_documento and titulo.arquivo_documento.name:
+                campos.append((titulo.arquivo_documento, Path(titulo.arquivo_documento.name).name))
+            campos.extend((anexo.arquivo, anexo.nome_original or Path(anexo.arquivo.name).name) for anexo in titulo.anexos.all())
+
+            usados = set()
+            for indice, (campo, nome_original) in enumerate(campos, start=1):
+                base_nome = nome_seguro(Path(nome_original).stem, f"anexo_{indice}")
+                extensao_bruta = Path(nome_original).suffix.lower()
+                extensao = extensao_bruta if re.fullmatch(r"\.[a-z0-9]{1,10}", extensao_bruta) else ""
+                candidato = f"{base_nome}{extensao}"
+                contador = 2
+                while candidato.lower() in usados:
+                    candidato = f"{base_nome}_{contador}{extensao}"
+                    contador += 1
+                usados.add(candidato.lower())
+
+                try:
+                    origem = campo.open("rb")
+                except (FileNotFoundError, OSError):
+                    continue
+                try:
+                    with zf.open(f"{pasta}/{candidato}", "w") as destino:
+                        shutil.copyfileobj(origem, destino, length=1024 * 1024)
+                    incluidos += 1
+                finally:
+                    origem.close()
+
+        if incluidos == 0:
+            zf.writestr("DOCUMENTOS/SEM_ANEXOS.txt", "Nenhum documento estava anexado às contas deste relatório.")
+
+    pacote.seek(0)
+    response = FileResponse(
+        pacote,
+        as_attachment=True,
+        filename=f"{relatorio.numero}.zip",
+        content_type="application/zip",
     )
-    response["Content-Disposition"] = f'attachment; filename="{relatorio.numero}.xlsx"'
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Cache-Control"] = "private, no-store"
     return response
 

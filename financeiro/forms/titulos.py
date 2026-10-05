@@ -7,6 +7,19 @@ from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
 from .cadastros import ERPModelForm
 
 
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    def clean(self, data, initial=None):
+        single_clean = super().clean
+        if not data:
+            return []
+        arquivos = data if isinstance(data, (list, tuple)) else [data]
+        return [single_clean(arquivo, initial) for arquivo in arquivos]
+
+
 class TituloPagarForm(ERPModelForm):
     """Formulário enxuto para solicitação avulsa e manutenção de contas."""
 
@@ -38,6 +51,13 @@ class TituloPagarForm(ERPModelForm):
         help_text="Aplicado a partir do primeiro vencimento.",
     )
 
+    anexos = MultipleFileField(
+        required=False,
+        label="Anexos",
+        widget=MultipleFileInput(attrs={"multiple": True}),
+        help_text="Você pode selecionar vários documentos de uma só vez.",
+    )
+
     class Meta:
         model = TituloPagar
         fields = (
@@ -56,7 +76,7 @@ class TituloPagarForm(ERPModelForm):
             "descricao",
             "especificacao_pagamento",
             "documento_numero",
-            "arquivo_documento",
+            "anexos",
             "data_emissao",
             "vencimento",
             "valor_original",
@@ -86,7 +106,6 @@ class TituloPagarForm(ERPModelForm):
             "descricao": "Descrição do pagamento",
             "especificacao_pagamento": "O que está sendo pago",
             "documento_numero": "Documento / NF",
-            "arquivo_documento": "Anexo",
             "valor_original": "Valor bruto",
             "desconto": "Desconto",
             "juros": "Juros",
@@ -143,8 +162,9 @@ class TituloPagarForm(ERPModelForm):
             self.fields["tipo_pagamento"].widget = forms.HiddenInput()
             self.fields["materiais"].widget = forms.HiddenInput()
 
-    def clean_arquivo_documento(self):
-        return validar_documento_upload(self.cleaned_data.get("arquivo_documento"))
+    def clean_anexos(self):
+        arquivos = self.cleaned_data.get("anexos") or []
+        return [validar_documento_upload(arquivo) for arquivo in arquivos]
 
     def clean(self):
         cleaned = super().clean()
