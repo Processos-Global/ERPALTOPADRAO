@@ -12,5 +12,8 @@ from .ficha_tecnica import (
 __all__ = [
     "Ambiente", "Obra", "Unidade", "AmbienteFichaTecnica",
     "CategoriaFichaTecnica", "FichaTecnicaObra", "ItemFichaTecnica",
-    "PavimentoFichaTecnica",
+    "PavimentoFichaTecnica", "MovimentoEstoque", "DiarioObra",
 ]
+
+from .estoque import MovimentoEstoque
+from .diario import DiarioObra

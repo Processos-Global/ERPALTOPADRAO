@@ -1,0 +1,126 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Almoxarifado | {{ obra|nome_obra }}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block content %}
+<div class="op-page">
+  <section class="op-head">
+    <div class="op-head-copy"><span class="op-eyebrow">Almoxarifado · {{ obra.codigo }}</span><h1>{{ obra|nome_obra }}</h1><p>Saldo físico calculado pelos recebimentos de Compras, saídas de consumo e transferências entre obras.</p></div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% url 'obras:almoxarifado_dashboard' %}">Dashboard geral</a>
+      <button class="op-btn" type="button" data-open-stock-modal="saida">Registrar saída</button>
+      <button class="op-btn" type="button" data-open-stock-modal="transferencia">Transferir</button>
+    </div>
+  </section>
+
+  <div class="op-kpi-grid">
+    <div class="op-kpi-card emphasis"><small>Valor total nesta obra</small><strong>{{ valor_total_obra|moeda_br }}</strong></div>
+    <div class="op-kpi-card"><small>Itens com saldo</small><strong>{{ total_itens }}</strong></div>
+  </div>
+
+  <form method="get" class="op-toolbar" style="grid-template-columns:minmax(240px,1fr) auto">
+    <div class="op-field"><label>Pesquisar material</label><input type="search" name="q" value="{{ q }}" placeholder="Descrição do item"></div><button class="op-btn" type="submit">Pesquisar</button>
+  </form>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><h2>Estoque atual</h2><span class="op-badge">{{ total_itens }} item{{ total_itens|pluralize }}</span></div>
+    <div class="op-table-wrap"><table class="op-table"><thead><tr><th>Material</th><th>Un.</th><th class="op-num">Recebido</th><th class="op-num">Transf. entrada</th><th class="op-num">Saídas</th><th class="op-num">Transf. saída</th><th class="op-num">Saldo</th><th class="op-num">Custo médio</th><th class="op-num">Valor em estoque</th><th></th></tr></thead><tbody>
+      {% for linha in linhas %}
+      <tr>
+        <td><strong>{{ linha.material_nome }}</strong>{% if linha.material_nome != linha.descricao %}<br><span class="op-muted">{{ linha.descricao }}</span>{% endif %}</td>
+        <td>{{ linha.unidade }}</td>
+        <td class="op-num">{{ linha.entradas_compras|numero_br }}</td>
+        <td class="op-num">{{ linha.transferencias_entrada|numero_br }}</td>
+        <td class="op-num op-negative">{{ linha.saidas|numero_br }}</td>
+        <td class="op-num op-negative">{{ linha.transferencias_saida|numero_br }}</td>
+        <td class="op-num op-positive">{{ linha.saldo|numero_br }}</td>
+        <td class="op-num">{{ linha.valor_unitario_medio|moeda_br }}</td>
+        <td class="op-num"><strong>{{ linha.valor_estoque|moeda_br }}</strong></td>
+        <td><div class="op-actions"><button class="op-btn secondary" type="button" data-open-stock-modal="saida" data-item="{{ linha.chave }}">Saída</button><button class="op-btn secondary" type="button" data-open-stock-modal="transferencia" data-item="{{ linha.chave }}">Transferir</button></div></td>
+      </tr>
+      {% empty %}<tr><td colspan="10" class="op-empty">Nenhum material com saldo disponível nesta obra.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><h2>Últimas movimentações internas</h2><span class="op-badge">Até 100 registros</span></div>
+    <div class="op-table-wrap"><table class="op-table"><thead><tr><th>Data</th><th>Tipo</th><th>Item</th><th class="op-num">Quantidade</th><th>Origem</th><th>Destino</th><th>Responsável</th><th>Finalidade</th></tr></thead><tbody>
+      {% for m in movimentos %}<tr><td>{{ m.data_movimento|date:"d/m/Y H:i" }}</td><td><span class="op-badge">{{ m.get_tipo_display }}</span></td><td><strong>{{ m.descricao_item }}</strong></td><td class="op-num">{{ m.quantidade|numero_br }} {{ m.unidade }}</td><td>{{ m.obra_origem|nome_obra }}</td><td>{% if m.obra_destino %}{{ m.obra_destino|nome_obra }}{% else %}—{% endif %}</td><td>{% if m.criado_por %}{{ m.criado_por.get_full_name|default:m.criado_por.username }}{% else %}—{% endif %}</td><td>{{ m.finalidade|default:"—" }}</td></tr>
+      {% empty %}<tr><td colspan="8" class="op-empty">Ainda não existem saídas ou transferências registradas para esta obra.</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+
+<div class="op-modal" id="modal-saida" aria-hidden="true">
+  <div class="op-modal-backdrop" data-close-stock-modal></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-saida">
+    <div class="op-modal-head"><div><span class="op-eyebrow">Almoxarifado · {{ obra|nome_obra }}</span><h2 id="titulo-modal-saida">Registrar saída</h2></div><button class="op-modal-close" type="button" data-close-stock-modal aria-label="Fechar">×</button></div>
+    <form method="post" action="{% url 'obras:saida_estoque' obra.pk %}" class="op-modal-body">{% csrf_token %}
+      <div class="op-field"><label>Item *</label><select name="item" class="js-stock-item" required><option value="">Selecione o material</option>{% for linha in estoque_modal %}<option value="{{ linha.chave }}">{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}</option>{% endfor %}</select></div>
+      <div class="op-grid op-modal-grid">
+        <div class="op-field c4"><label>Quantidade *</label><input type="number" name="quantidade" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00"></div>
+        <div class="op-field c8"><label>Finalidade</label><input type="text" name="finalidade" maxlength="255" placeholder="Ex.: consumo na alvenaria"></div>
+        <div class="op-field c6"><label>Documento / referência</label><input type="text" name="documento_referencia" maxlength="100" placeholder="Opcional"></div>
+        <div class="op-field c12"><label>Observação</label><textarea name="observacao" placeholder="Informações adicionais da saída"></textarea></div>
+      </div>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-close-stock-modal>Cancelar</button><button class="op-btn" type="submit">Confirmar saída</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="op-modal" id="modal-transferencia" aria-hidden="true">
+  <div class="op-modal-backdrop" data-close-stock-modal></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-transferencia">
+    <div class="op-modal-head"><div><span class="op-eyebrow">Almoxarifado · {{ obra|nome_obra }}</span><h2 id="titulo-modal-transferencia">Transferir material</h2></div><button class="op-modal-close" type="button" data-close-stock-modal aria-label="Fechar">×</button></div>
+    <form method="post" action="{% url 'obras:transferencia_estoque' obra.pk %}" class="op-modal-body">{% csrf_token %}
+      <div class="op-field"><label>Item *</label><select name="item" class="js-stock-item" required><option value="">Selecione o material</option>{% for linha in estoque_modal %}<option value="{{ linha.chave }}">{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}</option>{% endfor %}</select></div>
+      <div class="op-grid op-modal-grid">
+        <div class="op-field c6"><label>Obra de destino *</label><select name="obra_destino" required><option value="">Selecione a obra</option>{% for destino in destinos %}<option value="{{ destino.pk }}">{{ destino|nome_obra }}</option>{% endfor %}</select></div>
+        <div class="op-field c6"><label>Quantidade *</label><input type="number" name="quantidade" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00"></div>
+        <div class="op-field c6"><label>Finalidade</label><input type="text" name="finalidade" maxlength="255" placeholder="Motivo da transferência"></div>
+        <div class="op-field c6"><label>Documento / referência</label><input type="text" name="documento_referencia" maxlength="100" placeholder="Opcional"></div>
+        <div class="op-field c12"><label>Observação</label><textarea name="observacao" placeholder="Informações adicionais da transferência"></textarea></div>
+      </div>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-close-stock-modal>Cancelar</button><button class="op-btn" type="submit">Confirmar transferência</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const body = document.body;
+  const modais = {
+    saida: document.getElementById('modal-saida'),
+    transferencia: document.getElementById('modal-transferencia')
+  };
+
+  function fechar() {
+    Object.values(modais).forEach(modal => {
+      if (!modal) return;
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+    });
+    body.classList.remove('op-modal-open');
+  }
+
+  function abrir(tipo, item) {
+    fechar();
+    const modal = modais[tipo];
+    if (!modal) return;
+    const select = modal.querySelector('.js-stock-item');
+    if (select && item) select.value = item;
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    body.classList.add('op-modal-open');
+    window.setTimeout(() => (select || modal.querySelector('input,select,textarea,button'))?.focus(), 40);
+  }
+
+  document.querySelectorAll('[data-open-stock-modal]').forEach(btn => {
+    btn.addEventListener('click', () => abrir(btn.dataset.openStockModal, btn.dataset.item || ''));
+  });
+  document.querySelectorAll('[data-close-stock-modal]').forEach(btn => btn.addEventListener('click', fechar));
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') fechar(); });
+})();
+</script>
+{% endblock %}

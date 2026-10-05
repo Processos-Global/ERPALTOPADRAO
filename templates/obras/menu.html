@@ -1,0 +1,105 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Obras | SAARI ERP{% endblock %}
+{% block page_name %}Obras{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<style>
+  .module-menu{font-family:var(--font-sans)!important}
+  .module-menu .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:26px 28px;border:1px solid #ded7c8;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 62%,#f3ecdc 100%);box-shadow:0 14px 38px rgba(69,51,48,.07)}
+  .module-menu .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#b9aa72,#2d201c)}
+  .module-menu .dashboard-heading::after{content:"";position:absolute;right:-88px;top:-120px;width:210px;height:210px;border-radius:50%;background:rgba(119,101,92,.06);pointer-events:none}
+  .module-menu .dashboard-heading__content{position:relative;z-index:1;max-width:820px}
+  .module-menu .dashboard-heading__eyebrow,.module-menu .modules__eyebrow,.module-menu .module-card__number,.module-menu .module-card__footer{color:var(--saari-brown)}
+  .module-menu .dashboard-heading__content h1{margin:0;color:var(--saari-brown);font-family:var(--font-serif)!important;font-size:clamp(2.25rem,4vw,3.4rem);font-weight:400!important;line-height:1.04;letter-spacing:-.04em}
+  .module-menu .dashboard-heading__content h1 em{color:var(--saari-brown);font:inherit;font-style:normal}
+  .module-menu .dashboard-heading__content p{margin:12px 0 0;max-width:760px;color:#77655c;font-size:1rem;line-height:1.65}
+  .module-menu .modules__header h2,.module-menu .module-card__content h3{color:#2d201c}
+  .module-menu .module-card__content h3{font-family:var(--font-serif)!important;font-weight:400!important}
+  .module-menu .module-card__content p{color:#77655c}
+  .module-menu .module-card__icon{color:var(--saari-brown);border-color:#d9d0c2}
+  .module-menu .module-card__permission{background:#f5f1e9;color:var(--saari-brown)}
+  .module-menu .module-card__accent{background:var(--saari-brown)}
+  .module-menu .module-card:not(.module-card--disabled):hover{background:var(--saari-brown)!important;border-color:var(--saari-brown)!important}
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__number,
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__content h3,
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__content p,
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__footer,
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__footer span,
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__footer .icon{color:#fff!important}
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__icon{color:#fff!important;border-color:rgba(255,255,255,.28)!important;background:rgba(255,255,255,.08)!important}
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__permission{color:#fff!important;background:rgba(255,255,255,.12)!important}
+  .module-menu .module-card:not(.module-card--disabled):hover .module-card__accent{background:var(--saari-gold)!important}
+  @media(max-width:720px){.module-menu .dashboard-heading{padding:21px 19px 21px 23px;border-radius:15px}.module-menu .dashboard-heading::after{display:none}.module-menu .dashboard-heading__content h1{font-size:2.1rem}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-home module-menu">
+  <section class="dashboard-heading">
+    <div class="dashboard-heading__content">
+      <span class="dashboard-heading__eyebrow">Módulo</span>
+      <h1>Gestão <em>de Obras</em></h1>
+      <p>Centralize a ficha técnica, o estoque físico de cada obra e os registros diários da execução em um único ambiente.</p>
+    </div>
+  </section>
+
+  <section class="modules">
+    <div class="modules__header">
+      <div><span class="modules__eyebrow">Funcionalidades</span></div>
+    </div>
+
+    <div class="module-cards">
+      <a href="{% url 'obras:fichas_tecnicas' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">01</span>
+          <span class="module-card__permission">Técnico</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-ruler"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Ficha Técnica</h3>
+            <p>Ambientes, pavimentos, especificações e definições técnicas de cada obra.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <a href="{% url 'obras:almoxarifado_dashboard' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">02</span>
+          <span class="module-card__permission">Operacional</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-warehouse"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Almoxarifado</h3>
+            <p>Saldo por obra, recebimentos vindos de Compras, saídas e transferências internas.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <a href="{% url 'obras:diario_lista' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">03</span>
+          <span class="module-card__permission">Operacional</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-book"></use></svg></span>
+          <div class="module-card__content">
+            <h3>Diário de Obra</h3>
+            <p>Registre serviços executados, efetivo, clima, equipes e ocorrências do dia.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

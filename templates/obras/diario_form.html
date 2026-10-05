@@ -1,0 +1,24 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}{% if diario %}Editar{% else %}Novo{% endif %} Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block content %}
+<div class="op-page">
+  <section class="op-head">
+    <div class="op-head-copy"><span class="op-eyebrow">Diário de Obra</span><h1>{% if diario %}Editar registro{% else %}Novo registro diário{% endif %}</h1><p>Selecione a obra e registre as informações do dia.</p></div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Voltar aos registros</a></div>
+  </section>
+
+  <form method="post" class="op-form">{% csrf_token %}<div class="op-grid">
+    <div class="op-field c6"><label>Obra *</label><select name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{% if diario %}{{ diario.data|date:'Y-m-d' }}{% else %}{{ hoje }}{% endif %}"></div>
+    <div class="op-field c3"><label>Clima</label><select name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+    <div class="op-field c4"><label>Efetivo no dia</label><input type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo }}{% endif %}" placeholder="Quantidade de pessoas"></div>
+    <div class="op-field c12"><label>Serviços executados *</label><textarea name="servicos_executados" required placeholder="Descreva as atividades e frentes executadas no dia">{% if diario %}{{ diario.servicos_executados }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label>Equipe / terceiros presentes</label><textarea name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label>Ocorrências / impedimentos</label><textarea name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label>Observações</label><textarea name="observacoes" placeholder="Outras informações relevantes do dia">{% if diario %}{{ diario.observacoes }}{% endif %}</textarea></div>
+    <div class="c12 op-actions"><button class="op-btn" type="submit">Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
+  </div></form>
+</div>
+{% endblock %}

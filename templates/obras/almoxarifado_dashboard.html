@@ -1,0 +1,81 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Obras | Almoxarifado{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="op-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Obras · Almoxarifado</span>
+      <h1>Estoque geral das obras</h1>
+      <p>As entradas são originadas automaticamente dos recebimentos registrados em Compras. Aqui são controladas as saídas e transferências entre obras.</p>
+    </div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar ao menu</a></div>
+  </section>
+
+  <div class="op-kpi-grid">
+    <div class="op-kpi-card emphasis">
+      <small>Valor total em estoque</small>
+      <strong>{{ valor_total_geral|moeda_br }}</strong>
+    </div>
+    <div class="op-kpi-card">
+      <small>Itens exibidos</small>
+      <strong>{{ total_itens }}</strong>
+    </div>
+    {% if obra_filtro or q %}
+    <div class="op-kpi-card">
+      <small>Valor dos itens filtrados</small>
+      <strong>{{ valor_total_filtrado|moeda_br }}</strong>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="op-summary-grid">
+    {% for r in resumo_obras %}
+      <a class="op-summary-card" href="{% url 'obras:almoxarifado_obra' r.obra.pk %}">
+        <small>{{ r.obra.codigo }}</small>
+        <strong>{{ r.obra|nome_obra }}</strong>
+        <span>{{ r.itens }} item{{ r.itens|pluralize }} com saldo</span>
+        <b class="op-summary-value">{{ r.valor_total|moeda_br }}</b>
+        {% if r.ultima_movimentacao %}<span>Última movimentação {{ r.ultima_movimentacao|date:"d/m/Y H:i" }}</span>{% endif %}
+      </a>
+    {% empty %}
+      <div class="op-summary-card"><strong>Nenhuma obra ativa encontrada.</strong></div>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="op-toolbar">
+    <div class="op-field"><label>Pesquisar item ou obra</label><input type="search" name="q" value="{{ q }}" placeholder="Ex.: cimento, QL 10..."></div>
+    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <button class="op-btn" type="submit">Filtrar</button>
+  </form>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><h2>Posição de estoque</h2><span class="op-badge">{{ total_itens }} item{{ total_itens|pluralize }}</span></div>
+    <div class="op-table-wrap">
+      <table class="op-table">
+        <thead><tr><th>Obra</th><th>Material</th><th>Un.</th><th class="op-num">Recebido</th><th class="op-num">Transf. entrada</th><th class="op-num">Saídas</th><th class="op-num">Transf. saída</th><th class="op-num">Saldo</th><th class="op-num">Custo médio</th><th class="op-num">Valor em estoque</th><th></th></tr></thead>
+        <tbody>
+        {% for linha in linhas %}
+          <tr>
+            <td><strong>{{ linha.obra|nome_obra }}</strong><br><span class="op-muted">{{ linha.obra.codigo }}</span></td>
+            <td><strong>{{ linha.material_nome }}</strong>{% if linha.material_nome != linha.descricao %}<br><span class="op-muted">{{ linha.descricao }}</span>{% endif %}</td>
+            <td>{{ linha.unidade }}</td>
+            <td class="op-num">{{ linha.entradas_compras|numero_br }}</td>
+            <td class="op-num">{{ linha.transferencias_entrada|numero_br }}</td>
+            <td class="op-num op-negative">{{ linha.saidas|numero_br }}</td>
+            <td class="op-num op-negative">{{ linha.transferencias_saida|numero_br }}</td>
+            <td class="op-num op-positive">{{ linha.saldo|numero_br }}</td>
+            <td class="op-num">{{ linha.valor_unitario_medio|moeda_br }}</td>
+            <td class="op-num"><strong>{{ linha.valor_estoque|moeda_br }}</strong></td>
+            <td><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' linha.obra_id %}">Abrir</a></td>
+          </tr>
+        {% empty %}<tr><td colspan="11" class="op-empty">Nenhum item com saldo encontrado para os filtros informados.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Obras | Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block content %}
+<div class="op-page">
+  <section class="op-head">
+    <div class="op-head-copy"><span class="op-eyebrow">Obras · Registros diários</span><h1>Diário de Obra</h1><p>Acompanhe o histórico diário de execução, equipes, clima e ocorrências de todas as obras.</p></div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar ao menu</a><a class="op-btn" href="{% url 'obras:diario_novo' %}">Novo diário</a></div>
+  </section>
+
+  <form method="get" class="op-toolbar diario">
+    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label>De</label><input type="date" name="inicio" value="{{ data_inicio }}"></div>
+    <div class="op-field"><label>Até</label><input type="date" name="fim" value="{{ data_fim }}"></div>
+    <button class="op-btn" type="submit">Filtrar</button>
+  </form>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Registros realizados</h2><span class="op-muted">Os mais recentes aparecem primeiro</span></div></div>
+    {% for d in diarios %}
+      <article class="op-diario-card">
+        <div class="op-diario-top">
+          <div><h3>{{ d.obra|nome_obra }}</h3><div class="op-diario-meta"><span class="op-badge">{{ d.data|date:"d/m/Y" }}</span>{% if d.clima %}<span class="op-badge">{{ d.get_clima_display }}</span>{% endif %}{% if d.efetivo != None %}<span class="op-badge">Efetivo: {{ d.efetivo }}</span>{% endif %}<span class="op-muted">{{ d.obra.codigo }}</span></div></div>
+          <a class="op-btn secondary" href="{% url 'obras:diario_editar' d.pk %}">Editar</a>
+        </div>
+        <div class="op-diario-text"><strong>Serviços executados</strong><br>{{ d.servicos_executados }}</div>
+        {% if d.equipe_presente %}<div class="op-diario-text"><strong>Equipe / terceiros</strong><br>{{ d.equipe_presente }}</div>{% endif %}
+        {% if d.ocorrencias %}<div class="op-diario-text"><strong>Ocorrências</strong><br>{{ d.ocorrencias }}</div>{% endif %}
+        <div class="op-muted" style="margin-top:12px">Registrado por {% if d.registrado_por %}{{ d.registrado_por.get_full_name|default:d.registrado_por.username }}{% else %}—{% endif %} · atualizado {{ d.atualizado_em|date:"d/m/Y H:i" }}</div>
+      </article>
+    {% empty %}<div class="op-empty">Nenhum diário encontrado para os filtros informados. Use “Novo diário” para criar o primeiro registro.</div>{% endfor %}
+  </section>
+</div>
+{% endblock %}
