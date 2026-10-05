@@ -77,7 +77,7 @@
           <td>{% if rel.emitido_por %}{{ rel.emitido_por.get_full_name|default:rel.emitido_por.username }}{% else %}—{% endif %}</td>
           <td>{{ rel.quantidade_itens }}</td>
           <td class="fin-money">{{ rel.valor_total|moeda_br }}</td>
-          <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}">Baixar ZIP</a></td>
+          <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" download>Baixar ZIP</a></td>
         </tr>
       {% empty %}
         <tr><td colspan="7" class="fin-empty"><strong>Nenhum relatório emitido</strong>O histórico será criado a partir da primeira emissão.</td></tr>
