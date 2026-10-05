@@ -1,5 +1,6 @@
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from core.validators import validar_documento_upload
 from cadastros.models import Material
@@ -87,8 +88,8 @@ class TituloPagarForm(ERPModelForm):
             "observacao",
         )
         widgets = {
-            "data_emissao": forms.DateInput(attrs={"type": "date"}),
-            "vencimento": forms.DateInput(attrs={"type": "date"}),
+            "data_emissao": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "vencimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "especificacao_pagamento": forms.Textarea(attrs={"rows": 3, "placeholder": "Descreva o serviço, taxa ou outro pagamento."}),
             "observacao": forms.Textarea(attrs={"rows": 3}),
         }
@@ -119,9 +120,16 @@ class TituloPagarForm(ERPModelForm):
         self.fields["fornecedor"].empty_label = "Selecione o beneficiário / fornecedor"
         self.fields["obra"].empty_label = "Selecione a obra"
         self.fields["plano_financeiro"].empty_label = "Selecione a apropriação"
+        apropriacoes_qs = self.fields["plano_financeiro"].queryset
+        filtro_apropriacao = Q(ativo=True, pai__isnull=False)
+        # Na edição, mantém disponível a apropriação já gravada mesmo que ela
+        # tenha sido posteriormente inativada. Assim o select nunca aparece
+        # vazio nem troca o valor existente apenas por abrir a tela.
+        if self.instance and self.instance.pk and self.instance.plano_financeiro_id:
+            filtro_apropriacao |= Q(pk=self.instance.plano_financeiro_id)
         self.fields["plano_financeiro"].queryset = (
-            self.fields["plano_financeiro"].queryset.filter(ativo=True, pai__isnull=False)
-            .select_related("pai").order_by("pai__codigo", "codigo", "nome")
+            apropriacoes_qs.filter(filtro_apropriacao)
+            .select_related("pai").distinct().order_by("pai__codigo", "codigo", "nome")
         )
         self.fields["obra"].required = True
         self.fields["vencimento"].required = True
