@@ -110,7 +110,47 @@
         <summary style="cursor:pointer;font-weight:800">Documento e ajustes opcionais</summary>
         <div class="fin-form-grid fin-form-grid--3" style="margin-top:12px">
           <div class="fin-field"><label>Documento / NF</label>{{ form.documento_numero }}</div>
-          <div class="fin-field fin-field--full"><label>Anexos</label>{{ form.anexos }}<small class="fin-help">Selecione um ou vários documentos (NF, boleto, comprovante, imagem ou PDF) de uma só vez.</small>{% for e in form.anexos.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}{% if titulo and titulo.arquivo_documento or titulo and titulo.anexos.exists %}<small class="fin-help">Os anexos já salvos são mantidos. Novos arquivos serão acrescentados à conta.</small>{% endif %}</div>
+          <div class="fin-field fin-field--full">
+            <label>Anexos</label>
+            {{ form.anexos }}
+            <small class="fin-help">Selecione um ou vários documentos (NF, boleto, comprovante, imagem ou PDF). Se o mesmo arquivo já estiver salvo nesta conta, ele não será duplicado.</small>
+            {% for e in form.anexos.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}
+
+            {% if titulo and titulo.arquivo_documento or titulo and titulo.anexos.exists %}
+            <div style="margin-top:12px;padding:12px;border:1px solid var(--fin-border,#ddd);border-radius:12px">
+              <strong style="display:block;margin-bottom:8px">Arquivos desta conta</strong>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                {% if titulo.arquivo_documento %}
+                <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_documento_titulo' titulo.pk %}" target="_blank" rel="noopener">Documento anterior</a>
+                  <button class="fin-btn fin-btn--sm" type="submit" form="excluir-documento-anterior" onclick="return confirm('Excluir este documento?')">Excluir</button>
+                </div>
+                {% endif %}
+                {% for anexo in titulo.anexos.all %}
+                <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_anexo_titulo' titulo.pk anexo.pk %}" target="_blank" rel="noopener">{{ anexo.nome_original|default:"Anexo" }}</a>
+                  <button class="fin-btn fin-btn--sm" type="submit" form="excluir-anexo-{{ anexo.pk }}" onclick="return confirm('Excluir o arquivo {{ anexo.nome_original|escapejs }}?')">Excluir</button>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if titulo and anexos_pedido or titulo and notas_fiscais_pedido %}
+            <div style="margin-top:12px;padding:12px;border:1px solid var(--fin-border,#ddd);border-radius:12px">
+              <strong style="display:block;margin-bottom:4px">Arquivos herdados do pedido {{ titulo.pedido.numero }}</strong>
+              <small class="fin-help" style="display:block;margin-bottom:8px">Estes arquivos vêm do módulo de Compras e ficam disponíveis automaticamente no Financeiro. Para evitar inconsistências, a exclusão deve ser feita na origem.</small>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                {% for anexo in anexos_pedido %}
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_anexo_pedido_titulo' titulo.pk anexo.pk %}" target="_blank" rel="noopener">Pedido · {{ anexo.nome_arquivo }}</a>
+                {% endfor %}
+                {% for recebimento in notas_fiscais_pedido %}
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_nota_fiscal_pedido_titulo' titulo.pk recebimento.pk %}" target="_blank" rel="noopener">NF · {{ recebimento.nome_arquivo_nota_fiscal }}</a>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
           <div class="fin-field"><label>Desconto</label>{{ form.desconto }}</div>
           <div class="fin-field"><label>Juros</label>{{ form.juros }}</div>
           <div class="fin-field"><label>Multa</label>{{ form.multa }}</div>
@@ -124,6 +164,11 @@
   {{ form.beneficiario_nome }}
   <div class="fin-form-footer"><div></div><div class="fin-form-footer__actions"><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Cancelar</a><button class="fin-btn fin-btn--primary">{% if modo == 'novo' %}Criar e enviar para aprovação{% else %}Salvar alterações{% endif %}</button></div></div>
 </form>
+
+{% if titulo %}
+  {% if titulo.arquivo_documento %}<form id="excluir-documento-anterior" method="post" action="{% url 'financeiro:titulo_excluir_documento_legacy' titulo.pk %}" style="display:none">{% csrf_token %}</form>{% endif %}
+  {% for anexo in titulo.anexos.all %}<form id="excluir-anexo-{{ anexo.pk }}" method="post" action="{% url 'financeiro:titulo_excluir_anexo' titulo.pk anexo.pk %}" style="display:none">{% csrf_token %}</form>{% endfor %}
+{% endif %}
 
 {% if modo == 'novo' or not titulo.integrada %}
 {{ fornecedores_bancarios|json_script:"fornecedores-bancarios" }}

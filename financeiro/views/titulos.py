@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -24,18 +25,40 @@ from obras.models import Obra
 def _salvar_anexos(titulos, arquivos, usuario):
     arquivos = arquivos or []
     if not arquivos:
-        return
+        return 0
 
     # Preserva o conteúdo para permitir que os mesmos comprovantes acompanhem
     # todas as parcelas criadas no mesmo lançamento manual.
     copias = []
     for arquivo in arquivos:
         arquivo.seek(0)
-        copias.append((arquivo.name, arquivo.read(), getattr(arquivo, "content_type", None)))
+        conteudo = arquivo.read()
+        copias.append((arquivo.name, conteudo, len(conteudo)))
 
-    from django.core.files.base import ContentFile
+    criados = 0
     for titulo in titulos:
-        for nome, conteudo, _content_type in copias:
+        existentes = {}
+        if titulo.arquivo_documento and titulo.arquivo_documento.name:
+            nome_legacy = titulo.arquivo_documento.name.rsplit("/", 1)[-1].strip().lower()
+            try:
+                tamanho_legacy = titulo.arquivo_documento.size
+            except (FileNotFoundError, OSError):
+                tamanho_legacy = None
+            existentes.setdefault(nome_legacy, set()).add(tamanho_legacy)
+
+        for anexo_existente in titulo.anexos.all():
+            nome = (anexo_existente.nome_original or anexo_existente.arquivo.name.rsplit("/", 1)[-1]).strip().lower()
+            try:
+                tamanho = anexo_existente.arquivo.size
+            except (FileNotFoundError, OSError):
+                tamanho = None
+            existentes.setdefault(nome, set()).add(tamanho)
+
+        for nome, conteudo, tamanho in copias:
+            chave_nome = (nome or "").strip().lower()
+            if tamanho in existentes.get(chave_nome, set()):
+                continue
+
             anexo = AnexoTituloPagar(
                 titulo=titulo,
                 nome_original=nome,
@@ -43,6 +66,22 @@ def _salvar_anexos(titulos, arquivos, usuario):
             )
             anexo.arquivo.save(nome, ContentFile(conteudo), save=False)
             anexo.save()
+            existentes.setdefault(chave_nome, set()).add(tamanho)
+            criados += 1
+
+    return criados
+
+
+def _documentos_pedido(titulo):
+    if not titulo.pedido_id:
+        return [], []
+    anexos = list(titulo.pedido.anexos.all())
+    notas_fiscais = [
+        recebimento
+        for recebimento in titulo.pedido.recebimentos.all()
+        if recebimento.arquivo_nota_fiscal and recebimento.arquivo_nota_fiscal.name
+    ]
+    return anexos, notas_fiscais
 
 def _fornecedores_bancarios():
     return {
@@ -174,7 +213,7 @@ def titulo_detalhe(request, pk):
     titulo = get_object_or_404(
         TituloPagar.objects.select_related(
             "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
-        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais", "anexos"),
+        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais", "anexos", "pedido__anexos", "pedido__recebimentos"),
         pk=pk,
     )
     recebimentos = []
@@ -183,9 +222,13 @@ def titulo_detalhe(request, pk):
         recebimentos = list(titulo.pedido.recebimentos.prefetch_related("itens").all())
         valor_documentado = sum((r.valor_total_nota or Decimal("0") for r in recebimentos), Decimal("0"))
 
+    anexos_pedido, notas_fiscais_pedido = _documentos_pedido(titulo)
+
     return render(request, "financeiro/titulo_detalhe.html", {
         "titulo": titulo,
         "recebimentos": recebimentos,
+        "anexos_pedido": anexos_pedido,
+        "notas_fiscais_pedido": notas_fiscais_pedido,
         "valor_documentado_pedido": valor_documentado,
         "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
         "pode_aprovar": possui_acao_financeiro(request.user, "APROVAR"),
@@ -195,7 +238,10 @@ def titulo_detalhe(request, pk):
 
 @financeiro_acao_required("EDITAR_TITULOS")
 def titulo_editar(request, pk):
-    titulo = get_object_or_404(TituloPagar.objects.select_related("fornecedor"), pk=pk)
+    titulo = get_object_or_404(
+        TituloPagar.objects.select_related("fornecedor", "pedido").prefetch_related("anexos", "pedido__anexos", "pedido__recebimentos"),
+        pk=pk,
+    )
     if titulo.esta_pago:
         messages.error(request, "Conta paga não pode ser editada. Estorne o pagamento primeiro.")
         return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -211,12 +257,57 @@ def titulo_editar(request, pk):
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:
         form = TituloPagarForm(instance=titulo, titulo_integrado=titulo)
+    anexos_pedido, notas_fiscais_pedido = _documentos_pedido(titulo)
     return render(request, "financeiro/titulo_form.html", {
         "form": form,
         "modo": "editar",
         "titulo": titulo,
+        "anexos_pedido": anexos_pedido,
+        "notas_fiscais_pedido": notas_fiscais_pedido,
         "fornecedores_bancarios": _fornecedores_bancarios(),
     })
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_excluir_anexo(request, pk, anexo_pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    if titulo.esta_pago:
+        messages.error(request, "Conta paga não pode ter anexos excluídos. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+
+    anexo = get_object_or_404(AnexoTituloPagar, pk=anexo_pk, titulo=titulo)
+    nome = anexo.nome_original or anexo.arquivo.name.rsplit("/", 1)[-1]
+    arquivo = anexo.arquivo
+    anexo.delete()
+    try:
+        arquivo.delete(save=False)
+    except (FileNotFoundError, OSError):
+        pass
+    messages.success(request, f"Anexo {nome} excluído.")
+    return redirect("financeiro:titulo_editar", pk=pk)
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_excluir_documento_legacy(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    if titulo.esta_pago:
+        messages.error(request, "Conta paga não pode ter documentos excluídos. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+    if not titulo.arquivo_documento:
+        messages.info(request, "Esta conta não possui documento anterior para excluir.")
+        return redirect("financeiro:titulo_editar", pk=pk)
+
+    arquivo = titulo.arquivo_documento
+    titulo.arquivo_documento = None
+    titulo.save(update_fields=["arquivo_documento", "atualizado_em"])
+    try:
+        arquivo.delete(save=False)
+    except (FileNotFoundError, OSError):
+        pass
+    messages.success(request, "Documento anterior excluído.")
+    return redirect("financeiro:titulo_editar", pk=pk)
 
 
 @financeiro_acao_required("EDITAR_TITULOS")

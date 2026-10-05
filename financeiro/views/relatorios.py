@@ -201,7 +201,11 @@ def relatorio_pagamento_excel(request, pk):
         RelatorioPagamento.objects.select_related("emitido_por"),
         pk=pk,
     )
-    itens = list(relatorio.itens.select_related("titulo", "titulo__pedido").prefetch_related("titulo__anexos").order_by("data_aprovacao", "id"))
+    itens = list(
+        relatorio.itens.select_related("titulo", "titulo__pedido")
+        .prefetch_related("titulo__anexos", "titulo__pedido__anexos", "titulo__pedido__recebimentos")
+        .order_by("data_aprovacao", "id")
+    )
 
     try:
         from openpyxl import Workbook
@@ -341,7 +345,7 @@ def relatorio_pagamento_excel(request, pk):
         instrucoes = [
             f"Relatório: {relatorio.numero}",
             "",
-            "A pasta DOCUMENTOS contém os anexos das Contas a Pagar incluídas neste relatório.",
+            "A pasta DOCUMENTOS contém os anexos das Contas a Pagar e também os documentos herdados dos Pedidos de Compra vinculados.",
             "Cada subpasta é identificada por PEDIDO + CONTA + BENEFICIÁRIO para facilitar a rastreabilidade.",
             "Quando não existe pedido vinculado, a identificação começa por SEM_PEDIDO.",
         ]
@@ -360,6 +364,17 @@ def relatorio_pagamento_excel(request, pk):
             if titulo.arquivo_documento and titulo.arquivo_documento.name:
                 campos.append((titulo.arquivo_documento, Path(titulo.arquivo_documento.name).name))
             campos.extend((anexo.arquivo, anexo.nome_original or Path(anexo.arquivo.name).name) for anexo in titulo.anexos.all())
+            if titulo.pedido_id:
+                campos.extend(
+                    (anexo.arquivo, f"PEDIDO_{anexo.nome_arquivo}")
+                    for anexo in titulo.pedido.anexos.all()
+                    if anexo.arquivo and anexo.arquivo.name
+                )
+                campos.extend(
+                    (recebimento.arquivo_nota_fiscal, f"NF_{recebimento.nome_arquivo_nota_fiscal}")
+                    for recebimento in titulo.pedido.recebimentos.all()
+                    if recebimento.arquivo_nota_fiscal and recebimento.arquivo_nota_fiscal.name
+                )
 
             usados = set()
             for indice, (campo, nome_original) in enumerate(campos, start=1):

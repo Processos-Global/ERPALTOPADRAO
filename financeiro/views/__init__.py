@@ -13,6 +13,8 @@ from .titulos import (
     titulo_decidir,
     titulo_detalhe,
     titulo_editar,
+    titulo_excluir_anexo,
+    titulo_excluir_documento_legacy,
     titulo_enviar_aprovacao,
     titulo_novo,
     titulos_lista,
@@ -20,4 +22,10 @@ from .titulos import (
 
 __all__ = [name for name in globals() if not name.startswith("_")]
 
-from .downloads import baixar_anexo_titulo, baixar_comprovante_pagamento, baixar_documento_titulo
+from .downloads import (
+    baixar_anexo_pedido_titulo,
+    baixar_anexo_titulo,
+    baixar_comprovante_pagamento,
+    baixar_documento_titulo,
+    baixar_nota_fiscal_pedido_titulo,
+)
