@@ -21,7 +21,12 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
     fim = inicio + timedelta(days=dias)
     eventos = defaultdict(lambda: {"contas": Decimal("0"), "previsoes": Decimal("0")})
 
-    titulos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS, vencimento__range=(inicio, fim))
+    # saldo_aberto acessa a relação OneToOne pagamento. Sem select_related,
+    # cada título poderia gerar uma consulta adicional ao banco.
+    titulos = TituloPagar.objects.filter(
+        status__in=STATUS_ABERTOS,
+        vencimento__range=(inicio, fim),
+    ).select_related("pagamento")
     if obra_id:
         titulos = titulos.filter(obra_id=obra_id)
     for titulo in titulos:
@@ -56,24 +61,49 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
 
 
 def resumo_por_obra():
+    """Resumo financeiro por obra sem consultas dentro do loop de obras."""
     from obras.models import Obra
 
+    obras = list(Obra.objects.all().order_by("id"))
+
+    pagos_por_obra = {
+        item["titulo__obra_id"]: item["total"] or Decimal("0")
+        for item in (
+            Pagamento.objects.filter(
+                status=Pagamento.Status.EFETIVADO,
+                titulo__obra_id__isnull=False,
+            )
+            .values("titulo__obra_id")
+            .annotate(total=Sum("valor"))
+        )
+    }
+
+    abertos_por_obra = defaultdict(lambda: Decimal("0"))
+    titulos_abertos = (
+        TituloPagar.objects.filter(
+            status__in=STATUS_ABERTOS,
+            obra_id__isnull=False,
+        )
+        .select_related("pagamento")
+    )
+    for titulo in titulos_abertos:
+        abertos_por_obra[titulo.obra_id] += titulo.saldo_aberto
+
+    previstos_por_obra = {
+        item["obra_id"]: item["total"] or Decimal("0")
+        for item in (
+            PrevisaoFinanceira.objects.filter(ativa=True, obra_id__isnull=False)
+            .exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
+            .values("obra_id")
+            .annotate(total=Sum("valor_previsto"))
+        )
+    }
+
     linhas = []
-    for obra in Obra.objects.all().order_by("id"):
-        pago = Pagamento.objects.filter(
-            titulo__obra=obra,
-            status=Pagamento.Status.EFETIVADO,
-        ).aggregate(total=Sum("valor"))["total"] or Decimal("0")
-
-        aberto = Decimal("0")
-        for titulo in TituloPagar.objects.filter(obra=obra, status__in=STATUS_ABERTOS):
-            aberto += titulo.saldo_aberto
-
-        previsto_extra = PrevisaoFinanceira.objects.filter(
-            obra=obra,
-            ativa=True,
-        ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
-
+    for obra in obras:
+        pago = pagos_por_obra.get(obra.pk, Decimal("0"))
+        aberto = abertos_por_obra.get(obra.pk, Decimal("0"))
+        previsto_extra = previstos_por_obra.get(obra.pk, Decimal("0"))
         if pago or aberto or previsto_extra:
             linhas.append({
                 "obra": obra,

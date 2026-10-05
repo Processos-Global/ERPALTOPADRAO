@@ -15,7 +15,7 @@ from financeiro.services.permissoes import financeiro_acao_required
 def aprovacoes_lista(request):
     qs = (
         TituloPagar.objects.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO)
-        .select_related("fornecedor", "obra", "pedido", "plano_financeiro", "plano_financeiro__pai")
+        .select_related("fornecedor", "obra", "pedido", "plano_financeiro", "plano_financeiro__pai", "pagamento")
         .prefetch_related("pedido__itens")
     )
     busca = (request.GET.get("q") or "").strip()

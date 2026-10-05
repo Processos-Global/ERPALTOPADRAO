@@ -24,7 +24,7 @@ def previsoes_lista(request):
     origem = (request.GET.get("origem") or "").strip()
     obra = (request.GET.get("obra") or "").strip()
 
-    contas = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("obra", "fornecedor", "pedido")
+    contas = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("obra", "fornecedor", "pedido", "pagamento")
     if origem:
         contas = contas.filter(origem=origem)
     if obra:
@@ -43,17 +43,28 @@ def previsoes_lista(request):
     if obra:
         extras = extras.filter(obra_id=obra)
 
-    def soma_contas_ate(data):
-        return sum((x.saldo_aberto for x in contas.filter(vencimento__range=(hoje, data))), Decimal("0"))
+    # A tela usa o mesmo conjunto em vários KPIs e também na listagem.
+    # Materializar uma vez evita executar o mesmo queryset repetidamente.
+    contas_lista = list(contas)
+    extras_lista = list(extras)
 
-    contas_vencidas = list(contas.filter(vencimento__lt=hoje))
+    def soma_contas_ate(data):
+        return sum(
+            (x.saldo_aberto for x in contas_lista if x.vencimento and hoje <= x.vencimento <= data),
+            Decimal("0"),
+        )
+
+    contas_vencidas = [x for x in contas_lista if x.vencimento and x.vencimento < hoje]
     valor_vencidas = sum((x.saldo_aberto for x in contas_vencidas), Decimal("0"))
 
     def soma_extras_ate(data):
-        return extras.filter(data_prevista__range=(hoje, data)).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
+        return sum(
+            (x.valor_previsto for x in extras_lista if x.data_prevista and hoje <= x.data_prevista <= data),
+            Decimal("0"),
+        )
 
     linhas = []
-    for conta in contas.filter(vencimento__isnull=False):
+    for conta in (x for x in contas_lista if x.vencimento is not None):
         linhas.append({
             "tipo": "CONTA",
             "data": conta.vencimento,
@@ -67,7 +78,7 @@ def previsoes_lista(request):
             "dias_atraso": conta.dias_em_atraso,
             "pk": conta.pk,
         })
-    for previsao in extras.filter(data_prevista__isnull=False):
+    for previsao in (x for x in extras_lista if x.data_prevista is not None):
         linhas.append({
             "tipo": "PREVISAO",
             "data": previsao.data_prevista,

@@ -104,7 +104,7 @@ def _fornecedores_bancarios():
 @financeiro_acao_required("VISUALIZAR")
 def titulos_lista(request):
     hoje = timezone.localdate()
-    qs = TituloPagar.objects.select_related("fornecedor", "obra", "plano_financeiro", "pedido").all()
+    qs = TituloPagar.objects.select_related("fornecedor", "obra", "plano_financeiro", "pedido", "pagamento").all()
     busca = (request.GET.get("q") or "").strip()
     status = (request.GET.get("status") or "").strip()
     origem = (request.GET.get("origem") or "").strip()
@@ -152,7 +152,7 @@ def titulos_lista(request):
 
     page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
 
-    base_abertos = TituloPagar.objects.exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    base_abertos = TituloPagar.objects.select_related("pagamento").exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
     vencidos = list(base_abertos.filter(vencimento__lt=hoje))
     sete = list(base_abertos.filter(vencimento__range=(hoje, hoje + timedelta(days=7))))
     aprovacao = list(base_abertos.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO))

@@ -56,6 +56,7 @@ def _aprovacoes_disponiveis(data_inicio, data_fim):
             "titulo__pedido",
             "titulo__plano_financeiro",
             "titulo__plano_financeiro__pai",
+            "titulo__pagamento",
             "usuario",
         )
         .order_by("criado_em", "id")

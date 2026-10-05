@@ -16,7 +16,7 @@ def dashboard(request):
     em_7 = hoje + timedelta(days=7)
     em_30 = hoje + timedelta(days=30)
 
-    abertos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("fornecedor", "obra")
+    abertos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("fornecedor", "obra", "pagamento")
     vencidos = list(abertos.filter(vencimento__lt=hoje))
     proximos_7 = list(abertos.filter(vencimento__range=(hoje, em_7)))
     proximos_30 = list(abertos.filter(vencimento__range=(hoje, em_30)))
