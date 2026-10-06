@@ -18,6 +18,15 @@
     <form method="get" class="fin-toolbar" style="margin:0">
       <div class="fin-filter-field"><label>Início do período</label><input class="fin-control" type="date" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}" required></div>
       <div class="fin-filter-field"><label>Fim do período</label><input class="fin-control" type="date" name="fim" value="{{ data_fim|date:'Y-m-d' }}" required></div>
+      <div class="fin-filter-field">
+        <label>Obra</label>
+        <select class="fin-control" name="obra">
+          <option value="">Todas as obras</option>
+          {% for obra in obras %}
+            <option value="{{ obra.obra_id }}" {% if obra_id == obra.obra_id %}selected{% endif %}>{{ obra.obra__nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Consultar período</button></div>
     </form>
   </div>
@@ -27,6 +36,7 @@
   <div class="fin-kpi"><span>Pagamentos disponíveis</span><strong>{{ itens_preview|length }}</strong></div>
   <div class="fin-kpi"><span>Valor do fechamento</span><strong>{{ total_preview|moeda_br }}</strong></div>
   <div class="fin-kpi"><span>Período</span><strong style="font-size:17px">{{ data_inicio|date:"d/m/Y" }} — {{ data_fim|date:"d/m/Y" }}</strong></div>
+  <div class="fin-kpi"><span>Obra</span><strong style="font-size:17px">{% if obra_selecionada %}{{ obra_selecionada.obra__nome }}{% else %}Todas as obras{% endif %}</strong></div>
 </div>
 
 <section class="fin-section">
@@ -37,6 +47,7 @@
       {% csrf_token %}
       <input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}">
       <input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}">
+      {% if obra_id %}<input type="hidden" name="obra" value="{{ obra_id }}">{% endif %}
       <button class="fin-btn fin-btn--primary" type="submit">Emitir relatório + anexos</button>
     </form>
     {% endif %}
@@ -64,10 +75,15 @@
 </section>
 
 <section class="fin-section">
-  <div class="fin-section__head"><div><h2>Histórico de emissões</h2><p>Relatórios anteriores permanecem disponíveis para consulta e novo download do mesmo pacote (planilha + anexos).</p></div></div>
+  <div class="fin-section__head">
+    <div>
+      <h2>Histórico de emissões</h2>
+      <p>Você pode baixar novamente o pacote completo ou reemitir somente os pagamentos de uma obra que já fez parte daquele relatório.</p>
+    </div>
+  </div>
   <div class="fin-section__body--flush fin-table-wrap">
     <table class="fin-table">
-      <thead><tr><th>Relatório</th><th>Período das aprovações</th><th>Emissão</th><th>Emitido por</th><th>Itens</th><th style="text-align:right">Total</th><th></th></tr></thead>
+      <thead><tr><th>Relatório</th><th>Período das aprovações</th><th>Emissão</th><th>Emitido por</th><th>Itens</th><th style="text-align:right">Total</th><th style="min-width:330px">Downloads</th></tr></thead>
       <tbody>
       {% for rel in historico %}
         <tr>
@@ -77,7 +93,22 @@
           <td>{% if rel.emitido_por %}{{ rel.emitido_por.get_full_name|default:rel.emitido_por.username }}{% else %}—{% endif %}</td>
           <td>{{ rel.quantidade_itens }}</td>
           <td class="fin-money">{{ rel.valor_total|moeda_br }}</td>
-          <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" download>Baixar ZIP</a></td>
+          <td>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" download>ZIP completo</a>
+              {% if rel.obras_disponiveis %}
+                <form method="get" action="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" style="display:flex;gap:8px;align-items:center;margin:0">
+                  <select class="fin-control" name="obra" required style="min-width:180px;padding-top:7px;padding-bottom:7px">
+                    <option value="">Selecionar obra</option>
+                    {% for obra in rel.obras_disponiveis %}
+                      <option value="{{ obra.id }}">{{ obra.nome }}</option>
+                    {% endfor %}
+                  </select>
+                  <button class="fin-btn fin-btn--sm" type="submit">Baixar por obra</button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
         </tr>
       {% empty %}
         <tr><td colspan="7" class="fin-empty"><strong>Nenhum relatório emitido</strong>O histórico será criado a partir da primeira emissão.</td></tr>

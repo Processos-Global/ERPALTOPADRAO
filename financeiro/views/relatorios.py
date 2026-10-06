@@ -40,9 +40,9 @@ def _intervalo_local(data_inicio, data_fim):
     return inicio, fim
 
 
-def _aprovacoes_disponiveis(data_inicio, data_fim):
+def _aprovacoes_disponiveis(data_inicio, data_fim, obra_id=None):
     inicio, fim = _intervalo_local(data_inicio, data_fim)
-    return (
+    qs = (
         AprovacaoTituloFinanceiro.objects.filter(
             decisao=AprovacaoTituloFinanceiro.Decisao.APROVADO,
             criado_em__range=(inicio, fim),
@@ -61,6 +61,29 @@ def _aprovacoes_disponiveis(data_inicio, data_fim):
         )
         .order_by("criado_em", "id")
     )
+    if obra_id:
+        qs = qs.filter(titulo__obra_id=obra_id)
+    return qs
+
+
+def _parse_obra_id(valor):
+    try:
+        obra_id = int(valor)
+        return obra_id if obra_id > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _url_relatorios(data_inicio=None, data_fim=None, obra_id=None):
+    url = reverse("financeiro:relatorios_pagamento")
+    params = []
+    if data_inicio:
+        params.append(f"inicio={data_inicio:%Y-%m-%d}")
+    if data_fim:
+        params.append(f"fim={data_fim:%Y-%m-%d}")
+    if obra_id:
+        params.append(f"obra={obra_id}")
+    return f"{url}?{'&'.join(params)}" if params else url
 
 
 def _dados_item(aprovacao):
@@ -118,22 +141,56 @@ def relatorios_pagamento(request):
     inicio_padrao = hoje.replace(day=1)
     data_inicio = _parse_data(request.GET.get("inicio")) or inicio_padrao
     data_fim = _parse_data(request.GET.get("fim")) or hoje
+    obra_id = _parse_obra_id(request.GET.get("obra"))
 
     if data_fim < data_inicio:
         data_inicio, data_fim = data_fim, data_inicio
 
-    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim))
+    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_id=obra_id))
     itens_preview = [
         {"aprovacao": a, "titulo": a.titulo, "valor": a.titulo.saldo_aberto}
         for a in aprovacoes
     ]
     total_preview = sum((item["valor"] for item in itens_preview), Decimal("0"))
 
-    historico = (
+    obras = list(
+        TituloPagar.objects.filter(obra__isnull=False)
+        .values("obra_id", "obra__nome")
+        .distinct()
+        .order_by("obra__nome")
+    )
+    obra_selecionada = next((obra for obra in obras if obra["obra_id"] == obra_id), None)
+
+    historico = list(
         RelatorioPagamento.objects.select_related("emitido_por")
         .annotate(total_itens=Sum("itens__valor"))
         .order_by("-emitido_em", "-id")[:100]
     )
+
+    # Monta, em uma única consulta, as obras existentes em cada relatório histórico.
+    # Isso permite reemitir um ZIP antigo por obra sem tornar os pagamentos pendentes novamente.
+    obras_por_relatorio = {}
+    relatorio_ids = [rel.id for rel in historico]
+    if relatorio_ids:
+        linhas_obras = (
+            ItemRelatorioPagamento.objects.filter(
+                relatorio_id__in=relatorio_ids,
+                titulo__obra__isnull=False,
+            )
+            .values("relatorio_id", "titulo__obra_id", "obra_nome")
+            .distinct()
+            .order_by("obra_nome")
+        )
+        for linha in linhas_obras:
+            obras_por_relatorio.setdefault(linha["relatorio_id"], []).append(
+                {
+                    "id": linha["titulo__obra_id"],
+                    "nome": linha["obra_nome"] or "Obra sem identificação",
+                }
+            )
+
+    for rel in historico:
+        rel.obras_disponiveis = obras_por_relatorio.get(rel.id, [])
 
     return render(
         request,
@@ -141,6 +198,9 @@ def relatorios_pagamento(request):
         {
             "data_inicio": data_inicio,
             "data_fim": data_fim,
+            "obras": obras,
+            "obra_id": obra_id,
+            "obra_selecionada": obra_selecionada,
             "itens_preview": itens_preview,
             "total_preview": total_preview,
             "historico": historico,
@@ -154,21 +214,22 @@ def relatorios_pagamento(request):
 def relatorio_pagamento_emitir(request):
     data_inicio = _parse_data(request.POST.get("inicio"))
     data_fim = _parse_data(request.POST.get("fim"))
+    obra_id = _parse_obra_id(request.POST.get("obra"))
 
     if not data_inicio or not data_fim:
         messages.error(request, "Informe o início e o fim do período.")
-        return redirect("financeiro:relatorios_pagamento")
+        return redirect(_url_relatorios(obra_id=obra_id))
     if data_fim < data_inicio:
         messages.error(request, "A data final não pode ser anterior à data inicial.")
-        url = reverse("financeiro:relatorios_pagamento")
-        return redirect(f"{url}?inicio={data_inicio:%Y-%m-%d}&fim={data_fim:%Y-%m-%d}")
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_id))
 
     # Reconsulta dentro da transação para impedir emissão duplicada da mesma aprovação.
-    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim).select_for_update())
+    aprovacoes = list(
+        _aprovacoes_disponiveis(data_inicio, data_fim, obra_id=obra_id).select_for_update()
+    )
     if not aprovacoes:
         messages.warning(request, "O período pode ser usado novamente, mas não existem novas aprovações ainda não incluídas em relatório. Para rebaixar um relatório anterior, use o histórico de emissões.")
-        url = reverse("financeiro:relatorios_pagamento")
-        return redirect(f"{url}?inicio={data_inicio:%Y-%m-%d}&fim={data_fim:%Y-%m-%d}")
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_id))
 
     relatorio = RelatorioPagamento.objects.create(
         numero=gerar_numero("RELATORIO_PAGAMENTO"),
@@ -202,11 +263,24 @@ def relatorio_pagamento_excel(request, pk):
         RelatorioPagamento.objects.select_related("emitido_por"),
         pk=pk,
     )
-    itens = list(
-        relatorio.itens.select_related("titulo", "titulo__pedido")
+
+    obra_id = _parse_obra_id(request.GET.get("obra"))
+    itens_qs = (
+        relatorio.itens.select_related("titulo", "titulo__pedido", "titulo__obra")
         .prefetch_related("titulo__anexos", "titulo__pedido__anexos", "titulo__pedido__recebimentos")
         .order_by("data_aprovacao", "id")
     )
+    if obra_id:
+        itens_qs = itens_qs.filter(titulo__obra_id=obra_id)
+
+    itens = list(itens_qs)
+    if obra_id and not itens:
+        messages.warning(request, "Esta obra não possui itens dentro do relatório selecionado.")
+        return redirect("financeiro:relatorios_pagamento")
+
+    obra_reemissao = None
+    if obra_id and itens:
+        obra_reemissao = itens[0].obra_nome or str(getattr(itens[0].titulo, "obra", "") or "Obra")
 
     try:
         from openpyxl import Workbook
@@ -315,20 +389,22 @@ def relatorio_pagamento_excel(request, pk):
     # Segunda aba: rastreabilidade da emissão sem alterar o layout operacional.
     meta = wb.create_sheet("Controle da emissão")
     meta.sheet_view.showGridLines = False
+    total_exportado = sum((item.valor for item in itens), Decimal("0"))
     controle = [
         ("Relatório", relatorio.numero),
         ("Período das aprovações", f"{relatorio.periodo_inicio:%d/%m/%Y} a {relatorio.periodo_fim:%d/%m/%Y}"),
         ("Emitido em", timezone.localtime(relatorio.emitido_em).strftime("%d/%m/%Y %H:%M")),
         ("Emitido por", (relatorio.emitido_por.get_full_name() or relatorio.emitido_por.get_username()) if relatorio.emitido_por else ""),
-        ("Quantidade", relatorio.quantidade_itens),
-        ("Valor total", relatorio.valor_total),
+        ("Reemissão por obra", obra_reemissao or "Todas as obras"),
+        ("Quantidade exportada", len(itens)),
+        ("Valor exportado", total_exportado),
     ]
     for linha, (rotulo, valor) in enumerate(controle, 1):
         meta.cell(row=linha, column=1, value=rotulo).font = Font(bold=True)
         meta.cell(row=linha, column=2, value=valor)
     meta.column_dimensions["A"].width = 24
     meta.column_dimensions["B"].width = 46
-    meta.cell(row=6, column=2).number_format = 'R$ #,##0.00'
+    meta.cell(row=7, column=2).number_format = 'R$ #,##0.00'
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -345,6 +421,9 @@ def relatorio_pagamento_excel(request, pk):
 
         instrucoes = [
             f"Relatório: {relatorio.numero}",
+            f"Reemissão por obra: {obra_reemissao or 'Todas as obras'}",
+            f"Itens neste pacote: {len(itens)}",
+            f"Valor neste pacote: R$ {total_exportado:.2f}",
             "",
             "A pasta DOCUMENTOS contém os anexos das Contas a Pagar e também os documentos herdados dos Pedidos de Compra vinculados.",
             "Cada subpasta é identificada por PEDIDO + CONTA + BENEFICIÁRIO para facilitar a rastreabilidade.",
@@ -404,10 +483,11 @@ def relatorio_pagamento_excel(request, pk):
             zf.writestr("DOCUMENTOS/SEM_ANEXOS.txt", "Nenhum documento estava anexado às contas deste relatório.")
 
     pacote.seek(0)
+    sufixo_obra = f"__{nome_seguro(obra_reemissao, 'OBRA')}" if obra_reemissao else ""
     response = FileResponse(
         pacote,
         as_attachment=True,
-        filename=f"{relatorio.numero}.zip",
+        filename=f"{relatorio.numero}{sufixo_obra}.zip",
         content_type="application/zip",
     )
     response["X-Content-Type-Options"] = "nosniff"
