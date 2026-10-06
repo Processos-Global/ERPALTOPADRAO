@@ -35,5 +35,11 @@
     <h3>Ficha Técnica</h3><p>Ambientes, pavimentos, categorias, itens e especificações usados pelas fichas das obras.</p>
     <div class="cad-card__footer"><span>Acessar cadastros</span><span>→</span></div>
   </a>
+
+  <a class="cad-card" href="{% url 'cadastros:checklist_projetos_lista' %}">
+    <div class="cad-card__top"><span class="cad-card__icon">CK</span><strong class="cad-card__count">{{ total_checklist_projetos }}</strong></div>
+    <h3>Checklists de Projetos</h3><p>Macro checklists, etapas, códigos e entregas utilizados no checklist de verificação de compatibilização.</p>
+    <div class="cad-card__footer"><span>Acessar checklists</span><span>→</span></div>
+  </a>
 </div>
 {% endblock %}

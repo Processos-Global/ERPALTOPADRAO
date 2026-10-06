@@ -1,0 +1,80 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<div class="cad-head">
+  <div class="cad-head__copy">
+    <div class="cad-eyebrow">Projetos</div>
+    <h1 class="cad-title">Checklist de Projetos</h1>
+    <p class="cad-sub">Gerencie os macro checklists e os itens que alimentam a verificação de compatibilização.</p>
+  </div>
+  <div class="cad-head__actions">
+    {% if cad_pode_criar %}
+      <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:checklist_grupo_novo' %}">+ Novo macro checklist</a>
+      <a class="cad-btn" href="{% url 'cadastros:checklist_item_novo' %}">+ Novo item</a>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .chk-section{margin-bottom:18px;border:1px solid #ded7c8;border-radius:12px;background:#fff;overflow:hidden}
+  .chk-section__head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border-bottom:1px solid #ded7c8;background:#faf7f1}
+  .chk-section__title{margin:0;font-family:var(--font-serif);font-size:17px;font-weight:500;color:#453330}
+  .chk-section__sub{margin-top:3px;font-size:11px;color:#85776f}
+  .chk-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .chk-action-btn{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:6px 10px;border:1px solid #d9d0c2;border-radius:7px;background:#fff;color:#453330;text-decoration:none;font-size:11.5px;font-weight:750;white-space:nowrap;transition:.15s ease}
+  .chk-action-btn:hover{border-color:#453330;background:#453330;color:#fff}.chk-action-btn.primary{border-color:#453330;background:#453330;color:#fff}.chk-action-btn.primary:hover{background:#2d201c;border-color:#2d201c}
+  .chk-table{width:100%;border-collapse:collapse;min-width:920px}.chk-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#85776f;background:#f8f4ed;text-align:left;padding:10px 12px;border-bottom:1px solid #ded7c8;white-space:nowrap}.chk-table td{padding:10px 12px;border-bottom:1px solid #ece6dc;font-size:12.5px;vertical-align:middle;color:#453330}.chk-table tbody tr:hover{background:#fcf9f3}.chk-table tbody tr:last-child td{border-bottom:0}.chk-table-wrap{overflow:auto}
+  .chk-group-name{font-weight:800;color:#453330}.chk-type{font-size:11px;color:#85776f}.chk-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#66534c;white-space:nowrap}.chk-status{display:inline-flex;align-items:center;justify-content:center;min-width:58px;padding:4px 8px;border-radius:999px;background:#f4efe6;color:#66534c;font-size:10.5px;font-weight:800}.chk-status.off{background:#f1ece4;color:#9b8e85}
+  .chk-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;background:#fff;border:1px solid #ded7c8;border-radius:10px;padding:10px}.chk-toolbar form{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}.chk-toolbar input,.chk-toolbar select{min-height:38px;border:1px solid #d9d0c2;border-radius:8px;padding:9px 10px;background:#fff;color:#453330;font-size:13px}.chk-toolbar input[type=search]{min-width:280px;flex:1}.chk-empty{padding:24px;text-align:center;color:#85776f;font-size:12.5px}
+  .chk-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid #eee8d6;color:#85776f;font-size:11.5px}.chk-pagination__controls{display:flex;gap:6px}.chk-page-btn{height:32px;padding:0 10px;border:1px solid #ded7c8;border-radius:7px;background:#fff;color:#453330;font:inherit;font-size:11.5px;font-weight:750;cursor:pointer}.chk-page-btn:hover:not(:disabled){background:#f5f1e9}.chk-page-btn:disabled{opacity:.4;cursor:not-allowed}.chk-page-btn.is-active{background:#453330;border-color:#453330;color:#fff}
+  @media(max-width:720px){.chk-section__head{align-items:flex-start;flex-direction:column}.chk-actions{justify-content:flex-start}.chk-toolbar input[type=search]{min-width:100%}.chk-pagination{align-items:flex-start;flex-direction:column}}
+</style>
+
+<div class="chk-toolbar">
+  <form method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar etapa, código ou entrega / atividade">
+    <select name="grupo"><option value="">Todos os macro checklists</option>{% for g in grupos_filtro %}<option value="{{ g.pk }}" {% if grupo_id == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.nome }}</option>{% endfor %}</select>
+    <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
+  </form>
+</div>
+
+<section class="chk-section">
+  <div class="chk-section__head"><div><h2 class="chk-section__title">Macro checklists</h2><div class="chk-section__sub">Organização das abas exibidas no módulo de Projetos.</div></div></div>
+  <div class="chk-table-wrap">
+    <table class="chk-table js-paged-table" data-page-size="8" data-pagination="groups"><thead><tr><th>Macro checklist</th><th>Tipo</th><th>Ordem</th><th>Itens</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead><tbody>
+      {% for g in grupos_filtro %}<tr class="js-page-item"><td><span class="chk-group-name">{{ g.nome }}</span></td><td><span class="chk-type">{{ g.get_tipo_display }}</span></td><td class="chk-code">{{ g.ordem }}</td><td>{{ g.total_itens }}</td><td><span class="chk-status {% if not g.ativo %}off{% endif %}">{% if g.ativo %}Ativo{% else %}Inativo{% endif %}</span></td><td><div class="chk-actions">{% if cad_pode_criar %}<a class="chk-action-btn primary" href="{% url 'cadastros:checklist_item_novo' %}?grupo={{ g.pk }}">+ Adicionar item</a>{% endif %}{% if cad_pode_editar %}<a class="chk-action-btn" href="{% url 'cadastros:checklist_grupo_editar' g.pk %}">Editar grupo</a>{% endif %}</div></td></tr>
+      {% empty %}<tr><td class="chk-empty" colspan="6">Nenhum macro checklist cadastrado.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="chk-pagination js-pagination" data-name="groups"></div>
+</section>
+
+<section class="chk-section">
+  <div class="chk-section__head"><div><h2 class="chk-section__title">Itens do checklist</h2><div class="chk-section__sub">Tabela mestre de etapas, códigos e entregas / atividades.</div></div>{% if cad_pode_criar %}<a class="cad-btn" href="{% url 'cadastros:checklist_item_novo' %}">+ Novo item</a>{% endif %}</div>
+  <div class="chk-table-wrap">
+    <table class="chk-table js-paged-table" data-page-size="15" data-pagination="items"><thead><tr><th>Macro checklist</th><th>Etapa</th><th>Código</th><th>Entrega / Atividade</th><th>Ordem</th><th>Status</th>{% if cad_pode_editar %}<th style="text-align:right">Ações</th>{% endif %}</tr></thead><tbody>
+      {% for i in itens %}<tr class="js-page-item"><td><span class="chk-group-name">{{ i.grupo.nome }}</span></td><td class="chk-code">{{ i.etapa|default:"—" }}</td><td class="chk-code">{{ i.codigo|default:"—" }}</td><td>{{ i.entrega_atividade }}</td><td class="chk-code">{{ i.ordem }}</td><td><span class="chk-status {% if not i.ativo %}off{% endif %}">{% if i.ativo %}Ativo{% else %}Inativo{% endif %}</span></td>{% if cad_pode_editar %}<td><div class="chk-actions"><a class="chk-action-btn" href="{% url 'cadastros:checklist_item_editar' i.pk %}">Editar item</a></div></td>{% endif %}</tr>
+      {% empty %}<tr><td class="chk-empty" colspan="7">Nenhum item encontrado com os filtros informados.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+  <div class="chk-pagination js-pagination" data-name="items"></div>
+</section>
+
+<script>
+(function(){
+  document.querySelectorAll('.js-paged-table').forEach(table=>{
+    const rows=[...table.querySelectorAll('tbody .js-page-item')];
+    const pageSize=Number(table.dataset.pageSize||15);
+    const target=document.querySelector(`.js-pagination[data-name="${table.dataset.pagination}"]`);
+    if(!target || rows.length<=pageSize){if(target)target.hidden=true;return;}
+    let page=1; const pages=Math.ceil(rows.length/pageSize);
+    const draw=()=>{
+      const start=(page-1)*pageSize,end=start+pageSize;
+      rows.forEach((row,i)=>row.hidden=!(i>=start&&i<end));
+      target.hidden=false;
+      target.innerHTML=`<span>Exibindo ${start+1}–${Math.min(end,rows.length)} de ${rows.length}</span><div class="chk-pagination__controls"><button type="button" class="chk-page-btn js-prev" ${page===1?'disabled':''}>Anterior</button><button type="button" class="chk-page-btn is-active">${page} / ${pages}</button><button type="button" class="chk-page-btn js-next" ${page===pages?'disabled':''}>Próxima</button></div>`;
+      target.querySelector('.js-prev')?.addEventListener('click',()=>{if(page>1){page--;draw();}});target.querySelector('.js-next')?.addEventListener('click',()=>{if(page<pages){page++;draw();}});
+    }; draw();
+  });
+})();
+</script>
+{% endblock %}

@@ -9,3 +9,5 @@ from .ficha_tecnica import (
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]
+
+from .checklist_projetos import ChecklistProjetoGrupoForm, ChecklistProjetoItemForm

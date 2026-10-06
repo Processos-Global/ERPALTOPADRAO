@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from cadastros.forms import FornecedorForm, MaoObraForm, MaterialForm, UnidadeMedidaForm
-from cadastros.models import Fornecedor, MaoObra, Material, UnidadeMedida
+from cadastros.models import ChecklistProjetoItem, Fornecedor, MaoObra, Material, UnidadeMedida
 from usuarios.services import pode_acao_cadastros
 
 
@@ -41,6 +41,7 @@ def index(request):
         "total_fornecedores": Fornecedor.objects.filter(ativo=True).count(),
         "total_mao_obra": MaoObra.objects.filter(ativo=True).count(),
         "total_unidades": UnidadeMedida.objects.filter(ativo=True).count(),
+        "total_checklist_projetos": ChecklistProjetoItem.objects.filter(ativo=True).count(),
         **_permissoes_contexto(request.user),
     }
     return render(request, "cadastros/index.html", contexto)

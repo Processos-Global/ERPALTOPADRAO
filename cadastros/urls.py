@@ -3,6 +3,12 @@ from cadastros import views
 
 app_name = "cadastros"
 urlpatterns = [
+    path("checklists-projetos/", views.checklist_projetos_lista, name="checklist_projetos_lista"),
+    path("checklists-projetos/grupo/novo/", views.checklist_grupo_novo, name="checklist_grupo_novo"),
+    path("checklists-projetos/grupo/<int:pk>/editar/", views.checklist_grupo_editar, name="checklist_grupo_editar"),
+    path("checklists-projetos/item/novo/", views.checklist_item_novo, name="checklist_item_novo"),
+    path("checklists-projetos/item/<int:pk>/editar/", views.checklist_item_editar, name="checklist_item_editar"),
+    path("checklists-projetos/item/<int:pk>/excluir/", views.checklist_item_excluir, name="checklist_item_excluir"),
     path("", views.index, name="index"),
     path("ficha-tecnica/", views.ficha_tecnica_cadastros, name="ficha_tecnica_cadastros"),
     path("ficha-tecnica/<slug:tipo>/", views.ficha_tecnica_lista, name="ficha_tecnica_lista"),

@@ -2,80 +2,249 @@
 {% load obras_format %}
 {% block title %}Obras | Almoxarifado{% endblock %}
 {% block page_name %}Obras{% endblock %}
-{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+
+{% block extra_css %}
+{% include "obras/_operacional_styles.html" %}
+<style>
+  .alm-page{--alm-border:#e2dbcf;--alm-soft:#f8f5ef;--alm-cream:#fcfaf6;--alm-brown:#453330;--alm-ink:#2d201c;--alm-muted:#7b6e68;--alm-gold:#b9aa72}
+
+  /* Cabeçalho mais baixo e limpo */
+  .alm-page .op-head{margin-bottom:14px;padding:21px 24px 21px 28px;border-radius:16px}
+  .alm-page .op-head h1{font-size:clamp(2rem,2.7vw,2.65rem)}
+  .alm-page .op-head p{margin-top:6px;font-size:13px}
+
+  /* Resumo geral em uma única faixa, sem cards gigantes */
+  .alm-overview{display:grid;grid-template-columns:minmax(280px,1.35fr) minmax(150px,.55fr) minmax(150px,.55fr);gap:0;margin-bottom:14px;overflow:hidden;border:1px solid var(--alm-border);border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(69,51,48,.045)}
+  .alm-overview__item{position:relative;min-width:0;padding:15px 18px}
+  .alm-overview__item+.alm-overview__item{border-left:1px solid #eee8df}
+  .alm-overview__label{display:block;margin-bottom:4px;color:var(--alm-muted);font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+  .alm-overview__value{display:block;color:var(--alm-ink);font-family:var(--font-serif);font-size:22px;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+  .alm-overview__item--main{background:linear-gradient(135deg,#fff 0%,#fbf8f1 100%)}
+  .alm-overview__item--main::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--alm-gold)}
+  .alm-overview__item--main .alm-overview__value{font-size:27px}
+
+  /* Barra de filtros mais compacta */
+  .alm-page .op-toolbar{grid-template-columns:minmax(280px,1fr) minmax(220px,300px) auto;margin-bottom:14px;padding:12px 13px;border-radius:13px;box-shadow:0 6px 18px rgba(69,51,48,.035)}
+  .alm-page .op-field label{margin-bottom:5px;font-size:11px}
+  .alm-page .op-field input,.alm-page .op-field select{min-height:39px}
+  .alm-page .op-toolbar .op-btn{min-height:39px}
+
+  /* Bloco de obras */
+  .alm-section{margin-bottom:14px;border:1px solid var(--alm-border);border-radius:14px;background:#fff;box-shadow:0 8px 24px rgba(69,51,48,.04);overflow:hidden}
+  .alm-section__head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;border-bottom:1px solid #eee8df;background:linear-gradient(180deg,#fff,#fdfbf7)}
+  .alm-section__title{display:flex;align-items:center;gap:9px;min-width:0}
+  .alm-section__title h2{margin:0;color:var(--alm-ink);font-family:var(--font-serif);font-size:19px;font-weight:500}
+  .alm-section__title span{color:var(--alm-muted);font-size:11px}
+
+  /* Cards realmente compactos */
+  .alm-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:12px}
+  .alm-summary-card{position:relative;display:flex;align-items:center;gap:12px;min-width:0;min-height:74px;padding:12px 13px;border:1px solid #e7e0d5;border-radius:11px;background:#fff;color:var(--alm-brown);text-decoration:none;transition:border-color .15s ease,background .15s ease,transform .15s ease,box-shadow .15s ease}
+  .alm-summary-card:hover{transform:translateY(-1px);border-color:#cdbc8f;background:#fcfaf5;box-shadow:0 7px 18px rgba(69,51,48,.07);color:var(--alm-brown)}
+  .alm-summary-card__icon{display:flex;flex:0 0 34px;width:34px;height:34px;align-items:center;justify-content:center;border:1px solid #e7dfcf;border-radius:9px;background:var(--alm-soft);color:var(--alm-brown)}
+  .alm-summary-card__icon svg{width:16px;height:16px}
+  .alm-summary-card__body{min-width:0;flex:1}
+  .alm-summary-card__name{display:block;margin:0 0 5px;color:var(--alm-ink);font-family:var(--font-serif);font-size:15px;font-weight:500;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .alm-summary-card__details{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+  .alm-summary-card__items{color:var(--alm-muted);font-size:10.5px;white-space:nowrap}
+  .alm-summary-card__value{color:var(--alm-brown);font-size:12px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .alm-summary-card__arrow{display:flex;flex:0 0 24px;width:24px;height:24px;align-items:center;justify-content:center;color:#9b8a80;font-size:18px;transition:transform .15s ease,color .15s ease}
+  .alm-summary-card:hover .alm-summary-card__arrow{transform:translateX(2px);color:var(--alm-brown)}
+  .alm-summary-card--empty{grid-column:1/-1;justify-content:center;color:var(--alm-muted)}
+
+  /* Paginação discreta */
+  .alm-pagination{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-top:1px solid #eee8df;color:var(--alm-muted);font-size:10.5px}
+  .alm-pagination__controls{display:flex;align-items:center;gap:5px}
+  .alm-page-btn{display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:31px;padding:0 10px;border:1px solid #e4ddd2;border-radius:8px;background:#fff;color:var(--alm-brown);font:inherit;font-size:10.5px;font-weight:750;cursor:pointer}
+  .alm-page-btn:hover:not(:disabled){border-color:#cdbc8f;background:var(--alm-soft)}
+  .alm-page-btn:disabled{opacity:.35;cursor:not-allowed}
+  .alm-page-btn.is-active{border-color:var(--alm-brown);background:var(--alm-brown);color:#fff}
+
+  /* Tabela */
+  .alm-page .op-panel{margin-bottom:0;border-radius:14px;box-shadow:0 8px 24px rgba(69,51,48,.04)}
+  .alm-page .op-panel-head{padding:12px 15px}
+  .alm-page .op-panel-head h2{font-family:var(--font-serif);font-size:19px;font-weight:500}
+  .alm-page .op-table th{padding:10px 11px;font-size:10px}
+  .alm-page .op-table td{padding:10px 11px;font-size:12px}
+  .alm-page .op-table .op-btn{min-height:32px;padding:6px 10px;border-radius:8px;font-size:11px}
+  .alm-table-pagination .alm-pagination{border-top:0;padding:0}
+  .alm-table-pagination{padding:0}
+
+  @media(max-width:1180px){.alm-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:900px){
+    .alm-overview{grid-template-columns:1fr 1fr}.alm-overview__item--main{grid-column:1/-1}.alm-overview__item:nth-child(2){border-left:0;border-top:1px solid #eee8df}.alm-overview__item:nth-child(3){border-top:1px solid #eee8df}
+    .alm-page .op-toolbar{grid-template-columns:1fr}
+  }
+  @media(max-width:620px){
+    .alm-summary-grid{grid-template-columns:1fr;padding:9px}.alm-summary-card{min-height:68px}.alm-overview{grid-template-columns:1fr}.alm-overview__item,.alm-overview__item+.alm-overview__item{border-left:0;border-top:1px solid #eee8df}.alm-overview__item:first-child{border-top:0}.alm-pagination{align-items:flex-start;flex-direction:column}
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="op-page">
+<div class="op-page alm-page">
   <section class="op-head">
     <div class="op-head-copy">
       <span class="op-eyebrow">Obras · Almoxarifado</span>
-      <h1>Estoque geral das obras</h1>
-      <p>As entradas são originadas automaticamente dos recebimentos registrados em Compras. Aqui são controladas as saídas e transferências entre obras.</p>
+      <h1>Estoque geral</h1>
+      <p>Acompanhe os saldos e valores dos materiais disponíveis em cada obra.</p>
     </div>
-    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar ao menu</a></div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar ao menu</a>
+    </div>
   </section>
 
-  <div class="op-kpi-grid">
-    <div class="op-kpi-card emphasis">
-      <small>Valor total em estoque</small>
-      <strong>{{ valor_total_geral|moeda_br }}</strong>
+  <section class="alm-overview" aria-label="Resumo do estoque">
+    <div class="alm-overview__item alm-overview__item--main">
+      <span class="alm-overview__label">Valor total em estoque</span>
+      <strong class="alm-overview__value">{{ valor_total_geral|moeda_br }}</strong>
     </div>
-    <div class="op-kpi-card">
-      <small>Itens exibidos</small>
-      <strong>{{ total_itens }}</strong>
+    <div class="alm-overview__item">
+      <span class="alm-overview__label">Itens exibidos</span>
+      <strong class="alm-overview__value">{{ total_itens }}</strong>
     </div>
-    {% if obra_filtro or q %}
-    <div class="op-kpi-card">
-      <small>Valor dos itens filtrados</small>
-      <strong>{{ valor_total_filtrado|moeda_br }}</strong>
+    <div class="alm-overview__item">
+      <span class="alm-overview__label">Obras</span>
+      <strong class="alm-overview__value">{{ resumo_obras|length }}</strong>
     </div>
-    {% endif %}
-  </div>
-
-  <div class="op-summary-grid">
-    {% for r in resumo_obras %}
-      <a class="op-summary-card" href="{% url 'obras:almoxarifado_obra' r.obra.pk %}">
-        <small>{{ r.obra.codigo }}</small>
-        <strong>{{ r.obra|nome_obra }}</strong>
-        <span>{{ r.itens }} item{{ r.itens|pluralize }} com saldo</span>
-        <b class="op-summary-value">{{ r.valor_total|moeda_br }}</b>
-        {% if r.ultima_movimentacao %}<span>Última movimentação {{ r.ultima_movimentacao|date:"d/m/Y H:i" }}</span>{% endif %}
-      </a>
-    {% empty %}
-      <div class="op-summary-card"><strong>Nenhuma obra ativa encontrada.</strong></div>
-    {% endfor %}
-  </div>
+  </section>
 
   <form method="get" class="op-toolbar">
-    <div class="op-field"><label>Pesquisar item ou obra</label><input type="search" name="q" value="{{ q }}" placeholder="Ex.: cimento, QL 10..."></div>
-    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field">
+      <label>Pesquisar</label>
+      <input type="search" name="q" value="{{ q }}" placeholder="Material ou obra...">
+    </div>
+    <div class="op-field">
+      <label>Obra</label>
+      <select name="obra">
+        <option value="">Todas as obras</option>
+        {% for o in obras %}
+          <option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <button class="op-btn" type="submit">Filtrar</button>
   </form>
 
+  <section class="alm-section">
+    <div class="alm-section__head">
+      <div class="alm-section__title">
+        <h2>Estoque por obra</h2>
+        <span>Selecione uma obra para abrir o almoxarifado</span>
+      </div>
+      <span class="op-badge">{{ resumo_obras|length }} obra{{ resumo_obras|length|pluralize }}</span>
+    </div>
+
+    <div class="alm-summary-grid js-card-list" data-page-size="9">
+      {% for r in resumo_obras %}
+        <a class="alm-summary-card js-page-item" href="{% url 'obras:almoxarifado_obra' r.obra.pk %}">
+          <span class="alm-summary-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"></path><path d="M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path>
+            </svg>
+          </span>
+          <span class="alm-summary-card__body">
+            <strong class="alm-summary-card__name" title="{{ r.obra|nome_obra }}">{{ r.obra|nome_obra }}</strong>
+            <span class="alm-summary-card__details">
+              <span class="alm-summary-card__items">{{ r.itens }} item{{ r.itens|pluralize }} com saldo</span>
+              <b class="alm-summary-card__value">{{ r.valor_total|moeda_br }}</b>
+            </span>
+          </span>
+          <span class="alm-summary-card__arrow" aria-hidden="true">›</span>
+        </a>
+      {% empty %}
+        <div class="alm-summary-card alm-summary-card--empty">Nenhuma obra ativa encontrada.</div>
+      {% endfor %}
+    </div>
+    <div class="alm-pagination js-pagination" data-for="cards"></div>
+  </section>
+
   <section class="op-panel">
-    <div class="op-panel-head"><h2>Posição de estoque</h2><span class="op-badge">{{ total_itens }} item{{ total_itens|pluralize }}</span></div>
+    <div class="op-panel-head">
+      <h2>Posição de estoque</h2>
+      <span class="op-badge">{{ total_itens }} item{{ total_itens|pluralize }}</span>
+    </div>
     <div class="op-table-wrap">
-      <table class="op-table">
-        <thead><tr><th>Obra</th><th>Material</th><th>Un.</th><th class="op-num">Recebido</th><th class="op-num">Transf. entrada</th><th class="op-num">Saídas</th><th class="op-num">Transf. saída</th><th class="op-num">Saldo</th><th class="op-num">Custo médio</th><th class="op-num">Valor em estoque</th><th></th></tr></thead>
-        <tbody>
-        {% for linha in linhas %}
+      <table class="op-table js-stock-table" data-page-size="15">
+        <thead>
           <tr>
-            <td><strong>{{ linha.obra|nome_obra }}</strong><br><span class="op-muted">{{ linha.obra.codigo }}</span></td>
-            <td><strong>{{ linha.material_nome }}</strong>{% if linha.material_nome != linha.descricao %}<br><span class="op-muted">{{ linha.descricao }}</span>{% endif %}</td>
-            <td>{{ linha.unidade }}</td>
-            <td class="op-num">{{ linha.entradas_compras|numero_br }}</td>
-            <td class="op-num">{{ linha.transferencias_entrada|numero_br }}</td>
-            <td class="op-num op-negative">{{ linha.saidas|numero_br }}</td>
-            <td class="op-num op-negative">{{ linha.transferencias_saida|numero_br }}</td>
-            <td class="op-num op-positive">{{ linha.saldo|numero_br }}</td>
-            <td class="op-num">{{ linha.valor_unitario_medio|moeda_br }}</td>
-            <td class="op-num"><strong>{{ linha.valor_estoque|moeda_br }}</strong></td>
-            <td><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' linha.obra_id %}">Abrir</a></td>
+            <th>Obra</th><th>Material</th><th>Un.</th><th class="op-num">Recebido</th><th class="op-num">Transf. entrada</th><th class="op-num">Saídas</th><th class="op-num">Transf. saída</th><th class="op-num">Saldo</th><th class="op-num">Custo médio</th><th class="op-num">Valor em estoque</th><th></th>
           </tr>
-        {% empty %}<tr><td colspan="11" class="op-empty">Nenhum item com saldo encontrado para os filtros informados.</td></tr>{% endfor %}
+        </thead>
+        <tbody>
+          {% for linha in linhas %}
+            <tr class="js-page-item">
+              <td><strong>{{ linha.obra|nome_obra }}</strong></td>
+              <td><strong>{{ linha.material_nome }}</strong>{% if linha.material_nome != linha.descricao %}<br><span class="op-muted">{{ linha.descricao }}</span>{% endif %}</td>
+              <td>{{ linha.unidade }}</td>
+              <td class="op-num">{{ linha.entradas_compras|numero_br }}</td>
+              <td class="op-num">{{ linha.transferencias_entrada|numero_br }}</td>
+              <td class="op-num op-negative">{{ linha.saidas|numero_br }}</td>
+              <td class="op-num op-negative">{{ linha.transferencias_saida|numero_br }}</td>
+              <td class="op-num op-positive">{{ linha.saldo|numero_br }}</td>
+              <td class="op-num">{{ linha.valor_unitario_medio|moeda_br }}</td>
+              <td class="op-num"><strong>{{ linha.valor_estoque|moeda_br }}</strong></td>
+              <td><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' linha.obra_id %}">Abrir</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="11" class="op-empty">Nenhum item com saldo encontrado para os filtros informados.</td></tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
+    <div class="alm-table-pagination"><div class="alm-pagination js-pagination" data-for="stock"></div></div>
   </section>
 </div>
+
+<script>
+(function(){
+  function createPaginator(items, container, pageSize){
+    if(!container || !items.length || items.length <= pageSize){
+      if(container) container.hidden = true;
+      return;
+    }
+
+    let page = 1;
+    const totalPages = Math.ceil(items.length / pageSize);
+
+    const render = () => {
+      const start = (page - 1) * pageSize;
+      const end = start + pageSize;
+
+      items.forEach((el, i) => {
+        el.hidden = !(i >= start && i < end);
+      });
+
+      container.hidden = false;
+      container.innerHTML = `
+        <span>Exibindo ${start + 1}–${Math.min(end, items.length)} de ${items.length}</span>
+        <div class="alm-pagination__controls">
+          <button type="button" class="alm-page-btn js-prev" ${page === 1 ? 'disabled' : ''}>Anterior</button>
+          <button type="button" class="alm-page-btn is-active">${page} / ${totalPages}</button>
+          <button type="button" class="alm-page-btn js-next" ${page === totalPages ? 'disabled' : ''}>Próxima</button>
+        </div>`;
+
+      container.querySelector('.js-prev')?.addEventListener('click', () => {
+        if(page > 1){ page--; render(); }
+      });
+      container.querySelector('.js-next')?.addEventListener('click', () => {
+        if(page < totalPages){ page++; render(); }
+      });
+    };
+
+    render();
+  }
+
+  createPaginator(
+    [...document.querySelectorAll('.js-card-list .js-page-item')],
+    document.querySelector('.js-pagination[data-for="cards"]'),
+    9
+  );
+
+  createPaginator(
+    [...document.querySelectorAll('.js-stock-table tbody .js-page-item')],
+    document.querySelector('.js-pagination[data-for="stock"]'),
+    15
+  );
+})();
+</script>
 {% endblock %}

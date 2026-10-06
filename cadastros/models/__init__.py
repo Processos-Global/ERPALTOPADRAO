@@ -16,4 +16,7 @@ __all__ = [
     "CaracteristicaAmbiente", "CategoriaGrandeFornecedor",
     "OpcaoEspecificacaoGrandeFornecedor", "TipoAmbiente",
     "TipoItemGrandeFornecedor", "TipoPavimento",
+    "ChecklistProjetoGrupo", "ChecklistProjetoItem",
 ]
+
+from .checklist_projetos import ChecklistProjetoGrupo, ChecklistProjetoItem

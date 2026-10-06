@@ -10,3 +10,12 @@ from .ficha_tecnica import (
 )
 
 __all__ = [name for name in globals() if not name.startswith("_")]
+
+from .checklist_projetos import (
+    checklist_grupo_editar,
+    checklist_grupo_novo,
+    checklist_item_editar,
+    checklist_item_excluir,
+    checklist_item_novo,
+    checklist_projetos_lista,
+)

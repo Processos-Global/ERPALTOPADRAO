@@ -1,0 +1,162 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ tipo_titulo }} | SAARI ERP{% endblock %}
+{% block page_name %}Projetos{% endblock %}
+
+{% block extra_css %}
+<style>
+.proj-sheet-page{--p:#453330;--p2:#2d201c;--gold:#b9aa72;--paper:#fff;--soft:#f8f4ed;--soft2:#fcfaf6;--line:#ded7c8;--line2:#ece6dc;--muted:#85776f;color:var(--p);display:flex;flex-direction:column;gap:12px}
+.proj-sheet-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:17px 18px;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.proj-sheet-head__copy{min-width:0}.proj-sheet-eyebrow{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}.proj-sheet-head h1{margin:0;font-family:var(--font-serif,"Source Serif 4",serif);font-size:clamp(1.65rem,2.5vw,2.25rem);font-weight:400;line-height:1.05;color:var(--p)}.proj-sheet-head p{margin:5px 0 0;color:var(--muted);font-size:11.5px}
+.proj-sheet-filter{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.proj-sheet-field label{display:block;margin-bottom:5px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}.proj-sheet-control{min-width:280px;min-height:38px;border:1px solid #d9d0c2;border-radius:8px;background:#fff;padding:8px 10px;color:var(--p);font-size:12.5px;outline:none}.proj-sheet-control:focus{border-color:#77655c;box-shadow:0 0 0 3px rgba(119,101,92,.08)}
+.proj-sheet-tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--line);padding-left:2px}.proj-sheet-tab{position:relative;white-space:nowrap;padding:10px 15px 9px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:#f7f2ea;color:#6e5b52;text-decoration:none;font-size:11.5px;font-weight:750;margin-right:4px}.proj-sheet-tab:hover{background:#fff}.proj-sheet-tab.is-active{z-index:1;background:#fff;color:var(--p);border-color:#cfc4b3}.proj-sheet-tab.is-active::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#fff}
+.proj-sheet-shell{border:1px solid var(--line);border-radius:0 10px 10px 10px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(45,32,28,.03)}
+.proj-sheet-scroll{overflow:auto;max-height:calc(100vh - 275px);min-height:260px}
+.proj-sheet{width:100%;min-width:1040px;border-collapse:separate;border-spacing:0;table-layout:fixed}.proj-sheet th,.proj-sheet td{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2)}.proj-sheet th:last-child,.proj-sheet td:last-child{border-right:0}.proj-sheet tbody tr:last-child td{border-bottom:0}
+.proj-sheet th{position:sticky;top:0;z-index:5;padding:9px 10px;background:#f3eee5;color:#66534c;font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:.065em;white-space:nowrap}.proj-sheet td{padding:7px 8px;background:#fff;vertical-align:middle;font-size:12px;color:#453330}.proj-sheet tbody tr:hover td{background:#fdfbf7}
+.proj-sheet .col-etapa{width:74px}.proj-sheet .col-codigo{width:82px}.proj-sheet .col-entrega{width:38%}.proj-sheet .col-status{width:180px}.proj-sheet .col-observacao{width:auto}.proj-sheet .col-historico{width:92px;text-align:center}
+.proj-cell-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#66534c}.proj-cell-entrega{font-weight:650;line-height:1.35}
+.proj-status{width:100%;min-height:34px;border:1px solid #d9d0c2;border-radius:7px;padding:6px 8px;background:#fff;color:#453330;font-size:11.5px;outline:none}.proj-status:focus,.proj-observacao:focus{border-color:#77655c;box-shadow:0 0 0 2px rgba(119,101,92,.08)}
+.proj-status[data-status="RECEBIDO"]{background:#f2f6ed}.proj-status[data-status="PARCIALMENTE"]{background:#fbf6e7}.proj-status[data-status="NAO_SE_APLICA"]{background:#f1efed;color:#7c716b}.proj-status[data-status="NAO_RECEBIDO"]{background:#fbf1ef}
+.proj-observacao{display:block;width:100%;min-height:34px;max-height:100px;resize:vertical;border:1px solid #d9d0c2;border-radius:7px;padding:7px 8px;background:#fff;color:#453330;font:inherit;font-size:11.5px;line-height:1.35;outline:none;box-sizing:border-box}.proj-save-state{margin-top:3px;min-height:12px;color:#85776f;font-size:9.5px}
+.proj-history{border:0;background:transparent;color:#453330;font-size:11px;font-weight:800;cursor:pointer;padding:6px 4px}.proj-history:hover{text-decoration:underline;text-underline-offset:3px}
+.proj-empty{padding:36px 20px;text-align:center;color:#85776f;font-size:12.5px}
+.proj-dialog{width:min(760px,calc(100vw - 32px));max-height:min(78vh,720px);margin:auto;padding:0;border:1px solid #ded7c8;border-radius:14px;background:#fff;color:#453330;box-shadow:0 28px 90px rgba(35,26,23,.28);overflow:hidden}.proj-dialog::backdrop{background:rgba(35,26,23,.48);backdrop-filter:blur(2px)}.proj-dialog__head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 17px;border-bottom:1px solid #ded7c8;background:#faf7f1}.proj-dialog__head strong{display:block;font-size:13px}.proj-dialog__title{margin-top:3px;color:#85776f;font-size:11px}.proj-dialog__close{width:32px;height:32px;border:1px solid #d9d0c2;border-radius:8px;background:#fff;color:#453330;font-size:20px;line-height:1;cursor:pointer}.proj-dialog__body{max-height:calc(78vh - 64px);overflow:auto;padding:8px 17px 17px}.proj-history-entry{display:grid;grid-template-columns:110px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid #ece6dc}.proj-history-entry:last-child{border-bottom:0}.proj-history-entry__meta{font-size:10.5px;color:#85776f}.proj-history-entry__change{font-size:11.5px;line-height:1.45}.proj-history-entry__change strong{display:block;margin-bottom:3px;font-size:11px;color:#66534c;text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:900px){.proj-sheet-head{align-items:flex-start;flex-direction:column}.proj-sheet-filter,.proj-sheet-field,.proj-sheet-control{width:100%}.proj-sheet-control{min-width:0}.proj-sheet-scroll{max-height:none}.proj-dialog{width:calc(100vw - 20px)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="proj-sheet-page">
+  <section class="proj-sheet-head">
+    <div class="proj-sheet-head__copy">
+      <div class="proj-sheet-eyebrow">Projetos</div>
+      <h1>{{ tipo_titulo }}</h1>
+      <p>{% if obra %}Obra: <strong>{{ obra_label }}</strong>{% else %}Nenhuma obra ativa disponível.{% endif %}</p>
+    </div>
+    <form method="get" class="proj-sheet-filter">
+      <div class="proj-sheet-field">
+        <label for="obra-select">Obra</label>
+        <select id="obra-select" class="proj-sheet-control" name="obra" onchange="this.form.submit()">
+          {% for opt in obra_opcoes %}<option value="{{ opt.id }}" {% if obra and opt.id == obra.pk %}selected{% endif %}>{{ opt.label }}</option>{% endfor %}
+        </select>
+      </div>
+      {% if grupo %}<input type="hidden" name="grupo" value="{{ grupo.slug }}">{% endif %}
+    </form>
+  </section>
+
+  <nav class="proj-sheet-tabs" aria-label="Macro checklists">
+    {% for g in grupos %}
+      <a class="proj-sheet-tab {% if grupo and g.pk == grupo.pk %}is-active{% endif %}" href="?obra={{ obra.pk }}&grupo={{ g.slug }}">{{ g.nome }}</a>
+    {% empty %}
+      <span class="proj-sheet-tab is-active">Nenhum macro checklist cadastrado</span>
+    {% endfor %}
+  </nav>
+
+  <section class="proj-sheet-shell">
+    {% if linhas %}
+    <div class="proj-sheet-scroll">
+      <table class="proj-sheet">
+        <thead>
+          <tr>
+            <th class="col-etapa">Etapa</th>
+            <th class="col-codigo">Código</th>
+            <th class="col-entrega">Entrega / Atividade</th>
+            <th class="col-status">Status</th>
+            <th class="col-observacao">Observações</th>
+            <th class="col-historico">Histórico</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for linha in linhas %}
+          <tr data-item="{{ linha.item.pk }}">
+            <td class="proj-cell-code">{{ linha.item.etapa|default:"—" }}</td>
+            <td class="proj-cell-code">{{ linha.item.codigo|default:"—" }}</td>
+            <td class="proj-cell-entrega">{{ linha.item.entrega_atividade }}</td>
+            <td>
+              <select class="proj-status js-autosave" data-campo="status" data-status="{{ linha.status }}">
+                {% for valor,label in status_choices %}<option value="{{ valor }}" {% if linha.status == valor %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <div class="proj-save-state js-state"></div>
+            </td>
+            <td><textarea class="proj-observacao js-autosave" data-campo="observacao" rows="1" placeholder="Observação...">{{ linha.observacao }}</textarea></td>
+            <td style="text-align:center"><button class="proj-history js-history" type="button">Histórico</button></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="proj-empty">Ainda não há itens cadastrados para este checklist. Cadastre-os em <strong>Cadastros → Checklist de Projetos</strong>.</div>
+    {% endif %}
+  </section>
+</div>
+
+<dialog class="proj-dialog js-dialog">
+  <div class="proj-dialog__head">
+    <div><strong>Histórico da célula</strong><div class="proj-dialog__title js-dialog-title"></div></div>
+    <button type="button" class="proj-dialog__close js-dialog-close" aria-label="Fechar">×</button>
+  </div>
+  <div class="proj-dialog__body js-dialog-body"></div>
+</dialog>
+
+<script>
+(function(){
+ const saveUrl="{% url 'projetos:checklist_salvar_celula' %}";
+ const obraId="{{ obra.pk|default:'' }}";
+ const csrf=()=>document.cookie.split('; ').find(x=>x.startsWith('csrftoken='))?.split('=')[1]||'';
+ const escapeHtml=s=>String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+
+ async function salvar(el){
+   const row=el.closest('tr');
+   const state=row.querySelector('.js-state');
+   if(!obraId)return;
+   state.style.color='';
+   state.textContent='Salvando...';
+   try{
+     const r=await fetch(saveUrl,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf()},body:JSON.stringify({obra_id:obraId,item_id:row.dataset.item,campo:el.dataset.campo,valor:el.value})});
+     const d=await r.json();
+     if(!r.ok||!d.ok)throw new Error(d.erro||'Erro ao salvar');
+     if(el.dataset.campo==='status') el.dataset.status=el.value;
+     state.textContent='Salvo';
+     setTimeout(()=>{if(state.textContent==='Salvo')state.textContent=''},1400);
+   }catch(e){
+     state.textContent=e.message;
+     state.style.color='#9a463e';
+   }
+ }
+
+ document.querySelectorAll('select.js-autosave').forEach(el=>el.addEventListener('change',()=>salvar(el)));
+ document.querySelectorAll('textarea.js-autosave').forEach(el=>{
+   let timer;
+   el.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>salvar(el),700)});
+   el.addEventListener('blur',()=>{clearTimeout(timer);salvar(el)});
+ });
+
+ const dialog=document.querySelector('.js-dialog');
+ const body=document.querySelector('.js-dialog-body');
+ const title=document.querySelector('.js-dialog-title');
+
+ document.querySelectorAll('.js-history').forEach(btn=>btn.addEventListener('click',async()=>{
+   const row=btn.closest('tr');
+   title.textContent='';
+   body.innerHTML='<div class="proj-empty">Carregando...</div>';
+   if(typeof dialog.showModal==='function') dialog.showModal(); else dialog.setAttribute('open','');
+   try{
+     const url=`{% url 'projetos:checklist_historico' 999999 888888 %}`.replace('999999',obraId).replace('888888',row.dataset.item);
+     const r=await fetch(url);
+     const d=await r.json();
+     title.textContent=d.titulo||'';
+     if(!d.historico?.length){body.innerHTML='<div class="proj-empty">Ainda não existem alterações registradas.</div>';return;}
+     body.innerHTML=d.historico.map(h=>`<div class="proj-history-entry"><div class="proj-history-entry__meta">${escapeHtml(h.data)}<br>${escapeHtml(h.usuario)}</div><div class="proj-history-entry__change"><strong>${escapeHtml(h.campo)}</strong>${escapeHtml(h.anterior||'—')} → ${escapeHtml(h.novo||'—')}</div></div>`).join('');
+   }catch(e){body.innerHTML='<div class="proj-empty">Não foi possível carregar o histórico.</div>';}
+ }));
+
+ document.querySelector('.js-dialog-close')?.addEventListener('click',()=>dialog.close());
+ dialog?.addEventListener('click',e=>{
+   const rect=dialog.getBoundingClientRect();
+   const inside=e.clientX>=rect.left&&e.clientX<=rect.right&&e.clientY>=rect.top&&e.clientY<=rect.bottom;
+   if(!inside)dialog.close();
+ });
+})();
+</script>
+{% endblock %}
