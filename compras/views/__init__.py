@@ -42,7 +42,6 @@ from .acoes import (
     acao_cancelar_pedido,
 )
 
-__all__ = [name for name in globals() if not name.startswith("_")]
 
 from .downloads import (
     baixar_anexo_pedido,
@@ -72,3 +71,11 @@ from .grandes_fornecedores import (
 )
 
 from .grandes_fornecedores import selecionar_fornecedor_micro_item as gf_selecionar_fornecedor_micro_item
+
+from .contratos import (
+    contratos_dashboard, contrato_novo, contrato_detalhe, contrato_editar,
+    contrato_gerar_previa, contrato_enviar_aprovacao, contrato_decidir,
+    contrato_confirmar_assinatura, contrato_fornecedor_dados, contrato_baixar_docx, contrato_baixar_assinado,
+)
+
+__all__ = [name for name in globals() if not name.startswith("_")]

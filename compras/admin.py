@@ -7,7 +7,7 @@ MODELOS = [
     HistoricoNegociacaoItem, AdjudicacaoCompra, AlcadaAprovacaoCompra, AprovacaoCompra,
     ContratacaoCompra, PedidoCompra, PedidoCompraItem, ParcelaPrevistaPedido,
     HistoricoPrevisaoPedido, RecebimentoPedido, RecebimentoPedidoItem,
-    HistoricoProcessoCompra, SequenciaDocumentoCompra,
+    HistoricoProcessoCompra, SequenciaDocumentoCompra, ContratoCompra, HistoricoContratoCompra,
 ]
 for model in MODELOS:
     try:

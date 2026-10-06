@@ -34,3 +34,6 @@ tzdata==2026.3
 uritemplate==4.2.0
 urllib3==2.7.0
 wheel==0.47.0
+google-api-python-client>=2.149,<3
+google-auth>=2.35,<3
+num2words>=0.5.13,<1

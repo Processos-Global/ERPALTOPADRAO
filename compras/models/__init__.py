@@ -36,4 +36,6 @@ from .grande_fornecedor import (
 )
 from .historico_suprimentos import HistoricoCompraSuprimento, SuprimentoReferencia
 
+from .contrato import ContratoCompra, HistoricoContratoCompra
+
 __all__ = [name for name in globals() if not name.startswith("_")]

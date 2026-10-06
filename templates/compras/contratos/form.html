@@ -1,0 +1,42 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ titulo }} | SAARI ERP{% endblock %}
+{% block page_name %}Contratos{% endblock %}
+{% block extra_css %}
+<style>
+.cf{max-width:1250px;margin:auto}.cf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.cf-head h1{font-family:var(--font-serif);font-weight:400;color:var(--saari-brown);margin:0}.cf-card{background:#fff;border:1px solid #e2dbcf;border-radius:16px;margin-bottom:14px;padding:20px}.cf-card h2{margin:0 0 15px;font-size:1rem;color:#453330}.cf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.cf-field--full{grid-column:1/-1}.cf label{display:block;font-size:.8rem;font-weight:700;color:#67564e;margin-bottom:6px}.cf input,.cf select,.cf textarea{box-sizing:border-box;width:100%;border:1px solid #d9d0c2;border-radius:9px;padding:10px 11px;background:#fff;color:#2d201c}.cf textarea{resize:vertical}.cf .errorlist{color:#9a3f37;margin:5px 0 0;padding-left:18px}.cf-actions{display:flex;justify-content:flex-end;gap:10px}.btn{border:1px solid #d7cdbd;border-radius:10px;padding:10px 15px;background:#fff;color:#453330;text-decoration:none;font-weight:650;cursor:pointer}.btn--primary{background:var(--saari-brown);border-color:var(--saari-brown);color:#fff}@media(max-width:760px){.cf-grid{grid-template-columns:1fr}.cf-field--full{grid-column:auto}}
+</style>
+{% endblock %}
+{% block content %}
+<form class="cf" method="post">{% csrf_token %}<div class="cf-head"><h1>{{ titulo }}</h1><a class="btn" href="{% if contrato %}{% url 'compras:contrato_detalhe' contrato.pk %}{% else %}{% url 'compras:contratos_dashboard' %}{% endif %}">Cancelar</a></div>
+{% if form.non_field_errors %}<div class="cf-card">{{ form.non_field_errors }}</div>{% endif %}
+<div class="cf-card"><h2>Vínculo</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.processo %}{% include 'compras/contratos/_field.html' with field=form.obra %}{% include 'compras/contratos/_field.html' with field=form.fornecedor %}</div></div>
+<div class="cf-card"><h2>Contratado</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.contratado_razao_social %}{% include 'compras/contratos/_field.html' with field=form.contratado_cnpj %}{% include 'compras/contratos/_field.html' with field=form.contratado_endereco full=1 %}{% include 'compras/contratos/_field.html' with field=form.contratado_email %}</div></div>
+<div class="cf-card"><h2>Representante</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.representante_nome %}{% include 'compras/contratos/_field.html' with field=form.representante_cpf %}{% include 'compras/contratos/_field.html' with field=form.representante_nacionalidade %}{% include 'compras/contratos/_field.html' with field=form.representante_estado_civil %}{% include 'compras/contratos/_field.html' with field=form.representante_profissao %}{% include 'compras/contratos/_field.html' with field=form.representante_endereco full=1 %}</div></div>
+<div class="cf-card"><h2>Objeto e condições</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.modalidade_fornecimento full=1 %}{% include 'compras/contratos/_field.html' with field=form.objeto_contrato full=1 %}{% include 'compras/contratos/_field.html' with field=form.area_obra %}{% include 'compras/contratos/_field.html' with field=form.prazo_execucao %}{% include 'compras/contratos/_field.html' with field=form.valor_total %}{% include 'compras/contratos/_field.html' with field=form.multa_atraso %}{% include 'compras/contratos/_field.html' with field=form.descricao_ambientes_objeto full=1 %}{% include 'compras/contratos/_field.html' with field=form.escritorio_arquitetura %}{% include 'compras/contratos/_field.html' with field=form.responsavel_supervisao %}</div></div>
+<div class="cf-card"><h2>Pagamento</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.favorecido_nome %}{% include 'compras/contratos/_field.html' with field=form.favorecido_documento_tipo %}{% include 'compras/contratos/_field.html' with field=form.favorecido_documento %}{% include 'compras/contratos/_field.html' with field=form.banco %}{% include 'compras/contratos/_field.html' with field=form.agencia %}{% include 'compras/contratos/_field.html' with field=form.conta %}{% include 'compras/contratos/_field.html' with field=form.operacao %}{% include 'compras/contratos/_field.html' with field=form.pix %}</div></div>
+<div class="cf-card"><h2>Avalistas e assinatura</h2><div class="cf-grid">{% include 'compras/contratos/_field.html' with field=form.avalista_1_nome %}{% include 'compras/contratos/_field.html' with field=form.avalista_1_cpf %}{% include 'compras/contratos/_field.html' with field=form.avalista_2_nome %}{% include 'compras/contratos/_field.html' with field=form.avalista_2_cpf %}{% include 'compras/contratos/_field.html' with field=form.cidade_assinatura %}{% include 'compras/contratos/_field.html' with field=form.data_contrato %}{% include 'compras/contratos/_field.html' with field=form.observacoes_internas full=1 %}</div></div>
+<div class="cf-actions"><button class="btn btn--primary" type="submit">Salvar contrato</button></div></form>
+
+<script>
+(function(){
+  const fornecedor = document.getElementById('id_fornecedor');
+  if (!fornecedor) return;
+  const map = {
+    razao_social:'id_contratado_razao_social', cnpj:'id_contratado_cnpj', endereco:'id_contratado_endereco', email:'id_contratado_email',
+    favorecido_nome:'id_favorecido_nome', favorecido_documento:'id_favorecido_documento', banco:'id_banco', agencia:'id_agencia', conta:'id_conta', operacao:'id_operacao', pix:'id_pix'
+  };
+  fornecedor.addEventListener('change', async function(){
+    if (!this.value) return;
+    const base = "{% url 'compras:contrato_fornecedor_dados' 999999 %}".replace('999999', this.value);
+    try {
+      const response = await fetch(base, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+      if (!response.ok) return;
+      const data = await response.json();
+      Object.entries(map).forEach(([key,id]) => { const el=document.getElementById(id); if (el && data[key] && !el.value) el.value=data[key]; });
+      const tipo=document.getElementById('id_favorecido_documento_tipo');
+      if (tipo && data.cnpj && !tipo.value) tipo.value='CNPJ';
+    } catch(e) {}
+  });
+})();
+</script>
+{% endblock %}

@@ -13,3 +13,5 @@ from .fluxo import (
     PropostaCompletaForm,
     SolicitacaoCotacaoEnvioForm,
 )
+
+from .contrato import ContratoCompraForm, DecisaoContratoForm, ContratoAssinadoForm
