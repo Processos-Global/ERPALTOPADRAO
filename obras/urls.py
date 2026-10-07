@@ -5,6 +5,13 @@ app_name = "obras"
 urlpatterns = [
     path("", views.menu, name="menu"),
 
+    path("fvs/", views.fvs_lista, name="fvs_lista"),
+    path("fvs/nova/", views.fvs_nova, name="fvs_nova"),
+    path("fvs/ambientes/", views.fvs_ambientes, name="fvs_ambientes"),
+    path("fvs/<int:pk>/", views.fvs_detalhe, name="fvs_detalhe"),
+    path("fvs/<int:pk>/enviar-aprovacao/", views.fvs_enviar_aprovacao, name="fvs_enviar_aprovacao"),
+    path("fvs/<int:pk>/decidir/", views.fvs_decidir, name="fvs_decidir"),
+
     path("fichas/", views.fichas_tecnicas, name="fichas_tecnicas"),
     path("fichas/<int:obra_id>/", views.ficha_tecnica, name="ficha_tecnica"),
     path("fichas/<int:obra_id>/acao/", views.ficha_tecnica_acao, name="ficha_tecnica_acao"),

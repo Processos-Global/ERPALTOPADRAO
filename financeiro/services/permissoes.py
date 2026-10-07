@@ -2,8 +2,8 @@ from functools import wraps
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-
 from usuarios.models import ModuloSistema, NivelPermissao, PermissaoModulo
+
 try:
     from usuarios.models import PermissaoFinanceiro
 except ImportError:

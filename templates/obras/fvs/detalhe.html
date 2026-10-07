@@ -1,0 +1,594 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+
+{% block title %}{{ fvs.numero }} | FVS{% endblock %}
+{% block page_name %}Obras{% endblock %}
+
+{% block extra_css %}
+{% include "obras/_operacional_styles.html" %}
+<style>
+.fvs-page{
+  max-width:none;
+  width:100%;
+  margin:0 auto;
+}
+
+/* Cabeçalho e identificação */
+.fvs-head{
+  margin-bottom:10px;
+  padding:20px 23px;
+}
+.fvs-head h1{font-size:clamp(2rem,2.8vw,2.7rem)}
+.fvs-head p{font-size:12px}
+.fvs-head .op-btn{min-height:35px;padding:6px 11px;font-size:11px;border-radius:8px}
+.fvs-meta{
+  display:grid;
+  grid-template-columns:1.15fr .75fr .9fr 1.55fr;
+  gap:0;
+  margin-bottom:10px;
+  overflow:hidden;
+  border:1px solid var(--op-line);
+  border-radius:10px;
+  background:#fff;
+}
+.fvs-meta-card{
+  min-height:48px;
+  padding:8px 12px;
+  border:0;
+  border-right:1px solid var(--op-line-soft);
+  border-radius:0;
+  background:transparent;
+}
+.fvs-meta-card:last-child{border-right:0}
+.fvs-meta-card small{
+  display:block;
+  margin-bottom:2px;
+  color:var(--op-muted);
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.fvs-meta-card strong{
+  display:block;
+  color:var(--op-ink);
+  font-size:12.5px;
+  font-weight:750;
+  line-height:1.3;
+}
+
+.fvs-locked{
+  margin-bottom:8px;
+  padding:7px 11px;
+  border:1px solid #d8ccb0;
+  border-radius:10px;
+  background:#fcf8ee;
+  color:#5e4c45;
+  font-size:11.5px;
+}
+
+/* Planilha */
+.fvs-sheet-panel{
+  overflow:hidden;
+  margin-bottom:12px;
+  border:1px solid var(--op-line);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:var(--op-shadow);
+}
+.fvs-sheet-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--op-line);
+  background:linear-gradient(180deg,#fff,#fcf9f3);
+}
+.fvs-sheet-title h2{
+  margin:0;
+  color:var(--op-ink);
+  font-size:16px;
+}
+.fvs-sheet-title span{
+  color:var(--op-muted);
+  font-size:11px;
+}
+.fvs-sheet-wrap{
+  width:100%;
+  overflow:auto;
+}
+.fvs-sheet{
+  width:100%;
+  min-width:1480px;
+  border-collapse:separate;
+  border-spacing:0;
+  table-layout:fixed;
+  font-size:12px;
+}
+.fvs-sheet col.col-no{width:46px}
+.fvs-sheet col.col-item{width:210px}
+.fvs-sheet col.col-metodo{width:210px}
+.fvs-sheet col.col-criterio{width:470px}
+.fvs-sheet col.col-tolerancia{width:170px}
+.fvs-sheet col.col-result{width:46px}
+.fvs-sheet col.col-data{width:128px}
+.fvs-sheet col.col-obs{width:275px}
+
+.fvs-sheet thead th{
+  position:sticky;
+  top:0;
+  z-index:3;
+  padding:9px 8px;
+  border-right:1px solid #e7e0d5;
+  border-bottom:1px solid #d8cfbf;
+  background:#f5f0e7;
+  color:#62524b;
+  text-align:left;
+  font-size:10.5px;
+  font-weight:850;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  vertical-align:middle;
+}
+.fvs-sheet thead th:last-child{border-right:0}
+.fvs-sheet thead th.center{text-align:center}
+
+.fvs-sheet tbody td{
+  padding:7px 8px;
+  border-right:1px solid #eee8de;
+  border-bottom:1px solid #eee8de;
+  background:#fff;
+  color:var(--op-text);
+  vertical-align:top;
+  line-height:1.48;
+  font-size:11.5px;
+}
+.fvs-sheet tbody tr:nth-child(even) td{
+  background:#fdfbf7;
+}
+.fvs-sheet tbody tr:hover td{
+  background:#faf6ed;
+}
+.fvs-sheet tbody td:last-child{border-right:0}
+.fvs-sheet tbody tr:last-child td{border-bottom:0}
+
+.fvs-no{
+  text-align:center;
+  font-weight:850;
+  color:#6d5b53;
+}
+.fvs-item-name{
+  color:var(--op-ink);
+  font-weight:800;
+  font-size:12.2px;
+  line-height:1.4;
+}
+.fvs-tech-text{
+  color:#554942;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  font-size:11.8px;
+  line-height:1.5;
+}
+.fvs-tolerance{
+  color:#4f4039;
+  font-weight:750;
+  font-size:11.8px;
+  line-height:1.45;
+}
+
+/* C / NC / NA como células de planilha */
+.fvs-result-cell{
+  padding:0!important;
+  vertical-align:middle!important;
+  text-align:center;
+}
+.fvs-result-label{
+  display:flex;
+  width:100%;
+  min-height:52px;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:.12s ease;
+}
+.fvs-result-label input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.fvs-result-mark{
+  display:flex;
+  width:22px;
+  height:22px;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #cfc6b8;
+  border-radius:5px;
+  background:#fff;
+  color:transparent;
+  font-size:13px;
+  font-weight:900;
+  line-height:1;
+}
+.fvs-result-label:hover .fvs-result-mark{
+  border-color:#9e8c76;
+  background:#fbf7ee;
+}
+.fvs-result-label input:checked + .fvs-result-mark{
+  border-color:#6f5a4f;
+  background:#6f5a4f;
+  color:#fff;
+}
+.fvs-result-label.nc input:checked + .fvs-result-mark{
+  border-color:#a94f4f;
+  background:#a94f4f;
+}
+.fvs-result-label.na input:checked + .fvs-result-mark{
+  border-color:#8d857d;
+  background:#8d857d;
+}
+
+/* Campos dentro das células */
+.fvs-sheet input[type="date"]{
+  width:100%;
+  min-height:32px;
+  padding:6px 7px;
+  border:1px solid #d9d0c2;
+  border-radius:7px;
+  background:#fff;
+  color:var(--op-text);
+  font:inherit;
+  font-size:11.5px;
+  outline:none;
+}
+.fvs-sheet textarea{
+  display:block;
+  width:100%;
+  min-height:52px;
+  max-height:120px;
+  padding:7px 8px;
+  border:1px solid #d9d0c2;
+  border-radius:7px;
+  background:#fff;
+  color:var(--op-text);
+  font:inherit;
+  font-size:11.5px;
+  line-height:1.4;
+  resize:vertical;
+  outline:none;
+}
+.fvs-sheet input[type="date"]:focus,
+.fvs-sheet textarea:focus{
+  border-color:var(--op-gold);
+  box-shadow:0 0 0 2px rgba(185,170,114,.11);
+}
+.fvs-cell-error{
+  margin-top:4px;
+  color:#a23f3f;
+  font-size:9px;
+}
+
+/* Parecer e histórico */
+.fvs-bottom-grid{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:12px;
+  align-items:start;
+}
+.fvs-compact-panel{
+  margin-bottom:12px;
+}
+.fvs-compact-panel .op-panel-head{
+  padding:11px 14px;
+}
+.fvs-compact-panel .op-panel-head h2{
+  font-size:14px;
+}
+.fvs-compact-panel .op-panel-body{
+  padding:12px 13px;
+}
+.fvs-parecer-grid{
+  display:grid;
+  grid-template-columns:200px 1fr;
+  gap:10px;
+}
+.fvs-parecer-grid textarea{
+  min-height:64px!important;
+}
+.fvs-save-row{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--op-line-soft);
+}
+.fvs-history{
+  display:grid;
+  gap:0;
+}
+.fvs-history-row{
+  display:grid;
+  grid-template-columns:118px minmax(150px,.8fr) 1fr;
+  gap:8px;
+  padding:7px 0;
+  border-bottom:1px solid var(--op-line-soft);
+  font-size:10px;
+}
+.fvs-history-row:last-child{border-bottom:0}
+.decision{border-color:#d8ccb0}
+.decision textarea,.decision select{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--op-line);
+  border-radius:9px;
+  padding:9px;
+  margin-top:7px;
+}
+
+@media(max-width:1050px){
+  .fvs-meta{grid-template-columns:1fr 1fr}
+  .fvs-meta-card{border-bottom:1px solid var(--op-line-soft)}
+  .fvs-meta-card:nth-child(2){border-right:0}
+  .fvs-meta-card:nth-child(3),.fvs-meta-card:nth-child(4){border-bottom:0}
+  .fvs-bottom-grid{grid-template-columns:1fr}
+}
+@media(max-width:720px){
+  .fvs-meta{grid-template-columns:1fr 1fr}
+  .fvs-parecer-grid{grid-template-columns:1fr}
+  .fvs-history-row{grid-template-columns:1fr}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="op-page" style="max-width:none;padding-left:18px;padding-right:18px">
+  <div class="fvs-page">
+
+    <section class="op-head fvs-head">
+      <div class="op-head-copy">
+        <span class="op-eyebrow">Obras · FVS</span>
+        <h1>{{ fvs.numero }}</h1>
+        <p>{{ fvs.modelo_nome }} · {{ fvs.modelo_revisao }}</p>
+      </div>
+      <div class="op-head-actions">
+        <a class="op-btn secondary" href="{% url 'obras:fvs_lista' %}">Voltar</a>
+        {% if fvs.pode_editar %}
+        <form method="post" action="{% url 'obras:fvs_enviar_aprovacao' fvs.pk %}" onsubmit="return confirm('Enviar esta FVS para aprovação do gestor?');">
+          {% csrf_token %}
+          <button class="op-btn" type="submit">Enviar ao gestor</button>
+        </form>
+        {% endif %}
+      </div>
+    </section>
+
+    <div class="fvs-meta">
+      <div class="fvs-meta-card">
+        <small>Obra</small>
+        <strong>{{ fvs.obra|nome_obra }}</strong>
+      </div>
+      <div class="fvs-meta-card">
+        <small>Status</small>
+        <strong>{{ fvs.get_status_display }}</strong>
+      </div>
+      <div class="fvs-meta-card">
+        <small>Parecer</small>
+        <strong>{{ fvs.get_parecer_display|default:"Não definido" }}</strong>
+      </div>
+      <div class="fvs-meta-card">
+        <small>Ambientes</small>
+        <strong>{% for a in fvs.ambientes.all %}{% if not forloop.first %}, {% endif %}{{ a.pavimento.nome }} · {{ a.identificacao }}{% empty %}—{% endfor %}</strong>
+      </div>
+    </div>
+
+    {% if not fvs.pode_editar %}
+    <div class="fvs-locked">Esta ficha está bloqueada para edição enquanto aguarda o gestor ou após a aprovação.</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      {{ item_formset.management_form }}
+
+      <section class="fvs-sheet-panel">
+        <div class="fvs-sheet-title">
+          <div>
+            <h2>Itens de verificação</h2>
+          </div>
+        </div>
+
+        <div class="fvs-sheet-wrap">
+          <table class="fvs-sheet">
+            <colgroup>
+              <col class="col-no">
+              <col class="col-item">
+              <col class="col-metodo">
+              <col class="col-criterio">
+              <col class="col-tolerancia">
+              <col class="col-result">
+              <col class="col-result">
+              <col class="col-result">
+              <col class="col-data">
+              <col class="col-obs">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="center">Nº</th>
+                <th>Item de verificação</th>
+                <th>Método / instrumento</th>
+                <th>Critério de aceite</th>
+                <th>Tolerância</th>
+                <th class="center">C</th>
+                <th class="center">NC</th>
+                <th class="center">NA</th>
+                <th>Data</th>
+                <th>Observação / ação corretiva</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item_form in item_formset %}
+              <tr>
+                {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+
+                <td class="fvs-no">{{ item_form.instance.ordem }}</td>
+
+                <td>
+                  <div class="fvs-item-name">{{ item_form.instance.item_verificacao }}</div>
+                </td>
+
+                <td>
+                  <div class="fvs-tech-text">{{ item_form.instance.metodo_instrumento|default:"—" }}</div>
+                </td>
+
+                <td>
+                  <div class="fvs-tech-text">{{ item_form.instance.criterio_aceite|default:"—" }}</div>
+                </td>
+
+                <td>
+                  <div class="fvs-tolerance">{{ item_form.instance.tolerancia|default:"—" }}</div>
+                </td>
+
+                <td class="fvs-result-cell">
+                  <label class="fvs-result-label c" title="Conforme">
+                    <input
+                      type="radio"
+                      name="{{ item_form.resultado.html_name }}"
+                      value="C"
+                      {% if item_form.resultado.value == "C" %}checked{% endif %}
+                    >
+                    <span class="fvs-result-mark">✓</span>
+                  </label>
+                </td>
+
+                <td class="fvs-result-cell">
+                  <label class="fvs-result-label nc" title="Não conforme">
+                    <input
+                      type="radio"
+                      name="{{ item_form.resultado.html_name }}"
+                      value="NC"
+                      {% if item_form.resultado.value == "NC" %}checked{% endif %}
+                    >
+                    <span class="fvs-result-mark">✓</span>
+                  </label>
+                </td>
+
+                <td class="fvs-result-cell">
+                  <label class="fvs-result-label na" title="Não aplicável">
+                    <input
+                      type="radio"
+                      name="{{ item_form.resultado.html_name }}"
+                      value="NA"
+                      {% if item_form.resultado.value == "NA" %}checked{% endif %}
+                    >
+                    <span class="fvs-result-mark">✓</span>
+                  </label>
+                </td>
+
+                <td>
+                  {{ item_form.data_verificacao }}
+                  {% for error in item_form.data_verificacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
+                </td>
+
+                <td>
+                  {{ item_form.observacao }}
+                  {% for error in item_form.observacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
+                  {% for error in item_form.resultado.errors %}<div class="fvs-cell-error">Resultado: {{ error }}</div>{% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="fvs-bottom-grid">
+        <section class="op-panel fvs-compact-panel">
+          <div class="op-panel-head">
+            <div>
+              <h2>Parecer técnico</h2>
+              <span class="op-muted">Defina o parecer e registre a observação final antes do envio ao gestor.</span>
+            </div>
+          </div>
+          <div class="op-panel-body">
+            <div class="fvs-parecer-grid">
+              <div class="op-field">
+                <label>{{ resumo_form.parecer.label }}</label>
+                {{ resumo_form.parecer }}
+                {% for error in resumo_form.parecer.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
+              </div>
+              <div class="op-field">
+                <label>{{ resumo_form.observacao_final.label }}</label>
+                {{ resumo_form.observacao_final }}
+                {% for error in resumo_form.observacao_final.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
+              </div>
+            </div>
+            {% if fvs.pode_editar %}
+            <div class="fvs-save-row">
+              <button class="op-btn" type="submit" style="min-height:35px;padding:6px 11px;font-size:11px">Salvar preenchimento</button>
+            </div>
+            {% endif %}
+          </div>
+        </section>
+
+        <section class="op-panel fvs-compact-panel">
+          <div class="op-panel-head">
+            <div>
+              <h2>Histórico</h2>
+              <span class="op-muted">Rastreabilidade da ficha</span>
+            </div>
+          </div>
+          <div class="op-panel-body fvs-history">
+            {% for h in fvs.historico.all %}
+            <div class="fvs-history-row">
+              <strong>{{ h.criado_em|date:"d/m/Y H:i" }}</strong>
+              <span>{{ h.get_acao_display }} · {{ h.usuario.get_full_name|default:h.usuario.username }}</span>
+              <span>{{ h.observacao|default:"—" }}</span>
+            </div>
+            {% empty %}
+            <div class="op-muted">Sem histórico registrado.</div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+    </form>
+
+    {% if pode_aprovar and fvs.status == 'AGUARDANDO_APROVACAO' %}
+    <section class="op-panel decision fvs-compact-panel">
+      <div class="op-panel-head">
+        <div>
+          <h2>Decisão do gestor</h2>
+          <span class="op-muted">A aprovação encerra e bloqueia a ficha. A devolução reabre para correção.</span>
+        </div>
+      </div>
+      <div class="op-panel-body">
+        <form method="post" action="{% url 'obras:fvs_decidir' fvs.pk %}">
+          {% csrf_token %}
+          <div class="op-grid">
+            <div class="op-field c4">
+              <label>Decisão</label>
+              {{ decisao_form.decisao }}
+            </div>
+            <div class="op-field c8">
+              <label>Observação / motivo da devolução</label>
+              {{ decisao_form.observacao }}
+            </div>
+          </div>
+          <div class="op-modal-actions">
+            <button class="op-btn" type="submit" style="min-height:35px;padding:6px 11px;font-size:11px">Registrar decisão</button>
+          </div>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+{% if not fvs.pode_editar %}
+document.querySelectorAll('form input, form textarea, form select').forEach((el) => {
+  if (!el.closest('.decision')) el.disabled = true;
+});
+{% endif %}
+</script>
+{% endblock %}

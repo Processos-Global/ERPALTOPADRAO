@@ -14,3 +14,4 @@ __all__ = [
     "almoxarifado_dashboard", "almoxarifado_obra", "saida_estoque", "transferencia_estoque",
     "diario_lista", "diario_novo", "diario_editar",
 ]
+from .fvs import fvs_lista, fvs_nova, fvs_detalhe, fvs_enviar_aprovacao, fvs_decidir, fvs_ambientes

@@ -1,0 +1,56 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<style>
+.fvs-list-toolbar{display:grid;grid-template-columns:minmax(280px,1fr) 190px auto auto;gap:8px;align-items:end}.fvs-list-toolbar form{display:contents}.fvs-list-toolbar .cad-btn{min-height:38px;padding:8px 13px}.fvs-list-table .cad-table{min-width:980px}.fvs-list-table .cad-table th{font-size:10px}.fvs-list-table .cad-table td{font-size:12px}.fvs-model-name{font-size:12.5px;color:#453330}.fvs-rev{display:inline-flex;min-width:42px;justify-content:center;padding:4px 7px;border:1px solid #e5ded2;border-radius:7px;background:#faf7f1;font-size:10.5px;font-weight:800;color:#66534c}.fvs-count{font-weight:800;color:#453330}.fvs-actions .cad-btn{min-height:32px;padding:6px 10px;font-size:11.5px}.fvs-status-on{background:#f8f4e9;color:#5b4a43}.fvs-list-head{align-items:center}@media(max-width:800px){.fvs-list-toolbar{grid-template-columns:1fr}.fvs-list-toolbar form{display:contents}}
+</style>
+<div class="cad-head fvs-list-head">
+  <div class="cad-head__copy">
+    <div class="cad-eyebrow">Qualidade · Modelos</div>
+    <h1 class="cad-title">Modelos de FVS</h1>
+    <p class="cad-sub">Cadastre, revise e mantenha os modelos utilizados nas fichas de verificação de serviço.</p>
+  </div>
+  {% if cad_pode_criar %}
+  <div class="cad-head__actions"><a class="cad-btn" href="{% url 'cadastros:modelo_fvs_novo' %}">+ Novo modelo</a></div>
+  {% endif %}
+</div>
+
+<div class="cad-toolbar fvs-list-toolbar">
+  <form method="get">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por nome, disciplina ou revisão">
+    <select name="status">
+      <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos os status</option>
+      <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
+      <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativos</option>
+    </select>
+    <button class="cad-btn" type="submit">Filtrar</button>
+    <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:index' %}">Voltar</a>
+  </form>
+</div>
+
+<div class="cad-table-wrap fvs-list-table">
+  <table class="cad-table">
+    <thead>
+      <tr>
+        <th>Modelo</th><th>Disciplina</th><th>Revisão</th><th>Itens</th><th>Normas / referências</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for modelo in modelos %}
+      <tr>
+        <td><strong class="fvs-model-name">{{ modelo.nome }}</strong></td>
+        <td>{{ modelo.disciplina|default:"—" }}</td>
+        <td><span class="fvs-rev">{{ modelo.revisao }}</span></td>
+        <td><span class="fvs-count">{{ modelo.itens.count }}</span></td>
+        <td class="cad-muted">{{ modelo.normas_referencias|default:"—"|truncatechars:95 }}</td>
+        <td><span class="cad-badge {% if not modelo.ativo %}off{% else %}fvs-status-on{% endif %}">{% if modelo.ativo %}Ativo{% else %}Inativo{% endif %}</span></td>
+        <td>
+          <div class="cad-row-actions fvs-actions">
+            {% if cad_pode_editar %}<a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:modelo_fvs_editar' modelo.pk %}">Editar</a>{% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="cad-empty">Nenhum modelo de FVS encontrado.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

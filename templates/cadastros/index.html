@@ -41,5 +41,11 @@
     <h3>Checklists de Projetos</h3><p>Macro checklists, etapas, códigos e entregas utilizados no checklist de verificação de compatibilização.</p>
     <div class="cad-card__footer"><span>Acessar checklists</span><span>→</span></div>
   </a>
+
+  <a class="cad-card" href="{% url 'cadastros:modelos_fvs_lista' %}">
+    <div class="cad-card__top"><span class="cad-card__icon">FVS</span><strong class="cad-card__count">{{ total_modelos_fvs }}</strong></div>
+    <h3>Modelos de FVS</h3><p>Cadastre revisões, critérios, tolerâncias e itens das fichas de verificação de serviço.</p>
+    <div class="cad-card__footer"><span>Acessar modelos</span><span>→</span></div>
+  </a>
 </div>
 {% endblock %}

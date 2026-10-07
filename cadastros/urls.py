@@ -3,6 +3,9 @@ from cadastros import views
 
 app_name = "cadastros"
 urlpatterns = [
+    path("fvs/", views.modelos_fvs_lista, name="modelos_fvs_lista"),
+    path("fvs/novo/", views.modelo_fvs_novo, name="modelo_fvs_novo"),
+    path("fvs/<int:pk>/editar/", views.modelo_fvs_editar, name="modelo_fvs_editar"),
     path("checklists-projetos/", views.checklist_projetos_lista, name="checklist_projetos_lista"),
     path("checklists-projetos/grupo/novo/", views.checklist_grupo_novo, name="checklist_grupo_novo"),
     path("checklists-projetos/grupo/<int:pk>/editar/", views.checklist_grupo_editar, name="checklist_grupo_editar"),

@@ -1,0 +1,80 @@
+{% extends "layouts/base.html" %}
+{% block title %}Obras | Nova FVS{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}
+{% include "obras/_operacional_styles.html" %}
+<style>
+.fvs-create-page{max-width:1120px;margin:0 auto}.fvs-create-page .op-head{padding:20px 23px;margin-bottom:12px}.fvs-create-page .op-head h1{font-size:clamp(2rem,2.8vw,2.7rem)}.fvs-create-page .op-head p{font-size:12.5px}.fvs-create-page .op-btn{min-height:36px;padding:7px 12px;font-size:11.5px;border-radius:9px}.fvs-card{overflow:hidden;border:1px solid var(--op-line);border-radius:14px;background:#fff;box-shadow:var(--op-shadow)}.fvs-card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--op-line-soft);background:linear-gradient(180deg,#fff,#fcf9f3)}.fvs-card-head h2{margin:0;color:var(--op-ink);font-size:15px}.fvs-card-head p{margin:3px 0 0;color:var(--op-muted);font-size:10.5px}.fvs-card-body{padding:15px}.fvs-create-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px}.fvs-field label{display:block;margin-bottom:4px;color:var(--op-text);font-size:10.5px;font-weight:780}.fvs-field input,.fvs-field select,.fvs-field textarea{width:100%;box-sizing:border-box;min-height:38px;padding:8px 10px;border:1px solid var(--op-line-soft);border-radius:8px;background:#fff;color:var(--op-text);font:inherit;font-size:11.5px;outline:none}.fvs-field input:focus,.fvs-field select:focus,.fvs-field textarea:focus{border-color:var(--op-gold);box-shadow:0 0 0 2px rgba(185,170,114,.12)}.fvs-field-wide{grid-column:1/-1}.fvs-hidden-select{display:none!important}.fvs-help{margin-top:5px;color:var(--op-muted);font-size:10px}.fvs-error{margin-top:4px;color:#9e3f3f;font-size:10px}.fvs-amb-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:9px;border:1px solid var(--op-line-soft);border-radius:10px;background:#fcfaf6;min-height:80px}.fvs-amb-card{display:flex;gap:8px;align-items:flex-start;padding:9px 10px;border:1px solid var(--op-line);border-radius:9px;background:#fff;cursor:pointer;transition:.14s ease}.fvs-amb-card:hover{border-color:#d8ccb0}.fvs-amb-card input{width:14px;height:14px;min-height:auto;margin-top:2px;flex:0 0 auto}.fvs-amb-card small{display:block;margin-bottom:2px;color:var(--op-gold);font-size:8.5px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.fvs-amb-card strong{display:block;color:var(--op-ink);font-size:11px;line-height:1.25}.fvs-amb-card span{display:block;color:var(--op-muted);font-size:9.5px;line-height:1.35}.fvs-amb-card.is-selected{border-color:#b9aa72;background:#fffdf8;box-shadow:0 0 0 2px rgba(185,170,114,.11)}.fvs-empty-state{grid-column:1/-1;padding:15px;border:1px dashed #dacfb8;border-radius:9px;background:#fff;color:var(--op-muted);font-size:10.5px;text-align:center}.fvs-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--op-line-soft)}@media(max-width:900px){.fvs-create-grid,.fvs-amb-picker{grid-template-columns:1fr}.fvs-field-wide{grid-column:auto}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="op-page"><div class="fvs-create-page">
+  <section class="op-head">
+    <div class="op-head-copy"><span class="op-eyebrow">Obras · Qualidade</span><h1>Nova FVS</h1><p>Escolha a obra e o modelo. Os ambientes são carregados diretamente da ficha técnica da obra.</p></div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:fvs_lista' %}">Cancelar</a></div>
+  </section>
+
+  <form method="post" novalidate>{% csrf_token %}
+    <section class="fvs-card">
+      <div class="fvs-card-head"><div><h2>Dados da ficha</h2><p>Informações iniciais para criação da FVS.</p></div></div>
+      <div class="fvs-card-body">
+        <div class="fvs-create-grid">
+          <div class="fvs-field"><label>{{ form.obra.label }}</label>{{ form.obra }}{% for error in form.obra.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+          <div class="fvs-field"><label>{{ form.modelo_origem.label }}</label>{{ form.modelo_origem }}{% for error in form.modelo_origem.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+
+          <div class="fvs-field fvs-field-wide">
+            <label>{{ form.ambientes.label }}</label>{{ form.ambientes }}
+            <div id="ambientes-painel" class="fvs-amb-picker"></div>
+            <div class="fvs-help">Clique nos ambientes que fazem parte desta verificação.</div>
+            {% for error in form.ambientes.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="fvs-field"><label>{{ form.pavimento_etapa.label }}</label>{{ form.pavimento_etapa }}{% for error in form.pavimento_etapa.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+          <div class="fvs-field"><label>{{ form.projeto_versao.label }}</label>{{ form.projeto_versao }}{% for error in form.projeto_versao.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+          <div class="fvs-field"><label>{{ form.empresa_executora.label }}</label>{{ form.empresa_executora }}{% for error in form.empresa_executora.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+          <div class="fvs-field"><label>{{ form.responsavel_execucao.label }}</label>{{ form.responsavel_execucao }}{% for error in form.responsavel_execucao.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+          <div class="fvs-field fvs-field-wide"><label>{{ form.responsavel_inspecao.label }}</label>{{ form.responsavel_inspecao }}{% for error in form.responsavel_inspecao.errors %}<div class="fvs-error">{{ error }}</div>{% endfor %}</div>
+        </div>
+        <div class="fvs-actions"><a class="op-btn secondary" href="{% url 'obras:fvs_lista' %}">Cancelar</a><button class="op-btn" type="submit">Criar FVS</button></div>
+      </div>
+    </section>
+  </form>
+</div></div>
+<script>
+(() => {
+  const obra=document.getElementById('id_obra');
+  const select=document.getElementById('id_ambientes');
+  const painel=document.getElementById('ambientes-painel');
+  if(!obra||!select||!painel)return;
+
+  function selectedIds(){return new Set(Array.from(select.options).filter(o=>o.selected).map(o=>String(o.value)));}
+  function syncOption(id,checked){const option=Array.from(select.options).find(o=>String(o.value)===String(id));if(option)option.selected=checked;}
+  function renderEmpty(msg){painel.innerHTML=`<div class="fvs-empty-state">${msg}</div>`;}
+  function renderAmbientes(ambientes){
+    const chosen=selectedIds(); painel.innerHTML='';
+    if(!ambientes.length){renderEmpty('Nenhum ambiente ativo encontrado na ficha técnica desta obra.');return;}
+    ambientes.forEach(a=>{
+      const label=document.createElement('label');
+      label.className='fvs-amb-card'+(chosen.has(String(a.id))?' is-selected':'');
+      label.innerHTML=`<input type="checkbox" value="${a.id}" ${chosen.has(String(a.id))?'checked':''}><div><small>${a.pavimento}</small><strong>${a.nome}</strong><span>${a.tipo} · ${a.caracteristica}</span><span>${a.area} m²</span></div>`;
+      const checkbox=label.querySelector('input');
+      checkbox.addEventListener('change',()=>{syncOption(a.id,checkbox.checked);label.classList.toggle('is-selected',checkbox.checked);});
+      painel.appendChild(label);
+    });
+  }
+  async function carregar(){
+    const obraId=obra.value; const prev=selectedIds(); select.innerHTML='';
+    if(!obraId){renderEmpty('Selecione a obra para carregar os ambientes.');return;}
+    renderEmpty('Carregando ambientes...');
+    try{
+      const r=await fetch('{% url "obras:fvs_ambientes" %}?obra_id='+encodeURIComponent(obraId),{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
+      const data=await r.json();
+      (data.ambientes||[]).forEach(a=>{const o=document.createElement('option');o.value=a.id;o.textContent=a.label;o.selected=prev.has(String(a.id));select.appendChild(o);});
+      renderAmbientes(data.ambientes||[]);
+    }catch(e){renderEmpty('Não foi possível carregar os ambientes da obra.');console.error(e);}
+  }
+  obra.addEventListener('change',carregar);
+  if(obra.value)carregar();else renderEmpty('Selecione a obra para carregar os ambientes.');
+})();
+</script>
+{% endblock %}

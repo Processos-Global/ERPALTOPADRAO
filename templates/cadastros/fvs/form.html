@@ -1,0 +1,89 @@
+{% extends "cadastros/base_cadastros.html" %}
+{% block cadastros_content %}
+<style>
+.fvs-model-wrap{max-width:1320px}.fvs-model-card{background:#fff;border:1px solid #ded7c8;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 8px 22px rgba(45,32,28,.045)}.fvs-model-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;background:linear-gradient(180deg,#fff,#faf7f1);border-bottom:1px solid #e7e0d5}.fvs-model-head h2{margin:0;font:400 20px var(--font-serif);color:#453330}.fvs-model-head p{margin:3px 0 0;color:#85776f;font-size:11.5px}.fvs-model-body{padding:16px}.fvs-model-card .cad-form-grid{gap:11px 12px}.fvs-model-card .cad-field label{font-size:10.5px;margin-bottom:5px}.fvs-model-card .cad-field input:not([type=checkbox]),.fvs-model-card .cad-field select,.fvs-model-card .cad-field textarea{min-height:38px;padding:8px 10px;border-radius:8px;font-size:12px}.fvs-model-card .cad-field textarea{min-height:72px;resize:vertical}
+.fvs-items{display:grid;gap:10px}.fvs-item-row{position:relative;display:grid;grid-template-columns:72px 1.4fr 1fr 1fr;gap:10px 12px;padding:13px 14px 12px 17px;border:1px solid #e5ddd0;border-radius:11px;background:#fff}.fvs-item-row::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;border-radius:11px 0 0 11px;background:#b9aa72}.fvs-item-row label{display:block;margin-bottom:4px;color:#85776f;font-size:9.5px;font-weight:850;letter-spacing:.055em;text-transform:uppercase}.fvs-item-row input:not([type=checkbox]),.fvs-item-row textarea{width:100%;box-sizing:border-box;min-height:36px;padding:7px 9px;border:1px solid #d9d0c2;border-radius:7px;background:#fff;color:#453330;font:inherit;font-size:11.5px;outline:none}.fvs-item-row textarea{min-height:58px;resize:vertical}.fvs-item-row input:focus,.fvs-item-row textarea:focus{border-color:#77655c;box-shadow:0 0 0 2px rgba(119,101,92,.08)}.fvs-span-2{grid-column:span 2}.fvs-span-full{grid-column:1/-1}.fvs-checkline{display:flex;align-items:center;justify-content:space-between;gap:14px;grid-column:1/-1;padding-top:2px}.fvs-check{display:flex;align-items:center;gap:7px;color:#453330;font-size:11.5px;font-weight:700}.fvs-check input{width:15px;height:15px}.fvs-delete{display:flex;align-items:center;gap:6px;color:#9e3f3f;font-size:11px;font-weight:700;cursor:pointer}.fvs-error{margin-top:4px;color:#b42318;font-size:10.5px}.fvs-add{margin-top:11px;min-height:34px!important;padding:6px 11px!important;font-size:11.5px!important}.fvs-actions{position:sticky;bottom:0;z-index:4;margin-top:14px;padding:12px 0 2px;background:linear-gradient(180deg,rgba(247,245,241,0),#f7f5f1 28%)}.fvs-actions .cad-actions{margin:0;padding:12px 14px;border:1px solid #ded7c8;border-radius:12px;background:#fff;box-shadow:0 10px 30px rgba(45,32,28,.08)}.fvs-actions .cad-btn{min-height:36px;padding:7px 12px;font-size:11.5px}@media(max-width:1000px){.fvs-item-row{grid-template-columns:70px 1fr 1fr}.fvs-span-2{grid-column:span 2}}@media(max-width:720px){.fvs-item-row{grid-template-columns:1fr}.fvs-span-2,.fvs-span-full{grid-column:auto}.fvs-checkline{grid-column:auto;align-items:flex-start;flex-direction:column}}
+</style>
+<div class="fvs-model-wrap">
+  <div class="cad-head">
+    <div class="cad-head__copy">
+      <div class="cad-eyebrow">Qualidade · Cadastro</div>
+      <h1 class="cad-title">{% if modelo %}Editar modelo de FVS{% else %}Novo modelo de FVS{% endif %}</h1>
+      <p class="cad-sub">Configure o cabeçalho e os itens técnicos que serão copiados para cada ficha criada nas obras.</p>
+    </div>
+  </div>
+
+  <form method="post" novalidate>{% csrf_token %}
+    <section class="fvs-model-card">
+      <div class="fvs-model-head"><div><h2>Identificação do modelo</h2><p>Dados gerais, revisão e referências normativas.</p></div></div>
+      <div class="fvs-model-body cad-form-grid">
+        {% for field in form %}
+        <div class="cad-field {% if field.name == 'normas_referencias' or field.name == 'descricao' %}full{% endif %}">
+          <label>{{ field.label }}</label>{{ field }}
+          {% for error in field.errors %}<div class="cad-errors">{{ error }}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="fvs-model-card">
+      <div class="fvs-model-head"><div><h2>Itens de verificação</h2><p>Organize método, critério e tolerância da mesma forma que aparecerão na FVS.</p></div></div>
+      <div class="fvs-model-body">
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}<div class="fvs-error">{{ formset.non_form_errors }}</div>{% endif %}
+        <div id="fvs-items" class="fvs-items">
+          {% for item_form in formset %}
+          <div class="fvs-item-row">
+            {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
+            <div><label>Ordem</label>{{ item_form.ordem }}</div>
+            <div class="fvs-span-2"><label>Item de verificação</label>{{ item_form.item_verificacao }}</div>
+            <div><label>Método / instrumento</label>{{ item_form.metodo_instrumento }}</div>
+            <div class="fvs-span-2"><label>Critério de aceite</label>{{ item_form.criterio_aceite }}</div>
+            <div class="fvs-span-2"><label>Tolerância</label>{{ item_form.tolerancia }}</div>
+            <div class="fvs-checkline">
+              <div class="fvs-check">{{ item_form.obrigatorio }} <span>Item obrigatório</span></div>
+              {% if item_form.DELETE %}<label class="fvs-delete">{{ item_form.DELETE }} Excluir item</label>{% endif %}
+            </div>
+            {% for field in item_form %}{% for error in field.errors %}<div class="fvs-error fvs-span-full">{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        <button class="cad-btn cad-btn--secondary fvs-add" type="button" id="add-item">+ Adicionar item</button>
+      </div>
+    </section>
+
+    <div class="fvs-actions">
+      <div class="cad-actions">
+        <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:modelos_fvs_lista' %}">Cancelar</a>
+        <div class="cad-actions__main"><button class="cad-btn" type="submit">Salvar modelo</button></div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<template id="empty-form-template">
+  <div class="fvs-item-row">
+    {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+    <div><label>Ordem</label>{{ formset.empty_form.ordem }}</div>
+    <div class="fvs-span-2"><label>Item de verificação</label>{{ formset.empty_form.item_verificacao }}</div>
+    <div><label>Método / instrumento</label>{{ formset.empty_form.metodo_instrumento }}</div>
+    <div class="fvs-span-2"><label>Critério de aceite</label>{{ formset.empty_form.criterio_aceite }}</div>
+    <div class="fvs-span-2"><label>Tolerância</label>{{ formset.empty_form.tolerancia }}</div>
+    <div class="fvs-checkline">
+      <div class="fvs-check">{{ formset.empty_form.obrigatorio }} <span>Item obrigatório</span></div>
+      {% if formset.empty_form.DELETE %}<label class="fvs-delete">{{ formset.empty_form.DELETE }} Excluir item</label>{% endif %}
+    </div>
+  </div>
+</template>
+<script>
+(() => {
+  const btn=document.getElementById('add-item'), list=document.getElementById('fvs-items'), total=document.getElementById('id_itens-TOTAL_FORMS'), tpl=document.getElementById('empty-form-template');
+  if(!btn||!total||!tpl)return;
+  btn.addEventListener('click',()=>{
+    const n=parseInt(total.value,10);
+    list.insertAdjacentHTML('beforeend',tpl.innerHTML.replaceAll('__prefix__',n));
+    total.value=n+1;
+  });
+})();
+</script>
+{% endblock %}

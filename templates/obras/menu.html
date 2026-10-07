@@ -42,7 +42,7 @@
     <div class="dashboard-heading__content">
       <span class="dashboard-heading__eyebrow">Módulo</span>
       <h1>Gestão <em>de Obras</em></h1>
-      <p>Centralize a ficha técnica, o estoque físico de cada obra e os registros diários da execução em um único ambiente.</p>
+      <p>Centralize ficha técnica, estoque, diário de obra e controle de qualidade por FVS em um único ambiente.</p>
     </div>
   </section>
 
@@ -94,6 +94,22 @@
           <div class="module-card__content">
             <h3>Diário de Obra</h3>
             <p>Registre serviços executados, efetivo, clima, equipes e ocorrências do dia.</p>
+          </div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <a href="{% url 'obras:fvs_lista' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">04</span>
+          <span class="module-card__permission">Qualidade</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-check"></use></svg></span>
+          <div class="module-card__content">
+            <h3>FVS</h3>
+            <p>Preencha fichas por ambiente, acompanhe não conformidades e envie para aprovação do gestor.</p>
           </div>
         </div>
         <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>

@@ -20,3 +20,4 @@ __all__ = [
 ]
 
 from .checklist_projetos import ChecklistProjetoGrupo, ChecklistProjetoItem
+from .fvs import ModeloFVS, ItemModeloFVS
