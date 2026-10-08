@@ -5,6 +5,9 @@ app_name = "obras"
 urlpatterns = [
     path("", views.menu, name="menu"),
 
+    path("vistorias/", views.vistorias_lista, name="vistorias_lista"),
+    path("vistorias/<int:atividade_id>/alterar/", views.vistoria_alterar, name="vistoria_alterar"),
+
     path("fvs/", views.fvs_lista, name="fvs_lista"),
     path("fvs/nova/", views.fvs_nova, name="fvs_nova"),
     path("fvs/ambientes/", views.fvs_ambientes, name="fvs_ambientes"),

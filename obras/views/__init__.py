@@ -16,3 +16,5 @@ __all__ = [
     "diario_lista", "diario_novo", "diario_editar",
 ]
 from .fvs import fvs_lista, fvs_nova, fvs_detalhe, fvs_enviar_aprovacao, fvs_decidir, fvs_ambientes
+
+from .vistorias import vistorias_lista, vistoria_alterar

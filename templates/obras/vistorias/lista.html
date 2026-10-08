@@ -1,0 +1,143 @@
+{% extends "layouts/base.html" %}
+{% block title %}Vistorias | SAARI ERP{% endblock %}
+{% block page_name %}Obras{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.vs-page{width:100%;color:var(--text-primary,#40332e);font-size:13px}
+.vs-head{display:block;margin:0 0 18px;padding:23px 27px;background:#fff;border:1px solid #e3dcd2;border-radius:11px;box-shadow:0 1px 2px #00000005}.vs-head-kicker{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;color:#9a7b5f;margin:0 0 8px}.vs-head h1{font-family:var(--font-serif,Georgia,serif);font-size:38px;font-weight:600;line-height:1.05;letter-spacing:-.02em;color:#352823;margin:0}.vs-head p{font-size:14px;color:var(--text-muted,#7d7168);margin:8px 0 0;max-width:760px}
+.vs-tabs{display:flex;align-items:stretch;gap:5px;overflow-x:auto;padding:0 1px 0;border-bottom:1px solid #dcd4c9;scrollbar-width:thin}.vs-tab{flex:none;text-decoration:none!important;white-space:nowrap;padding:10px 15px 11px;font-size:12px;font-weight:600;background:transparent;border:1px solid transparent;border-bottom:2px solid transparent;border-radius:7px 7px 0 0;color:var(--text-muted,#776d65);transition:background .15s,color .15s}.vs-tab:hover{background:#eee8df;color:#453330}.vs-tab.active{background:#fff;border-color:#e2dbd2;border-bottom:2px solid #957455;color:#49372f}
+.vs-section{background:var(--surface,#fff);border:1px solid var(--border,#e3dcd2);border-radius:10px;margin-top:0;overflow:hidden}.vs-section-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 17px;border-bottom:1px solid #e9e3da;background:var(--surface,#fff)}.vs-section-label{display:flex;align-items:center;gap:10px}.vs-section-label h2{font-size:15px;line-height:1.3;margin:0;font-weight:650}.vs-section-mark{width:6px;height:24px;background:#9b8065;border-radius:8px}.vs-progress{display:flex;align-items:center;gap:12px;background:#fff!important;background-image:none!important;box-shadow:none!important}.vs-count{display:inline-block!important;font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-muted,#796c63);white-space:nowrap;background:#fff!important;background-color:#fff!important;background-image:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;text-shadow:none!important;outline:0!important;padding:0!important;user-select:none;-webkit-user-select:none}.vs-count::before{content:attr(data-display);display:inline-block;background:#fff!important;color:#796c63!important;box-shadow:none!important}.vs-count::selection,.vs-count *::selection{background:transparent!important;color:inherit!important}.vs-count::-moz-selection{background:transparent!important;color:inherit!important}.vs-bar{width:110px;height:5px;background:#e9e9e9;border-radius:10px;overflow:hidden}.vs-fill{height:100%;background:#b7b7b7;width:0;transition:width .2s}
+.vs-scroll{overflow-x:auto}.vs-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:690px}.vs-table th{padding:10px 15px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#74645a;background:#f7f4ef;border-bottom:1px solid #e8e1d8}.vs-table td{padding:10px 15px;font-size:12px;line-height:1.45;border-bottom:1px solid #eae5dd;vertical-align:middle;overflow-wrap:anywhere}.vs-table tbody tr:last-child td{border-bottom:0}.vs-table tbody tr:hover{background:#faf8f5}.vs-table th+th,.vs-table td+td{border-left:1px solid #eee8df}.vs-table .vs-local{width:23%;color:#74655c;font-size:11px;font-weight:550}.vs-table .vs-activity{font-weight:550}.vs-table .vs-state{width:238px}.vs-controls{display:inline-flex;gap:3px;border-radius:8px;padding:3px;background:#f3efe9;border:1px solid #e9e1d7}.vs-button{appearance:none;background:transparent;border:1px solid transparent;border-radius:5px;padding:6px 12px;color:#6e6057;white-space:nowrap;font-size:11px;font-weight:600;cursor:pointer;min-width:78px;transition:background .15s,color .15s,border-color .15s}.vs-button:hover:not(:disabled){background:#fff;color:#46372f}.vs-button[data-status="FEITO"].is-selected{background:#e4f0e6;border-color:#b8d3bc;color:#32663d}.vs-button[data-status="NAO_FEITO"].is-selected{background:#f8e8e1;border-color:#dfbdaf;color:#9b4a34}.vs-button:disabled{cursor:default}.vs-button.is-saving{opacity:.6;cursor:wait}.vs-meta{margin-top:5px;color:#95877d;font-size:10px;min-height:12px}.vs-meta.is-error{color:#b14232}.vs-empty{font-size:12px;color:#84766c;padding:22px}.vs-notice{position:fixed;bottom:22px;right:22px;z-index:9999;padding:10px 16px;border-radius:9px;background:#453330;color:#fff;box-shadow:0 10px 28px #0002;font-size:12px;max-width:min(400px,calc(100vw - 32px));display:none}.vs-notice.show{display:block}.vs-notice.error{background:#a74335}
+.vs-stage{margin-top:16px}.vs-stage-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.vs-stage-tab{appearance:none;padding:10px 17px;border:1px solid #ded6cb;background:#fff;border-radius:8px;color:#6f6055;font:inherit;font-weight:650;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}.vs-stage-tab:hover{background:#f8f6f2;color:#40312b}.vs-stage-tab.is-active{background:#f5f0e9;border-color:#ab8d71;color:#4c3529}.vs-section[hidden]{display:none!important}
+@media(max-width:780px){.vs-head{padding:18px 16px}.vs-stage-tab{flex:1;min-width:130px;text-align:center}.vs-head{margin-bottom:18px;padding-bottom:12px}.vs-head h1{font-size:29px}.vs-head p{font-size:13px}.vs-tab{padding:9px 11px}.vs-table th,.vs-table td{padding:9px 10px}.vs-table .vs-state{width:215px}.vs-bar{width:65px}.vs-button{padding:6px 9px;min-width:69px}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vs-page">
+  <header class="vs-head"><span class="vs-head-kicker">Módulo de Obras</span><h1>Vistorias</h1><p>Acompanhamento das atividades de pré e pós Habite-se por obra.</p></header>
+  {% if obras %}
+  <nav class="vs-tabs" aria-label="Selecionar obra">
+    {% for obra in obras %}<a href="?obra={{ obra.pk }}" class="vs-tab {% if obra.pk == obra_id %}active{% endif %}" {% if obra.pk == obra_id %}aria-current="page"{% endif %}>{{ obra.nome }}</a>{% endfor %}
+  </nav>
+  {% csrf_token %}
+  <div class="vs-stage">
+    <div class="vs-stage-tabs" role="tablist" aria-label="Tipo de vistoria">
+      {% for grupo in grupos %}
+      <button type="button" role="tab" class="vs-stage-tab {% if forloop.first %}is-active{% endif %}" id="vs-tab-{{ forloop.counter0 }}" data-vs-tab="{{ forloop.counter0 }}" aria-controls="vs-panel-{{ forloop.counter0 }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}">{{ grupo.titulo }}</button>
+      {% endfor %}
+    </div>
+  {% for grupo in grupos %}
+  <section class="vs-section" data-vs-section id="vs-panel-{{ forloop.counter0 }}" role="tabpanel" aria-labelledby="vs-tab-{{ forloop.counter0 }}" {% if not forloop.first %}hidden{% endif %}>
+    <div class="vs-section-head"><div class="vs-section-label"><span class="vs-section-mark" aria-hidden="true"></span><h2>{{ grupo.titulo }}</h2></div><div class="vs-progress"><span class="vs-count" data-total="{{ grupo.linhas|length }}" data-count data-display="{{ grupo.feitos }} / {{ grupo.linhas|length }}" aria-label="{{ grupo.feitos }} de {{ grupo.linhas|length }} atividades concluídas" title="Atividades concluídas / total"></span><div class="vs-bar" aria-hidden="true"><div class="vs-fill" data-progress></div></div></div></div>
+    {% if grupo.linhas %}
+    <div class="vs-scroll"><table class="vs-table"><thead><tr><th class="vs-local">Local</th><th>Atividade</th><th class="vs-state">Situação da vistoria</th></tr></thead><tbody>
+      {% for item in grupo.linhas %}
+      <tr data-vs-row data-url="{% url 'obras:vistoria_alterar' item.atividade_id %}">
+        <td class="vs-local">{{ item.local }}</td><td class="vs-activity">{{ item.nome }}</td>
+        <td class="vs-state"><div class="vs-controls" role="group" aria-label="Situação de {{ item.nome }}">
+          <button type="button" class="vs-button {% if item.status == 'FEITO' %}is-selected{% endif %}" data-status="FEITO" aria-pressed="{% if item.status == 'FEITO' %}true{% else %}false{% endif %}">Feito</button>
+          <button type="button" class="vs-button {% if item.status == 'NAO_FEITO' %}is-selected{% endif %}" data-status="NAO_FEITO" aria-pressed="{% if item.status == 'NAO_FEITO' %}true{% else %}false{% endif %}">Não feito</button>
+        </div><div class="vs-meta" aria-live="polite">{% if item.atualizado_em %}{{ item.atualizado_em|date:"d/m/Y H:i" }}{% endif %}</div></td>
+      </tr>
+      {% endfor %}
+    </tbody></table></div>
+    {% else %}<div class="vs-empty">Não há atividades desta etapa para a obra selecionada.</div>{% endif %}
+  </section>
+  {% endfor %}
+  </div>
+  {% else %}<section class="vs-section"><div class="vs-empty">Nenhuma obra possui atividades de pré ou pós Habite-se no cronograma ativo.</div></section>{% endif %}
+</div>
+<div class="vs-notice" id="vs-notice" role="status" aria-live="polite"></div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function(){
+  'use strict';
+  const csrf = document.querySelector('.vs-page input[name="csrfmiddlewaretoken"]')?.value;
+  const notice = document.getElementById('vs-notice');
+  let noticeTimer;
+  function notify(message, error){
+    if(!notice) return;
+    notice.textContent = message;
+    notice.classList.toggle('error', !!error);
+    notice.classList.add('show');
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => notice.classList.remove('show'), 3500);
+  }
+  function updateCount(section){
+    const counter=section.querySelector('[data-count]');
+    const total=Number(counter.dataset.total)||0;
+    const feitos=section.querySelectorAll('[data-status="FEITO"].is-selected').length;
+    counter.dataset.display=feitos+' / '+total;
+    counter.setAttribute('aria-label',feitos+' de '+total+' atividades concluídas');
+    const bar=section.querySelector('[data-progress]');
+    if(bar) bar.style.width=(total?feitos/total*100:0)+'%';
+  }
+  document.querySelectorAll('[data-vs-section]').forEach(updateCount);
+  const stageTabs = [...document.querySelectorAll('[data-vs-tab]')];
+  function selectStage(index, focus){
+    stageTabs.forEach(tab => {
+      const selected = tab.dataset.vsTab === String(index);
+      tab.classList.toggle('is-active', selected);
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById('vs-panel-' + tab.dataset.vsTab);
+      if(panel) panel.hidden = !selected;
+      if(selected && focus) tab.focus();
+    });
+  }
+  stageTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => selectStage(tab.dataset.vsTab, false));
+    tab.addEventListener('keydown', event => {
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? stageTabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + stageTabs.length) % stageTabs.length;
+      selectStage(stageTabs[next].dataset.vsTab, true);
+    });
+  });
+  document.querySelectorAll('[data-vs-row]').forEach(row=>{
+    const buttons=[...row.querySelectorAll('[data-status]')];
+    const meta=row.querySelector('.vs-meta');
+    buttons.forEach(button=>button.addEventListener('click',async()=>{
+      if(row.dataset.saving==='1' || button.classList.contains('is-selected')) return;
+      if(!csrf){notify('Token de segurança indisponível. Atualize a página.',true);return;}
+      row.dataset.saving='1';
+      buttons.forEach(b=>{b.disabled=true;b.classList.add('is-saving');});
+      const oldMeta=meta.textContent;
+      meta.textContent='Salvando...';meta.classList.remove('is-error');
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),15000);
+      try{
+        const payload=new URLSearchParams({status:button.dataset.status,csrfmiddlewaretoken:csrf});
+        const response=await fetch(row.dataset.url,{
+          method:'POST',body:payload,headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json','Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},credentials:'same-origin',signal:controller.signal
+        });
+        if(!response.ok) throw new Error('HTTP '+response.status);
+        const result=await response.json();
+        if(!result.ok || !['FEITO','NAO_FEITO'].includes(result.status)) throw new Error('Resposta inesperada');
+        buttons.forEach(b=>{
+          const selected=b.dataset.status===result.status;
+          b.classList.toggle('is-selected',selected);
+          b.setAttribute('aria-pressed',String(selected));
+        });
+        meta.textContent=result.atualizado_em||'Salvo';
+        updateCount(row.closest('[data-vs-section]'));
+      }catch(error){
+        meta.textContent=oldMeta;
+        meta.classList.add('is-error');
+        notify(error.name==='AbortError'?'O salvamento demorou demais. Confira a conexão e tente novamente.':'Não foi possível salvar. Tente novamente.',true);
+      }finally{
+        clearTimeout(timeout);
+        row.dataset.saving='0';
+        buttons.forEach(b=>{b.disabled=false;b.classList.remove('is-saving');});
+      }
+    }));
+  });
+})();
+</script>
+{% endblock %}
