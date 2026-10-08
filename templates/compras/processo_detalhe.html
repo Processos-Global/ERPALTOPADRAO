@@ -3403,6 +3403,13 @@
   const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v||0);
   const qty=v=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:4}).format(v||0);
 
+  // Permite preços unitários com até quatro casas decimais nos formulários
+  // de inclusão e edição de propostas, sem alterar o arredondamento do total em R$.
+  root.querySelectorAll('[data-proposta-form] [data-proposta-valor]').forEach(input=>{
+    if(input.type==='number') input.step='0.0001';
+    input.setAttribute('inputmode','decimal');
+  });
+
   root.querySelectorAll('[data-proposta-form]').forEach(form=>{
     const update=()=>{
       let subtotal=0;
