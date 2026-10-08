@@ -42,3 +42,12 @@ class DiarioObra(models.Model):
 
     def __str__(self):
         return f"{self.obra} · {self.data:%d/%m/%Y}"
+
+
+class FotoDiarioObra(models.Model):
+    diario = models.ForeignKey(DiarioObra, on_delete=models.CASCADE, related_name="fotos")
+    arquivo = models.ImageField(upload_to="obras/diarios/%Y/%m/")
+    enviado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]

@@ -27,6 +27,7 @@
         <div class="op-diario-text"><strong>Serviços executados</strong><br>{{ d.servicos_executados }}</div>
         {% if d.equipe_presente %}<div class="op-diario-text"><strong>Equipe / terceiros</strong><br>{{ d.equipe_presente }}</div>{% endif %}
         {% if d.ocorrencias %}<div class="op-diario-text"><strong>Ocorrências</strong><br>{{ d.ocorrencias }}</div>{% endif %}
+        {% if d.fotos.all %}<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">{% for foto in d.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Evidência fotográfica" loading="lazy" style="width:100px;height:78px;object-fit:cover;border-radius:7px"></a>{% endfor %}</div>{% endif %}
         <div class="op-muted" style="margin-top:12px">Registrado por {% if d.registrado_por %}{{ d.registrado_por.get_full_name|default:d.registrado_por.username }}{% else %}—{% endif %} · atualizado {{ d.atualizado_em|date:"d/m/Y H:i" }}</div>
       </article>
     {% empty %}<div class="op-empty">Nenhum diário encontrado para os filtros informados. Use “Novo diário” para criar o primeiro registro.</div>{% endfor %}

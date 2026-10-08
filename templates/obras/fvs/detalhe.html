@@ -100,7 +100,7 @@
 }
 .fvs-sheet{
   width:100%;
-  min-width:1480px;
+  min-width:1320px;
   border-collapse:separate;
   border-spacing:0;
   table-layout:fixed;
@@ -110,7 +110,6 @@
 .fvs-sheet col.col-item{width:210px}
 .fvs-sheet col.col-metodo{width:210px}
 .fvs-sheet col.col-criterio{width:470px}
-.fvs-sheet col.col-tolerancia{width:170px}
 .fvs-sheet col.col-result{width:46px}
 .fvs-sheet col.col-data{width:128px}
 .fvs-sheet col.col-obs{width:275px}
@@ -171,12 +170,26 @@
   font-size:11.8px;
   line-height:1.5;
 }
-.fvs-tolerance{
-  color:#4f4039;
-  font-weight:750;
-  font-size:11.8px;
-  line-height:1.45;
+/* Tolerância acessível por ícone junto ao critério técnico */
+.fvs-criterio-wrap{display:flex;align-items:flex-start;gap:8px}
+.fvs-criterio-wrap .fvs-tech-text{flex:1;min-width:0}
+.fvs-help-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:23px;height:23px;min-width:23px;padding:0;
+  border:1px solid #cbbda9;border-radius:50%;
+  background:#f8f3ea;color:#665047;
+  font-size:12px;font-weight:800;cursor:help;
 }
+.fvs-help-btn:hover,.fvs-help-btn:focus-visible{background:#6f5a4f;color:#fff;outline:2px solid #e0cfae;outline-offset:2px}
+.fvs-help-tooltip{
+  position:fixed;z-index:99999;display:none;max-width:min(320px,calc(100vw - 24px));
+  padding:11px 13px;border:1px solid #d5c8b5;border-radius:9px;
+  background:#fffdf9;color:#4f4039;box-shadow:0 9px 26px #20140e25;
+  font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;
+  pointer-events:none;
+}
+.fvs-help-tooltip.is-visible{display:block}
+.fvs-help-tooltip strong{display:block;margin-bottom:4px;color:#58453c}
 
 /* C / NC / NA como células de planilha */
 .fvs-result-cell{
@@ -386,7 +399,7 @@
     <div class="fvs-locked">Esta ficha está bloqueada para edição enquanto aguarda o gestor ou após a aprovação.</div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {{ item_formset.management_form }}
 
@@ -404,12 +417,12 @@
               <col class="col-item">
               <col class="col-metodo">
               <col class="col-criterio">
-              <col class="col-tolerancia">
               <col class="col-result">
               <col class="col-result">
               <col class="col-result">
               <col class="col-data">
               <col class="col-obs">
+              <col style="width:185px">
             </colgroup>
             <thead>
               <tr>
@@ -417,12 +430,12 @@
                 <th>Item de verificação</th>
                 <th>Método / instrumento</th>
                 <th>Critério de aceite</th>
-                <th>Tolerância</th>
                 <th class="center">C</th>
                 <th class="center">NC</th>
                 <th class="center">NA</th>
                 <th>Data</th>
                 <th>Observação / ação corretiva</th>
+                <th>Fotos / evidências</th>
               </tr>
             </thead>
             <tbody>
@@ -441,11 +454,13 @@
                 </td>
 
                 <td>
-                  <div class="fvs-tech-text">{{ item_form.instance.criterio_aceite|default:"—" }}</div>
-                </td>
-
-                <td>
-                  <div class="fvs-tolerance">{{ item_form.instance.tolerancia|default:"—" }}</div>
+                  <div class="fvs-criterio-wrap">
+                    <div class="fvs-tech-text">{{ item_form.instance.criterio_aceite|default:"—" }}</div>
+                    {% if item_form.instance.tolerancia %}
+                    <button type="button" class="fvs-help-btn" aria-label="Consultar tolerância do item {{ item_form.instance.ordem }}" aria-expanded="false" title="Consultar tolerância">?</button>
+                    <span class="fvs-tolerance-value" hidden>{{ item_form.instance.tolerancia }}</span>
+                    {% endif %}
+                  </div>
                 </td>
 
                 <td class="fvs-result-cell">
@@ -494,6 +509,7 @@
                   {% for error in item_form.observacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
                   {% for error in item_form.resultado.errors %}<div class="fvs-cell-error">Resultado: {{ error }}</div>{% endfor %}
                 </td>
+                <td><input type="file" name="fotos_item_{{ item_form.instance.pk }}" accept="image/*" multiple {% if not fvs.pode_editar %}disabled{% endif %} style="max-width:165px;font-size:11px">{% for foto in item_form.instance.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener" style="display:inline-block;margin:4px"><img src="{{ foto.arquivo.url }}" alt="Foto do item" loading="lazy" style="width:53px;height:45px;object-fit:cover;border-radius:5px"></a>{% endfor %}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -585,6 +601,49 @@
 </div>
 
 <script>
+(function(){
+  const tooltip = document.createElement('div');
+  tooltip.className = 'fvs-help-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  document.body.appendChild(tooltip);
+  let current = null;
+  let pinned = false;
+  function show(button, lock){
+    const value = button.parentElement.querySelector('.fvs-tolerance-value');
+    if (!value) return;
+    if (current && current !== button) current.setAttribute('aria-expanded','false');
+    current = button;
+    pinned = Boolean(lock);
+    tooltip.replaceChildren();
+    const heading = document.createElement('strong');
+    heading.textContent = 'Tolerância';
+    tooltip.append(heading, document.createTextNode(value.textContent.trim()));
+    tooltip.classList.add('is-visible');
+    button.setAttribute('aria-expanded','true');
+    const rect=button.getBoundingClientRect();
+    const tw=tooltip.offsetWidth, th=tooltip.offsetHeight;
+    const left=Math.max(12,Math.min(rect.left,window.innerWidth-tw-12));
+    const top=rect.bottom+8+th<=window.innerHeight ? rect.bottom+8 : Math.max(12,rect.top-th-8);
+    tooltip.style.left=left+'px';
+    tooltip.style.top=top+'px';
+  }
+  function hide(){
+    if(current) current.setAttribute('aria-expanded','false');
+    current=null;pinned=false;
+    tooltip.classList.remove('is-visible');
+  }
+  document.querySelectorAll('.fvs-help-btn').forEach(button=>{
+    button.addEventListener('mouseenter',()=>{if(!pinned)show(button,false)});
+    button.addEventListener('mouseleave',()=>{if(!pinned)hide()});
+    button.addEventListener('focus',()=>{if(!pinned)show(button,false)});
+    button.addEventListener('blur',()=>{if(!pinned)hide()});
+    button.addEventListener('click',e=>{e.stopPropagation();if(current===button&&pinned)hide();else show(button,true)});
+  });
+  document.addEventListener('click',e=>{if(pinned&&!e.target.closest('.fvs-help-btn'))hide()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
+  window.addEventListener('scroll',hide,true);
+  window.addEventListener('resize',hide);
+})();
 {% if not fvs.pode_editar %}
 document.querySelectorAll('form input, form textarea, form select').forEach((el) => {
   if (!el.closest('.decision')) el.disabled = true;

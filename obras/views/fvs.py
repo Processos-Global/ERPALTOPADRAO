@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import JsonResponse
@@ -8,7 +8,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from obras.forms import FVSDecisaoForm, FVSCriacaoForm, FVSItemFormSet, FVSResumoForm
-from obras.models import AmbienteFichaTecnica, FVS, FVSHistorico, FVSItem, Obra
+from obras.models import AmbienteFichaTecnica, FVS, FVSHistorico, FVSItem, Obra, FotoFVSItem
+from obras.services.fotos import validar_fotos
 from usuarios.decorators import modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
@@ -89,17 +90,27 @@ def fvs_detalhe(request, pk):
         FVS.objects.select_related("obra", "modelo_origem", "criado_por", "aprovado_por", "enviado_aprovacao_por").prefetch_related("ambientes", "historico__usuario"),
         pk=pk,
     )
-    itens_qs = fvs.itens.all()
+    itens_qs = fvs.itens.prefetch_related("fotos").all()
     resumo_form = FVSResumoForm(request.POST or None, instance=fvs, prefix="resumo")
     item_formset = FVSItemFormSet(request.POST or None, queryset=itens_qs, prefix="itens")
 
     if request.method == "POST":
         if not fvs.pode_editar:
             raise PermissionDenied("Esta FVS está bloqueada para edição.")
-        if resumo_form.is_valid() and item_formset.is_valid():
+        try:
+            fotos_por_item = {form.instance.pk: validar_fotos(request.FILES.getlist(f"fotos_item_{form.instance.pk}")) for form in item_formset.forms}
+            if sum(len(lista) for lista in fotos_por_item.values()) > 30:
+                raise ValidationError("Envie no máximo 30 fotos por salvamento da FVS.")
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+            fotos_por_item = None
+        if fotos_por_item is not None and resumo_form.is_valid() and item_formset.is_valid():
             with transaction.atomic():
                 resumo_form.save()
                 item_formset.save()
+                for item_id, fotos in fotos_por_item.items():
+                    for foto in fotos:
+                        FotoFVSItem.objects.create(item_id=item_id, arquivo=foto)
                 if fvs.status in {FVS.Status.RASCUNHO, FVS.Status.DEVOLVIDA}:
                     fvs.status = FVS.Status.EM_PREENCHIMENTO
                     fvs.save(update_fields=["status", "atualizado_em"])

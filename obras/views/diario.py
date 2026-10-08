@@ -2,12 +2,14 @@ from datetime import date
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from usuarios.decorators import modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
-from obras.models import DiarioObra, Obra
+from obras.models import DiarioObra, Obra, FotoDiarioObra
+from obras.services.fotos import validar_fotos
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
@@ -25,7 +27,7 @@ def diario_lista(request):
         diarios = diarios.filter(data__lte=data_fim)
 
     return render(request, "obras/diario_lista.html", {
-        "diarios": diarios.order_by("-data", "obra__nome", "-id")[:300],
+        "diarios": diarios.prefetch_related("fotos").order_by("-data", "obra__nome", "-id")[:300],
         "obras": Obra.objects.filter(ativa=True).order_by("nome"),
         "obra_filtro": int(obra_id) if obra_id and str(obra_id).isdigit() else None,
         "data_inicio": data_inicio or "",
@@ -66,6 +68,13 @@ def _diario_form(request, obra_inicial=None, diario=None):
         elif not servicos:
             messages.error(request, "Informe os serviços executados no dia.")
         else:
+            try:
+                fotos = validar_fotos(request.FILES.getlist("fotos"))
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+                fotos = None
+            if fotos is None:
+                return render(request, "obras/diario_form.html", {"obra": obra_selecionada, "obras": obras, "diario": diario, "climas": DiarioObra.Clima.choices, "hoje": date.today().isoformat()})
             obj = diario or DiarioObra(registrado_por=request.user)
             obj.obra = obra_selecionada
             obj.data = data_registro
@@ -78,6 +87,8 @@ def _diario_form(request, obra_inicial=None, diario=None):
             try:
                 with transaction.atomic():
                     obj.save()
+                    for foto in fotos:
+                        FotoDiarioObra.objects.create(diario=obj, arquivo=foto)
             except IntegrityError:
                 messages.error(request, "Já existe um diário registrado para esta obra nesta data.")
             else:

@@ -2,6 +2,7 @@ from datetime import datetime, time
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlencode
 import re
 import shutil
 import tempfile
@@ -40,12 +41,10 @@ def _intervalo_local(data_inicio, data_fim):
     return inicio, fim
 
 
-def _aprovacoes_disponiveis(data_inicio, data_fim, obra_id=None):
-    inicio, fim = _intervalo_local(data_inicio, data_fim)
+def _aprovacoes_disponiveis(data_inicio=None, data_fim=None, obra_ids=None):
     qs = (
         AprovacaoTituloFinanceiro.objects.filter(
             decisao=AprovacaoTituloFinanceiro.Decisao.APROVADO,
-            criado_em__range=(inicio, fim),
             titulo__status=TituloPagar.Status.APROVADO,
             item_relatorio_pagamento__isnull=True,
         )
@@ -61,29 +60,47 @@ def _aprovacoes_disponiveis(data_inicio, data_fim, obra_id=None):
         )
         .order_by("criado_em", "id")
     )
-    if obra_id:
-        qs = qs.filter(titulo__obra_id=obra_id)
+    if data_inicio:
+        inicio, _ = _intervalo_local(data_inicio, data_inicio)
+        qs = qs.filter(criado_em__gte=inicio)
+    if data_fim:
+        _, fim = _intervalo_local(data_fim, data_fim)
+        qs = qs.filter(criado_em__lte=fim)
+    if obra_ids:
+        qs = qs.filter(titulo__obra_id__in=obra_ids)
     return qs
 
 
 def _parse_obra_id(valor):
     try:
-        obra_id = int(valor)
-        return obra_id if obra_id > 0 else None
+        numero = int(valor)
+        return numero if numero > 0 else None
     except (TypeError, ValueError):
         return None
 
 
-def _url_relatorios(data_inicio=None, data_fim=None, obra_id=None):
-    url = reverse("financeiro:relatorios_pagamento")
+def _parse_obras(valores):
+    """IDs positivos e únicos vindos de checkboxes; ausência = todas as obras."""
+    ids = set()
+    for valor in valores:
+        try:
+            numero = int(valor)
+            if numero > 0:
+                ids.add(numero)
+        except (ValueError, TypeError):
+            continue
+    return sorted(ids)
+
+
+def _url_relatorios(data_inicio=None, data_fim=None, obra_ids=None):
     params = []
     if data_inicio:
-        params.append(f"inicio={data_inicio:%Y-%m-%d}")
+        params.append(("inicio", data_inicio.strftime("%Y-%m-%d")))
     if data_fim:
-        params.append(f"fim={data_fim:%Y-%m-%d}")
-    if obra_id:
-        params.append(f"obra={obra_id}")
-    return f"{url}?{'&'.join(params)}" if params else url
+        params.append(("fim", data_fim.strftime("%Y-%m-%d")))
+    params.extend(("obra", pk) for pk in (obra_ids or []))
+    base = reverse("financeiro:relatorios_pagamento")
+    return f"{base}?{urlencode(params)}" if params else base
 
 
 def _dados_item(aprovacao):
@@ -138,15 +155,14 @@ def _dados_item(aprovacao):
 @financeiro_acao_required("VISUALIZAR")
 def relatorios_pagamento(request):
     hoje = timezone.localdate()
-    inicio_padrao = hoje.replace(day=1)
-    data_inicio = _parse_data(request.GET.get("inicio")) or inicio_padrao
-    data_fim = _parse_data(request.GET.get("fim")) or hoje
-    obra_id = _parse_obra_id(request.GET.get("obra"))
+    data_inicio = _parse_data(request.GET.get("inicio"))
+    data_fim = _parse_data(request.GET.get("fim"))
+    obra_ids = _parse_obras(request.GET.getlist("obra"))
 
-    if data_fim < data_inicio:
+    if data_inicio and data_fim and data_fim < data_inicio:
         data_inicio, data_fim = data_fim, data_inicio
 
-    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_id=obra_id))
+    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids))
     itens_preview = [
         {"aprovacao": a, "titulo": a.titulo, "valor": a.titulo.saldo_aberto}
         for a in aprovacoes
@@ -159,38 +175,13 @@ def relatorios_pagamento(request):
         .distinct()
         .order_by("obra__nome")
     )
-    obra_selecionada = next((obra for obra in obras if obra["obra_id"] == obra_id), None)
+    obras_selecionadas = set(obra_ids)
 
     historico = list(
         RelatorioPagamento.objects.select_related("emitido_por")
         .annotate(total_itens=Sum("itens__valor"))
         .order_by("-emitido_em", "-id")[:100]
     )
-
-    # Monta, em uma única consulta, as obras existentes em cada relatório histórico.
-    # Isso permite reemitir um ZIP antigo por obra sem tornar os pagamentos pendentes novamente.
-    obras_por_relatorio = {}
-    relatorio_ids = [rel.id for rel in historico]
-    if relatorio_ids:
-        linhas_obras = (
-            ItemRelatorioPagamento.objects.filter(
-                relatorio_id__in=relatorio_ids,
-                titulo__obra__isnull=False,
-            )
-            .values("relatorio_id", "titulo__obra_id", "obra_nome")
-            .distinct()
-            .order_by("obra_nome")
-        )
-        for linha in linhas_obras:
-            obras_por_relatorio.setdefault(linha["relatorio_id"], []).append(
-                {
-                    "id": linha["titulo__obra_id"],
-                    "nome": linha["obra_nome"] or "Obra sem identificação",
-                }
-            )
-
-    for rel in historico:
-        rel.obras_disponiveis = obras_por_relatorio.get(rel.id, [])
 
     return render(
         request,
@@ -199,8 +190,8 @@ def relatorios_pagamento(request):
             "data_inicio": data_inicio,
             "data_fim": data_fim,
             "obras": obras,
-            "obra_id": obra_id,
-            "obra_selecionada": obra_selecionada,
+            "obra_ids": obra_ids,
+            "obras_selecionadas": obras_selecionadas,
             "itens_preview": itens_preview,
             "total_preview": total_preview,
             "historico": historico,
@@ -214,27 +205,26 @@ def relatorios_pagamento(request):
 def relatorio_pagamento_emitir(request):
     data_inicio = _parse_data(request.POST.get("inicio"))
     data_fim = _parse_data(request.POST.get("fim"))
-    obra_id = _parse_obra_id(request.POST.get("obra"))
+    obra_ids = _parse_obras(request.POST.getlist("obra"))
 
-    if not data_inicio or not data_fim:
-        messages.error(request, "Informe o início e o fim do período.")
-        return redirect(_url_relatorios(obra_id=obra_id))
-    if data_fim < data_inicio:
+    if data_inicio and data_fim and data_fim < data_inicio:
         messages.error(request, "A data final não pode ser anterior à data inicial.")
-        return redirect(_url_relatorios(data_inicio, data_fim, obra_id))
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
 
-    # Reconsulta dentro da transação para impedir emissão duplicada da mesma aprovação.
-    aprovacoes = list(
-        _aprovacoes_disponiveis(data_inicio, data_fim, obra_id=obra_id).select_for_update()
-    )
-    if not aprovacoes:
-        messages.warning(request, "O período pode ser usado novamente, mas não existem novas aprovações ainda não incluídas em relatório. Para rebaixar um relatório anterior, use o histórico de emissões.")
-        return redirect(_url_relatorios(data_inicio, data_fim, obra_id))
-
+    ids_raw = request.POST.getlist("aprovacoes")
+    ids = {int(v) for v in ids_raw if v.isdigit() and int(v) > 0}
+    if not ids or len(ids) != len(ids_raw):
+        messages.error(request, "Selecione ao menos um pagamento válido.")
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+    # Reconsulta aprovações e bloqueia os registros, evitando emissões repetidas.
+    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids).filter(pk__in=ids).select_for_update())
+    if len(aprovacoes) != len(ids):
+        messages.error(request, "Um ou mais pagamentos já foram emitidos ou não estão disponíveis. Atualize a seleção.")
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
     relatorio = RelatorioPagamento.objects.create(
         numero=gerar_numero("RELATORIO_PAGAMENTO"),
-        periodo_inicio=data_inicio,
-        periodo_fim=data_fim,
+        periodo_inicio=min(a.criado_em.date() for a in aprovacoes),
+        periodo_fim=max(a.criado_em.date() for a in aprovacoes),
         emitido_por=request.user,
     )
 

@@ -9,7 +9,7 @@
     <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Voltar aos registros</a></div>
   </section>
 
-  <form method="post" class="op-form">{% csrf_token %}<div class="op-grid">
+  <form method="post" enctype="multipart/form-data" class="op-form">{% csrf_token %}<div class="op-grid">
     <div class="op-field c6"><label>Obra *</label><select name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
     <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{% if diario %}{{ diario.data|date:'Y-m-d' }}{% else %}{{ hoje }}{% endif %}"></div>
     <div class="op-field c3"><label>Clima</label><select name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
@@ -18,6 +18,8 @@
     <div class="op-field c12"><label>Equipe / terceiros presentes</label><textarea name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Ocorrências / impedimentos</label><textarea name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Observações</label><textarea name="observacoes" placeholder="Outras informações relevantes do dia">{% if diario %}{{ diario.observacoes }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label>Fotos do dia (até 12 por envio, 10 MB cada)</label><input type="file" name="fotos" accept="image/*" multiple></div>
+    {% if diario and diario.fotos.all %}<div class="c12"><strong>Fotos já anexadas</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">{% for foto in diario.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Foto do diário" loading="lazy" style="height:110px;width:145px;object-fit:cover;border-radius:8px"></a>{% endfor %}</div></div>{% endif %}
     <div class="c12 op-actions"><button class="op-btn" type="submit">Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
   </div></form>
 </div>

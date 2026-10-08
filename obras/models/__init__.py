@@ -16,5 +16,5 @@ __all__ = [
 ]
 
 from .estoque import MovimentoEstoque
-from .diario import DiarioObra
-from .fvs import FVS, FVSItem, FVSHistorico
+from .diario import DiarioObra, FotoDiarioObra
+from .fvs import FVS, FVSItem, FVSHistorico, FotoFVSItem

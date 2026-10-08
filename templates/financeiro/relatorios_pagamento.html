@@ -1,120 +1,76 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
-{% block financeiro_title %}Relatórios de pagamento{% endblock %}
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras l10n %}
+{% block financeiro_title %}Pacotes de pagamento{% endblock %}
 {% block financeiro_content %}
 {% pode_financeiro "PAGAR" as pode_emitir_relatorio %}
-<header class="fin-head">
-  <div class="fin-head__copy">
-    <div class="fin-eyebrow">Fechamento para pagamento</div>
-    <h1 class="fin-title">Relatórios de pagamento</h1>
-    <div class="fin-sub">Selecione o período em que as contas foram aprovadas, confira o fechamento e emita o pacote para o setor financeiro, com a planilha e os documentos anexos.</div>
-  </div>
-</header>
-
-<section class="fin-section">
-  <div class="fin-section__head">
-    <div><h2>Novo relatório</h2><p>O período considera a data e hora em que cada conta recebeu a aprovação.</p></div>
-  </div>
-  <div class="fin-section__body">
-    <form method="get" class="fin-toolbar" style="margin:0">
-      <div class="fin-filter-field"><label>Início do período</label><input class="fin-control" type="date" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}" required></div>
-      <div class="fin-filter-field"><label>Fim do período</label><input class="fin-control" type="date" name="fim" value="{{ data_fim|date:'Y-m-d' }}" required></div>
-      <div class="fin-filter-field">
-        <label>Obra</label>
-        <select class="fin-control" name="obra">
-          <option value="">Todas as obras</option>
-          {% for obra in obras %}
-            <option value="{{ obra.obra_id }}" {% if obra_id == obra.obra_id %}selected{% endif %}>{{ obra.obra__nome }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Consultar período</button></div>
-    </form>
-  </div>
-</section>
-
-<div class="fin-kpis" style="margin-top:16px">
-  <div class="fin-kpi"><span>Pagamentos disponíveis</span><strong>{{ itens_preview|length }}</strong></div>
-  <div class="fin-kpi"><span>Valor do fechamento</span><strong>{{ total_preview|moeda_br }}</strong></div>
-  <div class="fin-kpi"><span>Período</span><strong style="font-size:17px">{{ data_inicio|date:"d/m/Y" }} — {{ data_fim|date:"d/m/Y" }}</strong></div>
-  <div class="fin-kpi"><span>Obra</span><strong style="font-size:17px">{% if obra_selecionada %}{{ obra_selecionada.obra__nome }}{% else %}Todas as obras{% endif %}</strong></div>
-</div>
-
-<section class="fin-section">
-  <div class="fin-section__head">
-    <div><h2>Prévia do fechamento</h2><p>Você pode usar o mesmo período quantas vezes precisar. Cada nova emissão inclui somente aprovações novas que ainda não foram enviadas em outro relatório.</p></div>
-    {% if itens_preview and pode_emitir_relatorio %}
-    <form method="post" action="{% url 'financeiro:relatorio_pagamento_emitir' %}" onsubmit="return confirm('Emitir este relatório? As aprovações deste fechamento ficarão registradas no histórico. Se houver novas aprovações nas mesmas datas, você poderá emitir outro relatório para o mesmo período.')">
-      {% csrf_token %}
-      <input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}">
-      <input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}">
-      {% if obra_id %}<input type="hidden" name="obra" value="{{ obra_id }}">{% endif %}
-      <button class="fin-btn fin-btn--primary" type="submit">Emitir relatório + anexos</button>
-    </form>
-    {% endif %}
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead><tr><th>Aprovação</th><th>Conta / beneficiário</th><th>Obra</th><th>Apropriação</th><th>Vencimento</th><th>Origem</th><th style="text-align:right">Valor</th></tr></thead>
-      <tbody>
-      {% for item in itens_preview %}
-        <tr>
-          <td class="fin-date">{{ item.aprovacao.criado_em|date:"d/m/Y H:i" }}<small class="fin-muted" style="display:block;margin-top:3px">{% if item.aprovacao.usuario %}{{ item.aprovacao.usuario.get_full_name|default:item.aprovacao.usuario.username }}{% else %}—{% endif %}</small></td>
-          <td class="fin-main-cell"><strong>{{ item.titulo.beneficiario_exibicao }}</strong><small>{{ item.titulo.numero }} · {{ item.titulo.descricao }}{% if item.titulo.parcela_total %} · Parcela {{ item.titulo.rotulo_parcela }}{% endif %}</small></td>
-          <td>{{ item.titulo.obra|default:"—" }}</td>
-          <td>{% if item.titulo.plano_financeiro %}{{ item.titulo.plano_financeiro.caminho }}{% else %}—{% endif %}</td>
-          <td>{{ item.titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>
-          <td>{{ item.titulo.get_origem_display }}</td>
-          <td class="fin-money">{{ item.valor|moeda_br }}</td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7" class="fin-empty"><strong>Nenhuma aprovação nova disponível</strong>Este período pode ser utilizado novamente, mas neste momento não existem novas contas aprovadas que ainda não tenham sido incluídas em relatório. Para baixar novamente um relatório já emitido, use o histórico abaixo.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="fin-section">
-  <div class="fin-section__head">
-    <div>
-      <h2>Histórico de emissões</h2>
-      <p>Você pode baixar novamente o pacote completo ou reemitir somente os pagamentos de uma obra que já fez parte daquele relatório.</p>
-    </div>
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead><tr><th>Relatório</th><th>Período das aprovações</th><th>Emissão</th><th>Emitido por</th><th>Itens</th><th style="text-align:right">Total</th><th style="min-width:330px">Downloads</th></tr></thead>
-      <tbody>
-      {% for rel in historico %}
-        <tr>
+<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Financeiro · Exportação</div><h1 class="fin-title">Gerar pacote de pagamentos</h1></div></header>
+<style>
+.saari-obras-filter{position:relative;min-width:280px;max-width:410px;flex:1}.saari-obras-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;text-align:left;gap:14px;min-height:42px}.saari-obras-panel{position:fixed;z-index:99999;width:390px;max-width:calc(100vw - 24px);background:var(--fin-surface,#fff);color:var(--fin-text,#292929);border:1px solid #d3c9bd;border-radius:10px;padding:10px;box-shadow:0 14px 30px rgba(0,0,0,.12);max-height:315px;overflow:auto}.saari-obra-option{display:flex;gap:9px;align-items:center;padding:8px;border-radius:6px;cursor:pointer;font-size:13px}.saari-obra-option[hidden]{display:none!important}.saari-obra-option:hover{background:rgba(120,100,75,.08)}.saari-obra-option input{accent-color:#85694d}.saari-obras-search{width:100%;box-sizing:border-box;margin:0 0 9px;padding:10px;border:1px solid #d3c9bd;border-radius:7px;background:inherit;color:inherit}.saari-obras-panel[hidden]{display:none!important}.saari-obras-tools{display:flex;gap:10px;justify-content:space-between;margin-bottom:7px}.saari-obras-tools button{background:none;border:0;text-decoration:underline;cursor:pointer;color:inherit}.saari-filter-caption{font-size:12px;opacity:.7;margin-top:5px}
+/* Filtro compacto, com campos alinhados e sem subtítulos redundantes */
+#filtro-obras-form.saari-filter-row{display:grid!important;grid-template-columns:minmax(250px,1.8fr) minmax(165px,1fr) minmax(165px,1fr) max-content;align-items:end;gap:12px!important;width:100%;box-sizing:border-box}
+#filtro-obras-form .fin-filter-field{min-width:0;max-width:none;width:100%;margin:0!important;display:flex;flex-direction:column;gap:6px}
+#filtro-obras-form .fin-filter-field>label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.035em;margin:0}
+#filtro-obras-form .fin-control{box-sizing:border-box;width:100%;height:44px;min-height:44px;margin:0}
+#filtro-obras-form .fin-toolbar__actions{margin:0!important;padding:0!important;display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+#filtro-obras-form .fin-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+.saari-filter-section .fin-section__body{padding:18px!important}
+.saari-obras-filter{max-width:none;min-width:0}
+.saari-obras-trigger{font-size:13px}
+.saari-table-grid{border-collapse:collapse!important;border-spacing:0;width:100%;table-layout:auto}
+.saari-table-grid th,.saari-table-grid td{border:1px solid #ded6cd!important;padding:12px 13px!important;vertical-align:middle}
+.saari-table-grid thead th{background:#f5f0e9!important;font-size:11px;letter-spacing:.025em;white-space:nowrap}
+.saari-table-grid tbody tr:nth-child(even){background:rgba(127,103,78,.035)}
+.saari-table-grid tbody tr:hover{background:rgba(127,103,78,.065)}
+.saari-table-grid th:first-child,.saari-table-grid td:first-child{text-align:center;width:48px}
+.saari-table-grid .fin-money{text-align:right;white-space:nowrap}
+.saari-history-grid th:first-child,.saari-history-grid td:first-child{text-align:left;width:auto}
+.saari-history-grid th:last-child,.saari-history-grid td:last-child{text-align:center;white-space:nowrap}
+.saari-history-grid{min-width:740px}
+.saari-table-grid .fin-main-cell small{display:block;line-height:1.55}
+@media(max-width:980px){#filtro-obras-form.saari-filter-row{grid-template-columns:minmax(220px,2fr) minmax(150px,1fr) minmax(150px,1fr)}#filtro-obras-form .fin-toolbar__actions{grid-column:1/-1;justify-content:flex-end}}
+@media(max-width:650px){#filtro-obras-form.saari-filter-row{grid-template-columns:1fr 1fr}#filtro-obras-form .saari-obras-filter{grid-column:1/-1}#filtro-obras-form .fin-toolbar__actions{grid-column:1/-1;justify-content:flex-start}.saari-filter-section .fin-section__body{padding:12px!important}}
+</style>
+<section class="fin-section saari-filter-section"><div class="fin-section__body"><form method="get" class="fin-toolbar saari-filter-row" id="filtro-obras-form">
+<div class="fin-filter-field saari-obras-filter"><label id="label-obras">Obras</label><button type="button" class="fin-control saari-obras-trigger" id="abrir-obras" aria-expanded="false" aria-controls="painel-obras"><span id="resumo-obras">Todas as obras</span><span aria-hidden="true">▾</span></button><div class="saari-obras-panel" id="painel-obras" hidden><input type="search" id="busca-obras" class="saari-obras-search" placeholder="Buscar obra..." aria-label="Buscar obra"><div class="saari-obras-tools"><button type="button" id="marcar-obras">Selecionar todas</button><button type="button" id="limpar-obras">Limpar seleção</button></div>{% for obra in obras %}<label class="saari-obra-option"><input type="checkbox" name="obra" value="{{ obra.obra_id }}" class="saari-obra-check" {% if obra.obra_id in obras_selecionadas %}checked{% endif %}><span>{{ obra.obra__nome }}</span></label>{% empty %}<p>Nenhuma obra cadastrada.</p>{% endfor %}</div></div>
+<div class="fin-filter-field"><label>De</label><input class="fin-control" type="date" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}"></div><div class="fin-filter-field"><label>Até</label><input class="fin-control" type="date" name="fim" value="{{ data_fim|date:'Y-m-d' }}"></div><div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Filtrar</button><a class="fin-btn" href="{% url 'financeiro:relatorios_pagamento' %}">Limpar</a></div></form></div></section>
+<section class="fin-section" style="margin-top:16px"><form method="post" action="{% url 'financeiro:relatorio_pagamento_emitir' %}" id="pacote-form">{% csrf_token %}{% for id in obra_ids %}<input type="hidden" name="obra" value="{{ id }}">{% endfor %}<input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}"><input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}"><div class="fin-section__head"><div><h2>Selecione os pagamentos</h2><p>{{ itens_preview|length }} pagamentos disponíveis</p></div>{% if pode_emitir_relatorio %}<button type="submit" class="fin-btn fin-btn--primary" id="btn-pacote" disabled>Gerar pacote ZIP</button>{% endif %}</div><div class="fin-section__body--flush fin-table-wrap"><table class="fin-table saari-table-grid"><thead><tr><th style="width:42px"><input type="checkbox" id="selecionar-todos" aria-label="Selecionar todos"></th><th>Pagamento / Beneficiário</th><th>Obra</th><th>Aprovação</th><th>Vencimento</th><th style="text-align:right">Valor</th></tr></thead><tbody>{% for item in itens_preview %}<tr><td><input class="pagamento-check" type="checkbox" name="aprovacoes" value="{{ item.aprovacao.pk }}" data-valor="{{ item.valor|unlocalize }}" {% if not pode_emitir_relatorio %}disabled{% endif %}></td><td class="fin-main-cell"><strong>{{ item.titulo.beneficiario_exibicao }}</strong><small>{{ item.titulo.numero }} · {{ item.titulo.descricao }}</small></td><td>{{ item.titulo.obra|default:"—" }}</td><td>{{ item.aprovacao.criado_em|date:'d/m/Y' }}</td><td>{{ item.titulo.vencimento|date:'d/m/Y'|default:'—' }}</td><td class="fin-money">{{ item.valor|moeda_br }}</td></tr>{% empty %}<tr><td colspan="6" class="fin-empty">Nenhum pagamento aprovado disponível para esses filtros.</td></tr>{% endfor %}</tbody></table></div><div class="fin-section__body" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><strong id="qtd-selecionados">0 selecionados</strong><strong id="total-selecionado">R$ 0,00</strong></div></form></section>
+<section class="fin-section" style="margin-top:16px">
+  <details id="historico-emissoes">
+    <summary class="fin-section__head" style="cursor:pointer;list-style-position:inside;padding:18px 20px">
+      <strong>Pacotes emitidos anteriormente</strong> <span style="font-weight:400;opacity:.7">· {{ historico|length }} registros · clique para consultar e baixar novamente</span>
+    </summary>
+    <div class="fin-section__body--flush fin-table-wrap">
+      <table class="fin-table saari-table-grid saari-history-grid"><thead><tr><th>Pacote</th><th>Emitido em</th><th>Responsável</th><th>Pagamentos</th><th style="text-align:right">Valor total</th><th>Ação</th></tr></thead>
+        <tbody>{% for rel in historico %}<tr>
           <td><strong>{{ rel.numero }}</strong></td>
-          <td>{{ rel.periodo_inicio|date:"d/m/Y" }} — {{ rel.periodo_fim|date:"d/m/Y" }}</td>
           <td>{{ rel.emitido_em|date:"d/m/Y H:i" }}</td>
           <td>{% if rel.emitido_por %}{{ rel.emitido_por.get_full_name|default:rel.emitido_por.username }}{% else %}—{% endif %}</td>
-          <td>{{ rel.quantidade_itens }}</td>
-          <td class="fin-money">{{ rel.valor_total|moeda_br }}</td>
-          <td>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" download>ZIP completo</a>
-              {% if rel.obras_disponiveis %}
-                <form method="get" action="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}" style="display:flex;gap:8px;align-items:center;margin:0">
-                  <select class="fin-control" name="obra" required style="min-width:180px;padding-top:7px;padding-bottom:7px">
-                    <option value="">Selecionar obra</option>
-                    {% for obra in rel.obras_disponiveis %}
-                      <option value="{{ obra.id }}">{{ obra.nome }}</option>
-                    {% endfor %}
-                  </select>
-                  <button class="fin-btn fin-btn--sm" type="submit">Baixar por obra</button>
-                </form>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-      {% empty %}
-        <tr><td colspan="7" class="fin-empty"><strong>Nenhum relatório emitido</strong>O histórico será criado a partir da primeira emissão.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+          <td>{{ rel.quantidade_itens }}</td><td class="fin-money">{{ rel.valor_total|moeda_br }}</td>
+          <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:relatorio_pagamento_excel' rel.pk %}">Baixar ZIP</a></td>
+        </tr>{% empty %}<tr><td colspan="6" class="fin-empty">Nenhum pacote emitido até o momento.</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </details>
 </section>
+<script>
+(function(){
+ const checks=[...document.querySelectorAll('.saari-obra-check')], trigger=document.getElementById('abrir-obras'), panel=document.getElementById('painel-obras'), summary=document.getElementById('resumo-obras'), search=document.getElementById('busca-obras');
+ // O painel vai para o body para não ser cortado pelo overflow dos cards do financeiro.
+ document.body.appendChild(panel);
+ const reposition=()=>{if(panel.hidden)return;const r=trigger.getBoundingClientRect();const w=Math.min(Math.max(r.width,340),390,innerWidth-24);panel.style.width=w+'px';panel.style.left=Math.max(12,Math.min(r.left,innerWidth-w-12))+'px';const below=innerHeight-r.bottom-12;const above=r.top-12;const openUp=below<210&&above>below;panel.style.maxHeight=Math.max(130,Math.min(315,openUp?above:below))+'px';panel.style.top=openUp?Math.max(8,r.top-Math.min(315,above)-5)+'px':r.bottom+5+'px';};
+ const close=()=>{panel.hidden=true;trigger.setAttribute('aria-expanded','false');};
+ const refresh=()=>{const selected=checks.filter(e=>e.checked);summary.textContent=!selected.length?'Todas as obras':selected.length===1?selected[0].nextElementSibling.textContent:selected.length+' obras selecionadas';};
+ trigger.addEventListener('click',()=>{if(!panel.hidden){close();return;}panel.hidden=false;trigger.setAttribute('aria-expanded','true');reposition();search.focus();});
+ document.addEventListener('pointerdown',e=>{if(!panel.contains(e.target)&&!trigger.contains(e.target))close();});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+ window.addEventListener('resize',reposition);
+ window.addEventListener('scroll',reposition,true);
+ search.addEventListener('input',()=>{const q=search.value.trim().toLocaleLowerCase('pt-BR');checks.forEach(e=>{e.closest('label').hidden=!e.nextElementSibling.textContent.toLocaleLowerCase('pt-BR').includes(q);});});
+ checks.forEach(e=>e.addEventListener('change',refresh));
+ document.getElementById('marcar-obras').addEventListener('click',()=>{checks.forEach(e=>e.checked=true);refresh();});
+ document.getElementById('limpar-obras').addEventListener('click',()=>{checks.forEach(e=>e.checked=false);refresh();});refresh();
+ const boxes=[...document.querySelectorAll('.pagamento-check')], all=document.getElementById('selecionar-todos'),qtd=document.getElementById('qtd-selecionados'),total=document.getElementById('total-selecionado'),botao=document.getElementById('btn-pacote'),form=document.getElementById('pacote-form');
+ function calc(){const marcados=boxes.filter(b=>b.checked&&!b.disabled),soma=marcados.reduce((n,b)=>n+Number(b.dataset.valor),0);qtd.textContent=marcados.length+' selecionado(s)';total.textContent=soma.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});all.checked=boxes.length>0&&marcados.length===boxes.filter(b=>!b.disabled).length;all.indeterminate=marcados.length>0&&!all.checked;if(botao)botao.disabled=!marcados.length;}
+ all.addEventListener('change',()=>{boxes.forEach(b=>{if(!b.disabled)b.checked=all.checked});calc()});boxes.forEach(b=>b.addEventListener('change',calc));form.addEventListener('submit',e=>{if(!boxes.some(b=>b.checked&&!b.disabled)||!confirm('Gerar o pacote apenas com os pagamentos selecionados?'))e.preventDefault()});calc();
+})();
+</script>
 {% endblock %}

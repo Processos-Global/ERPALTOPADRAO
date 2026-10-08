@@ -112,3 +112,12 @@ class FVSHistorico(models.Model):
         ordering = ["-criado_em"]
         verbose_name = "Histórico da FVS"
         verbose_name_plural = "Históricos da FVS"
+
+
+class FotoFVSItem(models.Model):
+    item = models.ForeignKey(FVSItem, on_delete=models.CASCADE, related_name="fotos")
+    arquivo = models.ImageField(upload_to="obras/fvs/%Y/%m/")
+    enviado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
