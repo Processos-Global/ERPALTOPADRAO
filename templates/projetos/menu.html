@@ -1,23 +1,125 @@
 {% extends "layouts/base.html" %}
+{% load static %}
+
 {% block title %}Projetos | SAARI ERP{% endblock %}
 {% block page_name %}Projetos{% endblock %}
+
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 <style>
-.projetos-menu{--pm-primary:#b9aa72;--pm-dark:#453330;--pm-deep:#2d201c;--pm-soft:#f5f1e9;--pm-border:#ded7c8;--pm-muted:#85776f;display:flex;flex-direction:column;gap:18px;font-family:var(--font-sans)}
-.projetos-menu__hero{position:relative;overflow:hidden;padding:24px 28px;border:1px solid var(--pm-border);border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 62%,#f3ecdc 100%);box-shadow:0 14px 38px rgba(69,51,48,.07)}.projetos-menu__hero:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--pm-primary),var(--pm-deep))}
-.projetos-menu__hero h1{margin:0;color:var(--pm-dark);font-family:var(--font-serif);font-size:clamp(2rem,3vw,3rem);font-weight:400;letter-spacing:-.035em}.projetos-menu__hero p{margin:8px 0 0;color:var(--pm-muted);font-size:13px;line-height:1.55}
-.projetos-menu__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.projetos-menu__card{display:flex;min-height:190px;flex-direction:column;justify-content:space-between;padding:19px;border:1px solid var(--pm-border);border-radius:14px;background:#fff;color:inherit;text-decoration:none;transition:.16s}.projetos-menu__card:hover{transform:translateY(-2px);border-color:var(--pm-dark);background:var(--pm-dark);box-shadow:0 12px 28px rgba(45,32,28,.12)}
-.projetos-menu__icon{display:inline-flex;width:42px;height:42px;align-items:center;justify-content:center;border:1px solid #eee8d6;border-radius:10px;background:#fffdfa;color:var(--pm-dark)}.projetos-menu__card h3{margin:18px 0 6px;color:var(--pm-dark);font-family:var(--font-serif);font-size:1.2rem;font-weight:500}.projetos-menu__card p{margin:0;color:var(--pm-muted);font-size:.76rem;line-height:1.5}.projetos-menu__footer{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;min-height:36px;margin-top:18px;padding:7px 11px;border:1px solid var(--pm-dark);border-radius:8px;background:var(--pm-dark);color:#fff;font-size:.72rem;font-weight:800}.projetos-menu__card:hover .projetos-menu__icon{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff}.projetos-menu__card:hover h3,.projetos-menu__card:hover p{color:#fff!important}.projetos-menu__card:hover .projetos-menu__footer{border-color:#fff;background:#fff;color:var(--pm-dark)}
-@media(max-width:850px){.projetos-menu__grid{grid-template-columns:1fr}}
+  :root {
+    --opal-blue:#453330;
+    --opal-blue-dark:#453330;
+    --opal-blue-soft:#f5f1e9;
+    --opal-blue-border:#d9d0c2;
+  }
+  .module-menu { font-family:"Segoe UI","Inter",Arial,sans-serif; }
+  .module-menu .dashboard-heading { margin-bottom:28px; }
+  .module-menu .dashboard-heading__content { max-width:780px; }
+  .module-menu .dashboard-heading__eyebrow,
+  .module-menu .modules__eyebrow,
+  .module-menu .module-card__number,
+  .module-menu .module-card__footer { color:var(--opal-blue); }
+  .module-menu .dashboard-heading__content h1 {
+    margin:0;
+    font-size:clamp(2.25rem,4vw,3.7rem);
+    line-height:1.04;
+    letter-spacing:-.04em;
+    font-weight:700;
+    color:#2d201c;
+  }
+  .module-menu .dashboard-heading__content h1 em { color:var(--opal-blue); font-style:normal; }
+  .module-menu .dashboard-heading__content p { margin:12px 0 0; color:#77655c; font-size:1rem; line-height:1.65; }
+  .module-menu .modules__header h2,
+  .module-menu .module-card__content h3 { color:#2d201c; font-weight:700; letter-spacing:-.02em; }
+  .module-menu .module-card__content p { color:#77655c; }
+  .module-menu .module-card__icon { color:var(--opal-blue); border-color:var(--opal-blue-border); }
+  .module-menu .module-card__permission { background:var(--opal-blue-soft); color:var(--opal-blue-dark); }
+  .module-menu .module-card__accent { background:var(--opal-blue); }
+  .module-menu .module-card:hover { border-color:var(--opal-blue); }
+  .module-menu .module-card--disabled { cursor:default; opacity:.62; }
+  .module-menu .module-card--disabled:hover { transform:none; border-color:inherit; box-shadow:inherit; }
+  .module-menu .module-card--disabled .module-card__footer { color:#a39890; }
+
+/* 2026 refresh: destaque do titulo do modulo */
+.module-menu .dashboard-heading{position:relative;overflow:hidden;margin-bottom:26px;padding:26px 28px;border:1px solid #ded7c8;border-radius:18px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 62%,#f3ecdc 100%);box-shadow:0 14px 38px rgba(69,51,48,.07)}.module-menu .dashboard-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.module-menu .dashboard-heading::after{content:"";position:absolute;right:-88px;top:-120px;width:210px;height:210px;border-radius:50%;background:rgba(119,101,92,.06);pointer-events:none}.module-menu .dashboard-heading__content{position:relative;z-index:1}.module-menu .dashboard-heading__content h1{font-size:clamp(2.25rem,4vw,3.4rem)}
+@media(max-width:720px){.module-menu .dashboard-heading{padding:21px 19px 21px 23px;border-radius:15px}.module-menu .dashboard-heading::after{display:none}.module-menu .dashboard-heading__content h1{font-size:2.1rem}}
+
+
+
+/* Ajustes SAARI — tipografia atual + hover legível */
+.module-menu{font-family:var(--font-sans)!important}
+.module-menu .dashboard-heading__content h1,
+.module-menu .module-card__content h3{font-family:var(--font-serif)!important;font-weight:400!important}
+.module-menu .dashboard-heading__content h1{color:var(--saari-brown)!important}
+.module-menu .dashboard-heading__content h1 em{font-family:inherit!important;font-weight:400!important;color:var(--saari-brown)!important}
+.module-menu .module-card:not(.module-card--disabled):hover{background:var(--saari-brown)!important;border-color:var(--saari-brown)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__number,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__content h3,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__content p,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer span,
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__footer .icon{color:#fff!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__icon{color:#fff!important;border-color:rgba(255,255,255,.28)!important;background:rgba(255,255,255,.08)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__permission{color:#fff!important;background:rgba(255,255,255,.12)!important}
+.module-menu .module-card:not(.module-card--disabled):hover .module-card__accent{background:var(--saari-gold)!important}
 </style>
 {% endblock %}
+
 {% block content %}
-<div class="projetos-menu">
-  <section class="projetos-menu__hero"><h1>Projetos</h1><p>Compatibilização, documentação e alterações de projeto organizadas por obra.</p></section>
-  <section class="projetos-menu__grid">
-    <a class="projetos-menu__card" href="{% url 'projetos:checklist_compatibilizacao' %}"><div><span class="projetos-menu__icon"><svg class="icon"><use href="#icon-check"></use></svg></span><h3>Checklist de compatibilização</h3><p>Acompanhe itens, status, observações e histórico por obra.</p></div><div class="projetos-menu__footer">Abrir checklist</div></a>
-    <a class="projetos-menu__card" href="#" onclick="return false;" aria-disabled="true"><div><span class="projetos-menu__icon"><svg class="icon"><use href="#icon-file"></use></svg></span><h3>Checklist documental</h3><p>Área reservada para o controle documental dos projetos.</p></div><div class="projetos-menu__footer">Em breve</div></a>
-    <a class="projetos-menu__card" href="{% url 'projetos:alteracoes' %}"><div><span class="projetos-menu__icon"><svg class="icon"><use href="#icon-edit"></use></svg></span><h3>Alterações de projeto</h3><p>Registre alterações, arquivos e responsáveis em uma visão organizada.</p></div><div class="projetos-menu__footer">Abrir alterações</div></a>
+<div class="dashboard-home module-menu">
+  <section class="dashboard-heading">
+    <div class="dashboard-heading__content">
+      <span class="dashboard-heading__eyebrow">Módulo</span>
+      <h1>Projetos</h1>
+      <p>Compatibilização, documentação e alterações de projeto organizadas por obra.</p>
+    </div>
+  </section>
+
+  <section class="modules">
+    <div class="modules__header">
+      <div><span class="modules__eyebrow">Funcionalidades</span></div>
+    </div>
+    <div class="module-cards">
+      <a href="{% url 'projetos:checklist_compatibilizacao' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">01</span>
+          <span class="module-card__permission">Projetos</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-check"></use></svg></span>
+          <div class="module-card__content"><h3>Checklist de compatibilização</h3><p>Acompanhe itens, status, observações e histórico por obra.</p></div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+
+      <div class="module-card module-card--disabled" aria-disabled="true">
+        <header class="module-card__header">
+          <span class="module-card__number">02</span>
+          <span class="module-card__permission">Em desenvolvimento</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-file"></use></svg></span>
+          <div class="module-card__content"><h3>Checklist documental</h3><p>Área reservada para o controle documental dos projetos.</p></div>
+        </div>
+        <footer class="module-card__footer"><span>Em breve</span></footer>
+        <span class="module-card__accent"></span>
+      </div>
+
+      <a href="{% url 'projetos:alteracoes' %}" class="module-card" data-transition-link>
+        <header class="module-card__header">
+          <span class="module-card__number">03</span>
+          <span class="module-card__permission">Projetos</span>
+        </header>
+        <div class="module-card__body">
+          <span class="module-card__icon"><svg class="icon"><use href="#icon-edit"></use></svg></span>
+          <div class="module-card__content"><h3>Alterações de projeto</h3><p>Registre alterações, arquivos e responsáveis em uma visão organizada.</p></div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+    </div>
   </section>
 </div>
 {% endblock %}
