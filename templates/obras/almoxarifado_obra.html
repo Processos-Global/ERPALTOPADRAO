@@ -9,6 +9,7 @@
     <div class="op-head-copy"><span class="op-eyebrow">Almoxarifado · {{ obra.codigo }}</span><h1>{{ obra|nome_obra }}</h1><p>Saldo físico calculado pelos recebimentos de Compras, saídas de consumo e transferências entre obras.</p></div>
     <div class="op-head-actions">
       <a class="op-btn secondary" href="{% url 'obras:almoxarifado_dashboard' %}">Dashboard geral</a>
+      <a class="op-btn secondary" href="{% url 'obras:relatorio_transferencias' obra.pk %}">Relatório de transferências</a>
       <button class="op-btn" type="button" data-open-stock-modal="saida">Registrar saída</button>
       <button class="op-btn" type="button" data-open-stock-modal="transferencia">Transferir</button>
     </div>

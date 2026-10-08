@@ -469,7 +469,7 @@
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
                       value="C"
-                      {% if item_form.resultado.value == "C" %}checked{% endif %}
+                      {% if item_form.resultado.value == "C" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
                     <span class="fvs-result-mark">✓</span>
                   </label>
@@ -481,7 +481,7 @@
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
                       value="NC"
-                      {% if item_form.resultado.value == "NC" %}checked{% endif %}
+                      {% if item_form.resultado.value == "NC" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
                     <span class="fvs-result-mark">✓</span>
                   </label>
@@ -493,14 +493,14 @@
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
                       value="NA"
-                      {% if item_form.resultado.value == "NA" %}checked{% endif %}
+                      {% if item_form.resultado.value == "NA" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
                     <span class="fvs-result-mark">✓</span>
                   </label>
                 </td>
 
                 <td>
-                  {{ item_form.data_verificacao }}
+                  {{ item_form.data_verificacao }}{% if item_form.bloqueado %}<small style="display:block;color:#7a6d60">Data original preservada</small>{% endif %}
                   {% for error in item_form.data_verificacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
                 </td>
 

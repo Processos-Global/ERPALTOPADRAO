@@ -42,6 +42,7 @@ class MovimentoEstoque(models.Model):
         decimal_places=4,
         validators=[MinValueValidator(Decimal("0.0001"))],
     )
+    custo_unitario_transferencia = models.DecimalField(max_digits=18, decimal_places=6, null=True, blank=True, help_text="Custo médio de compra no momento da transferência")
     data_movimento = models.DateTimeField(default=timezone.now, db_index=True)
     finalidade = models.CharField(max_length=255, blank=True)
     documento_referencia = models.CharField(max_length=100, blank=True)

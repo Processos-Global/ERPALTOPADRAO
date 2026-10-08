@@ -1,0 +1,45 @@
+{% extends "layouts/base.html" %}
+{% load obras_format l10n %}
+{% block title %}Relatório de transferências | SAARI ERP{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}
+<style>
+.rt-tabela{width:100%;border-collapse:collapse;min-width:1060px;font-size:13px}
+.rt-tabela th,.rt-tabela td{border:1px solid var(--border,#d9d5d0);padding:9px 11px;vertical-align:middle}
+.rt-tabela th{background:#f4f1ee;color:#453330;text-align:left;white-space:nowrap}
+.rt-tabela tbody tr:nth-child(even){background:#faf9f7}
+.rt-tabela .num{text-align:right;white-space:nowrap}
+.rt-tabela input{max-width:112px;width:100%;padding:8px;border:1px solid #c9c1ba;border-radius:6px;background:white;text-align:right;color:#352923}
+.rt-tabela input:focus{outline:2px solid #907250;outline-offset:1px}
+.rt-help{font-size:12px;color:#655d57}
+.rt-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}
+</style>{% endblock %}
+{% block content %}
+<div class="op-page">
+<section class="op-head"><div class="op-head-copy"><h1>Relatório de transferências</h1><p>Obra de origem: {{ obra|nome_obra }}. Informe a depreciação individual de cada transferência. O desconto afeta somente o relatório financeiro, não o estoque.</p></div><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Voltar</a></section>
+<section class="op-panel" style="padding:20px">
+<form method="get" class="op-grid">
+<div class="op-field c4"><label for="rt-inicio">Data inicial</label><input id="rt-inicio" type="date" name="inicio" value="{{ inicio }}"></div>
+<div class="op-field c4"><label for="rt-fim">Data final</label><input id="rt-fim" type="date" name="fim" value="{{ fim }}"></div>
+<div class="op-field c4"><label for="rt-destino">Obra de destino</label><select id="rt-destino" name="destino"><option value="">Todas</option>{% for o in destinos %}<option value="{{ o.pk }}" {% if destino == o.pk|stringformat:'s' %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+<div class="c12"><button class="op-btn secondary" type="submit">Filtrar transferências</button></div>
+</form></section>
+<section class="op-panel" style="padding:20px">
+<h2>Transferências selecionadas ({{ qtd }})</h2>
+<p class="rt-help">Cada linha corresponde a um movimento transferido. A depreciação começa em 0% e pode ser diferente em cada item. Movimentos antigos sem custo histórico devem ser conferidos antes do ressarcimento.</p>
+{% if movimentos %}
+<form method="post" action="?inicio={{ inicio|urlencode }}&amp;fim={{ fim|urlencode }}&amp;destino={{ destino|urlencode }}">
+{% csrf_token %}
+<div style="overflow-x:auto">
+<table class="rt-tabela"><thead><tr><th>Data</th><th>Nº</th><th>Obra destino</th><th>Material</th><th>Un.</th><th class="num">Quantidade</th><th class="num">Custo unitário</th><th>Depreciação (%)</th><th class="num">Total original</th></tr></thead>
+<tbody>{% for mov in movimentos %}<tr>
+<td>{{ mov.data_movimento|date:"d/m/Y" }}</td><td>#{{ mov.pk }}</td><td>{{ mov.obra_destino|nome_obra }}</td><td>{{ mov.descricao_item }}</td><td>{{ mov.unidade }}</td>
+<td class="num">{{ mov.quantidade|floatformat:2 }}</td><td class="num">{% if mov.custo_unitario_transferencia is not None %}R$ {{ mov.custo_unitario_transferencia|floatformat:2 }}{% else %}<span title="Sem custo histórico">A conferir</span>{% endif %}</td>
+<td><label for="depreciacao_{{ mov.pk }}" class="rt-help">% do movimento #{{ mov.pk }}</label><input id="depreciacao_{{ mov.pk }}" type="number" name="depreciacao_{{ mov.pk }}" min="0" max="100" step="0.01" value="0" required></td>
+<td class="num">{% if mov.valor_bruto_relatorio is not None %}R$ {{ mov.valor_bruto_relatorio|floatformat:2 }}{% else %}A conferir{% endif %}</td>
+</tr>{% endfor %}</tbody></table></div>
+<div class="rt-summary"><p class="rt-help">O Excel exibirá o percentual e o valor depreciado de cada movimento e o total devido à obra de origem.</p><button class="op-btn" type="submit">Gerar Excel financeiro</button></div>
+</form>
+{% else %}<p>Nenhuma transferência encontrada. Ajuste os filtros para selecionar os movimentos do relatório.</p>{% endif %}
+</section></div>
+{% endblock %}

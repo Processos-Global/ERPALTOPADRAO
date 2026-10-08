@@ -1,6 +1,7 @@
 from django import forms
 
 from obras.models import Obra
+from cadastros.models import ChecklistProjetoGrupo
 from projetos.models import AlteracaoProjeto
 
 
@@ -24,7 +25,7 @@ class AlteracaoProjetoForm(forms.ModelForm):
 
     class Meta:
         model = AlteracaoProjeto
-        fields = ["obra", "descricao", "arquivo"]
+        fields = ["obra", "disciplina", "descricao", "arquivo"]
         widgets = {
             "descricao": forms.Textarea(attrs={
                 "class": "proj-control",
@@ -36,4 +37,8 @@ class AlteracaoProjetoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["disciplina"].queryset = ChecklistProjetoGrupo.objects.filter(tipo=ChecklistProjetoGrupo.TIPO_COMPATIBILIZACAO, ativo=True).order_by("ordem", "nome")
+        self.fields["disciplina"].required = True
+        self.fields["disciplina"].label = "Disciplina alterada"
+        self.fields["disciplina"].label_from_instance = lambda obj: obj.nome
         self.fields["obra"].queryset = Obra.objects.filter(ativa=True).order_by("codigo", "nome")

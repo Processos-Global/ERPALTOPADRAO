@@ -5,6 +5,7 @@ from .estoque import (
     almoxarifado_obra,
     saida_estoque,
     transferencia_estoque,
+    relatorio_transferencias,
 )
 from .diario import diario_editar, diario_lista, diario_novo
 

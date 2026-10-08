@@ -95,6 +95,7 @@ class AlteracaoProjeto(models.Model):
         related_name="alteracoes_projeto",
     )
     descricao = models.TextField()
+    disciplina = models.ForeignKey("cadastros.ChecklistProjetoGrupo", on_delete=models.PROTECT, null=True, blank=True, related_name="alteracoes_projeto")
     arquivo = models.FileField(upload_to="projetos/alteracoes/%Y/%m/")
     criado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

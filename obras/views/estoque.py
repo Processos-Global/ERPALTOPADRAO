@@ -182,6 +182,7 @@ def transferencia_estoque(request, obra_id):
 
             MovimentoEstoque.objects.create(
                 tipo=MovimentoEstoque.Tipo.TRANSFERENCIA,
+                custo_unitario_transferencia=item_atual["valor_unitario_medio"],
                 obra_origem=obra,
                 obra_destino=destino,
                 material_id=item_atual["material_id"],
@@ -196,3 +197,115 @@ def transferencia_estoque(request, obra_id):
         messages.success(request, f"Transferência para {_nome_obra(destino)} registrada com sucesso.")
 
     return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def relatorio_transferencias(request, obra_id):
+    """Depreciação individual por movimento, usada somente no Excel de ressarcimento."""
+    from datetime import datetime
+    from io import BytesIO
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    obra = get_object_or_404(Obra, pk=obra_id)
+    movimentos = (MovimentoEstoque.objects
+        .filter(tipo=MovimentoEstoque.Tipo.TRANSFERENCIA, obra_origem=obra)
+        .select_related("obra_destino", "obra_origem")
+        .order_by("data_movimento", "id"))
+    inicio = request.GET.get("inicio", "")
+    fim = request.GET.get("fim", "")
+    destino = request.GET.get("destino", "")
+    if inicio:
+        try:
+            movimentos = movimentos.filter(data_movimento__date__gte=datetime.strptime(inicio, "%Y-%m-%d").date())
+        except ValueError:
+            return HttpResponse("Data inicial inválida.", status=400)
+    if fim:
+        try:
+            movimentos = movimentos.filter(data_movimento__date__lte=datetime.strptime(fim, "%Y-%m-%d").date())
+        except ValueError:
+            return HttpResponse("Data final inválida.", status=400)
+    if destino:
+        if not destino.isdigit():
+            return HttpResponse("Destino inválido.", status=400)
+        movimentos = movimentos.filter(obra_destino_id=int(destino))
+
+    registros = list(movimentos)
+    if request.method != "POST":
+        for mov in registros:
+            mov.valor_bruto_relatorio = (mov.custo_unitario_transferencia * mov.quantidade
+                if mov.custo_unitario_transferencia is not None else None)
+        return render(request, "obras/relatorio_transferencias.html", {
+            "obra": obra,
+            "destinos": Obra.objects.filter(ativa=True).exclude(pk=obra_id).order_by("nome"),
+            "inicio": inicio, "fim": fim, "destino": destino,
+            "qtd": len(registros), "movimentos": registros,
+        })
+
+    if not registros:
+        return HttpResponse("Nenhuma transferência selecionada para gerar o relatório.", status=400)
+    porcentagens = {}
+    for mov in registros:
+        campo = f"depreciacao_{mov.pk}"
+        texto = request.POST.get(campo)
+        if texto is None or not texto.strip():
+            return HttpResponse(f"Informe a depreciação do movimento {mov.pk}.", status=400)
+        texto = texto.strip().replace(",", ".")
+        try:
+            valor = Decimal(texto)
+        except (ValueError, InvalidOperation):
+            return HttpResponse(f"Depreciação inválida no movimento {mov.pk}.", status=400)
+        if not valor.is_finite() or not 0 <= valor <= 100:
+            return HttpResponse(f"Depreciação do movimento {mov.pk} deve estar entre 0 e 100%.", status=400)
+        porcentagens[mov.pk] = valor
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Transferências"
+    ws.append(["RELATÓRIO DE TRANSFERÊNCIAS ENTRE OBRAS"])
+    ws.append(["Obra de origem", _nome_obra(obra), "Emitido em", timezone.localtime().strftime("%d/%m/%Y %H:%M")])
+    ws.append(["Data", "Movimento", "Obra origem", "Obra destino", "Material", "Un.", "Quantidade",
+        "Custo unit. compra (R$)", "Depreciação individual (%)", "Valor unit. depreciado (R$)",
+        "Valor a ressarcir (R$)", "Referência", "Observações"])
+    total = Decimal("0")
+    sem_custo = 0
+    for mov in registros:
+        depreciacao = porcentagens[mov.pk]
+        custo = mov.custo_unitario_transferencia
+        if custo is None:
+            sem_custo += 1
+        unitario = custo * (Decimal("1") - depreciacao / Decimal("100")) if custo is not None else None
+        subtotal = unitario * mov.quantidade if unitario is not None else None
+        if subtotal is not None:
+            total += subtotal
+        ws.append([timezone.localtime(mov.data_movimento).strftime("%d/%m/%Y"), mov.pk,
+            _nome_obra(mov.obra_origem), _nome_obra(mov.obra_destino), mov.descricao_item,
+            mov.unidade, float(mov.quantidade), float(custo) if custo is not None else None,
+            float(depreciacao), float(unitario) if unitario is not None else None,
+            float(subtotal) if subtotal is not None else None,
+            mov.documento_referencia, mov.observacao])
+    linha_total = len(registros) + 4
+    ws.append(["TOTAL A RESSARCIR", None, None, None, None, None, None, None, None, None, float(total)])
+    ws.append(["Movimentos sem custo histórico", sem_custo,
+        "Validar o custo de compra antes do pagamento. Movimentos sem custo não estão incluídos no total."])
+    ws.freeze_panes = "A4"
+    ws.auto_filter.ref = f"A3:M{len(registros)+3}"
+    for cell in ws[3]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="453330")
+        cell.alignment = Alignment(wrap_text=True)
+    for col, largura in {"A":23,"B":14,"C":24,"D":24,"E":45,"F":9,"G":15,"H":25,
+                         "I":29,"J":30,"K":27,"L":22,"M":40}.items():
+        ws.column_dimensions[col].width = largura
+    for row in ws.iter_rows(min_row=4, max_row=3+len(registros)):
+        for idx in (8,10,11):
+            row[idx-1].number_format = '"R$" #,##0.00'
+        row[8].number_format = '0.00"%"'
+    ws[f"K{linha_total}"].number_format = '"R$" #,##0.00'
+    saida = BytesIO()
+    wb.save(saida)
+    response = HttpResponse(saida.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="transferencias_obra_{obra.pk}_{timezone.localdate():%Y%m%d}.xlsx"'
+    return response

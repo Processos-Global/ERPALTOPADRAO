@@ -42,7 +42,7 @@
             <div class="fvs-span-2"><label>Tolerância</label>{{ item_form.tolerancia }}</div>
             <div class="fvs-checkline">
               <div class="fvs-check">{{ item_form.obrigatorio }} <span>Item obrigatório</span></div>
-              {% if item_form.DELETE %}<label class="fvs-delete">{{ item_form.DELETE }} Excluir item</label>{% endif %}
+              {% if item_form.DELETE %}<label class="fvs-delete" style="display:none">{{ item_form.DELETE }}</label><button type="button" class="cad-btn cad-btn--secondary js-remove-fvs-item" style="color:#923e3e">Excluir item</button>{% endif %}
             </div>
             {% for field in item_form %}{% for error in field.errors %}<div class="fvs-error fvs-span-full">{{ field.label }}: {{ error }}</div>{% endfor %}{% endfor %}
           </div>
@@ -71,7 +71,7 @@
     <div class="fvs-span-2"><label>Tolerância</label>{{ formset.empty_form.tolerancia }}</div>
     <div class="fvs-checkline">
       <div class="fvs-check">{{ formset.empty_form.obrigatorio }} <span>Item obrigatório</span></div>
-      {% if formset.empty_form.DELETE %}<label class="fvs-delete">{{ formset.empty_form.DELETE }} Excluir item</label>{% endif %}
+      {% if formset.empty_form.DELETE %}<label class="fvs-delete" style="display:none">{{ formset.empty_form.DELETE }}</label><button type="button" class="cad-btn cad-btn--secondary js-remove-fvs-item" style="color:#923e3e">Remover item</button>{% endif %}
     </div>
   </div>
 </template>
@@ -79,6 +79,7 @@
 (() => {
   const btn=document.getElementById('add-item'), list=document.getElementById('fvs-items'), total=document.getElementById('id_itens-TOTAL_FORMS'), tpl=document.getElementById('empty-form-template');
   if(!btn||!total||!tpl)return;
+  list.addEventListener('click',e=>{const b=e.target.closest('.js-remove-fvs-item');if(!b)return;const row=b.closest('.fvs-item-row');const del=row.querySelector('input[name$="-DELETE"]');if(del){del.checked=true;row.style.display='none';}});
   btn.addEventListener('click',()=>{
     const n=parseInt(total.value,10);
     list.insertAdjacentHTML('beforeend',tpl.innerHTML.replaceAll('__prefix__',n));

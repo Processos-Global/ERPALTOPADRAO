@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import modelformset_factory
+from django.utils import timezone
 
 from cadastros.models import ModeloFVS
 from obras.models import AmbienteFichaTecnica, FVS, FVSItem, Obra
@@ -74,6 +75,21 @@ class FVSItemForm(forms.ModelForm):
             "data_verificacao": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "observacao": forms.Textarea(attrs={"rows": 1, "placeholder": "Observação ou ação corretiva"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.bloqueado = bool(self.instance.pk and self.instance.resultado)
+        if self.bloqueado:
+            self.fields["resultado"].disabled = True
+            self.fields["data_verificacao"].disabled = True
+        elif not self.is_bound and not self.instance.data_verificacao:
+            self.initial["data_verificacao"] = timezone.localdate()
+
+    def clean(self):
+        dados = super().clean()
+        if not self.bloqueado and dados.get("resultado") and not dados.get("data_verificacao"):
+            dados["data_verificacao"] = timezone.localdate()
+        return dados
 
 
 FVSItemFormSet = modelformset_factory(FVSItem, form=FVSItemForm, extra=0)

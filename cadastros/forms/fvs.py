@@ -34,6 +34,6 @@ ItemModeloFVSFormSet = inlineformset_factory(
     ModeloFVS,
     ItemModeloFVS,
     form=ItemModeloFVSForm,
-    extra=1,
+    extra=0,
     can_delete=True,
 )

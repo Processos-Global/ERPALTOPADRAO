@@ -5,7 +5,7 @@ from django.utils.text import slugify
 class ChecklistProjetoGrupo(models.Model):
     TIPO_COMPATIBILIZACAO = "COMPATIBILIZACAO"
     TIPO_CHOICES = [
-        (TIPO_COMPATIBILIZACAO, "Checklist de verificação de compatibilização"),
+        (TIPO_COMPATIBILIZACAO, "Acompanhamento de Projetos"),
     ]
 
     tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
