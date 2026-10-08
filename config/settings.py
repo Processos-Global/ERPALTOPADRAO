@@ -392,6 +392,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 # ============================================================
 # E-MAIL

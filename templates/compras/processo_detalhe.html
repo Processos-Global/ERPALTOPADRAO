@@ -2042,6 +2042,14 @@
             </div>
             <div class="pc-card-body">
               {% if permissoes_compras.pode_negociar and form_decisao_lote %}
+                {# Formulários leves por fornecedor: não enviam os campos da matriz de negociação. #}
+                {% for cotacao in cotacoes %}
+                  {% if cotacao.enviada_negociacao_em and not cotacao.enviada_aprovacao_em %}
+                    <form id="pc-enviar-aprovacao-{{ cotacao.pk }}" method="post" action="{% url 'compras:enviar_cotacao_aprovacao' processo.pk cotacao.pk %}">
+                      {% csrf_token %}
+                    </form>
+                  {% endif %}
+                {% endfor %}
                 <form method="post" action="{% url 'compras:decisao_comercial_lote' processo.pk %}" data-decisao-form>
                   {% csrf_token %}
 
@@ -2054,7 +2062,7 @@
                         {% if cotacao.enviada_negociacao_em and not cotacao.enviada_aprovacao_em %}
                           <div class="pc-neg-provider-action">
                             <div><strong>{{ cotacao.fornecedor.nome }}</strong><small>Pronto para envio</small></div>
-                            <button class="cp-btn cp-btn--primary cp-btn--sm" type="submit" formaction="{% url 'compras:enviar_cotacao_aprovacao' processo.pk cotacao.pk %}" formmethod="post">Enviar à aprovação</button>
+                            <button class="cp-btn cp-btn--primary cp-btn--sm" type="submit" form="pc-enviar-aprovacao-{{ cotacao.pk }}">Enviar à aprovação</button>
                           </div>
                         {% elif cotacao.enviada_aprovacao_em %}
                           <div class="pc-neg-provider-action is-sent">
