@@ -94,18 +94,18 @@
         <span class="module-card__accent"></span>
       </a>
 
-      <div class="module-card module-card--disabled" aria-disabled="true">
+      <a href="{% url 'projetos:checklist_documental' %}" class="module-card" data-transition-link>
         <header class="module-card__header">
           <span class="module-card__number">02</span>
-          <span class="module-card__permission">Em desenvolvimento</span>
+          <span class="module-card__permission">Projetos</span>
         </header>
         <div class="module-card__body">
           <span class="module-card__icon"><svg class="icon"><use href="#icon-file"></use></svg></span>
-          <div class="module-card__content"><h3>Checklist documental</h3><p>Área reservada para o controle documental dos projetos.</p></div>
+          <div class="module-card__content"><h3>Checklist documental</h3><p>Controle de documentos, andamento, observações e histórico por obra.</p></div>
         </div>
-        <footer class="module-card__footer"><span>Em breve</span></footer>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
         <span class="module-card__accent"></span>
-      </div>
+      </a>
 
       <a href="{% url 'projetos:alteracoes' %}" class="module-card" data-transition-link>
         <header class="module-card__header">

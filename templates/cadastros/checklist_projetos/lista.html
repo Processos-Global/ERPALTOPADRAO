@@ -4,7 +4,7 @@
   <div class="cad-head__copy">
     <div class="cad-eyebrow">Projetos</div>
     <h1 class="cad-title">Checklist de Projetos</h1>
-    <p class="cad-sub">Gerencie os macro checklists e os itens que alimentam a verificação de compatibilização.</p>
+    <p class="cad-sub">Gerencie os itens do acompanhamento de projetos e do checklist documental.</p>
   </div>
   <div class="cad-head__actions">
     {% if cad_pode_criar %}
@@ -32,6 +32,7 @@
 <div class="chk-toolbar">
   <form method="get">
     <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar etapa, código ou entrega / atividade">
+    <select name="tipo" onchange="this.form.submit()"><option value="">Todos os tipos</option><option value="COMPATIBILIZACAO" {% if tipo == "COMPATIBILIZACAO" %}selected{% endif %}>Acompanhamento de Projetos</option><option value="DOCUMENTAL" {% if tipo == "DOCUMENTAL" %}selected{% endif %}>Checklist Documental</option></select>
     <select name="grupo"><option value="">Todos os macro checklists</option>{% for g in grupos_filtro %}<option value="{{ g.pk }}" {% if grupo_id == g.pk|stringformat:'s' %}selected{% endif %}>{{ g.nome }}</option>{% endfor %}</select>
     <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
   </form>

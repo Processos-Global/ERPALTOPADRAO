@@ -58,9 +58,9 @@
       <table class="proj-sheet">
         <thead>
           <tr>
-            <th class="col-etapa">Etapa</th>
-            <th class="col-codigo">Código</th>
-            <th class="col-entrega">Entrega / Atividade</th>
+            {% if tipo_checklist != "DOCUMENTAL" %}<th class="col-etapa">Etapa</th>
+            <th class="col-codigo">Código</th>{% endif %}
+            <th class="col-entrega">{% if tipo_checklist == "DOCUMENTAL" %}Documento{% else %}Entrega / Atividade{% endif %}</th>
             <th class="col-status">Status</th>
             <th class="col-observacao">Observações</th>
             <th class="col-historico">Histórico</th>
@@ -69,8 +69,8 @@
         <tbody>
         {% for linha in linhas %}
           <tr data-item="{{ linha.item.pk }}">
-            <td class="proj-cell-code">{{ linha.item.etapa|default:"—" }}</td>
-            <td class="proj-cell-code">{{ linha.item.codigo|default:"—" }}</td>
+            {% if tipo_checklist != "DOCUMENTAL" %}<td class="proj-cell-code">{{ linha.item.etapa|default:"—" }}</td>
+            <td class="proj-cell-code">{{ linha.item.codigo|default:"—" }}</td>{% endif %}
             <td class="proj-cell-entrega">{{ linha.item.entrega_atividade }}</td>
             <td>
               <select class="proj-status js-autosave" data-campo="status" data-status="{{ linha.status }}">
@@ -86,7 +86,7 @@
       </table>
     </div>
     {% else %}
-      <div class="proj-empty">Ainda não há itens cadastrados para este checklist. Cadastre-os em <strong>Cadastros → Checklist de Projetos</strong>.</div>
+      <div class="proj-empty">Ainda não há itens cadastrados para este checklist. Cadastre-os em <strong>Cadastros → Checklists de Projetos</strong>.</div>
     {% endif %}
   </section>
 </div>

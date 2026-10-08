@@ -4,8 +4,10 @@ from django.utils.text import slugify
 
 class ChecklistProjetoGrupo(models.Model):
     TIPO_COMPATIBILIZACAO = "COMPATIBILIZACAO"
+    TIPO_DOCUMENTAL = "DOCUMENTAL"
     TIPO_CHOICES = [
         (TIPO_COMPATIBILIZACAO, "Acompanhamento de Projetos"),
+        (TIPO_DOCUMENTAL, "Checklist Documental"),
     ]
 
     tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)

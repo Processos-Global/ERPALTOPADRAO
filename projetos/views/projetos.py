@@ -98,6 +98,15 @@ def checklist_compatibilizacao(request):
 
 
 @login_required
+def checklist_documental(request):
+    return render(
+        request,
+        "projetos/checklist.html",
+        _checklist_contexto(request, ChecklistProjetoGrupo.TIPO_DOCUMENTAL),
+    )
+
+
+@login_required
 @require_POST
 @transaction.atomic
 def checklist_salvar_celula(request):

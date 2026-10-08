@@ -12,6 +12,9 @@ from cadastros.views.cadastros import cadastros_permissao_required, _permissoes_
 def checklist_projetos_lista(request):
     q = (request.GET.get("q") or "").strip()
     grupo_id = (request.GET.get("grupo") or "").strip()
+    tipo = (request.GET.get("tipo") or "").strip().upper()
+    if tipo not in dict(ChecklistProjetoGrupo.TIPO_CHOICES):
+        tipo = ""
 
     grupos_filtro = (
         ChecklistProjetoGrupo.objects
@@ -25,8 +28,11 @@ def checklist_projetos_lista(request):
         .order_by("grupo__ordem", "grupo__nome", "ordem", "id")
     )
 
+    if tipo:
+        grupos_filtro = grupos_filtro.filter(tipo=tipo)
+        itens = itens.filter(grupo__tipo=tipo)
     if grupo_id.isdigit():
-        itens = itens.filter(grupo_id=int(grupo_id))
+        itens = itens.filter(grupo_id=int(grupo_id), **({"grupo__tipo": tipo} if tipo else {}))
 
     if q:
         itens = itens.filter(
@@ -41,6 +47,7 @@ def checklist_projetos_lista(request):
         "itens": itens,
         "q": q,
         "grupo_id": grupo_id,
+        "tipo": tipo,
         **_permissoes_contexto(request.user),
     })
 
