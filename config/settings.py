@@ -537,3 +537,19 @@ CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = os.getenv(
     "CRONOGRAMA_SUPRIMENTOS_FOLDER_ID",
     ""
 )
+
+
+# ============================================================
+# SAARI — ARQUIVOS HÍBRIDOS (ativação controlada)
+# ============================================================
+SAARI_DRIVE_ENABLED = env.bool('SAARI_DRIVE_ENABLED', default=False)
+# Produção fase 1: manter URLs de /media/ atuais; apenas sincronizar cópias.
+# Ativar somente após auditoria de permissões e testes de leitura remota.
+SAARI_DRIVE_SERVE_REMOTE = env.bool('SAARI_DRIVE_SERVE_REMOTE', default=False)
+SAARI_ARQUIVOS_DRIVE_FOLDER_ID = env('SAARI_ARQUIVOS_DRIVE_FOLDER_ID', default='1trjGpEVARl9rX79KBW95gKALfFs1d879')
+
+if SAARI_DRIVE_ENABLED:
+    STORAGES = {
+        'default': {'BACKEND': 'core.storage.SaariPublicStorage'},
+        'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
+    }
