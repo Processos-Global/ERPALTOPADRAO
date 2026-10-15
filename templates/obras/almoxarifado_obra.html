@@ -42,6 +42,16 @@
       </tr>
       {% empty %}<tr><td colspan="10" class="op-empty">Nenhum material com saldo disponível nesta obra.</td></tr>{% endfor %}
     </tbody></table></div>
+    {% if pagina.paginator.num_pages > 1 %}
+    <nav class="stock-pages" aria-label="Páginas do estoque">
+      <span>Exibindo {{ pagina.start_index }}–{{ pagina.end_index }} de {{ pagina.paginator.count }} materiais</span>
+      <div class="stock-pages-links">
+        {% if pagina.has_previous %}<a href="?q={{ q|urlencode }}&page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+        <strong>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</strong>
+        {% if pagina.has_next %}<a href="?q={{ q|urlencode }}&page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+      </div>
+    </nav>
+    {% endif %}
   </section>
 
   <section class="op-panel">
@@ -58,7 +68,15 @@
   <div class="op-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-saida">
     <div class="op-modal-head"><div><span class="op-eyebrow">Almoxarifado · {{ obra|nome_obra }}</span><h2 id="titulo-modal-saida">Registrar saída</h2></div><button class="op-modal-close" type="button" data-close-stock-modal aria-label="Fechar">×</button></div>
     <form method="post" action="{% url 'obras:saida_estoque' obra.pk %}" class="op-modal-body">{% csrf_token %}
-      <div class="op-field"><label>Item *</label><select name="item" class="js-stock-item" required><option value="">Selecione o material</option>{% for linha in estoque_modal %}<option value="{{ linha.chave }}">{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}</option>{% endfor %}</select></div>
+      <div class="op-field stock-picker" data-stock-picker>
+        <label>Material *</label>
+        <input class="stock-picker-search" type="search" autocomplete="off" placeholder="Digite para pesquisar o material..." role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Pesquisar material" required>
+        <input type="hidden" name="item" class="js-stock-item">
+        <div class="stock-picker-list" role="listbox" hidden>
+          {% for linha in estoque_modal %}<button type="button" class="stock-picker-option" role="option" data-value="{{ linha.chave }}" data-label="{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}">{{ linha.material_nome }} <small>Saldo: {{ linha.saldo|numero_br }} {{ linha.unidade }}</small></button>{% endfor %}
+          <p class="stock-picker-empty" hidden>Nenhum material encontrado.</p>
+        </div>
+      </div>
       <div class="op-grid op-modal-grid">
         <div class="op-field c4"><label>Quantidade *</label><input type="number" name="quantidade" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00"></div>
         <div class="op-field c8"><label>Finalidade</label><input type="text" name="finalidade" maxlength="255" placeholder="Ex.: consumo na alvenaria"></div>
@@ -75,7 +93,15 @@
   <div class="op-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-transferencia">
     <div class="op-modal-head"><div><span class="op-eyebrow">Almoxarifado · {{ obra|nome_obra }}</span><h2 id="titulo-modal-transferencia">Transferir material</h2></div><button class="op-modal-close" type="button" data-close-stock-modal aria-label="Fechar">×</button></div>
     <form method="post" action="{% url 'obras:transferencia_estoque' obra.pk %}" class="op-modal-body">{% csrf_token %}
-      <div class="op-field"><label>Item *</label><select name="item" class="js-stock-item" required><option value="">Selecione o material</option>{% for linha in estoque_modal %}<option value="{{ linha.chave }}">{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}</option>{% endfor %}</select></div>
+      <div class="op-field stock-picker" data-stock-picker>
+        <label>Material *</label>
+        <input class="stock-picker-search" type="search" autocomplete="off" placeholder="Digite para pesquisar o material..." role="combobox" aria-expanded="false" aria-autocomplete="list" aria-label="Pesquisar material" required>
+        <input type="hidden" name="item" class="js-stock-item">
+        <div class="stock-picker-list" role="listbox" hidden>
+          {% for linha in estoque_modal %}<button type="button" class="stock-picker-option" role="option" data-value="{{ linha.chave }}" data-label="{{ linha.material_nome }} · saldo {{ linha.saldo|numero_br }} {{ linha.unidade }}">{{ linha.material_nome }} <small>Saldo: {{ linha.saldo|numero_br }} {{ linha.unidade }}</small></button>{% endfor %}
+          <p class="stock-picker-empty" hidden>Nenhum material encontrado.</p>
+        </div>
+      </div>
       <div class="op-grid op-modal-grid">
         <div class="op-field c6"><label>Obra de destino *</label><select name="obra_destino" required><option value="">Selecione a obra</option>{% for destino in destinos %}<option value="{{ destino.pk }}">{{ destino|nome_obra }}</option>{% endfor %}</select></div>
         <div class="op-field c6"><label>Quantidade *</label><input type="number" name="quantidade" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00"></div>
@@ -88,40 +114,99 @@
   </div>
 </div>
 
+<style>
+/* Os modais são realocados para body pelo JS, fora dos ancestrais animados. */
+.op-modal{align-items:center!important;overflow-y:auto;overscroll-behavior:contain}
+.op-modal-dialog{display:flex;flex-direction:column;overflow:hidden!important;max-height:calc(100dvh - 32px);margin:auto}
+.op-modal-head{flex:none}
+.op-modal-body{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.op-modal-actions{position:sticky;bottom:-20px;z-index:2;flex:none;background:#fff;margin-top:18px;padding:15px 0 2px}
+.stock-picker{position:relative}
+.stock-picker-list{position:relative;z-index:5;max-height:230px;margin-top:5px;overflow-y:auto;border:1px solid var(--op-line);border-radius:10px;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.stock-picker-list[hidden],.stock-picker-empty[hidden]{display:none!important}
+.stock-picker-option{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--op-line-soft);color:var(--op-text);font:inherit;cursor:pointer}
+.stock-picker-option[hidden]{display:none!important}
+.stock-picker-option:hover,.stock-picker-option:focus-visible{background:var(--op-soft);outline:none}
+.stock-picker-option small{flex-shrink:0;color:var(--op-muted)}
+.stock-picker-empty{padding:12px;margin:0;color:var(--op-muted)}
+.stock-pages{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:15px 18px;border-top:1px solid var(--op-line-soft);font-size:13px;color:var(--op-muted)}
+.stock-pages-links{display:flex;align-items:center;gap:12px}.stock-pages-links a{padding:8px 12px;border-radius:9px;border:1px solid var(--op-line);text-decoration:none;color:var(--op-text)}.stock-pages-links a:hover{background:var(--op-soft)}
+@media(max-width:700px){.op-modal{align-items:center!important}.op-modal-dialog{max-height:calc(100dvh - 20px)}.stock-picker-option{align-items:flex-start;flex-direction:column;gap:3px}}
+</style>
 <script>
 (function () {
   const body = document.body;
-  const modais = {
-    saida: document.getElementById('modal-saida'),
-    transferencia: document.getElementById('modal-transferencia')
-  };
-
-  function fechar() {
-    Object.values(modais).forEach(modal => {
-      if (!modal) return;
-      modal.classList.remove('is-open');
-      modal.setAttribute('aria-hidden', 'true');
+  const modais = {saida: document.getElementById('modal-saida'), transferencia: document.getElementById('modal-transferencia')};
+  // Evita que transform/overflow do layout base desloquem o modal.
+  Object.values(modais).forEach(modal => { if (modal) body.appendChild(modal); });
+  function normalizar(value) {return (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');}
+  function iniciarPicker(picker) {
+    const input = picker.querySelector('.stock-picker-search');
+    const hidden = picker.querySelector('.js-stock-item');
+    const list = picker.querySelector('.stock-picker-list');
+    const options = [...picker.querySelectorAll('.stock-picker-option')];
+    const empty = picker.querySelector('.stock-picker-empty');
+    function filtrar() {
+      const term = normalizar(input.value.trim());
+      let count = 0;
+      options.forEach(option => {
+        const match = normalizar(option.dataset.label).includes(term);
+        option.hidden = !match;
+        if (match) count++;
+      });
+      empty.hidden = count !== 0;
+      list.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    }
+    function selecionar(option) {
+      hidden.value = option.dataset.value;
+      input.value = option.dataset.label;
+      input.setCustomValidity('');
+      list.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+    }
+    input.addEventListener('focus', filtrar);
+    input.addEventListener('input', () => {hidden.value = ''; input.setCustomValidity(''); filtrar();});
+    input.addEventListener('keydown', event => {
+      if(event.key === 'Escape'){list.hidden=true;input.setAttribute('aria-expanded','false');}
+      if(event.key === 'ArrowDown' && !list.hidden){event.preventDefault();options.find(o=>!o.hidden)?.focus();}
     });
+    options.forEach((option,index) => {
+      option.addEventListener('click', () => selecionar(option));
+      option.addEventListener('keydown', event => {
+        if(event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();const visible=options.filter(o=>!o.hidden);
+          visible[(visible.indexOf(option)+(event.key==='ArrowDown'?1:-1)+visible.length)%visible.length]?.focus();
+        }
+      });
+    });
+    document.addEventListener('click', event => {if(!picker.contains(event.target)){list.hidden=true;input.setAttribute('aria-expanded','false');}});
+    picker.closest('form').addEventListener('submit', event => {
+      if (!hidden.value) {event.preventDefault();input.setCustomValidity('Selecione um material da lista.');input.reportValidity();input.focus();filtrar();}
+    });
+    picker.stockSelect = value => {
+      const option = options.find(o => o.dataset.value === value);
+      if (option) selecionar(option);
+      else {hidden.value='';input.value='';input.setCustomValidity('');list.hidden=true;}
+    };
+  }
+  document.querySelectorAll('[data-stock-picker]').forEach(iniciarPicker);
+  function fechar() {
+    Object.values(modais).forEach(modal => {if(!modal)return;modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');});
     body.classList.remove('op-modal-open');
   }
-
   function abrir(tipo, item) {
-    fechar();
-    const modal = modais[tipo];
-    if (!modal) return;
-    const select = modal.querySelector('.js-stock-item');
-    if (select && item) select.value = item;
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
+    fechar();const modal=modais[tipo];if(!modal)return;
+    const picker=modal.querySelector('[data-stock-picker]');
+    picker?.stockSelect(item || '');
+    modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');
     body.classList.add('op-modal-open');
-    window.setTimeout(() => (select || modal.querySelector('input,select,textarea,button'))?.focus(), 40);
+    modal.querySelector('.op-modal-body').scrollTop=0;
+    window.setTimeout(() => modal.querySelector('.stock-picker-search')?.focus(),40);
   }
-
-  document.querySelectorAll('[data-open-stock-modal]').forEach(btn => {
-    btn.addEventListener('click', () => abrir(btn.dataset.openStockModal, btn.dataset.item || ''));
-  });
-  document.querySelectorAll('[data-close-stock-modal]').forEach(btn => btn.addEventListener('click', fechar));
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') fechar(); });
+  document.querySelectorAll('[data-open-stock-modal]').forEach(btn => btn.addEventListener('click',()=>abrir(btn.dataset.openStockModal,btn.dataset.item||'')));
+  document.querySelectorAll('[data-close-stock-modal]').forEach(btn => btn.addEventListener('click',fechar));
+  document.addEventListener('keydown',event => {if(event.key==='Escape' && !event.target.closest('.stock-picker')) fechar();});
 })();
 </script>
 {% endblock %}

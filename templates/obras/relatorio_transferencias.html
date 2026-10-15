@@ -16,7 +16,7 @@
 </style>{% endblock %}
 {% block content %}
 <div class="op-page">
-<section class="op-head"><div class="op-head-copy"><h1>Relatório de transferências</h1><p>Obra de origem: {{ obra|nome_obra }}. Informe a depreciação individual de cada transferência. O desconto afeta somente o relatório financeiro, não o estoque.</p></div><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Voltar</a></section>
+<section class="op-head"><div class="op-head-copy"><h1>Relatório de transferências</h1><p>Obra de origem: {{ obra|nome_obra }}. Informe a depreciação individual de cada transferência. Depois de registrada, a depreciação é definitiva e ajusta o valor do estoque da obra de destino.</p></div><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Voltar</a></section>
 <section class="op-panel" style="padding:20px">
 <form method="get" class="op-grid">
 <div class="op-field c4"><label for="rt-inicio">Data inicial</label><input id="rt-inicio" type="date" name="inicio" value="{{ inicio }}"></div>
@@ -26,7 +26,7 @@
 </form></section>
 <section class="op-panel" style="padding:20px">
 <h2>Transferências selecionadas ({{ qtd }})</h2>
-<p class="rt-help">Cada linha corresponde a um movimento transferido. A depreciação começa em 0% e pode ser diferente em cada item. Movimentos antigos sem custo histórico devem ser conferidos antes do ressarcimento.</p>
+<p class="rt-help">Cada linha corresponde a um movimento transferido. Cada transferência aceita uma única depreciação, inclusive 0%. Movimentos concluídos ficam bloqueados. Movimentos antigos sem custo histórico devem ser conferidos antes do ressarcimento.</p>
 {% if movimentos %}
 <form method="post" action="?inicio={{ inicio|urlencode }}&amp;fim={{ fim|urlencode }}&amp;destino={{ destino|urlencode }}">
 {% csrf_token %}
@@ -35,10 +35,10 @@
 <tbody>{% for mov in movimentos %}<tr>
 <td>{{ mov.data_movimento|date:"d/m/Y" }}</td><td>#{{ mov.pk }}</td><td>{{ mov.obra_destino|nome_obra }}</td><td>{{ mov.descricao_item }}</td><td>{{ mov.unidade }}</td>
 <td class="num">{{ mov.quantidade|floatformat:2 }}</td><td class="num">{% if mov.custo_unitario_transferencia is not None %}R$ {{ mov.custo_unitario_transferencia|floatformat:2 }}{% else %}<span title="Sem custo histórico">A conferir</span>{% endif %}</td>
-<td><label for="depreciacao_{{ mov.pk }}" class="rt-help">% do movimento #{{ mov.pk }}</label><input id="depreciacao_{{ mov.pk }}" type="number" name="depreciacao_{{ mov.pk }}" min="0" max="100" step="0.01" value="0" required></td>
+<td>{% if mov.depreciacao_percentual is not None %}<strong>{{ mov.depreciacao_percentual|floatformat:2 }}%</strong> <span class="rt-help">(registrada; bloqueada)</span>{% else %}<label for="depreciacao_{{ mov.pk }}" class="rt-help">% do movimento #{{ mov.pk }}</label><input id="depreciacao_{{ mov.pk }}" type="number" name="depreciacao_{{ mov.pk }}" min="0" max="100" step="0.01" value="0" required>{% endif %}</td>
 <td class="num">{% if mov.valor_bruto_relatorio is not None %}R$ {{ mov.valor_bruto_relatorio|floatformat:2 }}{% else %}A conferir{% endif %}</td>
 </tr>{% endfor %}</tbody></table></div>
-<div class="rt-summary"><p class="rt-help">O Excel exibirá o percentual e o valor depreciado de cada movimento e o total devido à obra de origem.</p><button class="op-btn" type="submit">Gerar Excel financeiro</button></div>
+<div class="rt-summary"><p class="rt-help">A geração registra definitivamente os percentuais pendentes e cria o Excel. Os já registrados não podem ser alterados.</p><button class="op-btn" type="submit">{% if pendentes %}Registrar depreciações e gerar Excel{% else %}Baixar Excel dos lançamentos registrados{% endif %}</button></div>
 </form>
 {% else %}<p>Nenhuma transferência encontrada. Ajuste os filtros para selecionar os movimentos do relatório.</p>{% endif %}
 </section></div>

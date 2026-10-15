@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -79,6 +80,8 @@ def almoxarifado_obra(request, obra_id):
             if q in linha["material_nome"].lower() or q in linha["descricao"].lower()
         ]
 
+    pagina = Paginator(linhas, 25).get_page(request.GET.get("page"))
+
     movimentos = (
         MovimentoEstoque.objects
         .filter(Q(obra_origem=obra) | Q(obra_destino=obra))
@@ -88,7 +91,8 @@ def almoxarifado_obra(request, obra_id):
 
     return render(request, "obras/almoxarifado_obra.html", {
         "obra": obra,
-        "linhas": linhas,
+        "linhas": pagina.object_list,
+        "pagina": pagina,
         "estoque_modal": estoque_completo,
         "destinos": Obra.objects.filter(ativa=True).exclude(pk=obra.pk).order_by("nome"),
         "movimentos": movimentos,
@@ -201,7 +205,7 @@ def transferencia_estoque(request, obra_id):
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def relatorio_transferencias(request, obra_id):
-    """Depreciação individual por movimento, usada somente no Excel de ressarcimento."""
+    """Registra depreciação definitiva por transferência e gera planilha financeira."""
     from datetime import datetime
     from io import BytesIO
     from django.http import HttpResponse
@@ -242,24 +246,43 @@ def relatorio_transferencias(request, obra_id):
             "destinos": Obra.objects.filter(ativa=True).exclude(pk=obra_id).order_by("nome"),
             "inicio": inicio, "fim": fim, "destino": destino,
             "qtd": len(registros), "movimentos": registros,
+            "pendentes": sum(m.depreciacao_percentual is None for m in registros),
         })
 
     if not registros:
         return HttpResponse("Nenhuma transferência selecionada para gerar o relatório.", status=400)
     porcentagens = {}
     for mov in registros:
+        if mov.depreciacao_percentual is not None:
+            porcentagens[mov.pk] = mov.depreciacao_percentual
+            continue
         campo = f"depreciacao_{mov.pk}"
         texto = request.POST.get(campo)
         if texto is None or not texto.strip():
             return HttpResponse(f"Informe a depreciação do movimento {mov.pk}.", status=400)
-        texto = texto.strip().replace(",", ".")
         try:
-            valor = Decimal(texto)
+            valor = Decimal(texto.strip().replace(",", "."))
         except (ValueError, InvalidOperation):
             return HttpResponse(f"Depreciação inválida no movimento {mov.pk}.", status=400)
-        if not valor.is_finite() or not 0 <= valor <= 100:
-            return HttpResponse(f"Depreciação do movimento {mov.pk} deve estar entre 0 e 100%.", status=400)
+        if not valor.is_finite() or not 0 <= valor <= 100 or valor.as_tuple().exponent < -2:
+            return HttpResponse(f"Depreciação do movimento {mov.pk} deve estar entre 0 e 100%, com até duas casas decimais.", status=400)
         porcentagens[mov.pk] = valor
+
+    # Impede duas requisições concorrentes de lançarem percentuais distintos.
+    # Bloqueia também as obras, na mesma ordem usada nas transferências.
+    with transaction.atomic():
+        ids_obras = sorted(set([obra.pk] + [m.obra_destino_id for m in registros if m.obra_destino_id]))
+        list(Obra.objects.select_for_update().filter(pk__in=ids_obras).order_by("pk"))
+        bloqueados = {m.pk: m for m in MovimentoEstoque.objects.select_for_update().filter(pk__in=[m.pk for m in registros])}
+        for mov in registros:
+            atual = bloqueados[mov.pk]
+            if atual.depreciacao_percentual is not None:
+                if atual.depreciacao_percentual != porcentagens[mov.pk]:
+                    return HttpResponse("A depreciação foi registrada por outra operação. Atualize a página.", status=409)
+                continue
+            atual.depreciacao_percentual = porcentagens[mov.pk]
+            atual.depreciacao_registrada_em = timezone.now()
+            atual.save(update_fields=["depreciacao_percentual", "depreciacao_registrada_em"])
 
     wb = Workbook()
     ws = wb.active

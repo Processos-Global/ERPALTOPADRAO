@@ -43,6 +43,11 @@ class MovimentoEstoque(models.Model):
         validators=[MinValueValidator(Decimal("0.0001"))],
     )
     custo_unitario_transferencia = models.DecimalField(max_digits=18, decimal_places=6, null=True, blank=True, help_text="Custo médio de compra no momento da transferência")
+    depreciacao_percentual = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="Depreciação aplicada uma única vez no relatório financeiro.",
+    )
+    depreciacao_registrada_em = models.DateTimeField(null=True, blank=True)
     data_movimento = models.DateTimeField(default=timezone.now, db_index=True)
     finalidade = models.CharField(max_length=255, blank=True)
     documento_referencia = models.CharField(max_length=100, blank=True)

@@ -148,6 +148,7 @@ def obter_estoque(obra=None, somente_com_saldo=True):
             "chave_item": chave_item,
             "quantidade": mov.quantidade or ZERO,
             "valor": ZERO,
+            "depreciacao": mov.depreciacao_percentual,
         })
 
     # Custo médio móvel por obra/item. Não exige gravar valor nos movimentos.
@@ -179,7 +180,10 @@ def obter_estoque(obra=None, somente_com_saldo=True):
             chave_destino = (evento["obra_destino_id"], evento["chave_item"])
             estado_destino = estados.setdefault(chave_destino, {"quantidade": ZERO, "valor": ZERO})
             estado_destino["quantidade"] += quantidade
-            estado_destino["valor"] += valor_movimento
+            # A origem baixa o custo integral; a diferença é perda por depreciação.
+            # A obra de destino recebe somente o custo líquido atribuído ao movimento.
+            depreciacao = evento["depreciacao"] or ZERO
+            estado_destino["valor"] += valor_movimento * (Decimal("1") - depreciacao / Decimal("100"))
 
     resultado = []
     for chave, linha in linhas.items():
