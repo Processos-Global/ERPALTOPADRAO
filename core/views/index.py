@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 from django.shortcuts import render
 
 from usuarios.models import (
@@ -82,9 +83,9 @@ MODULOS_ERP = [
     {
         "codigo": ModuloSistema.POS_OBRA,
         "titulo": "Pós-obra",
-        "descricao": "Atendimento e assistência",
+        "descricao": "Atendimentos, garantias e ordens de serviço",
         "icone": "tools",
-        "url_name": "",
+        "url_name": "pos_obra:painel",
     },
     {
         "codigo": ModuloSistema.RELATORIOS,
@@ -112,6 +113,14 @@ MODULOS_ERP = [
 
 @login_required
 def index_view(request):
+    from pos_obra.models import Cliente
+    from pos_obra.access import cliente_do_usuario, acesso_interno
+    from django.core.exceptions import PermissionDenied
+    if Cliente.objects.filter(usuario=request.user).exists():
+        cliente = cliente_do_usuario(request.user)
+        if not cliente:
+            raise PermissionDenied("Acesso ao portal do cliente desabilitado.")
+        return render(request, "core/index.html", {"is_cliente_pos_obra": True, "cliente": cliente})
     if request.user.is_superuser:
         permissoes_por_modulo = {
             modulo["codigo"]: NivelPermissao.ADMINISTRADOR
@@ -134,6 +143,13 @@ def index_view(request):
             permissao["modulo"]: permissao["nivel"]
             for permissao in permissoes
         }
+
+    # O painel e a barra lateral seguem a mesma autorização das views de Pós-Obra.
+    pos_obra_acesso = acesso_interno(request.user)
+    if pos_obra_acesso:
+        permissoes_por_modulo.setdefault(ModuloSistema.POS_OBRA, NivelPermissao.EDICAO)
+    else:
+        permissoes_por_modulo.pop(ModuloSistema.POS_OBRA, None)
 
     niveis = dict(NivelPermissao.choices)
     modulos_liberados = []
@@ -160,6 +176,7 @@ def index_view(request):
     contexto = {
         "modulos": modulos_liberados,
         "total_modulos": len(modulos_liberados),
+        "pos_obra_acesso": pos_obra_acesso,
     }
 
     return render(

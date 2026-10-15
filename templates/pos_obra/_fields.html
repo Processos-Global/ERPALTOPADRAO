@@ -1,0 +1,3 @@
+{{ form.non_field_errors }}
+{% for f in form.hidden_fields %}{{ f }}{{ f.errors }}{% endfor %}
+<div class="po-form-grid">{% for f in form.visible_fields %}<div class="po-field {% if f.field.widget.input_type == 'file' or f.name == 'descricao' or f.name == 'comentario' or f.name == 'diagnostico' or f.name == 'execucao' or f.name == 'conclusao' or f.name == 'triagem' or f.name == 'materiais_observacao' %}full{% endif %}" data-field="{{ f.name }}"><label for="{{ f.id_for_label }}">{{ f.label }}{% if f.field.required %} *{% endif %}</label>{{ f }}{% if f.help_text %}<div class="po-help" id="help-{{ f.name }}">{{ f.help_text }}</div>{% endif %}{{ f.errors }}</div>{% endfor %}</div>

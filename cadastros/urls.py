@@ -3,6 +3,10 @@ from cadastros import views
 
 app_name = "cadastros"
 urlpatterns = [
+    path("pos-obra/<slug:modelo>/", views.pos_obra_views.lista, name="pos_obra_lista"),
+    path("pos-obra/<slug:modelo>/novo/", views.pos_obra_views.editar, name="pos_obra_novo"),
+    path("pos-obra/<slug:modelo>/<int:pk>/editar/", views.pos_obra_views.editar, name="pos_obra_editar"),
+    path("pos-obra/empreendimento/<int:pk>/liberar/", views.pos_obra_views.liberar, name="pos_obra_liberar"),
     path("fvs/", views.modelos_fvs_lista, name="modelos_fvs_lista"),
     path("fvs/novo/", views.modelo_fvs_novo, name="modelo_fvs_novo"),
     path("fvs/<int:pk>/editar/", views.modelo_fvs_editar, name="modelo_fvs_editar"),

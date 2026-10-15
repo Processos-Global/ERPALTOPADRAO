@@ -2,11 +2,11 @@
 {% load static %}
 
 {% block title %}
-    Painel Geral | SAARI ERP
+    {% if is_cliente_pos_obra %}Minha área | SAARI ERP{% else %}Painel Geral | SAARI ERP{% endif %}
 {% endblock %}
 
 {% block page_name %}
-    Painel Geral
+    {% if is_cliente_pos_obra %}Minha área{% else %}Painel Geral{% endif %}
 {% endblock %}
 
 {% block extra_css %}
@@ -236,8 +236,30 @@
         </section>
 
 
+        {% if is_cliente_pos_obra %}
+        <section class="modules" aria-label="Serviços do cliente">
+          <div class="module-cards">
+            <a href="{% url 'pos_obra:portal' %}" class="module-card" data-transition-link>
+              <header class="module-card__header"><span class="module-card__number">01</span><span class="module-card__permission">Pós-Obra</span></header>
+              <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-building"></use></svg></span><div class="module-card__content"><h3>Meus imóveis</h3><p>Consulte seus imóveis vinculados e acompanhe a assistência técnica.</p></div></div>
+              <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer><span class="module-card__accent"></span>
+            </a>
+            <a href="{% url 'pos_obra:portal_novo' %}" class="module-card" data-transition-link>
+              <header class="module-card__header"><span class="module-card__number">02</span><span class="module-card__permission">Atendimento</span></header>
+              <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-file"></use></svg></span><div class="module-card__content"><h3>Nova solicitação</h3><p>Abra um chamado de assistência técnica para um imóvel vinculado.</p></div></div>
+              <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer><span class="module-card__accent"></span>
+            </a>
+            <a href="{% url 'pos_obra:portal' %}#meus-chamados" class="module-card" data-transition-link>
+              <header class="module-card__header"><span class="module-card__number">03</span><span class="module-card__permission">Acompanhamento</span></header>
+              <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span><div class="module-card__content"><h3>Minhas solicitações</h3><p>Consulte o andamento, o histórico e as respostas dos chamados.</p></div></div>
+              <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer><span class="module-card__accent"></span>
+            </a>
+          </div>
+        </section>
+        {% else %}
         <section class="modules">
             <div class="module-cards">
+
                 {% if planejamento_acesso %}
 <a
                     href="{% url 'planejamento:menu' %}"
@@ -472,6 +494,14 @@
                     </a>
                 {% endif %}
 
+                {% if pos_obra_acesso %}
+                <a href="{% url 'pos_obra:painel' %}" class="module-card" data-transition-link>
+                  <header class="module-card__header"><span class="module-card__number">07</span><span class="module-card__permission">Assistência técnica</span></header>
+                  <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-tools"></use></svg></span><div class="module-card__content"><h3>Pós-Obra</h3><p>Atendimentos, garantias, ordens de serviço e acompanhamento do cliente.</p></div></div>
+                  <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer><span class="module-card__accent"></span>
+                </a>
+                {% endif %}
+
                 {% if usuarios_acesso %}
                     <a
                         href="{% url 'usuarios:lista_usuarios' %}"
@@ -480,7 +510,7 @@
                     >
                         <header class="module-card__header">
                             <span class="module-card__number">
-                                07
+                                08
                             </span>
 
                             <span class="module-card__permission">
@@ -519,5 +549,6 @@
                 {% endif %}
             </div>
         </section>
+        {% endif %}
     </div>
 {% endblock %}

@@ -1,0 +1,2 @@
+{% extends 'pos_obra/_base.html' %}{% block po_content %}
+<section class="po-card"><div class="po-card__head"><div><h2>{{ titulo }}</h2><p>Selecione o imóvel, o cliente vinculado e os dados da ocorrência.</p></div></div><form method="post" enctype="multipart/form-data" id="po-chamado-form">{% csrf_token %}{% include 'pos_obra/_fields.html' %}<div class="po-form-footer"><a class="po-button" href="{% url 'pos_obra:lista' %}">Cancelar</a><button class="po-button primary">Criar chamado</button></div></form></section>{% include 'pos_obra/_ambientes_script.html' %}{% endblock %}

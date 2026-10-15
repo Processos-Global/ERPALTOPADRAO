@@ -742,6 +742,7 @@
 
             <div class="sidebar__divider"></div>
 
+            {% if not is_cliente_pos_obra %}
             {% if sidebar_obra_ativa_nome and sidebar_obra_ativa_nome != "Nenhuma obra selecionada" and sidebar_obra_ativa_status != "Sem obra ativa" %}
                 <section class="sidebar__project">
                     <span class="sidebar__section-title">
@@ -768,6 +769,7 @@
                 </section>
             {% endif %}
 
+            {% endif %}
             <nav
                 class="sidebar__navigation"
                 aria-label="Navegação principal"
@@ -794,6 +796,16 @@
                 </a>
             </nav>
 
+            {% if is_cliente_pos_obra %}
+            <section class="sidebar__modules">
+              <header class="sidebar__modules-header"><span class="sidebar__section-title">Portal do cliente</span><small>3</small></header>
+              <div class="sidebar__modules-list">
+                <a href="{% url 'pos_obra:portal' %}" class="sidebar-link {% if request.resolver_match.view_name == 'pos_obra:portal' %}sidebar-link--active{% endif %}" data-transition-link title="Meus imóveis"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-building"></use></svg></span><span class="sidebar-link__text">Meus imóveis</span></a>
+                <a href="{% url 'pos_obra:portal_novo' %}" class="sidebar-link {% if request.resolver_match.view_name == 'pos_obra:portal_novo' %}sidebar-link--active{% endif %}" data-transition-link title="Nova solicitação"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-file"></use></svg></span><span class="sidebar-link__text">Nova solicitação</span></a>
+                <a href="{% url 'pos_obra:portal' %}#meus-chamados" class="sidebar-link" data-transition-link title="Minhas solicitações"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span><span class="sidebar-link__text">Minhas solicitações</span></a>
+              </div>
+            </section>
+            {% else %}
             <section class="sidebar__modules">
                 <header class="sidebar__modules-header">
                     <span class="sidebar__section-title">
@@ -894,6 +906,20 @@
                         </a>
                     {% endif %}
 
+                    {% if pos_obra_acesso %}
+                        <a
+                            href="{% url 'pos_obra:painel' %}"
+                            class="sidebar-link {% if request.resolver_match.namespace == 'pos_obra' %}sidebar-link--active{% endif %}"
+                            data-transition-link
+                            title="Pós-Obra"
+                        >
+                            <span class="sidebar-link__icon">
+                                <svg class="icon"><use href="#icon-tools"></use></svg>
+                            </span>
+                            <span class="sidebar-link__text">Pós-Obra</span>
+                        </a>
+                    {% endif %}
+
                     {% if cadastros_acesso %}
                         <a
                             href="{% url 'cadastros:index' %}"
@@ -929,6 +955,7 @@
                 </div>
             </section>
 
+            {% endif %}
             <footer class="sidebar__footer">
                 <div class="user-summary">
                     <span class="user-summary__avatar">
@@ -1022,6 +1049,7 @@
                         </svg>
                     </button>
 
+                    {% if not is_cliente_pos_obra %}
                     <div class="notification-center" data-notification-center>
                         <button
                             type="button"
@@ -1076,6 +1104,7 @@
                         </div>
                     </div>
 
+                    {% endif %}
                     <span class="topbar__status"></span>
 
                     <span class="topbar__account-text">

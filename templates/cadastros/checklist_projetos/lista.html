@@ -28,6 +28,18 @@
   .chk-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid #eee8d6;color:#85776f;font-size:11.5px}.chk-pagination__controls{display:flex;gap:6px}.chk-page-btn{height:32px;padding:0 10px;border:1px solid #ded7c8;border-radius:7px;background:#fff;color:#453330;font:inherit;font-size:11.5px;font-weight:750;cursor:pointer}.chk-page-btn:hover:not(:disabled){background:#f5f1e9}.chk-page-btn:disabled{opacity:.4;cursor:not-allowed}.chk-page-btn.is-active{background:#453330;border-color:#453330;color:#fff}
   @media(max-width:720px){.chk-section__head{align-items:flex-start;flex-direction:column}.chk-actions{justify-content:flex-start}.chk-toolbar input[type=search]{min-width:100%}.chk-pagination{align-items:flex-start;flex-direction:column}}
 </style>
+<!-- SAARI dark: ajustes locais de contraste de superficies; sem efeitos no tema claro. -->
+<style id="saari-dark-local-contrast">
+html[data-theme="dark"] .chk-section { background-color:var(--saari-surface) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-action-btn { background-color:var(--saari-surface) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-table th { background-color:var(--saari-table-head) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-toolbar { background-color:var(--saari-surface-soft) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-toolbar input { background-color:var(--saari-surface-soft) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-toolbar select { background-color:var(--saari-surface-soft) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-page-btn { background-color:var(--saari-surface) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+html[data-theme="dark"] .chk-page-btn:hover:not(:disabled) { background-color:var(--saari-surface) !important; color:var(--saari-text) !important; border-color:var(--saari-line) !important; }
+</style>
+
 
 <div class="chk-toolbar">
   <form method="get">
@@ -78,4 +90,14 @@
   });
 })();
 </script>
+
+<!-- SAARI DARK: contraste de tipografia local (somente modo escuro). -->
+<style id="saari-dark-text-contrast">
+html[data-theme="dark"] .chk-group-name,
+html[data-theme="dark"] .chk-section__title { color:var(--saari-text) !important; }
+html[data-theme="dark"] .chk-code,
+html[data-theme="dark"] .chk-empty,
+html[data-theme="dark"] .chk-section__sub,
+html[data-theme="dark"] .chk-type { color:var(--saari-muted) !important; }
+</style>
 {% endblock %}

@@ -1,0 +1,46 @@
+<script>
+(function(){
+ const form=document.getElementById('po-chamado-form');if(!form)return;
+ const imovel=form.querySelector('[name=empreendimento]'),ambiente=form.querySelector('[name=ambiente_ficha]'),padrao=form.querySelector('[name=ambiente_padrao]'),cliente=form.querySelector('select[name=cliente]');
+ if(!imovel||!ambiente||!padrao)return;
+ const wrapA=ambiente.closest('[data-field]'),wrapP=padrao.closest('[data-field]');
+ const notice=document.createElement('p');notice.className='po-help';notice.setAttribute('role','status');imovel.after(notice);
+ const retry=document.createElement('button');retry.type='button';retry.className='po-button';retry.textContent='Tentar novamente';retry.hidden=true;notice.after(retry);
+ let controller=null,previousState=null;
+ function options(placeholder,itens){return [new Option(placeholder,''),...itens.map(item=>new Option(item.nome,item.id))];}
+ async function load(){
+  if(controller)controller.abort();
+  else previousState={ambiente:ambiente.disabled,padrao:padrao.disabled,cliente:cliente?cliente.disabled:false};
+  const active=new AbortController();controller=active;retry.hidden=true;
+  const previous=ambiente.value,previousCliente=cliente?cliente.value:'';
+  if(!imovel.value){
+   ambiente.replaceChildren(new Option('Selecione o ambiente',''));ambiente.disabled=true;ambiente.required=false;
+   padrao.disabled=true;padrao.required=false;wrapA.hidden=false;wrapP.hidden=true;
+   if(cliente){cliente.replaceChildren(new Option('Selecione o cliente',''));cliente.disabled=true;}
+   notice.textContent='Selecione o imóvel para carregar os ambientes.';controller=null;return;
+  }
+  // Preservar as opções renderizadas pelo servidor até receber uma resposta válida.
+  ambiente.disabled=true;padrao.disabled=true;if(cliente)cliente.disabled=true;
+  notice.textContent='Carregando dados do imóvel…';
+  try{
+   const response=await fetch('{% url "pos_obra:portal_ambientes" %}?empreendimento='+encodeURIComponent(imovel.value),{signal:active.signal,headers:{'Accept':'application/json'}});
+   if(!response.ok)throw new Error('Não foi possível carregar o imóvel.');
+   const data=await response.json();
+   if(controller!==active)return;
+   if(typeof data.historica!=='boolean'||!Array.isArray(data.ambientes)||(cliente&&!Array.isArray(data.clientes)))throw new Error('Dados inválidos.');
+   ambiente.replaceChildren(...options('Selecione o ambiente',data.ambientes));ambiente.value=previous;
+   ambiente.disabled=data.historica;ambiente.required=!data.historica;
+   padrao.disabled=!data.historica;padrao.required=data.historica;
+   wrapA.hidden=data.historica;wrapP.hidden=!data.historica;
+   if(cliente){cliente.replaceChildren(...options('Selecione o cliente',data.clientes));cliente.disabled=false;cliente.value=previousCliente;}
+   notice.textContent=(!data.historica&&!data.ambientes.length)?'Este imóvel não possui ambientes ativos na ficha técnica. Solicite o cadastro à equipe.':'';
+  }catch(error){
+   if(error.name==='AbortError'||controller!==active)return;
+   ambiente.disabled=previousState.ambiente;padrao.disabled=previousState.padrao;if(cliente)cliente.disabled=previousState.cliente;
+   notice.textContent='Não foi possível carregar os dados. Tente novamente.';retry.hidden=false;
+  }finally{if(controller===active)controller=null;}
+ }
+ retry.addEventListener('click',load);
+ imovel.addEventListener('change',()=>{ambiente.value='';padrao.value='';if(cliente)cliente.value='';load();});load();
+})();
+</script>

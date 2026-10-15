@@ -3,6 +3,8 @@ from obras import views
 
 app_name = "obras"
 urlpatterns = [
+    path("pos-obra/liberacoes/", __import__("obras.views.pos_obra",fromlist=["liberacoes"]).liberacoes, name="pos_obra_liberacoes"),
+    path("pos-obra/<int:obra_id>/liberar/", __import__("obras.views.pos_obra",fromlist=["liberar"]).liberar, name="pos_obra_liberar"),
     path("", views.menu, name="menu"),
 
     path("vistorias/", views.vistorias_lista, name="vistorias_lista"),

@@ -612,4 +612,80 @@ html[data-theme="dark"] .logout-dialog__card{
   box-shadow:0 24px 60px rgba(0,0,0,.28)!important;
 }
 
+
+/* ============================================================
+   SAARI DARK 2.1 - acabamento de superficies por modulo.
+   Apenas no tema escuro. Preserva cores semanticas de status,
+   badges, progresso, graficos e botoes de acao.
+   ============================================================ */
+html[data-theme="dark"]{
+  --saari-dark-canvas:#1d1916;
+  --saari-dark-panel:#28221e;
+  --saari-dark-raised:#302823;
+  --saari-dark-field:#241f1b;
+  --saari-dark-border:rgba(235,222,205,.11);
+  --saari-dark-text:#e8dfd6;
+  --saari-dark-muted:#aa9e95;
+  --saari-dark-gold:#b89b5c;
+}
+/* Paineis: cobrem as variacoes legadas que nao usavam tokens globais. */
+html[data-theme="dark"] :is(
+  .pc-card,.pc-card-body,.cp-action-card,.cf-card,.purchase-card,
+  .pc-tab-panel,.cp-table-wrap,.pc-table-wrap,.kb-detail-card,
+  .kb-card,.kb-column,.kb-board,.gfp-form-section,
+  .chk-section,.chk-table-wrap,.chk-toolbar,.fvs-model-card,
+  .proj-alt-filter,.proj-alt-form,.proj-table-shell,.proj-table-wrap,
+  .op-panel,.op-toolbar,.op-kpi-card,.op-table-wrap,.ft-table-wrap,.ft-review-card,
+  .fvs-meta-card,.po-card,.po-toolbar,.po-table-wrap,.os-panel,
+  .po-kanban-card,.po-column,.fin-table-wrap,.fin-chart-card,.fin-toolbar
+){
+  background:var(--saari-dark-panel)!important;
+  border-color:var(--saari-dark-border)!important;
+  color:var(--saari-dark-text);
+}
+/* Cabecalhos e areas internas: outro degrau tonal, nao branco. */
+html[data-theme="dark"] :is(
+  .pc-card-head,.kb-step-head,.kb-column-head,.chk-section__head,
+  .proj-table-head,.proj-sheet-head,.op-panel-head,.ft-panel-head,
+  .po-card__head,.po-column-head,.os-section-head,.fin-chart-card__head
+){
+  background:var(--saari-dark-raised)!important;
+  border-color:var(--saari-dark-border)!important;
+  color:var(--saari-dark-text)!important;
+}
+/* Planilhas e tabelas devem preservar as grades sem branco estourado. */
+html[data-theme="dark"] :is(
+  .cp-table,.pc-table,.chk-table,.proj-table,.op-table,.ft-table,.po-table,.fin-table
+){
+  background:var(--saari-dark-panel)!important;
+  border-color:var(--saari-dark-border)!important;
+  color:var(--saari-dark-text)!important;
+}
+html[data-theme="dark"] :is(
+  .cp-table,.pc-table,.chk-table,.proj-table,.op-table,.ft-table,.po-table,.fin-table
+) :is(th,thead td){
+  background:#332b25!important;
+  border-color:var(--saari-dark-border)!important;
+  color:#cfc2b6!important;
+}
+/* Campos sem preenchimento branco, inclusive campos readonly. */
+html[data-theme="dark"] :is(input,textarea,select):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]){
+  background-color:var(--saari-dark-field)!important;
+  border-color:var(--saari-dark-border)!important;
+  color:var(--saari-dark-text)!important;
+}
+html[data-theme="dark"] :is(input,textarea,select):disabled,
+html[data-theme="dark"] :is(input,textarea,select)[readonly]{
+  background-color:#302a26!important;
+  color:#b5a99e!important;
+  opacity:1;
+}
+html[data-theme="dark"] :is(input,textarea,select):focus-visible{
+  outline:2px solid rgba(184,155,92,.45);
+  outline-offset:1px;
+}
+/* Selecoes nativas e celulas vazias mantem legibilidade. */
+html[data-theme="dark"] :is(option,optgroup){background:#28221e;color:#e8dfd6}
+html[data-theme="dark"] :is(.po-kanban,.po-kanban-page,.op-page,.proj-page){color:var(--saari-dark-text)}
+
 </style>

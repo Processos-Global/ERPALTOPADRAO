@@ -17,6 +17,18 @@ def erp_layout(request):
     if not request.user.is_authenticated:
         return {}
 
+    from pos_obra.models import Cliente
+    if Cliente.objects.filter(usuario=request.user).exists():
+        return {
+            "is_cliente_pos_obra": True,
+            "sidebar_dashboard": {
+                "titulo": "Minha área", "icone": "grid",
+                "url": reverse("core:index"),
+                "ativo": bool(getattr(request, "resolver_match", None) and request.resolver_match.view_name == "core:index"),
+            },
+            "sidebar_total_modulos": 3,
+        }
+
     resolver_match = getattr(request, "resolver_match", None)
     current_view_name = resolver_match.view_name if resolver_match else ""
 
@@ -31,6 +43,10 @@ def erp_layout(request):
             ).values_list("modulo", flat=True)
         }
 
+    from pos_obra.access import acesso_interno
+    pos_obra_acesso = acesso_interno(request.user)
+    permissoes[ModuloSistema.POS_OBRA] = pos_obra_acesso
+
     sidebar_modulos = []
     for item in sorted(MODULOS_REGISTRY, key=lambda modulo: modulo.ordem):
         if not permissoes.get(item.codigo):
@@ -42,7 +58,7 @@ def erp_layout(request):
             "icone": item.icone,
             "url_name": item.url_name,
             "url": url,
-            "ativo": current_view_name == item.url_name,
+            "ativo": current_view_name.startswith("pos_obra:") if item.codigo == ModuloSistema.POS_OBRA else current_view_name == item.url_name,
             "desabilitado": not bool(url),
         })
 
@@ -75,6 +91,7 @@ def erp_layout(request):
 
     return {
         "notificacoes_recentes": notificacoes_recentes,
+        "pos_obra_acesso": pos_obra_acesso,
         "planejamento_acesso": planejamento_acesso,
         "compras_acesso": compras_acesso,
         "projetos_acesso": projetos_acesso,

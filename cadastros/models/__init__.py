@@ -21,3 +21,7 @@ __all__ = [
 
 from .checklist_projetos import ChecklistProjetoGrupo, ChecklistProjetoItem
 from .fvs import ModeloFVS, ItemModeloFVS
+
+from .pos_obra import Cliente, EmpreendimentoPosObra, VinculoCliente, CategoriaOcorrencia, TipoProblema
+
+from .pos_obra import Cliente, EmpreendimentoPosObra, VinculoCliente, CategoriaOcorrencia, TipoProblema

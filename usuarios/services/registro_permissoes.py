@@ -294,7 +294,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
     ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, "projetos:menu"),
     ModuloDef(ModuloSistema.VISTORIAS, "Vistorias", "Inspeções, vistorias e registros de campo.", "check", 90, ""),
     ModuloDef(ModuloSistema.DIARIO_OBRA, "Diário de obra", "Registros diários e acompanhamento de campo.", "book", 100, ""),
-    ModuloDef(ModuloSistema.POS_OBRA, "Pós-obra", "Atendimento, garantias e ordens de serviço.", "tools", 110, ""),
+    ModuloDef(ModuloSistema.POS_OBRA, "Pós-obra", "Atendimento, garantias e ordens de serviço.", "tools", 110, "pos_obra:painel"),
     ModuloDef(ModuloSistema.RELATORIOS, "Relatórios", "Relatórios e consultas consolidadas.", "chart", 120, ""),
     ModuloDef(ModuloSistema.INTEGRACOES, "Integrações", "Integrações e rotinas de comunicação entre sistemas.", "refresh", 130, ""),
     ModuloDef(ModuloSistema.USUARIOS, "Usuários e permissões", "Gerenciamento de usuários e acessos do ERP.", "users", 140, "usuarios:lista_usuarios"),

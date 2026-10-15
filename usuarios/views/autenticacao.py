@@ -39,9 +39,27 @@ def _registrar_falha_cache(chave, timeout):
         return 1
 
 
+def _conta_cliente(usuario):
+    from pos_obra.models import Cliente
+    return Cliente.objects.filter(usuario=usuario).exists()
+
+
+def _destino_apos_login(usuario):
+    from pos_obra.access import cliente_do_usuario
+    from pos_obra.models import Cliente
+
+    if Cliente.objects.filter(usuario=usuario).exists():
+        return "core:index" if cliente_do_usuario(usuario) else "usuarios:logout"
+    return "core:index"
+
+
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect("core:index")
+        destino = _destino_apos_login(request.user)
+        if destino == "usuarios:logout":
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied("Portal do cliente desabilitado. Contate o atendimento.")
+        return redirect(destino)
 
     proxima_pagina = request.GET.get("next") or request.POST.get("next")
 
@@ -87,6 +105,15 @@ def login_view(request):
                     f"Bem-vindo, {usuario.get_full_name() or usuario.username}.",
                 )
 
+                destino = _destino_apos_login(usuario)
+                if destino == "usuarios:logout":
+                    logout(request)
+                    form.add_error(None, "Portal do cliente desabilitado. Contate o atendimento.")
+                    return render(request, "usuarios/autenticacao/login.html", {"form": form, "next": ""}, status=403)
+
+                if destino == "core:index" and _conta_cliente(usuario):
+                    return redirect(destino)
+
                 if (
                     proxima_pagina
                     and url_has_allowed_host_and_scheme(
@@ -97,7 +124,7 @@ def login_view(request):
                 ):
                     return redirect(proxima_pagina)
 
-                return redirect("core:index")
+                return redirect(destino)
         else:
             _registrar_falha_cache(
                 chave_tentativas,
