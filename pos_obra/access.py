@@ -2,6 +2,8 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from .models import Cliente,VinculoCliente
+from usuarios.decorators import possui_permissao_acao
+from usuarios.models import ModuloSistema
 
 def cliente_do_usuario(user):
     return Cliente.objects.filter(usuario=user,ativo=True,portal_habilitado=True).first() if user.is_authenticated else None
@@ -16,7 +18,8 @@ def interno(view):
     @login_required
     @wraps(view)
     def wrapped(request,*args,**kwargs):
-        if not acesso_interno(request.user):raise PermissionDenied('Acesso restrito ao Pós-Obra.')
+        if not acesso_interno(request.user) or not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'visualizar'):
+            raise PermissionDenied('Acesso restrito ao Pós-Obra.')
         return view(request,*args,**kwargs)
     return wrapped
 

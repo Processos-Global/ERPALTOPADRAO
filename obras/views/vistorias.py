@@ -1,13 +1,14 @@
 from django.contrib import messages
 from django.db import transaction
 from django.http import Http404, JsonResponse
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from obras.models import VistoriaHistorico, VistoriaItem
 from planejamento.models import ImportacaoCronograma, RegistroCronograma
-from usuarios.decorators import modulo_required
+from usuarios.decorators import modulo_required, possui_permissao_acao
 from usuarios.models import ModuloSistema, NivelPermissao
 
 # O filtro é executado no banco, antes de percorrer os snapshots semanais.
@@ -109,6 +110,13 @@ def vistoria_alterar(request, atividade_id):
     ).values('obra_id').first())
     if not registro:
         raise Http404('Atividade indisponível no cronograma ativo')
+    disciplina = RegistroCronograma.objects.filter(
+        importacao_id=importacao_id, atividade_planejamento_id=atividade_id,
+        disciplina__in=_DISCIPLINAS,
+    ).values_list('disciplina', flat=True).first()
+    acao = 'pre_habite_se' if disciplina in _PRE else 'pos_habite_se'
+    if not possui_permissao_acao(request.user, ModuloSistema.VISTORIAS, acao):
+        raise PermissionDenied('Você não pode alterar esta vistoria.')
 
     with transaction.atomic():
         item, _ = VistoriaItem.objects.select_for_update().get_or_create(

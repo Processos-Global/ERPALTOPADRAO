@@ -1,3 +1,4 @@
+from .permissao_acao import PermissaoAcao
 from .permissao_cadastros import PermissaoCadastros
 from .perfil import PerfilUsuario
 from .permissao import (
@@ -31,6 +32,7 @@ __all__ = [
     "PermissaoCompras",
     "PermissaoFinanceiro",
     "PermissaoCadastros",
+    "PermissaoAcao",
     "PermissaoModulo",
     "TipoNotificacao",
 ]

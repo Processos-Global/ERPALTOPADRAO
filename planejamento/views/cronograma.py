@@ -3,7 +3,8 @@ from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
 from planejamento.models import ImportacaoCronograma
-from usuarios.decorators import modulo_required
+from usuarios.decorators import modulo_required, possui_permissao_acao
+from django.core.exceptions import PermissionDenied
 from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma import (
     ImportacaoCronogramaError,
@@ -73,6 +74,8 @@ def historico_importacoes_cronograma(request):
 @modulo_required(ModuloSistema.PLANEJAMENTO, NivelPermissao.ADMINISTRADOR)
 @require_POST
 def atualizar_cronograma(request):
+    if not possui_permissao_acao(request.user, ModuloSistema.PLANEJAMENTO, 'importar_cronograma'):
+        raise PermissionDenied('Você não pode importar cronogramas.')
     try:
         resultado = importar_cronograma(
             executado_por=request.user,

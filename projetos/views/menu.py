@@ -1,8 +1,9 @@
-from django.contrib.auth.decorators import login_required
+from usuarios.decorators import modulo_required
+from usuarios.models import ModuloSistema
 from django.shortcuts import render
 
 
-@login_required
+@modulo_required(ModuloSistema.PROJETOS)
 def menu_projetos(request):
     return render(
         request,

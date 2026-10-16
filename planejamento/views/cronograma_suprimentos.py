@@ -12,7 +12,8 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from planejamento.models import ImportacaoCronogramaSuprimentos, ItemCronogramaSuprimento
-from usuarios.decorators import algum_modulo_required, modulo_required
+from usuarios.decorators import algum_modulo_required, modulo_required, possui_permissao_acao
+from django.core.exceptions import PermissionDenied
 from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma_suprimentos import (
     ImportacaoCronogramaSuprimentosError,
@@ -56,6 +57,8 @@ def kanban_cronograma_suprimentos(request):
 @modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.ADMINISTRADOR)
 @require_POST
 def atualizar_cronograma_suprimentos(request):
+    if not possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, 'editar_planejamento'):
+        raise PermissionDenied('Você não pode atualizar o cronograma de suprimentos.')
     try:
         resultado = importar_cronograma_suprimentos(
             usuario=request.user,
@@ -109,6 +112,8 @@ def salvar_datas_item_cronograma_suprimentos(request, item_id):
     interface. No futuro esta mesma camada poderá ser atualizada pelo módulo de
     Compras sem alterar a regra de cálculo do cronograma.
     """
+    if not possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, 'editar_planejamento'):
+        raise PermissionDenied('Você não pode alterar o planejamento de suprimentos.')
     item = get_object_or_404(
         ItemCronogramaSuprimento.objects.select_related(
             "cronograma_obra",

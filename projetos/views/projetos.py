@@ -1,6 +1,9 @@
 import json
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from usuarios.decorators import possui_permissao_acao, modulo_required
+from usuarios.models import ModuloSistema
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -88,7 +91,7 @@ def _checklist_contexto(request, tipo):
     }
 
 
-@login_required
+@modulo_required(ModuloSistema.PROJETOS)
 def checklist_compatibilizacao(request):
     return render(
         request,
@@ -97,7 +100,7 @@ def checklist_compatibilizacao(request):
     )
 
 
-@login_required
+@modulo_required(ModuloSistema.PROJETOS)
 def checklist_documental(request):
     return render(
         request,
@@ -106,7 +109,7 @@ def checklist_documental(request):
     )
 
 
-@login_required
+@modulo_required(ModuloSistema.PROJETOS)
 @require_POST
 @transaction.atomic
 def checklist_salvar_celula(request):
@@ -115,8 +118,17 @@ def checklist_salvar_celula(request):
     except (ValueError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "erro": "Dados inválidos."}, status=400)
 
+    # O tipo vem do item persistido; nunca confiar no tipo fornecido pelo navegador.
     obra = get_object_or_404(Obra, pk=payload.get("obra_id"), ativa=True)
     item = get_object_or_404(ChecklistProjetoItem, pk=payload.get("item_id"), ativo=True)
+    tipo = item.grupo.tipo
+    acao = (
+        'editar_documental' if tipo == ChecklistProjetoGrupo.TIPO_DOCUMENTAL
+        else 'editar_compatibilizacao' if tipo == ChecklistProjetoGrupo.TIPO_COMPATIBILIZACAO
+        else 'editar_acompanhamento'
+    )
+    if not possui_permissao_acao(request.user, ModuloSistema.PROJETOS, acao):
+        raise PermissionDenied('Você não pode alterar este checklist.')
     campo = (payload.get("campo") or "").strip().lower()
     valor = payload.get("valor")
     if valor is None:
@@ -201,9 +213,11 @@ def checklist_historico(request, obra_id, item_id):
     })
 
 
-@login_required
+@modulo_required(ModuloSistema.PROJETOS)
 def alteracoes_projeto(request):
     form = AlteracaoProjetoForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and not possui_permissao_acao(request.user, ModuloSistema.PROJETOS, 'editar_acompanhamento'):
+        raise PermissionDenied('Você não pode registrar alterações de projetos.')
     if request.method == "POST" and form.is_valid():
         registro = form.save(commit=False)
         registro.criado_por = request.user

@@ -48,7 +48,7 @@
     {% if modulo.tem_permissoes_especificas %}
       <div class="usr-specific" data-module-content="{{ modulo.codigo }}">
         <div class="usr-specific__head">
-          <div><strong>Ações específicas</strong><small>Estas regras complementam o nível geral e representam o fluxo real deste módulo.</small></div>
+          <div><strong>Ações específicas</strong><small>Estas permissões devem ser verificadas no backend de cada operação; a seleção por si só não altera as regras das views.</small></div>
         </div>
         <div class="usr-permission-grid">
           {% for permissao in modulo.permissoes %}

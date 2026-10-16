@@ -14,6 +14,8 @@ from django.views.decorators.http import require_POST
 from ..models import *
 from ..forms import ChamadoForm,AtendimentoForm,MaterialForm,PesquisaForm,MaterialQuantidadeForm,AnexoForm
 from ..access import interno,cliente,cliente_do_usuario,pode_acessar,acesso_interno
+from usuarios.decorators import possui_permissao_acao
+from usuarios.models import ModuloSistema
 
 @interno
 def painel(request):
@@ -72,6 +74,8 @@ def salvar_abertura(form, usuario, origem):
 
 @interno
 def novo(request):
+    if request.method == 'POST' and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'abrir_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     form = ChamadoForm(request.POST if request.method == 'POST' else None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         obj = salvar_abertura(form, request.user, 'INTERNO')
@@ -81,6 +85,8 @@ def novo(request):
 @interno
 @transaction.atomic
 def detalhe(request, pk):
+    if request.method == 'POST' and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'editar_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     qs = Chamado.objects.select_for_update() if request.method == 'POST' else Chamado.objects.all()
     c = get_object_or_404(qs, pk=pk)
     forms_por_etapa = {
@@ -96,6 +102,8 @@ def detalhe(request, pk):
     if request.method == 'POST':
         if etapa not in forms_por_etapa:
             raise PermissionDenied('Etapa inválida.')
+        if etapa == 'TRIAGEM' and 'responsavel' in request.POST and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'atribuir_responsavel'):
+            raise PermissionDenied('Você não pode atribuir responsáveis.')
         campos = forms_por_etapa[etapa]
         # Apenas os campos daquela etapa são editáveis e validados.
         for nome in list(form.fields):
@@ -174,6 +182,8 @@ def ultimo_preco_material(material):
 @require_POST
 @transaction.atomic
 def adicionar_material(request, pk):
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'editar_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     c = get_object_or_404(Chamado.objects.select_for_update(), pk=pk)
     if c.status in ('CONCLUIDO', 'CANCELADO'):
         raise PermissionDenied('OS encerrada.')
@@ -206,6 +216,8 @@ def adicionar_material(request, pk):
 @require_POST
 @transaction.atomic
 def finalizar_os(request, pk):
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'concluir_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     c = get_object_or_404(Chamado.objects.select_for_update(), pk=pk)
     if c.status in ('CONCLUIDO', 'CANCELADO'):
         raise PermissionDenied('OS já encerrada.')
@@ -230,6 +242,8 @@ def finalizar_os(request, pk):
 @require_POST
 @transaction.atomic
 def upload(request, pk):
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'editar_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     c = get_object_or_404(Chamado.objects.select_for_update(), pk=pk)
     if c.status in ('CONCLUIDO', 'CANCELADO'):
         raise PermissionDenied('OS encerrada.')
@@ -249,6 +263,8 @@ def upload(request, pk):
 @require_POST
 @transaction.atomic
 def publicar_anexo(request, pk):
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'editar_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     a = get_object_or_404(AnexoChamado, pk=pk)
     c = get_object_or_404(Chamado.objects.select_for_update(), pk=a.chamado_id)
     # Compartilhamento não altera o conteúdo de uma OS encerrada.
@@ -262,6 +278,8 @@ def publicar_anexo(request, pk):
 @require_POST
 @transaction.atomic
 def editar_material(request, pk, item_pk):
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'editar_ocorrencia'):
+        raise PermissionDenied('Permissão insuficiente para esta operação no Pós-obra.')
     c = get_object_or_404(Chamado.objects.select_for_update(), pk=pk)
     if c.status in ('CONCLUIDO', 'CANCELADO'):
         raise PermissionDenied('OS encerrada.')

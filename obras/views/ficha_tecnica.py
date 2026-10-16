@@ -16,7 +16,7 @@ from cadastros.models import (
     TipoPavimento,
     UnidadeMedida,
 )
-from usuarios.decorators import modulo_required
+from usuarios.decorators import acao_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import (
@@ -228,6 +228,7 @@ def ficha_tecnica(request, obra_id):
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
 @require_POST
 @transaction.atomic
+@acao_required(ModuloSistema.OBRAS, "gerenciar_ficha_tecnica")
 def ficha_tecnica_acao(request, obra_id):
     obra = get_object_or_404(Obra, pk=obra_id)
     ficha = _ficha(obra, request.user)

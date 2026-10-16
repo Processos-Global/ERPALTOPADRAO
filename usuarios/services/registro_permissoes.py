@@ -13,6 +13,7 @@ from usuarios.models import (
     PermissaoCompras,
     PermissaoFinanceiro,
     PermissaoModulo,
+    PermissaoAcao,
 )
 
 
@@ -189,6 +190,88 @@ def _salvar_compras(usuario: User, valores: dict, modulo_ativo: bool) -> None:
     permissao.save()
 
 
+
+# Ações granulares dos módulos que ainda não possuem seu próprio modelo.
+# A tela permite administrá-las; cada operação no backend deve chamar
+# possui_permissao_acao antes da gravação (não basta ocultar botões).
+ACOES_MODULO = {
+    ModuloSistema.OBRAS: (
+        ("visualizar", "Consultar obras"), ("editar_dados", "Editar dados de obras"),
+        ("gerenciar_ficha_tecnica", "Gerenciar fichas técnicas"),
+        ("criar_fvs", "Criar FVS"), ("editar_fvs", "Preencher FVS"),
+        ("aprovar_fvs", "Aprovar FVS"),
+    ),
+    ModuloSistema.PLANEJAMENTO: (
+        ("visualizar", "Consultar cronogramas"), ("editar_cronograma", "Alterar cronogramas"),
+        ("importar_cronograma", "Importar cronogramas"), ("aprovar_medicao", "Aprovar medições"),
+    ),
+    ModuloSistema.SUPRIMENTOS: (
+        ("visualizar", "Consultar suprimentos"), ("editar_planejamento", "Editar planejamento de suprimentos"),
+    ),
+    ModuloSistema.CONTRATOS: (
+        ("visualizar", "Consultar contratos"), ("criar", "Cadastrar contratos"),
+        ("editar", "Alterar contratos"), ("aprovar", "Aprovar contratos"),
+    ),
+    ModuloSistema.ALMOXARIFADO: (
+        ("visualizar", "Consultar estoque"), ("entrada", "Registrar entradas"),
+        ("saida", "Registrar saídas"), ("transferencia", "Transferir materiais"),
+        ("depreciacao", "Registrar depreciação"), ("ajuste", "Ajustar estoque"),
+    ),
+    ModuloSistema.PROJETOS: (
+        ("visualizar", "Consultar projetos"), ("editar_acompanhamento", "Editar acompanhamento de projetos"),
+        ("editar_documental", "Editar checklist documental"), ("editar_compatibilizacao", "Editar compatibilização"),
+    ),
+    ModuloSistema.VISTORIAS: (
+        ("visualizar", "Consultar vistorias"), ("pre_habite_se", "Preencher pré-habite-se"),
+        ("pos_habite_se", "Preencher pós-habite-se"),
+    ),
+    ModuloSistema.DIARIO_OBRA: (
+        ("visualizar", "Consultar diários"), ("criar", "Criar diário de obra"),
+        ("editar", "Editar diário de obra"),
+    ),
+    ModuloSistema.POS_OBRA: (
+        ("visualizar", "Consultar pós-obra"), ("gerenciar_clientes", "Gerenciar clientes"),
+        ("abrir_ocorrencia", "Abrir ocorrências"), ("editar_ocorrencia", "Editar ocorrências"),
+        ("atribuir_responsavel", "Atribuir responsáveis"), ("concluir_ocorrencia", "Concluir ocorrências"),
+    ),
+    ModuloSistema.RELATORIOS: (
+        ("visualizar", "Consultar relatórios"), ("exportar", "Exportar relatórios"),
+    ),
+    ModuloSistema.INTEGRACOES: (
+        ("visualizar", "Consultar integrações"), ("executar", "Executar sincronizações"),
+        ("configurar", "Configurar integrações"),
+    ),
+    ModuloSistema.USUARIOS: (
+        ("visualizar", "Consultar usuários"), ("gerenciar", "Gerenciar usuários e permissões"),
+    ),
+}
+
+
+def _carregar_acoes(modulo, usuario):
+    return dict(PermissaoAcao.objects.filter(usuario=usuario, modulo=modulo).values_list("acao", "permitido"))
+
+
+def _salvar_acoes(modulo, usuario, valores, ativo):
+    acoes_validas = {codigo for codigo, _ in ACOES_MODULO[modulo]}
+    existentes = {obj.acao: obj for obj in PermissaoAcao.objects.filter(usuario=usuario, modulo=modulo)}
+    for acao in acoes_validas:
+        permitido = bool(ativo and valores.get(acao, False))
+        if acao in existentes:
+            obj = existentes[acao]
+            if obj.permitido != permitido:
+                obj.permitido = permitido
+                obj.save(update_fields=["permitido", "atualizado_em"])
+        else:
+            PermissaoAcao.objects.create(usuario=usuario, modulo=modulo, acao=acao, permitido=permitido)
+
+
+def _habilitar_acoes(modulo):
+    return dict(
+        permissoes=tuple(PermissaoEspecificaDef(codigo, titulo, "Acesso específico a esta operação.") for codigo, titulo in ACOES_MODULO[modulo]),
+        carregar_especificas=lambda usuario: _carregar_acoes(modulo, usuario),
+        salvar_especificas=lambda usuario, valores, ativo: _salvar_acoes(modulo, usuario, valores, ativo),
+    )
+
 # Registry central. Para incluir um módulo futuro na tela, adicione apenas uma
 # definição aqui. Permissões específicas são opcionais e podem ser conectadas
 # posteriormente sem reescrever views ou templates.
@@ -200,6 +283,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         icone="building",
         ordem=10,
         url_name="obras:menu",
+        **_habilitar_acoes(ModuloSistema.OBRAS),
     ),
     ModuloDef(
         codigo=ModuloSistema.CADASTROS,
@@ -226,6 +310,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         icone="calendar",
         ordem=20,
         url_name="planejamento:painel_cronograma",
+        **_habilitar_acoes(ModuloSistema.PLANEJAMENTO),
     ),
     ModuloDef(
         codigo=ModuloSistema.SUPRIMENTOS,
@@ -234,6 +319,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         icone="package",
         ordem=30,
         url_name="planejamento:painel_cronograma_suprimentos",
+        **_habilitar_acoes(ModuloSistema.SUPRIMENTOS),
     ),
     ModuloDef(
         codigo=ModuloSistema.COMPRAS,
@@ -270,7 +356,7 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         salvar_especificas=_salvar_compras,
         resolver_nivel=_resolver_nivel_compras,
     ),
-    ModuloDef(ModuloSistema.CONTRATOS, "Contratos", "Gestão de contratos e documentos contratuais.", "file", 50, ""),
+    ModuloDef(ModuloSistema.CONTRATOS, "Contratos", "Gestão de contratos e documentos contratuais.", "file", 50, "", **_habilitar_acoes(ModuloSistema.CONTRATOS)),
     ModuloDef(
         codigo=ModuloSistema.FINANCEIRO,
         titulo="Financeiro",
@@ -290,14 +376,14 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
         salvar_especificas=_salvar_financeiro,
         resolver_nivel=_resolver_nivel_financeiro,
     ),
-    ModuloDef(ModuloSistema.ALMOXARIFADO, "Almoxarifado", "Entradas, saídas, estoque e transferências.", "warehouse", 70, ""),
-    ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, "projetos:menu"),
-    ModuloDef(ModuloSistema.VISTORIAS, "Vistorias", "Inspeções, vistorias e registros de campo.", "check", 90, ""),
-    ModuloDef(ModuloSistema.DIARIO_OBRA, "Diário de obra", "Registros diários e acompanhamento de campo.", "book", 100, ""),
-    ModuloDef(ModuloSistema.POS_OBRA, "Pós-obra", "Atendimento, garantias e ordens de serviço.", "tools", 110, "pos_obra:painel"),
-    ModuloDef(ModuloSistema.RELATORIOS, "Relatórios", "Relatórios e consultas consolidadas.", "chart", 120, ""),
-    ModuloDef(ModuloSistema.INTEGRACOES, "Integrações", "Integrações e rotinas de comunicação entre sistemas.", "refresh", 130, ""),
-    ModuloDef(ModuloSistema.USUARIOS, "Usuários e permissões", "Gerenciamento de usuários e acessos do ERP.", "users", 140, "usuarios:lista_usuarios"),
+    ModuloDef(ModuloSistema.ALMOXARIFADO, "Almoxarifado", "Entradas, saídas, estoque e transferências.", "warehouse", 70, "", **_habilitar_acoes(ModuloSistema.ALMOXARIFADO)),
+    ModuloDef(ModuloSistema.PROJETOS, "Projetos", "Gestão e acompanhamento de projetos.", "ruler", 80, "projetos:menu", **_habilitar_acoes(ModuloSistema.PROJETOS)),
+    ModuloDef(ModuloSistema.VISTORIAS, "Vistorias", "Inspeções, vistorias e registros de campo.", "check", 90, "", **_habilitar_acoes(ModuloSistema.VISTORIAS)),
+    ModuloDef(ModuloSistema.DIARIO_OBRA, "Diário de obra", "Registros diários e acompanhamento de campo.", "book", 100, "", **_habilitar_acoes(ModuloSistema.DIARIO_OBRA)),
+    ModuloDef(ModuloSistema.POS_OBRA, "Pós-obra", "Atendimento, garantias e ordens de serviço.", "tools", 110, "pos_obra:painel", **_habilitar_acoes(ModuloSistema.POS_OBRA)),
+    ModuloDef(ModuloSistema.RELATORIOS, "Relatórios", "Relatórios e consultas consolidadas.", "chart", 120, "", **_habilitar_acoes(ModuloSistema.RELATORIOS)),
+    ModuloDef(ModuloSistema.INTEGRACOES, "Integrações", "Integrações e rotinas de comunicação entre sistemas.", "refresh", 130, "", **_habilitar_acoes(ModuloSistema.INTEGRACOES)),
+    ModuloDef(ModuloSistema.USUARIOS, "Usuários e permissões", "Gerenciamento de usuários e acessos do ERP.", "users", 140, "usuarios:lista_usuarios", **_habilitar_acoes(ModuloSistema.USUARIOS)),
 )
 
 

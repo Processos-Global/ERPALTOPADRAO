@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from obras.forms import FVSDecisaoForm, FVSCriacaoForm, FVSItemFormSet, FVSResumoForm
 from obras.models import AmbienteFichaTecnica, FVS, FVSHistorico, FVSItem, Obra, FotoFVSItem
 from obras.services.fotos import validar_fotos
-from usuarios.decorators import modulo_required
+from usuarios.decorators import acao_required, modulo_required, possui_permissao_acao
 from usuarios.models import ModuloSistema, NivelPermissao
 
 
@@ -53,6 +53,7 @@ def fvs_lista(request):
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+@acao_required(ModuloSistema.OBRAS, "criar_fvs")
 def fvs_nova(request):
     form = FVSCriacaoForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -95,6 +96,8 @@ def fvs_detalhe(request, pk):
     item_formset = FVSItemFormSet(request.POST or None, queryset=itens_qs, prefix="itens")
 
     if request.method == "POST":
+        if not possui_permissao_acao(request.user, ModuloSistema.OBRAS, "editar_fvs"):
+            raise PermissionDenied("Você não pode preencher FVS.")
         if not fvs.pode_editar:
             raise PermissionDenied("Esta FVS está bloqueada para edição.")
         try:
@@ -136,6 +139,7 @@ def fvs_detalhe(request, pk):
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
 @require_POST
+@acao_required(ModuloSistema.OBRAS, "editar_fvs")
 def fvs_enviar_aprovacao(request, pk):
     fvs = get_object_or_404(FVS, pk=pk)
     if not fvs.pode_editar:
@@ -158,6 +162,7 @@ def fvs_enviar_aprovacao(request, pk):
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 @require_POST
+@acao_required(ModuloSistema.OBRAS, "aprovar_fvs")
 def fvs_decidir(request, pk):
     if not _pode_aprovar(request.user):
         raise PermissionDenied("Você não possui permissão para aprovar FVS.")

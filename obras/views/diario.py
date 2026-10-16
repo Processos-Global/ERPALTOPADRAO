@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
-from usuarios.decorators import modulo_required
+from usuarios.decorators import acao_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import DiarioObra, Obra, FotoDiarioObra
@@ -36,6 +36,7 @@ def diario_lista(request):
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+@acao_required(ModuloSistema.DIARIO_OBRA, "criar")
 def diario_novo(request, obra_id=None):
     obra_inicial = None
     if obra_id is not None:
@@ -44,6 +45,7 @@ def diario_novo(request, obra_id=None):
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+@acao_required(ModuloSistema.DIARIO_OBRA, "editar")
 def diario_editar(request, diario_id):
     diario = get_object_or_404(DiarioObra.objects.select_related("obra"), pk=diario_id)
     return _diario_form(request, obra_inicial=diario.obra, diario=diario)

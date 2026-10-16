@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from usuarios.forms import UsuarioSistemaForm
 from usuarios.models import ModuloSistema, NivelPermissao, PerfilUsuario, PermissaoModulo
+from usuarios.decorators import possui_permissao_acao
 from usuarios.services import (
     obter_configuracao_modulos_usuario,
     salvar_configuracao_modulos_usuario,
@@ -24,12 +25,15 @@ def _pode_gerenciar_usuarios(usuario):
         return False
     if usuario.is_superuser:
         return True
-    return PermissaoModulo.objects.filter(
-        usuario=usuario,
-        modulo=ModuloSistema.USUARIOS,
-        ativo=True,
-        nivel=NivelPermissao.ADMINISTRADOR,
-    ).exists()
+    return (
+        PermissaoModulo.objects.filter(
+            usuario=usuario,
+            modulo=ModuloSistema.USUARIOS,
+            ativo=True,
+            nivel=NivelPermissao.ADMINISTRADOR,
+        ).exists()
+        and possui_permissao_acao(usuario, ModuloSistema.USUARIOS, 'gerenciar')
+    )
 
 
 def usuarios_admin_required(view_func):

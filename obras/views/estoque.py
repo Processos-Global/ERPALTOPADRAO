@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from usuarios.decorators import modulo_required
+from usuarios.decorators import acao_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import MovimentoEstoque, Obra
@@ -104,6 +104,7 @@ def almoxarifado_obra(request, obra_id):
 
 @require_POST
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+@acao_required(ModuloSistema.ALMOXARIFADO, "saida")
 def saida_estoque(request, obra_id):
     obra = get_object_or_404(Obra, pk=obra_id, ativa=True)
     chave_selecionada = request.POST.get("item") or ""
@@ -150,6 +151,7 @@ def saida_estoque(request, obra_id):
 
 @require_POST
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+@acao_required(ModuloSistema.ALMOXARIFADO, "transferencia")
 def transferencia_estoque(request, obra_id):
     obra = get_object_or_404(Obra, pk=obra_id, ativa=True)
     chave_selecionada = request.POST.get("item") or ""

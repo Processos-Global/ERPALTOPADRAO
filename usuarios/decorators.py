@@ -5,7 +5,7 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 
-from usuarios.models import ModuloSistema, NivelPermissao, PermissaoModulo
+from usuarios.models import ModuloSistema, NivelPermissao, PermissaoModulo, PermissaoAcao
 
 
 _ORDEM_NIVEL = {
@@ -62,5 +62,32 @@ def algum_modulo_required(*modulos):
             if any(possui_permissao_modulo(request.user, modulo) for modulo in modulos):
                 return view_func(request, *args, **kwargs)
             raise PermissionDenied("Você não possui permissão para acessar esta área.")
+        return wrapper
+    return decorator
+
+
+def possui_permissao_acao(usuario, modulo, acao):
+    """Verifica permissão explícita, sem inferir autorização a partir de checkbox visual."""
+    # Subáreas historicamente disponibilizadas pelo módulo Obras.
+    modulo_acesso = ModuloSistema.OBRAS if modulo in (
+        ModuloSistema.ALMOXARIFADO, ModuloSistema.VISTORIAS,
+        ModuloSistema.DIARIO_OBRA,
+    ) else modulo
+    if not possui_permissao_modulo(usuario, modulo_acesso):
+        return False
+    if usuario.is_superuser:
+        return True
+    return PermissaoAcao.objects.filter(usuario=usuario, modulo=modulo, acao=acao, permitido=True).exists()
+
+
+def acao_required(modulo, acao):
+    """Utilizar nas views, inclusive POST/API, que executem a ação protegida."""
+    def decorator(view_func):
+        @login_required
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            if not possui_permissao_acao(request.user, modulo, acao):
+                raise PermissionDenied("Você não possui permissão para executar esta ação.")
+            return view_func(request, *args, **kwargs)
         return wrapper
     return decorator
