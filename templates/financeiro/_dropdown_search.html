@@ -1,0 +1,28 @@
+<style>
+.fin-searchable{position:relative;min-width:0}.fin-searchable__button{width:100%;min-height:40px;display:flex;align-items:center;justify-content:space-between;text-align:left;gap:8px;overflow:hidden}.fin-searchable__button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fin-searchable__panel{position:fixed;z-index:100000;background:var(--fin-surface,#fff);color:var(--fin-text,#242424);border:1px solid #c9c4c0;border-radius:9px;box-shadow:0 12px 25px #0002;padding:8px;min-width:220px;max-height:310px;display:flex;flex-direction:column;gap:5px}.fin-searchable__panel[hidden]{display:none}.fin-searchable__panel input{width:100%;min-height:38px;border:1px solid #ccc;border-radius:6px;padding:7px 10px;background:inherit;color:inherit}.fin-searchable__options{overflow-y:auto;min-height:0}.fin-searchable__option{display:block;width:100%;text-align:left;cursor:pointer;background:transparent;color:inherit;border:0;border-radius:5px;padding:8px}.fin-searchable__option:hover,.fin-searchable__option:focus{background:#80808022}.fin-searchable__option[hidden]{display:none}.fin-searchable__native{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important;left:0;top:0}
+</style>
+<script>
+(function(){
+ function normalize(v){return (v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+ function enhance(select){
+  if(select.dataset.finSearchReady||select.dataset.noSearch!==undefined||select.closest('.fin-combobox, .saari-obras-panel, .fin-searchable')||select.options.length<5||select.options.length>750||select.multiple||select.disabled||select.hidden||select.offsetParent===null||select.classList.contains('select2-hidden-accessible'))return;
+  select.dataset.finSearchReady='1';
+  const container=document.createElement('div');container.className='fin-searchable';select.parentNode.insertBefore(container,select);container.appendChild(select);select.classList.add('fin-searchable__native');
+  const button=document.createElement('button');button.type='button';button.className='fin-control fin-searchable__button';button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');button.innerHTML='<span></span><span aria-hidden="true">⌄</span>';container.appendChild(button);
+  const panel=document.createElement('div');panel.className='fin-searchable__panel';panel.hidden=true;const search=document.createElement('input');search.type='search';search.placeholder='Pesquisar...';search.setAttribute('aria-label','Pesquisar opções');panel.appendChild(search);const options=document.createElement('div');options.className='fin-searchable__options';panel.appendChild(options);document.body.appendChild(panel);
+  const sync=()=>{button.firstElementChild.textContent=(select.selectedOptions[0]&&select.selectedOptions[0].textContent)||'Selecione...';};
+  const buttons=[...select.options].filter(o=>o.value&&!o.disabled).map(o=>{const b=document.createElement('button');b.type='button';b.className='fin-searchable__option';b.textContent=o.textContent;b.dataset.search=normalize(o.textContent);b.addEventListener('click',()=>{select.value=o.value;select.dispatchEvent(new Event('change',{bubbles:true}));sync();close();});options.appendChild(b);return b;});
+  function close(){panel.hidden=true;button.setAttribute('aria-expanded','false');}
+  function position(){if(panel.hidden)return;const r=button.getBoundingClientRect();const w=Math.max(220,Math.min(r.width,innerWidth-24));panel.style.width=w+'px';panel.style.left=Math.max(8,Math.min(r.left,innerWidth-w-8))+'px';const available=innerHeight-r.bottom-8;panel.style.top=available>180?r.bottom+4+'px':Math.max(8,r.top-310)+'px';}
+  button.addEventListener('click',()=>{if(!panel.hidden){close();return;}document.querySelectorAll('.fin-searchable__panel').forEach(p=>p.hidden=true);panel.hidden=false;button.setAttribute('aria-expanded','true');search.value='';buttons.forEach(b=>b.hidden=false);position();search.focus();});
+  search.addEventListener('input',()=>{const q=normalize(search.value);buttons.forEach(b=>b.hidden=!b.dataset.search.includes(q));});
+  search.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='Enter'){e.preventDefault();const first=buttons.find(b=>!b.hidden);if(first)first.click();}});
+  document.addEventListener('pointerdown',e=>{if(!panel.hidden&&!panel.contains(e.target)&&!button.contains(e.target))close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+  window.addEventListener('resize',position);window.addEventListener('scroll',position,true);
+  select.addEventListener('change',sync);sync();
+ }
+ function boot(){document.querySelectorAll('.fin-page select').forEach(enhance);}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>

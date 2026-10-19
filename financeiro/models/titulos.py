@@ -132,6 +132,11 @@ class TituloPagar(models.Model):
     parcela_descricao = models.CharField(max_length=255, blank=True)
     gatilho_pagamento = models.CharField(max_length=120, blank=True)
     condicao_pagamento = models.CharField(max_length=255, blank=True)
+    meio_pagamento = models.CharField(max_length=20, blank=True, choices=[
+        ("BOLETO", "Boleto"), ("PIX", "PIX"),
+        ("TRANSFERENCIA", "Transferência"), ("DEPOSITO", "Depósito"),
+        ("OUTRO", "Outro"),
+    ], help_text="Meio previsto; pode ser confirmado na emissão do malote.")
 
     descricao = models.CharField(max_length=300)
     especificacao_pagamento = models.TextField(

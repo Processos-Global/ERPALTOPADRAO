@@ -77,6 +77,7 @@ class TituloPagarForm(ERPModelForm):
             "descricao",
             "especificacao_pagamento",
             "documento_numero",
+            "meio_pagamento",
             "anexos",
             "data_emissao",
             "vencimento",

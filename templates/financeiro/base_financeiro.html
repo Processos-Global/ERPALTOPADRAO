@@ -18,6 +18,7 @@
     {% if fin_pode_admin %}<a href="{% url 'financeiro:plano_financeiro' %}" class="{% if 'plano_financeiro' in request.resolver_match.url_name %}is-active{% endif %}">Apropriações</a>{% endif %}
   </nav>
   {% block financeiro_content %}{% endblock %}
+  {% include "financeiro/_dropdown_search.html" %}
 </div>
 <script>
 (function(){

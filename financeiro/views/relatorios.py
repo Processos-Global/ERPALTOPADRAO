@@ -10,7 +10,7 @@ import zipfile
 
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -61,11 +61,9 @@ def _aprovacoes_disponiveis(data_inicio=None, data_fim=None, obra_ids=None):
         .order_by("criado_em", "id")
     )
     if data_inicio:
-        inicio, _ = _intervalo_local(data_inicio, data_inicio)
-        qs = qs.filter(criado_em__gte=inicio)
+        qs = qs.filter(titulo__vencimento__gte=data_inicio)
     if data_fim:
-        _, fim = _intervalo_local(data_fim, data_fim)
-        qs = qs.filter(criado_em__lte=fim)
+        qs = qs.filter(titulo__vencimento__lte=data_fim)
     if obra_ids:
         qs = qs.filter(titulo__obra_id__in=obra_ids)
     return qs
@@ -148,8 +146,20 @@ def _dados_item(aprovacao):
         "competencia": titulo.competencia,
         "centro_custo_codigo": centro_custo_codigo,
         "centro_custo_descricao": centro_custo_descricao,
-        "forma_pagamento": titulo.condicao_pagamento or "",
+        "forma_pagamento": titulo.get_meio_pagamento_display() if titulo.meio_pagamento else "Não informado",
     }
+
+
+def _assinatura_documento(titulo):
+    documento = re.sub(r"\s+", "", (titulo.documento_numero or "").upper())
+    fornecedor = re.sub(r"\D", "", titulo.beneficiario_documento or "")
+    if not fornecedor and titulo.fornecedor_id:
+        fornecedor = re.sub(r"\D", "", (titulo.fornecedor.documento or ""))
+    if not documento or not fornecedor:
+        return None  # Identificação insuficiente: não presumir duplicidade.
+    # Parcela única explicitamente identificada como 1/1 equivale a ÚNICA.
+    parcela = titulo.parcela_ordem or 1
+    return (fornecedor, documento, parcela)
 
 
 @financeiro_acao_required("VISUALIZAR")
@@ -168,6 +178,23 @@ def relatorios_pagamento(request):
         for a in aprovacoes
     ]
     total_preview = sum((item["valor"] for item in itens_preview), Decimal("0"))
+    meios = TituloPagar._meta.get_field("meio_pagamento").choices
+    # Identidade composta: emissor + documento + parcela. Itens da mesma
+    # aprovação continuam protegidos pelo OneToOne de ItemRelatorioPagamento.
+    assinaturas_emitidas = set()
+    ja_emitidos = ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo")
+    for item in ja_emitidos.iterator():
+        assinatura = _assinatura_documento(item.titulo)
+        if assinatura:
+            assinaturas_emitidas.add(assinatura)
+    vistas = set(assinaturas_emitidas)
+    for preview in itens_preview:
+        assinatura = _assinatura_documento(preview["titulo"])
+        preview["duplicado"] = bool(assinatura and assinatura in vistas)
+        if assinatura:
+            vistas.add(assinatura)
+        preview["meio"] = preview["titulo"].meio_pagamento or ""
+
 
     obras = list(
         TituloPagar.objects.filter(obra__isnull=False)
@@ -183,6 +210,28 @@ def relatorios_pagamento(request):
         .order_by("-emitido_em", "-id")[:100]
     )
 
+    # Uma entrada por ID de obra em cada pacote, mesmo quando há nomes
+    # históricos diferentes nos snapshots. Não mistura emissões distintas.
+    historico_ids = [rel.id for rel in historico]
+    por_relatorio = {}
+    registros = (ItemRelatorioPagamento.objects
+        .filter(relatorio_id__in=historico_ids, titulo__obra_id__isnull=False)
+        .values("relatorio_id", "titulo__obra_id", "titulo__obra__nome", "obra_nome")
+        .order_by("relatorio_id", "titulo__obra_id"))
+    for reg in registros:
+        obras_do_pacote = por_relatorio.setdefault(reg["relatorio_id"], {})
+        obra_id = reg["titulo__obra_id"]
+        if obra_id not in obras_do_pacote:
+            obras_do_pacote[obra_id] = {
+                "id": obra_id,
+                "nome": reg["titulo__obra__nome"] or reg["obra_nome"] or f"Obra {obra_id}",
+            }
+    for rel in historico:
+        rel.obras_disponiveis = sorted(
+            por_relatorio.get(rel.id, {}).values(),
+            key=lambda obra: (obra["nome"].casefold(), obra["id"]),
+        )
+
     return render(
         request,
         "financeiro/relatorios_pagamento.html",
@@ -193,6 +242,7 @@ def relatorios_pagamento(request):
             "obra_ids": obra_ids,
             "obras_selecionadas": obras_selecionadas,
             "itens_preview": itens_preview,
+            "meios_pagamento": meios,
             "total_preview": total_preview,
             "historico": historico,
         },
@@ -221,6 +271,32 @@ def relatorio_pagamento_emitir(request):
     if len(aprovacoes) != len(ids):
         messages.error(request, "Um ou mais pagamentos já foram emitidos ou não estão disponíveis. Atualize a seleção.")
         return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+    # Lock nas contas, além das aprovações, para serializar emissões concorrentes.
+    titulos_ids = sorted(a.titulo_id for a in aprovacoes)
+    list(TituloPagar.objects.select_for_update().filter(pk__in=titulos_ids).order_by("pk"))
+    assinaturas = {}
+    for aprovacao in aprovacoes:
+        chave = _assinatura_documento(aprovacao.titulo)
+        if chave:
+            if chave in assinaturas:
+                messages.error(request, "Há duas contas para o mesmo fornecedor, documento e parcela na seleção. Revise antes de emitir.")
+                return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+            assinaturas[chave] = aprovacao.titulo_id
+    for item in ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo").iterator():
+        if _assinatura_documento(item.titulo) in assinaturas:
+            messages.error(request, "Documento/parcela já consta em outro malote. Emissão bloqueada; consulte o histórico.")
+            return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+    meios_validos = dict(TituloPagar._meta.get_field("meio_pagamento").choices)
+    meios_escolhidos = {}
+    for aprovacao in aprovacoes:
+        meio = request.POST.get(f"meio_{aprovacao.pk}", "").strip()
+        if meio not in meios_validos:
+            messages.error(request, f"Informe o meio de pagamento da conta {aprovacao.titulo.numero}.")
+            return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+        if meio == "PIX" and not (aprovacao.titulo.beneficiario_pix or (aprovacao.titulo.fornecedor_id and aprovacao.titulo.fornecedor.pix)):
+            messages.error(request, f"Conta {aprovacao.titulo.numero}: cadastre a chave PIX antes de emitir.")
+            return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+        meios_escolhidos[aprovacao.pk] = meio
     relatorio = RelatorioPagamento.objects.create(
         numero=gerar_numero("RELATORIO_PAGAMENTO"),
         periodo_inicio=min(a.criado_em.date() for a in aprovacoes),
@@ -232,10 +308,13 @@ def relatorio_pagamento_emitir(request):
     total = Decimal("0")
     for aprovacao in aprovacoes:
         dados = _dados_item(aprovacao)
+        dados["forma_pagamento"] = meios_validos[meios_escolhidos[aprovacao.pk]]
         total += dados["valor"]
         itens.append(ItemRelatorioPagamento(relatorio=relatorio, **dados))
 
     ItemRelatorioPagamento.objects.bulk_create(itens)
+    for aprovacao in aprovacoes:
+        TituloPagar.objects.filter(pk=aprovacao.titulo_id).update(meio_pagamento=meios_escolhidos[aprovacao.pk])
     relatorio.quantidade_itens = len(itens)
     relatorio.valor_total = total
     relatorio.save(update_fields=["quantidade_itens", "valor_total"])
@@ -255,6 +334,7 @@ def relatorio_pagamento_excel(request, pk):
     )
 
     obra_id = _parse_obra_id(request.GET.get("obra"))
+    somente_excel = request.GET.get("formato") == "xlsx"
     itens_qs = (
         relatorio.itens.select_related("titulo", "titulo__pedido", "titulo__obra")
         .prefetch_related("titulo__anexos", "titulo__pedido__anexos", "titulo__pedido__recebimentos")
@@ -399,6 +479,12 @@ def relatorio_pagamento_excel(request, pk):
     buffer = BytesIO()
     wb.save(buffer)
     buffer.seek(0)
+    if somente_excel:
+        from django.http import HttpResponse
+        resposta = HttpResponse(buffer.getvalue(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        resposta["Content-Disposition"] = f'attachment; filename="{relatorio.numero}_obra_{obra_id or "todas"}.xlsx"'
+        resposta["Cache-Control"] = "private, no-store"
+        return resposta
 
     def nome_seguro(valor, padrao="SEM_IDENTIFICACAO"):
         texto = re.sub(r"[^A-Za-z0-9._-]+", "_", str(valor or "").strip())
