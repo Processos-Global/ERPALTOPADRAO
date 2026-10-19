@@ -1,137 +1,94 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras %}
 {% block financeiro_title %}Indicadores financeiros{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head">
-  <div class="fin-head__copy">
-    <div class="fin-eyebrow">Análise financeira</div>
-    <h1 class="fin-title">Indicadores</h1>
-    <div class="fin-sub">Indicadores, gráficos e consolidações do financeiro.</div>
-  </div>
-</header>
 
 <style>
-  .fin-ind-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px}
-  .fin-chart-card{overflow:hidden;border:1px solid var(--fin-line);border-radius:15px;background:#fff;box-shadow:var(--fin-shadow)}
-  .fin-chart-card__head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid var(--fin-line-soft);background:linear-gradient(180deg,#fff,#fcf9f3)}
-  .fin-chart-card__head h2{margin:0;color:var(--fin-primary-deep);font-size:16px;font-weight:820}
-  .fin-chart-badge{display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;padding:0 9px;border-radius:999px;background:var(--fin-primary-soft);color:var(--fin-primary-dark);font-size:11px;font-weight:820}
-  .fin-chart-card__body{padding:16px 18px 18px}
-  .fin-chart-list{display:grid;gap:14px}
-  .fin-chart-item{min-width:0}
-  .fin-chart-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px}
-  .fin-chart-label{min-width:0;color:#453330;font-size:12px;font-weight:760;line-height:1.4}
-  .fin-chart-value{flex:0 0 auto;color:var(--fin-primary-deep);font-size:12px;font-weight:820;text-align:right;white-space:nowrap}
-  .fin-chart-meta{margin-top:5px;color:var(--fin-muted);font-size:10px}
-  .fin-chart-track{width:100%;height:10px;border-radius:999px;background:#f5f1e9;overflow:hidden}
-  .fin-chart-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--fin-primary),var(--fin-primary-dark))}
-  .fin-chart-bar--warning{background:linear-gradient(90deg,#d9ad50,#9a6717)}
-  .fin-chart-bar--danger{background:linear-gradient(90deg,#d96d6d,#a53f3f)}
-  .fin-chart-bar--success{background:linear-gradient(90deg,#77655c,#453330)}
-  .fin-ind-wide{margin-bottom:18px}
-  .fin-ind-wide .fin-table{min-width:980px}
-  .fin-ind-wide .fin-table th:nth-child(2),.fin-ind-wide .fin-table td:nth-child(2){width:200px}
-  .fin-ind-wide .fin-table th:last-child,.fin-ind-wide .fin-table td:last-child{text-align:right}
-  @media(max-width:980px){.fin-ind-grid{grid-template-columns:1fr}}
-</style>
+.saari-dash{--d-card:var(--fin-card-bg,var(--fin-surface,#fff));--d-line:var(--fin-line,#e4e8eb);--d-text:var(--fin-text,#273542);--d-muted:var(--fin-muted,#667786);--d-primary:var(--fin-primary,#677d8c);--d-subtle:var(--fin-primary-soft,#edf3f5);color:var(--d-text);max-width:100%;font-family:inherit}
+.saari-dash *{box-sizing:border-box}.saari-dash .dash-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:4px 0 22px;flex-wrap:wrap}.saari-dash .dash-kicker{font-size:11px;letter-spacing:.11em;font-weight:800;color:var(--d-muted);text-transform:uppercase}.saari-dash h1{font-size:clamp(24px,2.6vw,32px);line-height:1.22;margin:7px 0;color:var(--d-text);font-weight:800}.saari-dash .dash-desc{color:var(--d-muted);font-size:13px}.saari-dash .dash-period{color:var(--d-muted);font-size:12px;padding:10px 14px;border:1px solid var(--d-line);border-radius:10px;background:var(--d-card)}
+.saari-dash .dash-card,.saari-dash .fin-chart-card{border:1px solid var(--d-line);border-radius:15px;background:var(--d-card);box-shadow:0 2px 8px rgba(24,42,54,.035);overflow:hidden;min-width:0}
+.saari-dash .dash-card{margin-bottom:18px}.saari-dash .dash-card-head,.saari-dash .fin-chart-card__head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:19px 21px 14px;border-bottom:1px solid var(--d-line);background:transparent;flex-wrap:wrap}
+.saari-dash h2,.saari-dash .fin-chart-card__head h2{margin:0;font-size:16px;line-height:1.4;color:var(--d-text);font-weight:800}.saari-dash .dash-hint,.saari-dash .dash-card-head small{display:block;color:var(--d-muted);font-size:12px;margin-top:3px}.saari-dash .dash-card-body,.saari-dash .fin-chart-card__body{padding:20px 21px}
+.saari-dash .dash-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.saari-dash .dash-field{min-width:0}.saari-dash .dash-field>label{display:block;color:var(--d-text);font-size:12px;font-weight:750;margin-bottom:7px}.saari-dash .dash-control{width:100%;border-radius:9px;border:1px solid var(--d-line);background:var(--d-card);color:var(--d-text);height:42px;padding:9px 11px;font:inherit;font-size:13px;min-width:0}
+.saari-dash .dash-actions{display:flex;gap:9px;margin-top:16px;align-items:center}.saari-dash .dash-btn{border:1px solid var(--d-line);background:var(--d-card);color:var(--d-text);padding:10px 17px;border-radius:9px;font-size:13px;font-weight:750;cursor:pointer;text-decoration:none;min-height:40px}.saari-dash .dash-btn-main{background:var(--d-primary);border-color:var(--d-primary);color:#fff}.saari-dash .dash-select{position:relative}.saari-dash .dash-select summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}.saari-dash .dash-select summary::-webkit-details-marker{display:none}.saari-dash .dash-options{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:50;border:1px solid var(--d-line);background:var(--d-card);padding:10px;border-radius:10px;box-shadow:0 14px 32px #0002;max-height:285px;overflow:auto}.saari-dash .dash-option{display:flex;align-items:center;gap:9px;font-size:12px;margin:0;padding:8px 4px;cursor:pointer}.saari-dash .dash-option[hidden]{display:none}.saari-dash input[type=checkbox]{accent-color:var(--d-primary)}
+.saari-dash .dash-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 19px}.saari-dash .dash-kpi{min-width:0;background:var(--d-card);border:1px solid var(--d-line);border-radius:14px;padding:19px}.saari-dash .dash-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--d-muted);font-size:12px;font-weight:700}.saari-dash .dash-kpi-symbol{background:var(--d-subtle);width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px}.saari-dash .dash-kpi strong{font-size:clamp(17px,1.8vw,24px);display:block;margin:13px 0 7px;font-weight:800;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.saari-dash .dash-kpi small{font-size:11px;color:var(--d-muted)}
+.saari-dash .dash-tabs{display:flex;gap:7px;overflow:auto;border-bottom:1px solid var(--d-line);margin:4px 0 20px}.saari-dash .dash-tab{border:0;border-bottom:3px solid transparent;background:transparent;color:var(--d-muted);cursor:pointer;font-size:13px;font-weight:800;padding:13px 18px;white-space:nowrap}.saari-dash .dash-tab[aria-selected=true]{color:var(--d-text);border-bottom-color:var(--d-primary)}.saari-dash .dash-panel[hidden]{display:none!important}.saari-dash .dash-grid2,.saari-dash .fin-ind-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0 0 18px}.saari-dash .fin-chart-card{margin:0}.saari-dash .fin-chart-badge{background:var(--d-subtle);color:var(--d-text);border-radius:15px;padding:5px 10px;font-size:11px}.saari-dash .fin-chart-list{display:grid;gap:16px}.saari-dash .fin-chart-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;margin-bottom:7px}.saari-dash .fin-chart-label{color:var(--d-text);font-weight:700}.saari-dash .fin-chart-value{color:var(--d-text);font-weight:800;white-space:nowrap}.saari-dash .fin-chart-meta{font-size:11px;color:var(--d-muted);margin-top:5px}.saari-dash .fin-chart-track,.saari-dash .dash-track{height:9px;border-radius:10px;background:var(--d-subtle);overflow:hidden}.saari-dash .fin-chart-bar{height:100%;border-radius:10px;background:#778fa0}.saari-dash .fin-chart-bar--warning{background:#d1a761}.saari-dash .fin-chart-bar--danger{background:#bd8580}.saari-dash .fin-chart-bar--success{background:#7b9d91}
+.saari-dash .dash-table-scroll{overflow:auto}.saari-dash .dash-table{border-collapse:collapse;width:100%;font-size:12px;min-width:640px}.saari-dash .dash-table th,.saari-dash .dash-table td{border-bottom:1px solid var(--d-line);padding:13px 16px;text-align:left}.saari-dash .dash-table th{font-size:11px;letter-spacing:.025em;color:var(--d-muted);font-weight:800;white-space:nowrap}.saari-dash .dash-table tr:last-child td{border-bottom:0}.saari-dash .dash-number{text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums}.saari-dash .dash-empty{padding:20px;color:var(--d-muted);font-size:12px;text-align:center}.saari-dash .dash-note{margin:13px 0;color:var(--d-muted);font-size:12px;line-height:1.6}.saari-dash .dash-alert{border:1px solid #dfada6;border-radius:9px;padding:12px;color:#a85147;font-size:12px;margin:14px 0}.saari-dash .dash-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.saari-dash .dash-metric{border:1px solid var(--d-line);border-radius:12px;padding:17px;background:var(--d-subtle)}.saari-dash .dash-metric label{font-size:12px;color:var(--d-muted)}.saari-dash .dash-metric strong{font-size:21px;display:block;margin-top:10px}.saari-dash .dash-svg-chart{min-height:260px;width:100%}.saari-dash .dash-legend{display:flex;flex-wrap:wrap;gap:16px;font-size:11px;color:var(--d-muted);margin-bottom:8px}.saari-dash .dash-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.saari-dash .dash-list{display:grid;gap:13px}.saari-dash .dash-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:6px}.saari-dash .dash-row strong{color:var(--d-text)}
+@media(max-width:1000px){.saari-dash .dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:790px){.saari-dash .dash-filters,.saari-dash .dash-grid2,.saari-dash .fin-ind-grid,.saari-dash .dash-metrics{grid-template-columns:1fr}.saari-dash .dash-card-body,.saari-dash .fin-chart-card__body{padding:15px}}@media(max-width:460px){.saari-dash .dash-kpis{grid-template-columns:1fr}}
 
-<form class="fin-toolbar" method="get">
-  <div class="fin-filter-field"><label>De</label><input class="fin-control" type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
-  <div class="fin-filter-field"><label>Até</label><input class="fin-control" type="date" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
-  <div class="fin-filter-field"><label>Obra</label><select class="fin-control" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div>
-  <div class="fin-filter-field"><label>Classe</label><select class="fin-control" name="classe"><option value="">Todas</option>{% for c in classes_financeiras %}<option value="{{ c.pk }}" {% if filtros.classe == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></div>
-  <div class="fin-filter-field"><label>Apropriação</label><select class="fin-control" name="apropriacao"><option value="">Todas</option>{% for a in apropriacoes %}<option value="{{ a.pk }}" {% if filtros.apropriacao == a.pk|stringformat:'s' %}selected{% endif %}>{{ a.pai.nome }} → {{ a.nome }}</option>{% endfor %}</select></div>
-  <div class="fin-filter-field"><label>Fornecedor</label><select class="fin-control" name="fornecedor"><option value="">Todos</option>{% for f in fornecedores %}<option value="{{ f.pk }}" {% if filtros.fornecedor == f.pk|stringformat:'s' %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
-  <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary">Aplicar</button><a class="fin-btn" href="{% url 'financeiro:indicadores' %}">Limpar</a></div>
-</form>
+/* Indicadores SAARI — extensão visual dos componentes nativos de Financeiro.
+   Mantém a estrutura e scripts dos gráficos, respeita os tokens do tema. */
+.saari-dash{
+  --d-card:var(--fin-card,#fff);
+  --d-line:var(--fin-line,#ded7c8);
+  --d-text:var(--fin-text,#453330);
+  --d-muted:var(--fin-muted,#77655c);
+  --d-primary:var(--fin-primary,#b9aa72);
+  --d-subtle:var(--fin-primary-soft,#f5f1e9);
+  width:100%;color:var(--fin-text);
+}
+.saari-dash .fin-head{margin-bottom:18px}
+.saari-dash .dash-period{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border:1px solid var(--fin-line);border-radius:10px;background:var(--fin-card);color:var(--fin-muted);font-size:13px;font-weight:700;white-space:nowrap}
+.saari-dash .dash-card,.saari-dash .fin-chart-card{background:var(--fin-card);border:1px solid var(--fin-line);border-radius:15px;box-shadow:var(--fin-shadow,0 8px 24px rgba(69,51,48,.055));}
+.saari-dash .dash-card-head,.saari-dash .fin-chart-card__head{min-height:60px;background:linear-gradient(180deg,var(--fin-card,#fff),var(--fin-line-soft,#f5f1e9));padding:15px 18px;border-bottom:1px solid var(--fin-line-soft,#f5f1e9)}
+.saari-dash .dash-card-head h2,.saari-dash .fin-chart-card__head h2{color:var(--fin-primary-deep,var(--fin-text));font-size:16px;font-weight:820}
+.saari-dash .dash-card-body,.saari-dash .fin-chart-card__body{padding:18px}
+.saari-dash .dash-filter-section{margin-bottom:20px}
+.saari-dash .dash-filters{grid-template-columns:repeat(3,minmax(0,1fr));gap:13px 17px}
+.saari-dash .dash-field>label{color:var(--fin-text);font-size:12px;font-weight:750}
+.saari-dash .dash-control{min-height:41px;height:41px;background:var(--fin-card);border:1px solid var(--fin-line);border-radius:10px;color:var(--fin-text);font-size:13px;transition:border-color .15s ease,box-shadow .15s ease}
+.saari-dash .dash-control:focus,.saari-dash .dash-control:focus-visible{outline:none;border-color:var(--fin-primary);box-shadow:0 0 0 3px var(--fin-primary-soft)}
+.saari-dash .dash-actions{justify-content:flex-end;padding-top:15px;border-top:1px solid var(--fin-line-soft);margin-top:18px}
+.saari-dash .dash-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:8px 15px;border-radius:10px;border:1px solid var(--fin-primary-border,var(--fin-line));font-size:13px;font-weight:750;background:var(--fin-card);color:var(--fin-text);transition:.16s ease}
+.saari-dash .dash-btn:hover{border-color:var(--fin-primary);background:var(--fin-primary-soft);color:var(--fin-primary-dark,var(--fin-text))}
+.saari-dash .dash-btn-main{background:var(--fin-primary);border-color:var(--fin-primary);color:#fff}
+.saari-dash .dash-btn-main:hover{background:var(--fin-primary-dark);border-color:var(--fin-primary-dark);color:#fff}
+.saari-dash .dash-options{background:var(--fin-card);border-color:var(--fin-line);box-shadow:var(--fin-shadow-hover,0 14px 34px rgba(69,51,48,.09))}
+.saari-dash .dash-option:hover{background:var(--fin-primary-soft);border-radius:6px}
+.saari-dash .dash-kpis{gap:14px;margin-bottom:22px;grid-template-columns:repeat(4,minmax(0,1fr))}
+.saari-dash .dash-kpi{position:relative;overflow:hidden;padding:18px;border:1px solid var(--fin-line);border-radius:15px;background:var(--fin-card);box-shadow:var(--fin-shadow,0 8px 24px rgba(69,51,48,.055));border-left:4px solid var(--fin-primary)}
+.saari-dash .dash-kpi:nth-child(2){border-left-color:var(--fin-warn,#9a6819)}
+.saari-dash .dash-kpi:nth-child(3){border-left-color:var(--fin-ok,#6d9483)}
+.saari-dash .dash-kpi:nth-child(4){border-left-color:var(--fin-danger,#b64646)}
+.saari-dash .dash-kpi-top{font-size:12px;color:var(--fin-muted)}
+.saari-dash .dash-kpi-symbol{background:var(--fin-primary-soft);color:var(--fin-primary-deep,var(--fin-text));font-size:17px;width:35px;height:35px}
+.saari-dash .dash-kpi strong{font-size:clamp(19px,2vw,27px);font-weight:850;letter-spacing:-.03em;color:var(--fin-primary-deep,var(--fin-text))}
+.saari-dash .dash-kpi small{color:var(--fin-muted)}
+.saari-dash .dash-tabs{gap:6px;padding:6px;border:1px solid var(--fin-line);border-radius:14px;background:var(--fin-card);box-shadow:var(--fin-shadow,0 8px 24px rgba(69,51,48,.055));margin-bottom:20px;overflow-x:auto}
+.saari-dash .dash-tab{padding:11px 16px;min-height:42px;border:1px solid transparent;border-radius:10px;font-weight:750;color:var(--fin-muted);font-size:13px}
+.saari-dash .dash-tab:hover{background:var(--fin-primary-soft);color:var(--fin-primary-dark,var(--fin-text))}
+.saari-dash .dash-tab[aria-selected=true]{color:var(--fin-primary-dark,var(--fin-text));border:1px solid var(--fin-primary-border,var(--fin-line));background:var(--fin-primary-soft);box-shadow:none}
+.saari-dash .dash-grid2,.saari-dash .fin-ind-grid{gap:18px}
+.saari-dash .fin-chart-bar{background:var(--fin-primary)}
+.saari-dash .dash-table{font-size:13px}
+.saari-dash .dash-table th{background:var(--fin-line-soft);color:var(--fin-text);font-weight:800;font-size:12px}
+.saari-dash .dash-table th,.saari-dash .dash-table td{border-bottom-color:var(--fin-line);padding:12px 14px}
+.saari-dash .dash-table tbody tr:hover{background:var(--fin-primary-soft)}
+.saari-dash .dash-note,.saari-dash .dash-hint{color:var(--fin-muted)}
+.saari-dash .dash-svg-chart{width:100%;min-width:0}
+.saari-dash button:focus-visible,.saari-dash summary:focus-visible,.saari-dash a:focus-visible{outline:3px solid var(--fin-primary);outline-offset:2px}
+@media(max-width:1100px){.saari-dash .dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:780px){.saari-dash .dash-filters,.saari-dash .dash-grid2,.saari-dash .fin-ind-grid{grid-template-columns:1fr}.saari-dash .dash-card-body,.saari-dash .fin-chart-card__body{padding:15px}.saari-dash .dash-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.saari-dash .fin-head{align-items:flex-start}.saari-dash .dash-actions{flex-wrap:wrap}}
+@media(max-width:480px){.saari-dash .dash-kpis{grid-template-columns:1fr}.saari-dash .dash-tab{padding:9px 12px}.saari-dash .dash-actions>*{flex:1}}
 
-<div class="fin-kpis">
-  <div class="fin-kpi fin-kpi--success">
-    <span>Pago no período</span>
-    <strong>{{ total_pago|moeda_br }}</strong>
-    <small>{{ quantidade_pagamentos }} pagamento{{ quantidade_pagamentos|pluralize }}</small>
-  </div>
-  <div class="fin-kpi">
-    <span>Média por pagamento</span>
-    <strong>{{ media_pagamento|moeda_br }}</strong>
-    <small>ticket médio</small>
-  </div>
-  <div class="fin-kpi fin-kpi--warning">
-    <span>Saldo em aberto</span>
-    <strong>{{ total_aberto|moeda_br }}</strong>
-    <small>contas em aberto</small>
-  </div>
-  <div class="fin-kpi">
-    <span>Previsão 30 dias</span>
-    <strong>{{ previsao_30|moeda_br }}</strong>
-    <small>{{ previsoes_extras_30|moeda_br }} em previsões extras</small>
-  </div>
-</div>
-
-<section class="fin-section fin-ind-wide">
-  <div class="fin-section__head">
-    <div><h2>Resumo financeiro por obra</h2></div>
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead>
-        <tr>
-          <th>Obra</th>
-          <th style="text-align:right">Pago</th>
-          <th style="text-align:right">Contas abertas</th>
-          <th style="text-align:right">Previsões extras</th>
-          <th style="text-align:right">Total mapeado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for linha in obras_resumo %}
-        <tr>
-          <td><strong>{{ linha.obra }}</strong></td>
-          <td class="fin-money">{{ linha.pago|moeda_br }}</td>
-          <td class="fin-money">{{ linha.aberto|moeda_br }}</td>
-          <td class="fin-money">{{ linha.previsto|moeda_br }}</td>
-          <td class="fin-money">{{ linha.total|moeda_br }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="fin-empty">Nenhum movimento financeiro.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<section class="fin-section fin-ind-wide">
-  <div class="fin-section__head">
-    <div><h2>Detalhamento por apropriação</h2></div>
-  </div>
-  <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table">
-      <thead>
-        <tr>
-          <th>Código</th>
-          <th>Classe</th>
-          <th>Apropriação</th>
-          <th>Pagamentos</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for i in por_apropriacao %}
-        <tr>
-          <td>{{ i.titulo__plano_financeiro__codigo }}</td>
-          <td>{{ i.titulo__plano_financeiro__pai__nome|default:"—" }}</td>
-          <td><strong>{{ i.titulo__plano_financeiro__nome }}</strong></td>
-          <td>{{ i.quantidade }}</td>
-          <td class="fin-money">{{ i.total|moeda_br }}</td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="fin-empty">Sem dados.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<div class="fin-ind-grid">
+</style><div class="saari-dash" id="saari-dashboard"><header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Visão gerencial</div><h1 class="fin-title">Indicadores financeiros</h1><div class="fin-sub">Acompanhe pagamentos, categorias, custos por m² e projeções financeiras.</div></div><div class="fin-actions"><span class="dash-period" aria-label="Período selecionado">{{ inicio|date:'d/m/Y' }} — {{ fim|date:'d/m/Y' }}</span></div></header><section class="dash-card dash-filter-section"><div class="dash-card-head"><div><h2>Filtros do painel</h2><small>Selecione o período e refine os indicadores por obra, classe e fornecedor</small></div></div><div class="dash-card-body"><form method="get" id="dash-filter-form"><div class="dash-filters">
+<div class="dash-field"><label for="d-inicio">Data inicial</label><input class="dash-control" type="date" id="d-inicio" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div><div class="dash-field"><label for="d-fim">Data final</label><input class="dash-control" type="date" id="d-fim" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
+<div class="dash-field"><label>Obras</label><details class="dash-select" id="d-obras"><summary class="dash-control"><span id="d-obras-label">{% if obras_ids %}{{ obras_ids|length }} obra(s) selecionada(s){% else %}Todas as obras{% endif %}</span><span>⌄</span></summary><div class="dash-options"><input type="search" class="dash-control" id="d-pesquisa" placeholder="Pesquisar obra...">{% for obra in obras %}<label class="dash-option"><input type="checkbox" name="obras" value="{{ obra.pk }}" {% if obra.pk in obras_ids %}checked{% endif %}><span>{{ obra }}</span></label>{% endfor %}</div></details></div>
+<div class="dash-field"><label for="d-classe">Classe financeira</label><select class="dash-control" name="classe" id="d-classe"><option value="">Todas</option>{% for c in classes_financeiras %}<option value="{{ c.pk }}" {% if filtros.classe == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.codigo }} · {{ c.nome }}</option>{% endfor %}</select></div>
+<div class="dash-field"><label for="d-apropriacao">Apropriação</label><select class="dash-control" name="apropriacao" id="d-apropriacao"><option value="">Todas</option>{% for a in apropriacoes %}<option value="{{ a.pk }}" {% if filtros.apropriacao == a.pk|stringformat:'s' %}selected{% endif %}>{{ a.pai.nome }} → {{ a.nome }}</option>{% endfor %}</select></div>
+<div class="dash-field"><label for="d-fornecedor">Fornecedor</label><select class="dash-control" name="fornecedor" id="d-fornecedor"><option value="">Todos</option>{% for f in fornecedores %}<option value="{{ f.pk }}" {% if filtros.fornecedor == f.pk|stringformat:'s' %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div></div>
+<div class="dash-actions"><button class="dash-btn dash-btn-main" type="submit">Aplicar filtros</button><a class="dash-btn" href="{% url 'financeiro:indicadores' %}">Limpar filtros</a></div></form></div></section><div class="dash-kpis">
+<div class="dash-kpi"><div class="dash-kpi-top"><span>Total lançado</span><span class="dash-kpi-symbol">▤</span></div><strong>{{ gerenciais.totais.lancado|moeda_br }}</strong><small>Títulos cadastrados no período</small></div>
+<div class="dash-kpi"><div class="dash-kpi-top"><span>Total aprovado</span><span class="dash-kpi-symbol">✓</span></div><strong>{{ gerenciais.totais.aprovado|moeda_br }}</strong><small>Aprovações registradas</small></div>
+<div class="dash-kpi"><div class="dash-kpi-top"><span>Total pago</span><span class="dash-kpi-symbol">↗</span></div><strong>{{ total_pago|moeda_br }}</strong><small>{{ quantidade_pagamentos }} pagamento(s)</small></div>
+<div class="dash-kpi"><div class="dash-kpi-top"><span>Saldo em aberto</span><span class="dash-kpi-symbol">◷</span></div><strong>{{ total_aberto|moeda_br }}</strong><small>Saldo de títulos em aberto</small></div></div>
+<div class="dash-tabs" role="tablist" aria-label="Painéis financeiros"><button class="dash-tab" type="button" data-tab="geral" role="tab" aria-selected="true">Visão geral</button><button class="dash-tab" type="button" data-tab="forecast" role="tab" aria-selected="false">Forecast</button><button class="dash-tab" type="button" data-tab="custos" role="tab" aria-selected="false">Custos por m²</button><button class="dash-tab" type="button" data-tab="analises" role="tab" aria-selected="false">Análises detalhadas</button></div>
+<div class="dash-panel" data-panel="geral"><div class="dash-grid2"><section class="dash-card"><div class="dash-card-head"><div><h2>Evolução financeira mensal</h2><small>Valores lançados, aprovados e pagos por mês</small></div></div><div class="dash-card-body"><div class="dash-legend"><span><i style="background:#788e9d"></i>Lançado</span><span><i style="background:#c6a46f"></i>Aprovado</span><span><i style="background:#7caa98"></i>Pago</span></div><div class="dash-svg-chart" id="d-evolucao" role="img" aria-label="Gráfico mensal de lançamentos, aprovações e pagamentos"></div></div></section><section class="dash-card"><div class="dash-card-head"><div><h2>Fluxo de desembolso futuro</h2><small>Barras mensais e linha de valores acumulados (próximos seis meses)</small></div></div><div class="dash-card-body"><div class="dash-legend"><span><i style="background:#c6a46f"></i>Desembolso mensal</span><span><i style="background:#7caa98"></i>Acumulado</span></div><div class="dash-svg-chart" id="d-desembolso" role="img" aria-label="Gráfico combinado de desembolso mensal e acumulado"></div></div></section></div><section class="dash-card"><div class="dash-card-head"><div><h2>Previsão dos próximos 30 dias</h2><small>Compromissos e previsões extras</small></div></div><div class="dash-card-body"><div class="dash-metrics"><div class="dash-metric"><label>Previsão total 30 dias</label><strong>{{ previsao_30|moeda_br }}</strong></div><div class="dash-metric"><label>Previsões extras</label><strong>{{ previsoes_extras_30|moeda_br }}</strong></div><div class="dash-metric"><label>Média por pagamento</label><strong>{{ media_pagamento|moeda_br }}</strong></div></div></div></section></div>
+<div class="dash-panel" data-panel="forecast" hidden><section class="dash-card"><div class="dash-card-head"><div><h2>Forecast gerencial por categoria</h2><small>Lançado, aprovado e pago — os valores representam eventos diferentes</small></div></div><div class="dash-card-body"><div class="dash-table-scroll"><table class="dash-table"><thead><tr><th>Categoria</th><th>Lançado</th><th>Aprovado</th><th>Pago</th></tr></thead><tbody>{% for item in gerenciais.categorias %}<tr><td><strong>{{ item.nome }}</strong></td><td class="dash-number">{{ item.lancado|moeda_br }}</td><td class="dash-number">{{ item.aprovado|moeda_br }}</td><td class="dash-number">{{ item.pago|moeda_br }}</td></tr>{% empty %}<tr><td colspan="4" class="dash-empty">Nenhuma categoria no período.</td></tr>{% endfor %}</tbody></table></div></div></section><section class="dash-card"><div class="dash-card-head"><div><h2>Forecast mensal detalhado</h2><small>Separação mensal por categoria financeira</small></div></div><div class="dash-card-body"><div class="dash-table-scroll"><table class="dash-table"><thead><tr><th>Mês</th><th>Categoria</th><th>Lançado</th><th>Aprovado</th><th>Pago</th></tr></thead><tbody>{% for item in forecast_mensal %}<tr><td>{{ item.mes }}</td><td>{{ item.categoria }}</td><td class="dash-number">{{ item.lancado|moeda_br }}</td><td class="dash-number">{{ item.aprovado|moeda_br }}</td><td class="dash-number">{{ item.pago|moeda_br }}</td></tr>{% empty %}<tr><td colspan="5" class="dash-empty">Nenhum evento financeiro no período.</td></tr>{% endfor %}</tbody></table></div></div></section></div>
+<div class="dash-panel" data-panel="custos" hidden><section class="dash-card"><div class="dash-card-head"><div><h2>Custos realizados por metro quadrado</h2><small>Comparação entre categorias por área construída</small></div></div><div class="dash-card-body"><div class="dash-note">Área construída considerada: <strong>{{ gerenciais.area_total|floatformat:2 }} m²</strong>. Indicadores calculados com pagamentos efetivados e somente obras com área válida.</div><div class="dash-metrics">
+{% for nome,valor in gerenciais.custos_m2.items %}<div class="dash-metric"><label>{{ nome }} / m²</label><strong>{% if valor != None %}{{ valor|moeda_br }}{% else %}Sem área{% endif %}</strong></div>{% endfor %}</div>
+{% if gerenciais.obras_sem_area %}<div class="dash-alert"><strong>Obras fora do cálculo por falta de área:</strong> {{ gerenciais.obras_sem_area|join:', ' }}</div>{% endif %}</div></section><section class="dash-card"><div class="dash-card-head"><div><h2>Comparação individual entre obras</h2><small>Indicadores realizados / m² por obra</small></div></div><div class="dash-card-body"><div class="dash-table-scroll"><table class="dash-table"><thead><tr><th>Obra</th><th>Área construída</th><th>Mão de obra / m²</th><th>Grandes fornecedores / m²</th><th>Materiais / m²</th></tr></thead><tbody>{% for item in gerenciais.detalhe_obras %}<tr><td><strong>{{ item.nome }}</strong></td><td class="dash-number">{% if item.area %}{{ item.area|floatformat:2 }} m²{% else %}—{% endif %}</td><td class="dash-number">{% if item.mao_obra != None %}{{ item.mao_obra|moeda_br }}{% else %}—{% endif %}</td><td class="dash-number">{% if item.fornecedores != None %}{{ item.fornecedores|moeda_br }}{% else %}—{% endif %}</td><td class="dash-number">{% if item.materiais != None %}{{ item.materiais|moeda_br }}{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="5" class="dash-empty">Nenhuma obra aplicável.</td></tr>{% endfor %}</tbody></table></div></div></section></div>
+<div class="dash-panel" data-panel="analises" hidden><section class="dash-card"><div class="dash-card-head"><div><h2>Detalhamento por apropriação</h2><small>Classificações financeiras dos pagamentos efetivados</small></div></div><div class="dash-card-body"><div class="dash-table-scroll"><table class="dash-table"><thead><tr><th>Código</th><th>Classe</th><th>Apropriação</th><th>Pagamentos</th><th>Total</th></tr></thead><tbody>{% for item in por_apropriacao %}<tr><td>{{ item.titulo__plano_financeiro__codigo }}</td><td>{{ item.titulo__plano_financeiro__pai__nome|default:"—" }}</td><td><strong>{{ item.titulo__plano_financeiro__nome }}</strong></td><td>{{ item.quantidade }}</td><td class="dash-number">{{ item.total|moeda_br }}</td></tr>{% empty %}<tr><td colspan="5" class="dash-empty">Nenhuma apropriação no período.</td></tr>{% endfor %}</tbody></table></div></div></section>{% if resumo_obra_sem_filtro %}<section class="dash-card"><div class="dash-card-head"><div><h2>Resumo financeiro por obra</h2><small>Visão geral de desembolsos, títulos e previsões (sem filtros adicionais)</small></div></div><div class="dash-card-body"><div class="dash-table-scroll"><table class="dash-table"><thead><tr><th>Obra</th><th>Pago</th><th>Em aberto</th><th>Previsões extras</th><th>Total mapeado</th></tr></thead><tbody>{% for item in obras_resumo %}<tr><td><strong>{{ item.obra }}</strong></td><td class="dash-number">{{ item.pago|moeda_br }}</td><td class="dash-number">{{ item.aberto|moeda_br }}</td><td class="dash-number">{{ item.previsto|moeda_br }}</td><td class="dash-number">{{ item.total|moeda_br }}</td></tr>{% empty %}<tr><td colspan="5" class="dash-empty">Nenhum movimento financeiro.</td></tr>{% endfor %}</tbody></table></div></div></section>{% endif %}<div class="fin-ind-grid">
   <section class="fin-chart-card">
     <div class="fin-chart-card__head">
       <h2>Pagamentos por mês</h2>
@@ -267,5 +224,33 @@
       </div>
     </div>
   </section>
-</div>
+</div></div></div>
+{{ comparacao_mensal|json_script:"dash-evolucao-json" }}
+{{ desembolso_mensal|json_script:"dash-desembolso-json" }}
+<script>
+(function(){
+'use strict';
+const root=document.getElementById('saari-dashboard');if(!root)return;
+const tabs=[...root.querySelectorAll('.dash-tab')],panels=[...root.querySelectorAll('.dash-panel')];
+function selectTab(name){tabs.forEach(t=>t.setAttribute('aria-selected',String(t.dataset.tab===name)));panels.forEach(p=>p.hidden=p.dataset.panel!==name);}
+tabs.forEach(t=>t.addEventListener('click',()=>selectTab(t.dataset.tab)));
+const search=root.querySelector('#d-pesquisa'),options=[...root.querySelectorAll('.dash-option')],label=root.querySelector('#d-obras-label');
+search.addEventListener('input',()=>{const q=search.value.toLocaleLowerCase('pt-BR');options.forEach(x=>x.hidden=!x.textContent.toLocaleLowerCase('pt-BR').includes(q))});
+root.querySelectorAll('.dash-option input').forEach(x=>x.addEventListener('change',()=>{const n=root.querySelectorAll('.dash-option input:checked').length;label.textContent=n?n+' obra(s) selecionada(s)':'Todas as obras'}));
+const fmt=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(n);
+const monthly=JSON.parse(document.getElementById('dash-evolucao-json').textContent||'[]');
+const future=JSON.parse(document.getElementById('dash-desembolso-json').textContent||'[]');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function renderBars(el,data,keys){if(!data.length){el.innerHTML='<p class="dash-empty">Sem dados para o período.</p>';return;}
+const width=760,height=268,l=68,r=14,t=18,b=46,pw=width-l-r,ph=height-t-b,max=Math.max(1,...data.flatMap(d=>keys.map(k=>Number(d[k.id])||0))), step=pw/data.length;
+let h=`<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto" role="img" aria-label="Comparação mensal">`;
+for(let j=0;j<=4;j++){let y=t+ph*j/4;h+=`<line x1="${l}" y1="${y}" x2="${width-r}" y2="${y}" stroke="var(--d-line)" stroke-dasharray="3 4"/><text x="${l-8}" y="${y+4}" text-anchor="end" fill="var(--d-muted)" font-size="10">${esc(new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1}).format(max*(4-j)/4))}</text>`;}
+data.forEach((d,i)=>{const group=step*.7,start=l+i*step+(step-group)/2,bar=group/keys.length;keys.forEach((k,j)=>{const v=Number(d[k.id])||0,bh=v/max*ph,x=start+j*bar+2,y=t+ph-bh;h+=`<rect x="${x}" y="${y}" width="${Math.max(3,bar-4)}" height="${bh}" rx="3" fill="${k.color}"><title>${esc(k.name)}: ${esc(fmt(v))}</title></rect>`});h+=`<text x="${l+(i+.5)*step}" y="${height-21}" fill="var(--d-muted)" text-anchor="middle" font-size="11">${esc(d.mes.slice(5,7)+'/'+d.mes.slice(2,4))}</text>`});el.innerHTML=h+'</svg>';}
+renderBars(root.querySelector('#d-evolucao'),monthly,[{id:'lancado',name:'Lançado',color:'#788e9d'},{id:'aprovado',name:'Aprovado',color:'#c6a46f'},{id:'pago',name:'Pago',color:'#7caa98'}]);
+function renderFuture(el,data){if(!data.length){el.innerHTML='<p class="dash-empty">Sem projeções.</p>';return;}const w=760,h=268,l=68,r=18,t=18,b=46,pw=w-l-r,ph=h-t-b,max=Math.max(1,...data.map(x=>Number(x.acumulado)||0)),step=pw/data.length;let s=`<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto">`;
+for(let j=0;j<=4;j++){let y=t+j*ph/4;s+=`<line x1="${l}" y1="${y}" x2="${w-r}" y2="${y}" stroke="var(--d-line)" stroke-dasharray="3 4"/><text x="${l-8}" y="${y+4}" text-anchor="end" font-size="10" fill="var(--d-muted)">${esc(new Intl.NumberFormat('pt-BR',{notation:'compact',maximumFractionDigits:1}).format(max*(4-j)/4))}</text>`;}
+let path=[];data.forEach((d,i)=>{const x=l+(i+.5)*step,y=t+ph-(Number(d.acumulado)||0)/max*ph,bh=(Number(d.valor)||0)/max*ph;s+=`<rect x="${x-step*.18}" y="${t+ph-bh}" width="${step*.36}" height="${bh}" rx="4" fill="#c6a46f"><title>Mensal: ${esc(fmt(Number(d.valor)||0))}</title></rect><text x="${x}" y="${h-21}" text-anchor="middle" font-size="11" fill="var(--d-muted)">${esc(d.mes)}</text>`;path.push(`${i?'L':'M'} ${x} ${y}`)});s+=`<path d="${path.join(' ')}" fill="none" stroke="#7caa98" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;data.forEach((d,i)=>{const x=l+(i+.5)*step,y=t+ph-(Number(d.acumulado)||0)/max*ph;s+=`<circle cx="${x}" cy="${y}" r="4" fill="#7caa98"><title>Acumulado: ${esc(fmt(Number(d.acumulado)||0))}</title></circle>`});el.innerHTML=s+'</svg>';}
+renderFuture(root.querySelector('#d-desembolso'),future);
+})();
+</script>
 {% endblock %}

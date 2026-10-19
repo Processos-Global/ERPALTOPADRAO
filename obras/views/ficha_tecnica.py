@@ -1,6 +1,7 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.http import Http404
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -114,6 +115,27 @@ def _decimal(valor, padrao="0"):
         return Decimal(str(valor or padrao).replace(".", "").replace(",", "."))
     except (InvalidOperation, ValueError):
         return Decimal(padrao)
+
+
+def _pk_post(request, campo):
+    """Valida IDs do POST, sem aceitar separadores de milhar."""
+    valor = str(request.POST.get(campo) or "").strip()
+    if not valor:
+        return None
+    if not valor.isascii() or not valor.isdecimal():
+        raise Http404("Identificador inválido no formulário.")
+    numero = int(valor)
+    if numero <= 0:
+        raise Http404("Identificador inválido no formulário.")
+    return numero
+
+
+def _categorias_post(request):
+    """Não permitir que IDs inválidos limpem seleções já salvas."""
+    valores = request.POST.getlist("categorias")
+    if any(not str(x).isascii() or not str(x).isdecimal() or int(x) <= 0 for x in valores):
+        raise Http404("Identificador de categoria inválido.")
+    return {int(x) for x in valores}
 
 
 def _ficha(obra, usuario):
@@ -236,21 +258,21 @@ def ficha_tecnica_acao(request, obra_id):
     etapa = request.POST.get("etapa", "1")
 
     if acao == "adicionar_pavimento":
-        tipo = get_object_or_404(TipoPavimento, pk=request.POST.get("tipo_pavimento"), ativo=True)
+        tipo = get_object_or_404(TipoPavimento, pk=_pk_post(request, "tipo_pavimento"), ativo=True)
         nome = (request.POST.get("nome") or tipo.nome).strip()
         ordem = ficha.pavimentos.count() + 1
         PavimentoFichaTecnica.objects.get_or_create(ficha=ficha, nome=nome, defaults={"tipo_pavimento": tipo, "ordem": ordem})
         messages.success(request, "Pavimento adicionado.")
 
     elif acao == "excluir_pavimento":
-        pav = get_object_or_404(PavimentoFichaTecnica, pk=request.POST.get("pavimento_id"), ficha=ficha)
+        pav = get_object_or_404(PavimentoFichaTecnica, pk=_pk_post(request, "pavimento_id"), ficha=ficha)
         pav.delete()
         messages.success(request, "Pavimento removido.")
 
     elif acao == "adicionar_ambiente":
-        pav = get_object_or_404(PavimentoFichaTecnica, pk=request.POST.get("pavimento"), ficha=ficha)
-        tipo = get_object_or_404(TipoAmbiente, pk=request.POST.get("tipo_ambiente"), ativo=True)
-        caracteristica_id = request.POST.get("caracteristica") or (tipo.caracteristica_padrao_id or "")
+        pav = get_object_or_404(PavimentoFichaTecnica, pk=_pk_post(request, "pavimento"), ficha=ficha)
+        tipo = get_object_or_404(TipoAmbiente, pk=_pk_post(request, "tipo_ambiente"), ativo=True)
+        caracteristica_id = _pk_post(request, "caracteristica") or tipo.caracteristica_padrao_id
         caracteristica = get_object_or_404(CaracteristicaAmbiente, pk=caracteristica_id, ativo=True)
         area = _decimal(request.POST.get("area_m2"))
         if area <= 0:
@@ -268,12 +290,12 @@ def ficha_tecnica_acao(request, obra_id):
             messages.success(request, "Ambiente adicionado.")
 
     elif acao == "excluir_ambiente":
-        ambiente = get_object_or_404(AmbienteFichaTecnica, pk=request.POST.get("ambiente_id"), pavimento__ficha=ficha)
+        ambiente = get_object_or_404(AmbienteFichaTecnica, pk=_pk_post(request, "ambiente_id"), pavimento__ficha=ficha)
         ambiente.delete()
         messages.success(request, "Ambiente removido.")
 
     elif acao == "salvar_categorias_obra":
-        selecionadas = {int(x) for x in request.POST.getlist("categorias") if x.isdigit()}
+        selecionadas = _categorias_post(request)
         categorias_obra, _ = _categorias_por_escopo()
         permitidas = list(categorias_obra.filter(pk__in=selecionadas))
         ids = {c.pk for c in permitidas}
@@ -305,8 +327,8 @@ def ficha_tecnica_acao(request, obra_id):
         messages.success(request, "Categorias gerais da obra atualizadas.")
 
     elif acao == "salvar_categorias_ambiente":
-        ambiente = get_object_or_404(AmbienteFichaTecnica, pk=request.POST.get("ambiente_id"), pavimento__ficha=ficha)
-        selecionadas = {int(x) for x in request.POST.getlist("categorias") if x.isdigit()}
+        ambiente = get_object_or_404(AmbienteFichaTecnica, pk=_pk_post(request, "ambiente_id"), pavimento__ficha=ficha)
+        selecionadas = _categorias_post(request)
         _, categorias_ambiente = _categorias_por_escopo()
         permitidas = []
         for cat in categorias_ambiente.filter(pk__in=selecionadas):
@@ -321,17 +343,17 @@ def ficha_tecnica_acao(request, obra_id):
         return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=3&ambiente={ambiente.pk}")
 
     elif acao == "adicionar_item":
-        aplicacao = get_object_or_404(CategoriaFichaTecnica, pk=request.POST.get("aplicacao"), ficha=ficha)
+        aplicacao = get_object_or_404(CategoriaFichaTecnica, pk=_pk_post(request, "aplicacao"), ficha=ficha)
         tipo_item = None
-        tipo_item_id = request.POST.get("tipo_item")
+        tipo_item_id = _pk_post(request, "tipo_item")
         if tipo_item_id:
             tipo_item = get_object_or_404(TipoItemGrandeFornecedor, pk=tipo_item_id, categoria=aplicacao.categoria, ativo=True)
         unidade = None
-        unidade_id = request.POST.get("unidade")
+        unidade_id = _pk_post(request, "unidade")
         if unidade_id:
             unidade = get_object_or_404(UnidadeMedida, pk=unidade_id, ativo=True)
         opcao = None
-        opcao_id = request.POST.get("opcao_especificacao")
+        opcao_id = _pk_post(request, "opcao_especificacao")
         if opcao_id:
             opcao = get_object_or_404(OpcaoEspecificacaoGrandeFornecedor, pk=opcao_id, categoria=aplicacao.categoria, ativo=True)
         ItemFichaTecnica.objects.create(
@@ -350,7 +372,7 @@ def ficha_tecnica_acao(request, obra_id):
         return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=4{ambiente_param}")
 
     elif acao == "excluir_item":
-        item = get_object_or_404(ItemFichaTecnica, pk=request.POST.get("item_id"), aplicacao_categoria__ficha=ficha)
+        item = get_object_or_404(ItemFichaTecnica, pk=_pk_post(request, "item_id"), aplicacao_categoria__ficha=ficha)
         ambiente_id = item.aplicacao_categoria.ambiente_id
         if (
             item.aplicacao_categoria.ambiente_id is None

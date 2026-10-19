@@ -24,8 +24,8 @@ def _quantidade(valor):
     return texto.replace(".", ",") or "0"
 
 
-def gerar_pdf_solicitacao_cotacao(processo):
-    """Gera uma solicitação genérica de cotação, sem fornecedor e sem preços."""
+def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
+    """Solicitação genérica ou individual por fornecedor, sem preços."""
     try:
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_CENTER, TA_RIGHT
@@ -56,7 +56,7 @@ def gerar_pdf_solicitacao_cotacao(processo):
         topMargin=12 * mm,
         bottomMargin=12 * mm,
         title=f"Solicitação de cotação - {processo.numero}",
-        author="ERP Alto Padrão",
+        author="SAARI ERP",
     )
 
     styles = getSampleStyleSheet()
@@ -115,7 +115,8 @@ def gerar_pdf_solicitacao_cotacao(processo):
         textColor=ink,
     )
 
-    story = []
+    from compras.services.pdf_empresa import cabecalho_empresa
+    story = cabecalho_empresa(184)
 
     cabecalho = Table(
         [[
@@ -128,7 +129,7 @@ def gerar_pdf_solicitacao_cotacao(processo):
                 right,
             ),
         ], [
-            Paragraph("ERP ALTO PADRÃO · SUPRIMENTOS", subtitle),
+            Paragraph("SAARI ERP · SUPRIMENTOS", subtitle),
             Paragraph(
                 f"Emitido em {timezone.localtime().strftime('%d/%m/%Y %H:%M')}",
                 right,
@@ -177,8 +178,8 @@ def gerar_pdf_solicitacao_cotacao(processo):
     fornecedor = Table([
         [Paragraph("DADOS DO FORNECEDOR / PREENCHIMENTO DA PROPOSTA", section)],
         [
-            Paragraph("<b>Empresa:</b> ______________________________________________", body),
-            Paragraph("<b>CNPJ:</b> ______________________________", body),
+            Paragraph("<b>Empresa:</b> " + (_texto(fornecedor.nome_exibicao) if fornecedor else "______________________________________________"), body),
+            Paragraph("<b>CNPJ:</b> " + (_texto(fornecedor.documento) if fornecedor else "______________________________"), body),
         ],
         [
             Paragraph("<b>Vendedor:</b> _____________________________________________", body),
@@ -294,7 +295,7 @@ def gerar_pdf_solicitacao_cotacao(processo):
     story.append(instrucoes_table)
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph(
-        "Documento gerado eletronicamente pelo ERP Alto Padrão. Esta solicitação não representa pedido de compra, aprovação comercial ou autorização de faturamento.",
+        "Documento gerado eletronicamente pelo SAARI ERP. Esta solicitação não representa pedido de compra, aprovação comercial ou autorização de faturamento.",
         small,
     ))
 

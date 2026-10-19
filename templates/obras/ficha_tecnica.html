@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load l10n %}
 {% block title %}Ficha Técnica | {{ obra.nome }}{% endblock %}
 {% block page_name %}Ficha Técnica{% endblock %}
 
@@ -44,7 +45,7 @@
             <input type="hidden" name="acao" value="adicionar_pavimento">
             <input type="hidden" name="etapa" value="1">
             <div class="ft-grid">
-              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" required>{% for p in tipos_pavimento %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" required>{% for p in tipos_pavimento %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c5"><label>Nome na obra</label><input name="nome" placeholder="Ex.: Térreo, 1º Pavimento"></div>
               <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
             </div>
@@ -59,7 +60,7 @@
               {% for p in pavimentos %}
               <tr>
                 <td>{{ p.ordem }}</td><td><strong>{{ p.nome }}</strong></td><td>{{ p.ambientes.count }}</td>
-                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_pavimento"><input type="hidden" name="etapa" value="1"><input type="hidden" name="pavimento_id" value="{{ p.pk }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_pavimento"><input type="hidden" name="etapa" value="1"><input type="hidden" name="pavimento_id" value="{{ p.pk|unlocalize }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
               </tr>
               {% empty %}<tr><td colspan="4" class="ft-empty">Nenhum pavimento cadastrado.</td></tr>{% endfor %}
             </tbody>
@@ -77,10 +78,10 @@
             <input type="hidden" name="acao" value="adicionar_ambiente">
             <input type="hidden" name="etapa" value="2">
             <div class="ft-grid">
-              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk }}">{{ p.nome }}</option>{% endfor %}</select></div>
-              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" required>{% for a in tipos_ambiente %}<option value="{{ a.pk }}">{{ a.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" required>{% for a in tipos_ambiente %}<option value="{{ a.pk|unlocalize }}">{{ a.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c3"><label>Identificação</label><input name="identificacao" placeholder="Ex.: Quarto 01" required></div>
-              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk }}">{{ c.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}">{{ c.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c3"><label>Área (m²)</label><input name="area_m2" required inputmode="decimal" placeholder="12,50"></div>
               <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
             </div>
@@ -95,7 +96,7 @@
               {% for a in ambientes %}
               <tr>
                 <td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.caracteristica.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td>
-                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
               </tr>
               {% empty %}<tr><td colspan="6" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
             </tbody>
@@ -114,7 +115,7 @@
               {% for c in categorias_obra %}
                 <div class="ft-cat-wrap">
                   <label class="ft-cat">
-                    <input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}{% if c.pk == ar_sistema_categoria_id %} data-ar-sistema-toggle{% endif %}>
+                    <input type="checkbox" name="categorias" value="{{ c.pk|unlocalize }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}{% if c.pk == ar_sistema_categoria_id %} data-ar-sistema-toggle{% endif %}>
                     <span>
                       <strong>{{ c.nome }}</strong>
                       {% if c.pk == ar_sistema_categoria_id %}<small>Selecione também o tipo do sistema</small>{% endif %}
@@ -143,7 +144,7 @@
           <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
           <div class="ft-tabs">
             {% for a in ambientes %}
-              <a data-ambiente-link class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk }}">
+              <a data-ambiente-link class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk|unlocalize }}">
                 <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
                 {% if a.total_categorias_ativas %}
                   <span class="ft-tab-status" title="{{ a.total_categorias_ativas }} categoria{{ a.total_categorias_ativas|pluralize }} selecionada{{ a.total_categorias_ativas|pluralize }} neste ambiente">
@@ -165,11 +166,11 @@
             </div>
 
             <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
-              {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_ambiente"><input type="hidden" name="etapa" value="3"><input type="hidden" name="ambiente_id" value="{{ ambiente_selecionado.pk }}">
+              {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_ambiente"><input type="hidden" name="etapa" value="3"><input type="hidden" name="ambiente_id" value="{{ ambiente_selecionado.pk|unlocalize }}">
               <div class="ft-cats">
                 {% for c in categorias_ambiente %}
                   {% if not c.somente_area_molhada or ambiente_selecionado.caracteristica.codigo == 'AREA_MOLHADA' %}
-                  <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk }}" {% if c.pk in aplicacoes_ambiente_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
+                  <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk|unlocalize }}" {% if c.pk in aplicacoes_ambiente_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
                   {% endif %}
                 {% endfor %}
               </div>
@@ -185,7 +186,7 @@
         <div class="ft-tabs">
           <a class="{% if not ambiente_selecionado %}active{% endif %}" href="?etapa=4">Gerais</a>
           {% for a in ambientes %}
-            <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_itens_ativos %} is-filled{% endif %}" href="?etapa=4&ambiente={{ a.pk }}">
+            <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_itens_ativos %} is-filled{% endif %}" href="?etapa=4&ambiente={{ a.pk|unlocalize }}">
               <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
               {% if a.total_itens_ativos %}
                 <span class="ft-tab-status" title="{{ a.total_itens_ativos }} item{{ a.total_itens_ativos|pluralize }} cadastrado{{ a.total_itens_ativos|pluralize }} neste ambiente">

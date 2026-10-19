@@ -1617,7 +1617,19 @@ def pdf_solicitacao_cotacao(request, pk):
         pk=pk,
     )
     try:
-        conteudo = gerar_pdf_solicitacao_cotacao(processo)
+        fornecedor = None
+        fornecedor_id = (request.GET.get("fornecedor") or "").strip()
+        if fornecedor_id:
+            if not fornecedor_id.isdigit():
+                raise ValidationError("Fornecedor inválido.")
+            from cadastros.models import Fornecedor
+            fornecedor = Fornecedor.objects.filter(
+                pk=int(fornecedor_id),
+                solicitacoes_cotacao__processo=processo,
+            ).first()
+            if fornecedor is None:
+                raise ValidationError("Fornecedor não vinculado à cotação deste processo.")
+        conteudo = gerar_pdf_solicitacao_cotacao(processo, fornecedor=fornecedor)
     except ValidationError as exc:
         messages.error(request, str(exc))
         return redirect("compras:detalhe_processo", pk=processo.pk)

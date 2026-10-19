@@ -34,10 +34,11 @@
       {% if modo == 'novo' or not titulo.integrada %}
       <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
         <div class="fin-field">
-          <label>Tipo do pagamento</label>
+          <label>Classificação</label>
           <select class="fin-control" id="tipo-pagamento-ui">
             <option value="OUTRO" {% if form.tipo_pagamento.value == 'OUTRO' or not form.tipo_pagamento.value %}selected{% endif %}>Outro pagamento</option>
             <option value="MATERIAL" {% if form.tipo_pagamento.value == 'MATERIAL' %}selected{% endif %}>Materiais</option>
+            <option value="SERVICO" {% if form.tipo_pagamento.value == 'SERVICO' %}selected{% endif %}>Serviços</option>
             <option value="REEMBOLSO" {% if form.tipo_pagamento.value == 'REEMBOLSO' %}selected{% endif %}>Reembolso</option>
           </select>
         </div>

@@ -1,3 +1,4 @@
+from .empresa import DadosEmpresa
 from .fornecedores import Fornecedor
 from .mao_obra import MaoObra
 from .materiais import Material

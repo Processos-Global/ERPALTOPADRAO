@@ -1,3 +1,4 @@
+{% load l10n %}
 <section class="ft-cat-card">
   <div class="ft-cat-head">
     <div>
@@ -42,7 +43,7 @@
                 <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
                   {% csrf_token %}
                   <input type="hidden" name="acao" value="excluir_item">
-                  <input type="hidden" name="item_id" value="{{ item.pk }}">
+                  <input type="hidden" name="item_id" value="{{ item.pk|unlocalize }}">
                   <button class="ft-icon-btn danger" type="submit" title="Excluir item">Excluir</button>
                 </form>
               {% endif %}
@@ -61,7 +62,7 @@
     <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
       {% csrf_token %}
       <input type="hidden" name="acao" value="adicionar_item">
-      <input type="hidden" name="aplicacao" value="{{ ap.pk }}">
+      <input type="hidden" name="aplicacao" value="{{ ap.pk|unlocalize }}">
 
       <div class="ft-grid compact">
         <div class="ft-field c4">
@@ -69,7 +70,7 @@
           <select name="tipo_item">
             <option value="">Selecionar...</option>
             {% for t in ap.categoria.tipos_itens.all %}
-              {% if t.ativo %}<option value="{{ t.pk }}">{{ t.nome }}</option>{% endif %}
+              {% if t.ativo %}<option value="{{ t.pk|unlocalize }}">{{ t.nome }}</option>{% endif %}
             {% endfor %}
           </select>
         </div>
@@ -88,7 +89,7 @@
           <label>Unidade</label>
           <select name="unidade">
             <option value="">—</option>
-            {% for u in unidades %}<option value="{{ u.pk }}">{{ u.sigla }}</option>{% endfor %}
+            {% for u in unidades %}<option value="{{ u.pk|unlocalize }}">{{ u.sigla }}</option>{% endfor %}
           </select>
         </div>
 
@@ -98,7 +99,7 @@
           <select name="opcao_especificacao">
             <option value="">Nenhuma</option>
             {% for o in ap.categoria.opcoes_especificacao.all %}
-              {% if o.ativo %}<option value="{{ o.pk }}">{{ o.nome }}</option>{% endif %}
+              {% if o.ativo %}<option value="{{ o.pk|unlocalize }}">{{ o.nome }}</option>{% endif %}
             {% endfor %}
           </select>
         </div>

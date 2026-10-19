@@ -47,6 +47,13 @@ class TituloPagar(models.Model):
         CONFERIDO = "CONFERIDO", "Conferido"
         DIVERGENCIA = "DIVERGENCIA", "Divergência"
 
+    class Classificacao(models.TextChoices):
+        OUTRO = 'OUTRO', 'Outro pagamento'
+        MATERIAL = 'MATERIAL', 'Materiais'
+        SERVICO = 'SERVICO', 'Serviços'
+        REEMBOLSO = 'REEMBOLSO', 'Reembolso'
+
+    classificacao = models.CharField(max_length=16, choices=Classificacao.choices, default=Classificacao.OUTRO, db_index=True)
     numero = models.CharField(max_length=24, unique=True, db_index=True)
     origem = models.CharField(max_length=30, choices=Origem.choices, default=Origem.MANUAL, db_index=True)
     status = models.CharField(max_length=30, choices=Status.choices, default=Status.PREVISTA, db_index=True)

@@ -70,7 +70,7 @@ def gerar_pdf_pedido_compra(pedido):
         topMargin=14 * mm,
         bottomMargin=14 * mm,
         title=f"Pedido de compra - {pedido.numero}",
-        author="ERP Alto Padrão",
+        author="SAARI ERP",
     )
 
     styles = getSampleStyleSheet()
@@ -126,7 +126,8 @@ def gerar_pdf_pedido_compra(pedido):
         alignment=TA_RIGHT,
     )
 
-    story = []
+    from compras.services.pdf_empresa import cabecalho_empresa
+    story = cabecalho_empresa(182)
 
     story.append(Paragraph("PEDIDO DE COMPRA", title))
     story.append(
@@ -146,7 +147,7 @@ def gerar_pdf_pedido_compra(pedido):
     cabecalho = [
         [Paragraph("Fornecedor", small), Paragraph("Obra", small), Paragraph("Processo", small)],
         [
-            Paragraph(_texto(getattr(fornecedor, "nome", fornecedor)), body),
+            Paragraph(_texto(getattr(fornecedor, "nome_exibicao", fornecedor)) + "<br/><font size=7>CNPJ/CPF: " + _texto(getattr(fornecedor,"documento", "")) + "</font>", body),
             Paragraph(_texto(getattr(pedido.obra, "nome", pedido.obra)), body),
             Paragraph(_texto(processo.numero), body),
         ],

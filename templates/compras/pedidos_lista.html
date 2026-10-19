@@ -11,6 +11,7 @@
 
   .cp-orders-filter{display:grid;grid-template-columns:minmax(260px,2fr) minmax(180px,1fr) minmax(180px,1fr) auto;gap:9px;align-items:center;padding:12px;border:1px solid var(--cp-line);border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(45,32,28,.025)}
 
+  .cp-order--atrasado{border:2px solid #d92d20!important;box-shadow:0 4px 14px rgba(217,45,32,.09)!important}.cp-atrasado{display:inline-block;background:#fee4e2;color:#b42318;border:1px solid #fecdca;border-radius:6px;padding:4px 7px;font-size:11px;font-weight:800;margin-top:5px}
   .cp-order{overflow:hidden;border:1px solid #ded7c8;border-radius:14px;background:#fff;box-shadow:0 6px 22px rgba(45,32,28,.045)}
   .cp-order__head{display:grid;grid-template-columns:minmax(250px,1.55fr) minmax(115px,.58fr) minmax(125px,.62fr) minmax(150px,.75fr) minmax(125px,.58fr);gap:14px;align-items:center;padding:16px 18px;background:#fff}
   .cp-order__identity{min-width:0}
@@ -199,11 +200,11 @@
   </form>
 
   {% for pedido in pedidos %}
-  <article class="cp-order">
+  <article class="cp-order{% if pedido.atrasado %} cp-order--atrasado{% endif %}">
     <div class="cp-order__head">
       <div class="cp-order__identity">
-        <div class="cp-order__number">{{ pedido.numero }}</div>
-        <div class="cp-order__supplier">{{ pedido.fornecedor.nome|default:"Fornecedor não informado" }}</div>
+        <div class="cp-order__number">{{ pedido.numero }}</div>{% if pedido.atrasado %}<span class="cp-atrasado">⚠ Pedido atrasado há {{ pedido.dias_atraso }} dia{{ pedido.dias_atraso|pluralize }}</span>{% endif %}
+        <div class="cp-order__supplier">{{ pedido.fornecedor.nome_exibicao|default:"Fornecedor não informado" }}</div>
         <div class="cp-order__meta">
           <span>{{ pedido.obra.nome }}</span>
           <span class="cp-order__dot"></span>

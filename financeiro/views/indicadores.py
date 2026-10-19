@@ -10,6 +10,7 @@ from django.utils.dateparse import parse_date
 from cadastros.models import Fornecedor
 from financeiro.models import Pagamento, PlanoFinanceiro, PrevisaoFinanceira, TituloPagar
 from financeiro.services.fluxo_caixa import STATUS_ABERTOS, resumo_por_obra, serie_desembolsos
+from financeiro.services.indicadores_gerenciais import indicadores_gerenciais, desembolso_mensal, forecast_mensal_por_categoria, _filtros
 from financeiro.services.permissoes import financeiro_acao_required
 from obras.models import Obra
 
@@ -27,7 +28,10 @@ def indicadores(request):
 
     inicio = parse_date((request.GET.get("inicio") or "").strip()) or date(hoje.year, 1, 1)
     fim = parse_date((request.GET.get("fim") or "").strip()) or hoje
+    obras_ids = [int(item) for item in request.GET.getlist('obras') if item.isdigit()]
     obra = (request.GET.get("obra") or "").strip()
+    if obra.isdigit() and int(obra) not in obras_ids:
+        obras_ids.append(int(obra))
     classe = (request.GET.get("classe") or "").strip()
     apropriacao = (request.GET.get("apropriacao") or "").strip()
     fornecedor = (request.GET.get("fornecedor") or "").strip()
@@ -42,19 +46,8 @@ def indicadores(request):
         "obra", "fornecedor", "plano_financeiro", "plano_financeiro__pai"
     )
 
-    def aplicar_filtros(qs, prefixo=""):
-        if obra:
-            qs = qs.filter(**{f"{prefixo}obra_id": obra})
-        if fornecedor:
-            qs = qs.filter(**{f"{prefixo}fornecedor_id": fornecedor})
-        if apropriacao:
-            qs = qs.filter(**{f"{prefixo}plano_financeiro_id": apropriacao})
-        elif classe:
-            qs = qs.filter(**{f"{prefixo}plano_financeiro__pai_id": classe})
-        return qs
-
-    pagos = aplicar_filtros(pagos, "titulo__")
-    titulos = aplicar_filtros(titulos)
+    pagos = _filtros(pagos, 'titulo__', obras_ids, classe, apropriacao, fornecedor)
+    titulos = _filtros(titulos, '', obras_ids, classe, apropriacao, fornecedor)
 
     total_pago = pagos.aggregate(total=Sum("valor"))["total"] or Decimal("0")
     quantidade_pagamentos = pagos.aggregate(total=Count("id"))["total"] or 0
@@ -92,10 +85,12 @@ def indicadores(request):
         .order_by("mes")
     )
 
-    previsoes_extras_30 = PrevisaoFinanceira.objects.filter(
+    previsoes_extras_qs = PrevisaoFinanceira.objects.filter(
         ativa=True,
         data_prevista__range=(hoje, em_30),
-    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
+    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
+    previsoes_extras_qs = _filtros(previsoes_extras_qs, '', obras_ids, classe, apropriacao, fornecedor)
+    previsoes_extras_30 = previsoes_extras_qs.aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
 
     previsao_30 = sum(
         (titulo.saldo_aberto for titulo in titulos.filter(vencimento__isnull=False, vencimento__range=(hoje, em_30))),
@@ -114,19 +109,30 @@ def indicadores(request):
                 "quantidade": len(itens),
             })
 
-    desembolsos = serie_desembolsos(inicio=hoje, dias=84)
+    # Série semanal original: mantém o histórico de saídas projetadas.
+    serie = serie_desembolsos(inicio=hoje, dias=84)
     pontos_desembolso = []
-    acumulado_semana = Decimal("0")
-    for idx, item in enumerate(desembolsos["serie"]):
-        acumulado_semana += item["saida"]
-        if (idx + 1) % 7 == 0 or idx == len(desembolsos["serie"]) - 1:
-            pontos_desembolso.append({
-                "rotulo": item["data"].strftime("%d/%m"),
-                "saida": float(acumulado_semana),
-            })
-            acumulado_semana = Decimal("0")
+    acumulado_semana = Decimal('0')
+    for idx, item in enumerate(serie['serie']):
+        acumulado_semana += item['saida']
+        if (idx + 1) % 7 == 0 or idx == len(serie['serie']) - 1:
+            pontos_desembolso.append({'rotulo': item['data'].strftime('%d/%m'), 'saida': acumulado_semana})
+            acumulado_semana = Decimal('0')
 
+    gerenciais = indicadores_gerenciais(inicio, fim, obras_ids, classe, apropriacao, fornecedor)
+    forecast = forecast_mensal_por_categoria(inicio, fim, obras_ids, classe, apropriacao, fornecedor)
+    por_mes_forecast = {}
+    for item in forecast:
+        linha = por_mes_forecast.setdefault(item['mes'], {'mes': item['mes'], 'lancado': Decimal('0'), 'aprovado': Decimal('0'), 'pago': Decimal('0')})
+        for col in ('lancado', 'aprovado', 'pago'):
+            linha[col] += item[col]
+    comparacao_mensal = [por_mes_forecast[k] for k in sorted(por_mes_forecast)]
     return render(request, "financeiro/indicadores.html", {
+        'gerenciais': gerenciais,
+        'forecast_mensal': forecast,
+        'comparacao_mensal': comparacao_mensal,
+        'desembolso_mensal': desembolso_mensal(hoje, 6, obras_ids, classe, apropriacao, fornecedor),
+        'obras_ids': obras_ids,
         "inicio": inicio,
         "fim": fim,
         "filtros": {"obra": obra, "classe": classe, "apropriacao": apropriacao, "fornecedor": fornecedor},
@@ -146,12 +152,13 @@ def indicadores(request):
         "por_fornecedor": por_fornecedor,
         "por_mes": por_mes,
         "por_origem": por_origem,
-        "obras_resumo": resumo_por_obra()[:8],
+        "obras_resumo": resumo_por_obra()[:8] if not (obras_ids or classe or apropriacao or fornecedor) else [],
+        "resumo_obra_sem_filtro": not (obras_ids or classe or apropriacao or fornecedor),
         "pontos_desembolso": pontos_desembolso,
+        "max_pontos_desembolso": _max_total(pontos_desembolso, "saida"),
         "max_por_mes": _max_total(por_mes),
         "max_por_classe": _max_total(por_classe),
         "max_por_obra": _max_total(por_obra),
         "max_por_fornecedor": _max_total(por_fornecedor),
         "max_por_origem": _max_total(por_origem),
-        "max_pontos_desembolso": _max_total(pontos_desembolso, "saida"),
     })

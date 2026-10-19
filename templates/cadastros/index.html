@@ -9,6 +9,7 @@
 </div>
 
 <div class="cad-grid">
+  <a class="cad-card" href="{% url 'cadastros:empresa' %}"><div class="cad-card__top"><span class="cad-card__icon">SA</span></div><h3>Informações da SAARI</h3><p>Razão social, CNPJ, endereço, contatos e logo institucional para os PDFs.</p><div class="cad-card__footer"><span>Gerenciar empresa</span><span>→</span></div></a>
   <a class="cad-card" href="{% url 'cadastros:materiais_lista' %}">
     <div class="cad-card__top"><span class="cad-card__icon">MA</span><strong class="cad-card__count">{{ total_materiais }}</strong></div>
     <h3>Materiais</h3><p>Catálogo oficial de materiais com especificação e unidade de medida padronizada.</p>

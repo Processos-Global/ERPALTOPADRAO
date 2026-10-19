@@ -25,9 +25,9 @@ class TituloPagarForm(ERPModelForm):
     """Formulário enxuto para solicitação avulsa e manutenção de contas."""
 
     tipo_pagamento = forms.ChoiceField(
-        choices=(("OUTRO", "Outro pagamento"), ("MATERIAL", "Materiais"), ("REEMBOLSO", "Reembolso")),
+        choices=(("OUTRO", "Outro pagamento"), ("MATERIAL", "Materiais"), ("SERVICO", "Serviços"), ("REEMBOLSO", "Reembolso")),
         initial="OUTRO",
-        label="Tipo do pagamento",
+        label="Classificação",
     )
     materiais = forms.ModelMultipleChoiceField(
         queryset=Material.objects.all(),
@@ -138,7 +138,9 @@ class TituloPagarForm(ERPModelForm):
         self.fields["especificacao_pagamento"].required = False
         self.fields["beneficiario_nome"].required = False
 
-        if self.instance and self.instance.pk and self.instance.materiais.exists():
+        if self.instance and self.instance.pk and self.instance.classificacao:
+            self.fields["tipo_pagamento"].initial = self.instance.classificacao
+        elif self.instance and self.instance.pk and self.instance.materiais.exists():
             self.fields["tipo_pagamento"].initial = "MATERIAL"
         elif self.instance and self.instance.pk and (self.instance.descricao or "").strip().upper() == "REEMBOLSO":
             self.fields["tipo_pagamento"].initial = "REEMBOLSO"

@@ -1,8 +1,10 @@
 from django.urls import path
 from cadastros import views
+from cadastros.views.empresa import empresa
 
 app_name = "cadastros"
 urlpatterns = [
+    path("empresa/", empresa, name="empresa"),
     path("pos-obra/<slug:modelo>/", views.pos_obra_views.lista, name="pos_obra_lista"),
     path("pos-obra/<slug:modelo>/novo/", views.pos_obra_views.editar, name="pos_obra_novo"),
     path("pos-obra/<slug:modelo>/<int:pk>/editar/", views.pos_obra_views.editar, name="pos_obra_editar"),

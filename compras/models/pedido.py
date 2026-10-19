@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 
 from core.storage import private_media_storage
 
@@ -69,7 +70,18 @@ class PedidoCompra(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.numero} - {self.fornecedor.nome}"
+        return f"{self.numero} - {self.fornecedor.nome_exibicao}"
+
+    @property
+    def atrasado(self):
+        previsao = self.previsao_entrega_atual or self.previsao_entrega_original
+        return bool(previsao and previsao < timezone.localdate() and self.status not in (self.Status.CANCELADO, self.Status.ENTREGUE) and self.percentual_recebido < 100)
+
+    @property
+    def dias_atraso(self):
+        if not self.atrasado:
+            return 0
+        return (timezone.localdate() - (self.previsao_entrega_atual or self.previsao_entrega_original)).days
 
     @property
     def percentual_recebido(self):

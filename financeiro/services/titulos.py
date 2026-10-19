@@ -18,7 +18,7 @@ def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias
     independentes. Cada parcela segue aprovação e pagamento integral próprios.
     """
     materiais = dados.pop("materiais", None)
-    dados.pop("tipo_pagamento", None)
+    dados["classificacao"] = dados.pop("tipo_pagamento", None) or "OUTRO"
     fornecedor = dados.get("fornecedor")
     if fornecedor and not dados.get("beneficiario_nome"):
         dados["beneficiario_nome"] = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
@@ -79,7 +79,9 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
     if titulo.status == TituloPagar.Status.PAGO:
         raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento antes de qualquer ajuste financeiro.")
     materiais = dados.pop("materiais", None)
-    dados.pop("tipo_pagamento", None)
+    classificacao = dados.pop("tipo_pagamento", None)
+    if not titulo.integrada and classificacao:
+        dados['classificacao'] = classificacao
     criticos = {
         "valor_original", "desconto", "juros", "multa", "outros_acrescimos",
         "vencimento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento",
