@@ -57,5 +57,16 @@ html[data-theme=dark] .po-shell .po-eyebrow{color:var(--po-muted)}
 .po-shell .po-column-empty{padding:23px 8px;text-align:center;font-size:11px;color:var(--po-muted)}
 .po-shell .po-column-more{display:block;text-align:center;padding:10px;margin-top:8px;font-size:10px;font-weight:700;text-decoration:none;border-top:1px solid var(--po-line)}
 @media(max-width:700px){.po-shell .po-board-hint span{display:none}.po-shell .po-kanban{grid-auto-columns:minmax(255px,85vw)}.po-shell .os-workspace{padding:15px}}
+
+/* Ajustes de legibilidade e consistência SAARI: tabelas, formulários e portal */
+.po-shell .po-table tbody tr:last-child td {border-bottom:0}
+.po-shell .po-table th {font-weight:750;line-height:1.4}
+.po-shell .po-card:focus-within {border-color:var(--saari-gold,var(--po-line))}
+.po-shell .po-form-grid input,.po-shell .po-form-grid select,.po-shell .po-form-grid textarea {max-width:100%;min-width:0}
+.po-shell .po-table-wrap {scrollbar-width:thin}
+.po-shell .po-nav a:focus-visible,.po-shell .po-button:focus-visible {outline:2px solid var(--saari-gold);outline-offset:2px}
+html[data-theme=dark] .po-shell .po-table th {color:var(--saari-muted,#c9b9ab)}
+html[data-theme=dark] .po-shell .po-status {background:var(--po-soft);color:var(--po-ink)}
+@media(max-width:650px){.po-shell .po-nav{flex-wrap:nowrap;overflow-x:auto}.po-shell .po-table th,.po-shell .po-table td{padding:10px}.po-shell .po-actions .po-button{max-width:100%}}
 </style>
 

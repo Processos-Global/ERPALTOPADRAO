@@ -1,82 +1,174 @@
-"""Relatórios de atendimento com paginação, tabelas e campos para assinatura."""
+"""Documentos técnicos de Pós-Obra do SAARI ERP (ReportLab)."""
 from io import BytesIO
+from pathlib import Path
 from xml.sax.saxutils import escape
+
+from django.contrib.staticfiles import finders
 from django.http import Http404, HttpResponse
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+from reportlab.platypus import (
+    Image, KeepTogether, LongTable, Paragraph, SimpleDocTemplate,
+    Spacer, Table, TableStyle, HRFlowable,
+)
+
+MARROM = colors.HexColor('#463631')
+DOURADO = colors.HexColor('#b79b59')
+CINZA = colors.HexColor('#647074')
+FUNDO = colors.HexColor('#f8f7f4')
+LINHA = colors.HexColor('#dcdedc')
 
 
 def gerar_relatorio(chamado, tipo, publico=False):
-    titulos = {'vistoria': 'Relatório de vistoria', 'execucao': 'Relatório de execução', 'os': 'Ordem de serviço'}
+    titulos = {'vistoria': 'Relatório técnico de vistoria',
+               'execucao': 'Relatório técnico de execução',
+               'os': 'Ordem de serviço'}
     if tipo not in titulos:
-        raise Http404
+        raise Http404('Documento não encontrado.')
     c = chamado
-    stream = BytesIO()
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle('SAARI', fontName='Times-Roman', fontSize=23, leading=28, textColor=colors.HexColor('#453330'), spaceAfter=16))
-    styles.add(ParagraphStyle('CorpoSAARI', fontName='Helvetica', fontSize=10, leading=15, spaceAfter=9, wordWrap='CJK'))
-    styles.add(ParagraphStyle('SecaoSAARI', parent=styles['Heading2'], textColor=colors.HexColor('#453330'), spaceBefore=14, spaceAfter=8))
-    styles.add(ParagraphStyle('AssinaturaSAARI', parent=styles['CorpoSAARI'], alignment=TA_CENTER, fontSize=9))
+    memoria = BytesIO()
+    estilos = getSampleStyleSheet()
+    estilos.add(ParagraphStyle(name='DocTitle', fontName='Helvetica-Bold', fontSize=17, leading=21,
+        textColor=MARROM, spaceAfter=4))
+    estilos.add(ParagraphStyle(name='DocSub', fontName='Helvetica', fontSize=8.5, leading=13,
+        textColor=CINZA, spaceAfter=5))
+    estilos.add(ParagraphStyle(name='SectionSaari', fontName='Helvetica-Bold', fontSize=10,
+        leading=13, textColor=MARROM, spaceBefore=9, spaceAfter=6, keepWithNext=True))
+    estilos.add(ParagraphStyle(name='BodySaari', fontName='Helvetica', fontSize=9,
+        leading=14, textColor=MARROM, spaceAfter=4, splitLongWords=True))
+    estilos.add(ParagraphStyle(name='SmallSaari', parent=estilos['BodySaari'], fontSize=7.5, leading=11))
+    estilos.add(ParagraphStyle(name='LabelSaari', parent=estilos['SmallSaari'],
+        fontName='Helvetica-Bold', textColor=CINZA))
+    estilos.add(ParagraphStyle(name='SignSaari', parent=estilos['SmallSaari'], alignment=TA_CENTER))
+    estilos.add(ParagraphStyle(name='DocCode', parent=estilos['SmallSaari'], alignment=TA_RIGHT,
+        fontName='Helvetica-Bold'))
 
-    def par(texto, estilo='CorpoSAARI'):
-        return Paragraph(escape(str(texto or 'Não informado')).replace('\n', '<br/>'), styles[estilo])
+    def p(value, style='BodySaari', empty='Não informado'):
+        text = str(value).strip() if value is not None else ''
+        return Paragraph(escape(text or empty).replace('\n', '<br/>'), estilos[style])
 
-    story = [par('SAARI ERP · Assistência técnica'), par(titulos[tipo], 'SAARI')]
+    def section(title, content, empty='Não registrado até a emissão deste documento.'):
+        return KeepTogether([p(title, 'SectionSaari'), p(content, empty=empty)])
+
+    def cells(items):
+        return Table([[p(k, 'LabelSaari'), p(v)] for k, v in items],
+            colWidths=[35*mm, 137*mm], hAlign='LEFT', style=TableStyle([
+                ('BACKGROUND',(0,0),(0,-1),FUNDO),
+                ('LINEBELOW',(0,0),(-1,-1),.35,LINHA),
+                ('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('LEFTPADDING',(0,0),(-1,-1),8),
+                ('RIGHTPADDING',(0,0),(-1,-1),7),
+                ('TOPPADDING',(0,0),(-1,-1),6),
+                ('BOTTOMPADDING',(0,0),(-1,-1),5),
+            ]))
+
     endereco = c.empreendimento.endereco_historico if c.empreendimento.historica else getattr(c.empreendimento.obra, 'endereco', '')
-    detalhes = [('OS', c.numero), ('Imóvel', c.empreendimento), ('Cliente', c.cliente), ('Endereço', endereco),
-                ('Abertura', c.criado_em.strftime('%d/%m/%Y')), ('Status', c.get_status_display()),
-                ('Responsável', c.responsavel.get_full_name() or c.responsavel.username if c.responsavel else ''),
-                ('Ambiente', f'{c.ambiente_padrao or c.ambiente_ficha or ""} {c.ambiente_detalhe}'.strip())]
-    table = Table([[par(k), par(v)] for k,v in detalhes], colWidths=[32*mm, 142*mm], hAlign='LEFT')
-    table.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'), ('GRID',(0,0),(-1,-1),.4,colors.HexColor('#ded7c8')), ('BACKGROUND',(0,0),(0,-1),colors.HexColor('#faf7f1')), ('TOPPADDING',(0,0),(-1,-1),7), ('BOTTOMPADDING',(0,0),(-1,-1),4)]))
-    story.append(table)
-    blocos = [('Ocorrência', f'{c.categoria_original} · {c.tipo_original}'), ('Descrição do problema', c.descricao)]
+    responsavel = (c.responsavel.get_full_name() or c.responsavel.username) if c.responsavel else ''
+    ambiente = f'{c.ambiente_padrao or c.ambiente_ficha or ""} {c.ambiente_detalhe or ""}'.strip()
+    historia = [
+        ('Número da OS', c.numero), ('Cliente', c.cliente), ('Imóvel', c.empreendimento),
+        ('Endereço', endereco), ('Ambiente', ambiente),
+        ('Data de abertura', c.criado_em.strftime('%d/%m/%Y')),
+        ('Responsável', responsavel), ('Situação', c.get_status_display()),
+    ]
+
+    story = []
+    # O símbolo é pequeno e acompanhado de uma identificação tipográfica legível.
+    simbolo = finders.find('img/saari/saari-simbolo-gold.png')
+    logotipo = None
+    if simbolo and Path(simbolo).is_file():
+        try:
+            logotipo = Image(simbolo, width=14*mm, height=14*mm, kind='proportional')
+        except (OSError, ValueError):
+            pass
+    nome = [p('SAARI ERP', 'SectionSaari'), p('ASSISTÊNCIA TÉCNICA · PÓS-OBRA', 'SmallSaari')]
+    if logotipo:
+        cabecalho = Table([[logotipo, nome, p(c.numero, 'DocCode')]], colWidths=[19*mm, 100*mm, 53*mm])
+    else:
+        cabecalho = Table([[nome, p(c.numero, 'DocCode')]], colWidths=[119*mm, 53*mm])
+    cabecalho.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+        ('LINEBELOW',(0,0),(-1,-1),1,DOURADO), ('BOTTOMPADDING',(0,0),(-1,-1),10)]))
+    story += [cabecalho, Spacer(1,8*mm), p(titulos[tipo], 'DocTitle'),
+              p('Registro técnico do atendimento · Emitido em ' + __import__('django.utils.timezone', fromlist=['localtime']).localtime().strftime('%d/%m/%Y às %H:%M'), 'DocSub'),
+              Spacer(1,3*mm), p('01  IDENTIFICAÇÃO DO ATENDIMENTO', 'SectionSaari'), cells(historia)]
+
+    story += [p('02  OCORRÊNCIA REGISTRADA', 'SectionSaari'),
+              cells([('Classificação', f'{c.categoria_original} · {c.tipo_original}'),
+                     ('Descrição', c.descricao)])]
     if not publico:
-        blocos.append(('Triagem interna', c.triagem))
-    blocos += [('Data da vistoria', c.data_vistoria.strftime('%d/%m/%Y') if c.data_vistoria else ''), ('Diagnóstico', c.diagnostico)]
-    if tipo != 'vistoria':
-        blocos += [('Data da execução', c.data_execucao.strftime('%d/%m/%Y') if c.data_execucao else ''), ('Serviços executados', c.execucao)]
+        story += [section('03  TRIAGEM INTERNA', c.triagem)]
+    indice = 4 if not publico else 3
+    if tipo in ('vistoria', 'execucao', 'os'):
+        story += [p(f'{indice:02d}  VISTORIA TÉCNICA', 'SectionSaari'),
+                  cells([('Data', c.data_vistoria.strftime('%d/%m/%Y') if c.data_vistoria else ''),
+                         ('Diagnóstico', c.diagnostico)])]
+        indice += 1
+    if tipo in ('execucao','os'):
+        story += [p(f'{indice:02d}  EXECUÇÃO DOS SERVIÇOS', 'SectionSaari'),
+                  cells([('Data', c.data_execucao.strftime('%d/%m/%Y') if c.data_execucao else ''),
+                         ('Serviços realizados', c.execucao)])]
+        indice += 1
     if tipo == 'os':
-        blocos.append(('Conclusão', c.conclusao))
-    for titulo, texto in blocos:
-        story.extend([par(titulo, 'SecaoSAARI'), par(texto)])
-    if tipo == 'os':
+        story += [section(f'{indice:02d}  CONCLUSÃO TÉCNICA', c.conclusao)]
+        indice += 1
         materiais = list(c.materiais.all())
+        story.append(p(f'{indice:02d}  MATERIAIS UTILIZADOS', 'SectionSaari'))
         if materiais:
-            story.append(par('Materiais utilizados', 'SecaoSAARI'))
-            headers = ['Material', 'Unidade', 'Quantidade'] + ([] if publico else ['Valor unitário', 'Total'])
-            rows = [[par(x) for x in headers]]
+            headers = ['Descrição', 'Un.', 'Qtd.'] + ([] if publico else ['Unit. (R$)', 'Total (R$)'])
+            colWidths = [125*mm, 19*mm, 28*mm] if publico else [77*mm, 14*mm, 18*mm, 30*mm, 33*mm]
+            rows = [[p(x,'LabelSaari') for x in headers]]
             for m in materiais:
-                row = [m.descricao, m.unidade, str(m.utilizado)]
+                linha = [m.descricao, m.unidade, str(m.utilizado)]
                 if not publico:
-                    row += [f'R$ {m.custo_unitario:.4f}', f'R$ {m.total:.2f}']
-                rows.append([par(x) for x in row])
-            widths = [94*mm, 30*mm, 50*mm] if publico else [74*mm, 20*mm, 25*mm, 28*mm, 27*mm]
-            table = Table(rows, colWidths=widths, repeatRows=1, hAlign='LEFT')
-            table.setStyle(TableStyle([('GRID',(0,0),(-1,-1),.4,colors.HexColor('#ded7c8')), ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#faf7f1')),('VALIGN',(0,0),(-1,-1),'TOP')]))
-            story.append(table)
-        if not publico:
-            story += [par('Observações de materiais', 'SecaoSAARI'), par(c.materiais_observacao)]
-        assinaturas = Table([[par('Cliente / pessoa autorizada', 'AssinaturaSAARI'), '', par('Responsável pelo atendimento', 'AssinaturaSAARI')]], colWidths=[80*mm, 14*mm, 80*mm])
-        assinaturas.setStyle(TableStyle([('LINEABOVE',(0,0),(0,0),.5,colors.HexColor('#85776f')), ('LINEABOVE',(2,0),(2,0),.5,colors.HexColor('#85776f')), ('TOPPADDING',(0,0),(-1,-1),8)]))
-        story.append(KeepTogether([Spacer(1,20*mm), assinaturas, Spacer(1,6*mm), par('Data: ______ / ______ / __________', 'AssinaturaSAARI')]))
-    # Evidências são baixadas por rota autenticada; nenhum link público é incorporado ao PDF.
-    anexos = c.anexos.all()
+                    linha += [f'{m.custo_unitario:.4f}', f'{m.total:.2f}']
+                rows.append([p(x,'SmallSaari') for x in linha])
+            tabela = LongTable(rows, colWidths=colWidths, repeatRows=1, hAlign='LEFT')
+            tabela.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),FUNDO),
+                ('LINEBELOW',(0,0),(-1,-1),.35,LINHA), ('VALIGN',(0,0),(-1,-1),'TOP'),
+                ('TOPPADDING',(0,0),(-1,-1),6), ('BOTTOMPADDING',(0,0),(-1,-1),6)]))
+            story.append(tabela)
+        else:
+            story.append(p('Nenhum material utilizado registrado.'))
+        if not publico and (c.materiais_observacao or '').strip():
+            story.append(section('Observações sobre materiais', c.materiais_observacao))
+        indice += 1
+    stages = {'vistoria':['ABERTURA','VISTORIA'], 'execucao':['ABERTURA','VISTORIA','EXECUCAO'],
+              'os':['ABERTURA','VISTORIA','EXECUCAO','FINALIZACAO']}
+    anexos = c.anexos.filter(etapa__in=stages[tipo])
     if publico:
         anexos = anexos.filter(publico=True)
-    etapas = {'vistoria':['ABERTURA','VISTORIA'], 'execucao':['ABERTURA','VISTORIA','EXECUCAO'], 'os':['ABERTURA','VISTORIA','EXECUCAO','FINALIZACAO']}
-    anexos = anexos.filter(etapa__in=etapas[tipo])
     if anexos.exists():
-        story.append(par('Documentos anexados ao atendimento', 'SecaoSAARI'))
+        story.append(p(f'{indice:02d}  RELAÇÃO DE EVIDÊNCIAS', 'SectionSaari'))
+        story.append(p('Arquivos vinculados ao atendimento. Os originais permanecem disponíveis no sistema conforme permissões de acesso.', 'SmallSaari'))
         for a in anexos:
-            story.append(par(f'{a.get_etapa_display()} · {a.arquivo.name.rsplit("/",1)[-1]}'))
-    def rodape(canvas, doc):
-        canvas.saveState();canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#85776f'))
-        canvas.drawString(18*mm,14*mm,f'SAARI ERP | {c.numero}');canvas.drawRightString(192*mm,14*mm,f'Página {doc.page}');canvas.restoreState()
-    doc = SimpleDocTemplate(stream, pagesize=A4, rightMargin=18*mm, leftMargin=18*mm, topMargin=18*mm, bottomMargin=23*mm, title=f'{titulos[tipo]} — {c.numero}')
-    doc.build(story,onFirstPage=rodape,onLaterPages=rodape)
-    return HttpResponse(stream.getvalue(),content_type='application/pdf',headers={'Content-Disposition':f'attachment; filename="{c.numero}-{tipo}.pdf"'})
+            story.append(p(f'• {a.get_etapa_display()} — {Path(a.arquivo.name).name}', 'SmallSaari'))
+    # Assinaturas somente onde fazem sentido operacionalmente.
+    if tipo == 'os':
+        assinatura = Table([[p('Cliente / pessoa autorizada','SignSaari'), p('Responsável técnico / atendimento','SignSaari')]],
+            colWidths=[84*mm, 84*mm], hAlign='CENTER')
+        assinatura.setStyle(TableStyle([('LINEABOVE',(0,0),(-1,-1),.65,MARROM),
+            ('TOPPADDING',(0,0),(-1,-1),9), ('LEFTPADDING',(0,0),(-1,-1),4)]))
+        story.append(KeepTogether([Spacer(1,20*mm), assinatura, Spacer(1,5*mm),
+                     p('Local e data: __________________________________________', 'SignSaari')]))
+
+    def pagina(canvas, doc):
+        canvas.saveState()
+        w, h = A4
+        canvas.setStrokeColor(DOURADO)
+        canvas.setLineWidth(.65)
+        canvas.line(19*mm, 19*mm, w-19*mm, 19*mm)
+        canvas.setFont('Helvetica',7.5)
+        canvas.setFillColor(CINZA)
+        canvas.drawString(19*mm, 13.5*mm, f'SAARI ERP  |  {c.numero}  |  {titulos[tipo]}')
+        canvas.drawRightString(w-19*mm,13.5*mm, f'Página {doc.page}')
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(memoria, pagesize=A4, leftMargin=19*mm, rightMargin=19*mm,
+        topMargin=17*mm, bottomMargin=26*mm, title=f'{titulos[tipo]} - {c.numero}',
+        author='SAARI ERP')
+    doc.build(story, onFirstPage=pagina, onLaterPages=pagina)
+    return HttpResponse(memoria.getvalue(), content_type='application/pdf',
+        headers={'Content-Disposition':f'attachment; filename="{c.numero}-{tipo}.pdf"'})

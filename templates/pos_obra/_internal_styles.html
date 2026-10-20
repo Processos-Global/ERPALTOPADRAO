@@ -1,0 +1,58 @@
+<style>
+/* SAARI ERP | Pós-Obra interno — camadas de trabalho e formulários */
+.po-shell{max-width:1600px}.po-shell .po-os-summary{padding:0;overflow:hidden}
+.po-shell .po-os-summary>.po-card__head{padding:19px 24px;margin:0;border-bottom:1px solid var(--po-line);background:var(--po-soft)}
+.po-shell .po-os-summary>.po-card__head h2{font-size:22px;letter-spacing:-.025em}
+.po-shell .po-os-summary>.po-meta{padding:20px 24px;gap:12px}
+.po-shell .po-os-summary>.po-meta>div{padding:12px 14px;border:1px solid var(--po-line);border-radius:8px;background:var(--po-paper)}
+.po-shell .po-os-summary>hr{margin:0 24px 17px}
+.po-shell .po-os-summary>.po-eyebrow,.po-shell .po-os-summary>p,.po-shell .po-os-summary>h4{display:block;margin-left:24px;margin-right:24px}
+.po-shell .po-os-summary>.po-eyebrow{margin-bottom:7px}
+.po-shell .po-os-summary>p{margin-top:0;margin-bottom:20px;line-height:1.7}
+.po-shell .po-os-summary>.po-eyebrow~p{padding:14px;border:1px solid var(--po-line);border-radius:8px;background:var(--po-soft)}
+.po-shell .po-internal-workspace{padding:0;overflow:hidden}
+.po-shell .po-internal-workspace>.os-workspace-intro{padding:22px 26px 18px;margin:0;border-bottom:1px solid var(--po-line);background:var(--po-soft)}
+.po-shell .po-internal-workspace>.os-workspace-intro strong{font-size:19px}
+.po-shell .os-stage-label{display:flex;justify-content:space-between;align-items:center;padding:17px 26px 0;font-weight:750;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--po-ink)}
+.po-shell .os-stage-label span{font-size:11px;letter-spacing:0;text-transform:none;font-weight:450;color:var(--po-muted)}
+.po-shell .po-internal-workspace>.os-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:0;padding:15px 26px 20px;border-bottom:1px solid var(--po-line);overflow-x:auto}
+.po-shell .po-internal-workspace .os-tab{position:relative;white-space:normal;text-align:center;min-height:49px;padding:11px 7px;background:var(--po-paper);color:var(--po-muted);border:1px solid var(--po-line)}
+.po-shell .po-internal-workspace .os-tab[aria-selected=true]{background:var(--po-ink);border-color:var(--po-ink);color:#fff;box-shadow:0 3px 8px var(--saari-shadow)}
+.po-shell .po-internal-workspace>.os-panel{max-width:none;margin:0;padding:26px;min-height:330px}
+.po-shell .po-internal-workspace .os-section-head{margin:0 0 20px;padding:0 0 16px}
+.po-shell .po-internal-workspace .os-section-head h3{font-size:19px}
+.po-shell .po-internal-workspace .os-section-head .po-button{flex-shrink:0}
+.po-shell .os-form-surface{max-width:1200px;border:1px solid var(--po-line);background:var(--po-paper);border-radius:11px;overflow:hidden;box-shadow:0 1px 3px var(--saari-shadow)}
+.po-shell .os-form-caption{display:flex;align-items:center;gap:9px;padding:13px 19px;background:var(--po-soft);border-bottom:1px solid var(--po-line);font-size:12px;font-weight:750;color:var(--po-ink)}
+.po-shell .os-form-caption small{font-weight:450;color:var(--po-muted);margin-left:auto}
+.po-shell .os-caption-dot{width:7px;height:7px;flex-shrink:0;border-radius:100%;background:var(--saari-gold,#b9aa72)}
+.po-shell .os-step-form>.po-form-grid,.po-shell .os-step-form>fieldset>.po-form-grid,.po-shell .os-material-entry form>.po-form-grid{padding:21px;gap:17px 20px}
+.po-shell .os-step-form>fieldset{display:flex;flex-direction:column}
+.po-shell .po-internal-workspace .po-field{min-width:0;padding:0}
+.po-shell .po-internal-workspace .po-field label{margin-bottom:7px;color:var(--po-ink);font-size:12px;font-weight:650}
+.po-shell .po-internal-workspace .po-field input:not([type=checkbox]):not([type=hidden]),.po-shell .po-internal-workspace .po-field select,.po-shell .po-internal-workspace .po-field textarea{border-radius:7px;min-height:44px}
+.po-shell .po-internal-workspace .po-field textarea{min-height:120px;line-height:1.55}
+.po-shell .os-form-surface .os-actions{margin:0;padding:15px 20px;background:var(--po-soft);border-top:1px solid var(--po-line)}
+.po-shell .os-form-surface .os-actions .po-button.primary{min-width:155px}
+.po-shell .os-documents{margin-top:22px;padding:18px 20px 20px;border:1px solid var(--po-line);border-radius:10px;background:var(--po-soft)}
+.po-shell .os-documents h4{margin:0 0 14px;font-size:14px;color:var(--po-ink)}
+.po-shell .os-documents .os-file-row{background:var(--po-paper);border-style:solid;align-items:end}
+.po-shell .os-documents .os-file-row>.po-field{flex:1 1 260px}
+.po-shell .os-documents .os-file-row .po-button{min-height:43px}
+.po-shell .os-material-entry{margin-top:16px}
+.po-shell .po-internal-workspace .po-table-wrap{background:var(--po-paper)}
+.po-shell .po-internal-workspace .po-table td .po-field{margin-bottom:9px}
+.po-shell .po-internal-workspace .po-table td .po-field input{min-height:36px}
+.po-shell .po-internal-workspace .po-table .po-actions{justify-content:flex-start}
+.po-shell .po-os-history .po-row{align-items:flex-start;position:relative;padding:13px 15px;margin:0;border-left:2px solid var(--po-line)}
+.po-shell .po-os-history .po-row:before{content:'';position:absolute;width:8px;height:8px;border-radius:50%;top:19px;left:-5px;background:var(--saari-gold,#b9aa72)}
+.po-shell .po-os-history .po-row strong{font-size:13px}
+.po-shell .po-os-history .po-row small{margin-top:4px}
+/* Tela de abertura interna */
+.po-shell #po-chamado-form{border:1px solid var(--po-line);border-radius:10px;overflow:hidden}
+.po-shell #po-chamado-form>.po-form-grid{padding:22px;background:var(--po-paper)}
+.po-shell #po-chamado-form>.po-form-footer{background:var(--po-soft);margin:0;padding:16px 22px}
+html[data-theme=dark] .po-shell .po-internal-workspace .os-tab[aria-selected=true]{background:#80634d;border-color:#80634d;color:#fff}
+@media(max-width:1100px){.po-shell .po-internal-workspace>.os-tabs{grid-template-columns:repeat(3,minmax(155px,1fr))}}
+@media(max-width:650px){.po-shell .po-os-summary>.po-card__head,.po-shell .po-os-summary>.po-meta{padding:16px}.po-shell .po-internal-workspace>.os-workspace-intro,.po-shell .po-internal-workspace>.os-panel{padding:16px}.po-shell .os-stage-label{padding:14px 16px 0}.po-shell .os-stage-label span{display:none}.po-shell .po-internal-workspace>.os-tabs{display:flex;padding:12px 16px 16px}.po-shell .po-internal-workspace .os-tab{min-width:125px}.po-shell .os-step-form>fieldset>.po-form-grid,.po-shell .os-step-form>.po-form-grid,.po-shell .os-material-entry form>.po-form-grid{padding:15px;grid-template-columns:1fr}.po-shell .os-form-caption{padding:12px 15px}.po-shell .os-form-surface .os-actions{padding:13px 15px}.po-shell .os-documents{padding:15px}}
+</style>

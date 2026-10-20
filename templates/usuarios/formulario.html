@@ -9,7 +9,7 @@
     <div>
       <div class="usr-eyebrow">Administração</div>
       <h1 class="usr-title">Novo usuário</h1>
-      <div class="usr-sub">Cadastre os dados básicos. Depois você será direcionado para configurar os módulos e permissões.</div>
+      <div class="usr-sub">Selecione colaborador interno ou cliente. Para clientes, o acesso será exclusivo ao Portal Pós-Obra.</div>
     </div>
     <div class="usr-actions"><a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Voltar</a></div>
   </div>
@@ -39,8 +39,9 @@
     </div>
     <div class="usr-card__footer">
       <a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Cancelar</a>
-      <button class="usr-btn usr-btn--primary" type="submit">Criar e configurar permissões</button>
+      <button class="usr-btn usr-btn--primary" type="submit">Criar usuário</button>
     </div>
   </form>
 </div>
+<script>(function(){const tipo=document.getElementById('id_tipo_acesso');function sync(){if(!tipo)return;const cliente=tipo.value==='CLIENTE';['cargo'].forEach(n=>{const e=document.getElementById('id_'+n);if(e&&e.closest('.usr-field'))e.closest('.usr-field').hidden=cliente;});const e=document.getElementById('id_cliente_vinculado');if(e&&e.closest('.usr-field'))e.closest('.usr-field').hidden=!cliente;}if(tipo){tipo.addEventListener('change',sync);sync();}})();</script>
 {% endblock %}

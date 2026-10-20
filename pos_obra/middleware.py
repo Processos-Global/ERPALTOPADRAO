@@ -23,8 +23,10 @@ class IsolamentoPortalClienteMiddleware:
                 return self.get_response(request)
             if not cliente_do_usuario(user):
                 raise PermissionDenied("O acesso do cliente ao portal está desabilitado.")
-            if not nome.startswith("pos_obra:portal") and nome not in ("pos_obra:pesquisa", "pos_obra:anexo", "core:index"):
+            if nome == "core:index" and request.method not in ("GET", "HEAD"):
+                raise PermissionDenied("Clientes não podem modificar dados pelo menu inicial.")
+            if not nome.startswith("pos_obra:portal") and nome not in ("core:index", "pos_obra:pesquisa", "pos_obra:anexo"):
                 if request.method in ("GET", "HEAD"):
-                    return redirect("pos_obra:portal")
+                    return redirect("core:index")
                 raise PermissionDenied("Clientes não podem executar operações internas do ERP.")
         return self.get_response(request)

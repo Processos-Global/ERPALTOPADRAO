@@ -1,18 +1,20 @@
 {% extends 'layouts/base.html' %}
+{% load static %}
 {% block title %}Pós-Obra | SAARI ERP{% endblock %}
 {% block page_name %}Pós-Obra{% endblock %}
-{% block extra_css %}{{ block.super }}{% include 'pos_obra/_styles.html' %}{% endblock %}
+{% block extra_css %}{{ block.super }}{% include 'pos_obra/_styles.html' %}{% include 'pos_obra/_internal_styles.html' %}{% endblock %}
 {% block content %}
 <div class="po-shell">
 <header class="po-head"><div><span class="po-eyebrow">Módulos / Assistência técnica</span><h1>Pós-Obra</h1><p>Atendimentos, garantias e ordens de serviço.</p></div><a class="po-button primary" href="{% url 'pos_obra:novo' %}">+ Novo chamado</a></header>
 <nav class="po-nav" aria-label="Pós-Obra">
 <a href="{% url 'pos_obra:painel' %}" {% if request.resolver_match.url_name == 'painel' %}aria-current="page"{% endif %}>Visão geral</a>
 <a href="{% url 'pos_obra:lista' %}" {% if request.resolver_match.url_name == 'lista' or request.resolver_match.url_name == 'detalhe' %}aria-current="page"{% endif %}>Ordens de serviço</a>
+<a href="{% url 'pos_obra:agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}aria-current="page"{% endif %}>Agenda de atendimentos</a>
 <a href="{% url 'pos_obra:kanban' %}" {% if request.resolver_match.url_name == 'kanban' %}aria-current="page"{% endif %}>Kanban</a>
 <a href="{% url 'cadastros:pos_obra_lista' 'empreendimentos' %}">Empreendimentos</a>
 <a href="{% url 'cadastros:pos_obra_lista' 'clientes' %}">Clientes e cadastros</a>
 </nav>
 
-{% block po_content %}{% endblock %}
+{% block po_content %}<link rel="stylesheet" href="{% static 'css/pos_obra_ajustes.css' %}">{% endblock %}
 </div>
 {% endblock %}

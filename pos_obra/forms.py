@@ -1,3 +1,4 @@
+from .models import AgendamentoOS
 from django import forms
 from django.contrib.auth import get_user_model
 from .models import *
@@ -57,11 +58,31 @@ class ChamadoForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Chamado
         fields = ['empreendimento', 'cliente', 'tipo_problema', 'ambiente_padrao',
-                  'ambiente_ficha', 'ambiente_detalhe', 'descricao']
+                  'ambiente_ficha', 'ambiente_detalhe', 'descricao', 'preferencia_data', 'preferencia_periodo', 'preferencia_inicio', 'preferencia_fim', 'preferencia_alternativa', 'horario_flexivel']
         labels = {'empreendimento': 'Imóvel', 'tipo_problema': 'Tipo de ocorrência',
                   'ambiente_ficha': 'Ambiente da ficha técnica', 'ambiente_detalhe': 'Complemento do ambiente',
                   'descricao': 'Descrição do problema'}
-        widgets = {'descricao': forms.Textarea(attrs={'rows': 5})}
+        widgets = {'descricao': forms.Textarea(attrs={'rows': 3}),
+                   'preferencia_data': forms.DateInput(attrs={'type':'date'},format='%Y-%m-%d'),
+                   'preferencia_alternativa': forms.DateInput(attrs={'type':'date'},format='%Y-%m-%d'),
+                   'preferencia_inicio': forms.TimeInput(attrs={'type':'time'},format='%H:%M'),
+                   'preferencia_fim': forms.TimeInput(attrs={'type':'time'},format='%H:%M')}
+
+    def clean(self):
+        from django.utils import timezone
+        dados=super().clean()
+        data=dados.get('preferencia_data')
+        if data and data < timezone.localdate():
+            self.add_error('preferencia_data','Escolha uma data atual ou futura.')
+        alternativa=dados.get('preferencia_alternativa')
+        if alternativa and alternativa < timezone.localdate():
+            self.add_error('preferencia_alternativa','Escolha uma data atual ou futura.')
+        inicio,fim=dados.get('preferencia_inicio'),dados.get('preferencia_fim')
+        if inicio and fim and inicio >= fim:
+            self.add_error('preferencia_fim','O horário final precisa ser posterior ao inicial.')
+        if dados.get('preferencia_periodo')=='HORARIO' and not (inicio and fim):
+            self.add_error('preferencia_periodo','Informe o horário inicial e final.')
+        return dados
 
     def __init__(self, *args, cliente_portal=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,6 +108,10 @@ class ChamadoForm(StyledFormMixin, forms.ModelForm):
                 ativo=True, pavimento__ficha__obra_id=empreendimento.obra_id).select_related('pavimento__ficha')
         self.fields['ambiente_padrao'].widget = forms.Select(choices=[('', 'Selecione')] + [
             (x, x) for x in ['Sala', 'Quarto', 'Cozinha', 'Banheiro', 'Piscina', 'Área externa', 'Outro']])
+        for nome in ('preferencia_data','preferencia_alternativa'):
+            self.fields[nome].input_formats=['%Y-%m-%d']
+        for nome in ('preferencia_inicio','preferencia_fim'):
+            self.fields[nome].input_formats=['%H:%M']
         self.style()
 
     def clean(self):
@@ -123,7 +148,6 @@ class MaterialForm(StyledFormMixin, forms.Form):
         label='Material do catálogo SAARI', empty_label='Selecione o material'
     )
     previsto = forms.DecimalField(label='Quantidade necessária', min_value=0.001, max_digits=12, decimal_places=3)
-    utilizado = forms.DecimalField(label='Quantidade utilizada', min_value=0, max_digits=12, decimal_places=3, required=False, initial=0)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.style()
@@ -135,8 +159,8 @@ class PesquisaForm(StyledFormMixin,forms.ModelForm):
         widgets={'comentario':forms.Textarea(attrs={'rows':3})}
     def __init__(self,*a,**kw):
         super().__init__(*a,**kw);self.style()
-        for x in ('atendimento','prazo','qualidade'):self.fields[x].widget=forms.Select(choices=[('', 'Selecione'), (5, 'Sim'), (1, 'Não')])
-        self.fields['resolvido'].widget=forms.Select(choices=[('', 'Selecione'), ('SIM','Sim'), ('NAO','Não')])
+        for x in ('atendimento','prazo','qualidade'):self.fields[x].widget=forms.Select(choices=[('', 'Selecione'), (1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')])
+        self.fields['resolvido'].widget=forms.Select(choices=[('', 'Selecione'), ('SIM','Sim'), ('PARCIAL','Parcialmente'), ('NAO','Não')])
 
 class ObraHistoricaForm(StyledFormMixin,forms.ModelForm):
     class Meta:
@@ -148,12 +172,11 @@ class ObraHistoricaForm(StyledFormMixin,forms.ModelForm):
 class MaterialQuantidadeForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = MaterialOS
-        fields = ['previsto', 'utilizado']
-        labels = {'previsto': 'Quantidade necessária', 'utilizado': 'Quantidade utilizada'}
+        fields = ['previsto']
+        labels = {'previsto': 'Quantidade necessária'}
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['previsto'].min_value = 0.001
-        self.fields['utilizado'].min_value = 0
         self.style()
     def clean_previsto(self):
         from decimal import Decimal
@@ -174,3 +197,28 @@ class AnexoForm(StyledFormMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.style()
+
+
+class AgendamentoForm(StyledFormMixin, forms.ModelForm):
+    class Meta:
+        model=AgendamentoOS
+        fields=['tipo','inicio','fim','responsavel','observacoes']
+        widgets={'inicio':forms.DateTimeInput(attrs={'type':'datetime-local'},format='%Y-%m-%dT%H:%M'),
+                 'fim':forms.DateTimeInput(attrs={'type':'datetime-local'},format='%Y-%m-%dT%H:%M'),
+                 'observacoes':forms.Textarea(attrs={'rows':2})}
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        for key in ('inicio','fim'):
+            self.fields[key].input_formats=['%Y-%m-%dT%H:%M']
+        self.style()
+    def clean(self):
+        from django.utils import timezone
+        data=super().clean()
+        inicio,fim=data.get('inicio'),data.get('fim')
+        if inicio and inicio < timezone.now():self.add_error('inicio','Não agende no passado.')
+        if inicio and fim and fim<=inicio:self.add_error('fim','O término deve ser posterior ao início.')
+        if inicio and fim and data.get('responsavel'):
+            conflitos=AgendamentoOS.objects.filter(responsavel=data['responsavel'],inicio__lt=fim,fim__gt=inicio,situacao__in=['PROPOSTO','CONFIRMADO'])
+            if self.instance.pk:conflitos=conflitos.exclude(pk=self.instance.pk)
+            if conflitos.exists():self.add_error('responsavel','Existe conflito com outro atendimento deste responsável.')
+        return data

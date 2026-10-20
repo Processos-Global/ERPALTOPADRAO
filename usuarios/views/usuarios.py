@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from usuarios.forms import UsuarioSistemaForm
+from cadastros.models.pos_obra import Cliente
 from usuarios.models import ModuloSistema, NivelPermissao, PerfilUsuario, PermissaoModulo
 from usuarios.decorators import possui_permissao_acao
 from usuarios.services import (
@@ -99,6 +100,9 @@ def novo_usuario(request):
         if form.is_valid():
             with transaction.atomic():
                 usuario = form.save()
+            if form.cleaned_data["tipo_acesso"] == "CLIENTE":
+                messages.success(request, "Login do cliente criado e vinculado. Vincule agora o cliente a um empreendimento histórico ou concluído em Cadastros > Pós-Obra.")
+                return redirect("usuarios:lista_usuarios")
             messages.success(request, "Usuário criado. Agora configure os módulos e permissões.")
             return redirect("usuarios:configurar_usuario", usuario_id=usuario.pk)
     else:
@@ -121,7 +125,11 @@ def configurar_usuario(request, usuario_id):
         if form.is_valid():
             with transaction.atomic():
                 usuario = form.save()
-                salvar_configuracao_modulos_usuario(usuario, request.POST, usuario_executor=request.user)
+                if Cliente.objects.filter(usuario=usuario).exists():
+                    if usuario.permissoes_modulos_erp.filter(ativo=True).exists():
+                        raise PermissionDenied("Uma conta de cliente não pode possuir módulos internos ativos.")
+                else:
+                    salvar_configuracao_modulos_usuario(usuario, request.POST, usuario_executor=request.user)
             if usuario.pk == request.user.pk and form.cleaned_data.get("senha"):
                 update_session_auth_hash(request, usuario)
             messages.success(request, "Usuário, módulos e permissões atualizados com sucesso.")
@@ -134,6 +142,7 @@ def configurar_usuario(request, usuario_id):
         "form": form,
         "usuario_alvo": usuario_alvo,
         "modulos": modulos,
+        "eh_cliente": Cliente.objects.filter(usuario=usuario_alvo).exists(),
     })
 
 

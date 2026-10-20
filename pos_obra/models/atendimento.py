@@ -28,6 +28,13 @@ class Chamado(models.Model):
     execucao=models.TextField(blank=True)
     data_execucao=models.DateField(null=True,blank=True)
     conclusao=models.TextField(blank=True)
+    preferencia_data=models.DateField(null=True,blank=True,verbose_name='Data preferencial')
+    preferencia_periodo=models.CharField(max_length=12,blank=True,choices=[('MANHA','Manhã'),('TARDE','Tarde'),('HORARIO','Horário específico')],verbose_name='Período preferencial')
+    preferencia_inicio=models.TimeField(null=True,blank=True,verbose_name='Disponível a partir de')
+    preferencia_fim=models.TimeField(null=True,blank=True,verbose_name='Disponível até')
+    preferencia_alternativa=models.DateField(null=True,blank=True,verbose_name='Segunda opção de data')
+    horario_flexivel=models.BooleanField(default=False,verbose_name='Tenho flexibilidade de horário')
+    orientacoes_acesso=models.TextField(blank=True,verbose_name='Orientações de acesso ao imóvel')
     prazo=models.DateField(null=True,blank=True)
     finalizado_em=models.DateTimeField(null=True,blank=True)
     criado_em=models.DateTimeField(auto_now_add=True)
@@ -75,4 +82,75 @@ class PesquisaSatisfacao(models.Model):
     qualidade=models.PositiveSmallIntegerField()
     resolvido=models.CharField(max_length=12,choices=[('SIM','Sim'),('PARCIAL','Parcialmente'),('NAO','Não')])
     comentario=models.TextField(blank=True)
+    criado_em=models.DateTimeField(auto_now_add=True)
+
+
+class AgendamentoOS(models.Model):
+    TIPOS=[('VISTORIA','Vistoria'),('EXECUCAO','Execução'),('RETORNO','Retorno técnico'),('COMPLEMENTO','Complementação')]
+    SITUACOES=[('PROPOSTO','Aguardando confirmação'),('CONFIRMADO','Confirmado'),('REAGENDAMENTO','Reagendamento solicitado'),('SUBSTITUIDO','Reagendado'),('CANCELADO','Cancelado'),('REALIZADO','Realizado'),('NAO_REALIZADO','Não realizado')]
+    chamado=models.ForeignKey(Chamado,on_delete=models.PROTECT,related_name='agendamentos')
+    tipo=models.CharField(max_length=20,choices=TIPOS)
+    inicio=models.DateTimeField()
+    fim=models.DateTimeField()
+    responsavel=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.PROTECT,related_name='agendamentos_pos_obra')
+    situacao=models.CharField(max_length=20,choices=SITUACOES,default='PROPOSTO')
+    observacoes=models.TextField(blank=True)
+    criado_por=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,related_name='+')
+    criado_em=models.DateTimeField(auto_now_add=True)
+    confirmado_em=models.DateTimeField(null=True,blank=True)
+    respondido_por=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.SET_NULL,null=True,blank=True,related_name='+')
+    class Meta:
+        ordering=['inicio','pk']
+    def __str__(self):return f'{self.chamado.numero} - {self.get_tipo_display()} - {self.inicio}'
+
+class HistoricoAgendamento(models.Model):
+    agendamento=models.ForeignKey(AgendamentoOS,on_delete=models.PROTECT,related_name='historico')
+    usuario=models.ForeignKey(settings.AUTH_USER_MODEL,null=True,on_delete=models.SET_NULL)
+    de=models.CharField(max_length=20,blank=True)
+    para=models.CharField(max_length=20)
+    observacao=models.TextField(blank=True)
+    criado_em=models.DateTimeField(auto_now_add=True)
+
+class DocumentoOS(models.Model):
+    chamado=models.ForeignKey(Chamado,on_delete=models.PROTECT,related_name='documentos_versionados')
+    tipo=models.CharField(max_length=16,choices=[('EXECUCAO','Execução'),('OS','Ordem de serviço')])
+    versao=models.PositiveIntegerField()
+    arquivo=models.FileField(storage=PrivateMediaStorage(),upload_to='pos_obra/documentos/%Y/%m/')
+    sha256=models.CharField(max_length=64)
+    criado_por=models.ForeignKey(settings.AUTH_USER_MODEL,null=True,on_delete=models.SET_NULL)
+    criado_em=models.DateTimeField(auto_now_add=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['chamado','tipo','versao'],name='po_documento_versao_unica')]
+
+class AceiteOS(models.Model):
+    RESULTADOS=[('ACEITO','Aceito'),('RECUSADO','Recusado'),('RESSALVA','Aceito com ressalvas')]
+    documento=models.OneToOneField(DocumentoOS,on_delete=models.PROTECT,related_name='aceite')
+    signatario=models.CharField(max_length=180)
+    representacao=models.CharField(max_length=180)
+    resultado=models.CharField(max_length=12,choices=RESULTADOS)
+    observacoes=models.TextField(blank=True)
+    assinatura=models.FileField(storage=PrivateMediaStorage(),upload_to='pos_obra/assinaturas/%Y/%m/',blank=True)
+    usuario_registro=models.ForeignKey(settings.AUTH_USER_MODEL,null=True,on_delete=models.SET_NULL)
+    criado_em=models.DateTimeField(auto_now_add=True)
+
+
+class NotificacaoOS(models.Model):
+    chamado=models.ForeignKey(Chamado,on_delete=models.CASCADE,related_name='notificacoes')
+    evento=models.CharField(max_length=48)
+    destinatario=models.EmailField()
+    assunto=models.CharField(max_length=250)
+    mensagem=models.TextField()
+    chave=models.CharField(max_length=160,unique=True)
+    situacao=models.CharField(max_length=16,default='PENDENTE',choices=[('PENDENTE','Pendente'),('ENVIADO','Enviado'),('ERRO','Erro')])
+    tentativas=models.PositiveIntegerField(default=0)
+    ultimo_erro=models.TextField(blank=True)
+    criado_em=models.DateTimeField(auto_now_add=True)
+    enviado_em=models.DateTimeField(null=True,blank=True)
+    class Meta:
+        ordering=['-criado_em']
+
+class TratativaSatisfacao(models.Model):
+    chamado=models.ForeignKey(Chamado,on_delete=models.PROTECT,related_name='tratativas_satisfacao')
+    observacao=models.TextField()
+    responsavel=models.ForeignKey(settings.AUTH_USER_MODEL,null=True,on_delete=models.SET_NULL)
     criado_em=models.DateTimeField(auto_now_add=True)

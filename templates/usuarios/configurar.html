@@ -9,7 +9,7 @@
     <div>
       <div class="usr-eyebrow">Administração</div>
       <h1 class="usr-title">Configurar usuário</h1>
-      <div class="usr-sub">Edite os dados da pessoa e defina, módulo por módulo, o que ela pode acessar e executar.</div>
+      <div class="usr-sub">Edite o cadastro e gerencie as permissões, quando for colaborador interno.</div>
     </div>
     <div class="usr-actions"><a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Voltar para usuários</a></div>
   </div>
@@ -60,6 +60,7 @@
           </div>
         </section>
 
+        {% if not eh_cliente %}
         <section class="usr-section">
           <div class="usr-section__head">
             <h2>Módulos e permissões</h2>
@@ -69,6 +70,7 @@
             {% for modulo in modulos %}{% include "usuarios/_modulo_permissoes.html" with modulo=modulo %}{% endfor %}
           </div>
         </section>
+        {% else %}<section class="usr-section"><div class="usr-section__body"><div class="usr-note">Conta de cliente: acesso exclusivo ao Portal Pós-Obra. O vínculo com imóveis e obras históricas é feito em Cadastros → Pós-Obra → Vínculos.</div></div></section>{% endif %}
       </div>
 
       <aside>
@@ -117,4 +119,5 @@
   });
 })();
 </script>
+<script>(function(){const tipo=document.getElementById('id_tipo_acesso');function sync(){if(!tipo)return;const cli=tipo.value==='CLIENTE';for(const n of ['cargo','cliente_vinculado']){const el=document.getElementById('id_'+n);if(el&&el.closest('.usr-field'))el.closest('.usr-field').hidden=n==='cargo'?cli:!cli;}}if(tipo){tipo.addEventListener('change',sync);sync();}})();</script>
 {% endblock %}
