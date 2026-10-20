@@ -33,6 +33,29 @@ def _obra_label(obra):
     return nome or codigo or str(obra)
 
 
+STATUS_DOCUMENTAL = [
+    (StatusChecklistProjeto.INICIADO, "Iniciado"),
+    (StatusChecklistProjeto.EM_ANDAMENTO, "Em andamento"),
+    (StatusChecklistProjeto.FINALIZADO, "Finalizado"),
+    (StatusChecklistProjeto.NAO_SE_APLICA, "Não se aplica"),
+]
+STATUS_OUTROS = [
+    (StatusChecklistProjeto.NAO_RECEBIDO, "Não Recebido"),
+    (StatusChecklistProjeto.PARCIALMENTE, "Parcialmente"),
+    (StatusChecklistProjeto.RECEBIDO, "Recebido"),
+    (StatusChecklistProjeto.NAO_SE_APLICA, "Não se aplica"),
+]
+
+
+def _status_choices(tipo):
+    return STATUS_DOCUMENTAL if tipo == ChecklistProjetoGrupo.TIPO_DOCUMENTAL else STATUS_OUTROS
+
+
+def _status_inicial(tipo):
+    return (StatusChecklistProjeto.INICIADO if tipo == ChecklistProjetoGrupo.TIPO_DOCUMENTAL
+            else StatusChecklistProjeto.NAO_RECEBIDO)
+
+
 def _checklist_contexto(request, tipo):
     obras = list(Obra.objects.filter(ativa=True).order_by("codigo", "nome"))
     obra_id = (request.GET.get("obra") or "").strip()
@@ -71,7 +94,7 @@ def _checklist_contexto(request, tipo):
         linhas.append({
             "item": item,
             "resposta": resposta,
-            "status": resposta.status if resposta else StatusChecklistProjeto.NAO_RECEBIDO,
+            "status": resposta.status if resposta else _status_inicial(tipo),
             "observacao": resposta.observacao if resposta else "",
         })
 
@@ -87,7 +110,7 @@ def _checklist_contexto(request, tipo):
         "grupos": grupos,
         "grupo": grupo,
         "linhas": linhas,
-        "status_choices": StatusChecklistProjeto.choices,
+        "status_choices": _status_choices(tipo),
     }
 
 
@@ -139,14 +162,14 @@ def checklist_salvar_celula(request):
         obra=obra,
         item=item,
         defaults={
-            "status": StatusChecklistProjeto.NAO_RECEBIDO,
+            "status": _status_inicial(tipo),
             "observacao": "",
             "atualizado_por": request.user,
         },
     )
 
     if campo == "status":
-        permitidos = {k for k, _ in StatusChecklistProjeto.choices}
+        permitidos = {k for k, _ in _status_choices(tipo)}
         if valor not in permitidos:
             return JsonResponse({"ok": False, "erro": "Status inválido."}, status=400)
         anterior = resposta.status

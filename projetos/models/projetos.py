@@ -3,6 +3,9 @@ from django.db import models
 
 
 class StatusChecklistProjeto(models.TextChoices):
+    INICIADO = "INICIADO", "Iniciado"
+    EM_ANDAMENTO = "EM_ANDAMENTO", "Em andamento"
+    FINALIZADO = "FINALIZADO", "Finalizado"
     NAO_RECEBIDO = "NAO_RECEBIDO", "Não Recebido"
     PARCIALMENTE = "PARCIALMENTE", "Parcialmente"
     RECEBIDO = "RECEBIDO", "Recebido"
