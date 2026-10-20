@@ -186,7 +186,13 @@ class TituloPagarForm(ERPModelForm):
                 raise ValidationError("Selecione um beneficiário / fornecedor cadastrado.")
         elif not fornecedor and not beneficiario:
             raise ValidationError("A conta integrada precisa possuir um beneficiário identificado na origem.")
-        if fornecedor and not beneficiario:
+        # Nos lançamentos manuais o fornecedor cadastrado é a fonte do nome;
+        # o campo beneficiario_nome fica oculto e pode conter o valor anterior.
+        if fornecedor and (not self.titulo_integrado or not self.titulo_integrado.integrada):
+            cleaned["beneficiario_nome"] = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
+            if self.instance and self.instance.pk and self.instance.fornecedor_id != fornecedor.pk:
+                cleaned["beneficiario_documento"] = (getattr(fornecedor, "documento", "") or "").strip()
+        elif fornecedor and not beneficiario:
             cleaned["beneficiario_nome"] = getattr(fornecedor, "nome_exibicao", None) or str(fornecedor)
         if fornecedor and not (cleaned.get("beneficiario_documento") or "").strip():
             cleaned["beneficiario_documento"] = (getattr(fornecedor, "documento", "") or "").strip()

@@ -80,6 +80,21 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
         raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento antes de qualquer ajuste financeiro.")
     materiais = dados.pop("materiais", None)
     classificacao = dados.pop("tipo_pagamento", None)
+    # A listagem usa beneficiario_nome (snapshot), não o FK fornecedor.
+    # Ao trocar o fornecedor de uma conta manual, ambos precisam acompanhar
+    # o novo cadastro, mesmo que o formulário envie o snapshot anterior.
+    novo_fornecedor = dados.get("fornecedor", titulo.fornecedor)
+    fornecedor_alterado = (
+        novo_fornecedor is not None
+        and getattr(novo_fornecedor, "pk", None) != titulo.fornecedor_id
+    )
+    if fornecedor_alterado and not titulo.integrada:
+        dados["beneficiario_nome"] = (
+            getattr(novo_fornecedor, "nome_exibicao", None) or str(novo_fornecedor)
+        )
+        dados["beneficiario_documento"] = (
+            getattr(novo_fornecedor, "documento", "") or ""
+        ).strip()
     if not titulo.integrada and classificacao:
         dados['classificacao'] = classificacao
     criticos = {
