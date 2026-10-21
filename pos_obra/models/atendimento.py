@@ -46,6 +46,18 @@ class Chamado(models.Model):
         super().save(*args,**kwargs)
     def __str__(self):return self.numero
 
+class RascunhoEtapaOS(models.Model):
+    """Rascunho compartilhado por OS e etapa; não altera o registro técnico definitivo."""
+    chamado = models.ForeignKey(Chamado, on_delete=models.CASCADE, related_name='rascunhos_etapas')
+    etapa = models.CharField(max_length=20)
+    dados = models.JSONField(default=dict)
+    atualizado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['chamado', 'etapa'], name='po_rascunho_os_etapa_unico')]
+
+
 class MaterialOS(models.Model):
     material=models.ForeignKey('cadastros.Material',null=True,blank=True,on_delete=models.PROTECT,related_name='materiais_pos_obra')
     chamado=models.ForeignKey(Chamado,on_delete=models.CASCADE,related_name='materiais')
@@ -57,6 +69,8 @@ class MaterialOS(models.Model):
     observacoes=models.TextField(blank=True)
     @property
     def total(self):return self.utilizado*self.custo_unitario
+    @property
+    def total_estimado(self):return self.previsto*self.custo_unitario
 
 class RegistroChamado(models.Model):
     chamado=models.ForeignKey(Chamado,on_delete=models.CASCADE,related_name='historico')
@@ -70,6 +84,7 @@ class RegistroChamado(models.Model):
 
 class AnexoChamado(models.Model):
     chamado=models.ForeignKey(Chamado,on_delete=models.CASCADE,related_name='anexos')
+    via_assinada_conferida=models.BooleanField(default=False, help_text="Via assinada identificada e conferida por responsável interno.")
     etapa=models.CharField(max_length=30,choices=[(s,s.title()) for s in ('ABERTURA','TRIAGEM','VISTORIA','EXECUCAO','FINALIZACAO')])
     arquivo=models.FileField(storage=PrivateMediaStorage(),upload_to='pos_obra/%Y/%m/')
     publico=models.BooleanField(default=False)

@@ -68,9 +68,8 @@ class ChamadoForm(StyledFormMixin, forms.ModelForm):
                    'preferencia_inicio': forms.TimeInput(attrs={'type':'time'},format='%H:%M'),
                    'preferencia_fim': forms.TimeInput(attrs={'type':'time'},format='%H:%M')}
 
-    def clean(self):
+    def clean_preferencias(self, dados):
         from django.utils import timezone
-        dados=super().clean()
         data=dados.get('preferencia_data')
         if data and data < timezone.localdate():
             self.add_error('preferencia_data','Escolha uma data atual ou futura.')
@@ -115,7 +114,7 @@ class ChamadoForm(StyledFormMixin, forms.ModelForm):
         self.style()
 
     def clean(self):
-        d = super().clean()
+        d = self.clean_preferencias(super().clean())
         e, c = d.get('empreendimento'), d.get('cliente')
         if e and c and not VinculoCliente.objects.filter(cliente=c, empreendimento=e, ativo=True, cliente__ativo=True).exists():
             self.add_error('cliente', 'Cliente não vinculado ao imóvel.')
@@ -134,6 +133,7 @@ class AtendimentoForm(StyledFormMixin,forms.ModelForm):
     class Meta:
         model=Chamado
         fields=['status','prioridade','responsavel','garantia','triagem','diagnostico','data_vistoria','materiais_observacao','execucao','data_execucao','conclusao']
+        labels={'responsavel':'Responsável técnico','diagnostico':'Diagnóstico técnico','execucao':'Serviços executados','conclusao':'Parecer de conclusão','materiais_observacao':'Observações sobre materiais','data_vistoria':'Data da vistoria','data_execucao':'Data da execução'}
         widgets={'data_vistoria':forms.DateInput(format='%Y-%m-%d', attrs={'type':'date'}),'data_execucao':forms.DateInput(format='%Y-%m-%d', attrs={'type':'date'}),'triagem':forms.Textarea(attrs={'rows':3}),'diagnostico':forms.Textarea(attrs={'rows':4}),'materiais_observacao':forms.Textarea(attrs={'rows':3}),'execucao':forms.Textarea(attrs={'rows':4}),'conclusao':forms.Textarea(attrs={'rows':3})}
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -194,6 +194,7 @@ class AnexoForm(StyledFormMixin, forms.Form):
     arquivo = forms.FileField(validators=[validar_anexo], label='Arquivo')
     etapa = forms.ChoiceField(choices=AnexoChamado._meta.get_field('etapa').choices)
     publico = forms.BooleanField(required=False, label='Disponível para o cliente')
+    via_assinada_conferida = forms.BooleanField(required=False, label='Confirmo que o arquivo contém a via física assinada e conferida')
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.style()
@@ -203,11 +204,13 @@ class AgendamentoForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model=AgendamentoOS
         fields=['tipo','inicio','fim','responsavel','observacoes']
+        labels={'inicio':'Início','fim':'Término','responsavel':'Responsável','observacoes':'Observações'}
         widgets={'inicio':forms.DateTimeInput(attrs={'type':'datetime-local'},format='%Y-%m-%dT%H:%M'),
                  'fim':forms.DateTimeInput(attrs={'type':'datetime-local'},format='%Y-%m-%dT%H:%M'),
                  'observacoes':forms.Textarea(attrs={'rows':2})}
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
+        self.fields['responsavel'].queryset = get_user_model().objects.filter(is_active=True, cliente_saari__isnull=True).order_by('first_name', 'username')
         for key in ('inicio','fim'):
             self.fields[key].input_formats=['%Y-%m-%dT%H:%M']
         self.style()

@@ -40,23 +40,7 @@
         <section class="usr-section">
           <div class="usr-section__head"><h2>Dados do usuário</h2><p>Identificação, cargo, contato, status e senha.</p></div>
           <div class="usr-section__body">
-            <div class="usr-form-grid usr-form-grid--2">
-              {% for field in form %}
-                <div class="usr-field {% if field.name == 'ativo' %}usr-field--full{% endif %}">
-                  {% if field.name == 'ativo' %}
-                    <label class="usr-access usr-access--compact">
-                      <div><strong>{{ field.label }}</strong><small>Usuários inativos não conseguem entrar no ERP.</small></div>
-                      <span class="usr-switch">{{ field }}<span></span></span>
-                    </label>
-                  {% else %}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="usr-required">*</span>{% endif %}</label>
-                    {{ field }}
-                    {% if field.help_text %}<small class="usr-help">{{ field.help_text }}</small>{% endif %}
-                    {% for error in field.errors %}<small class="usr-error">{{ error }}</small>{% endfor %}
-                  {% endif %}
-                </div>
-              {% endfor %}
-            </div>
+            {% include 'usuarios/_dados_usuario.html' %}
           </div>
         </section>
 
@@ -70,7 +54,7 @@
             {% for modulo in modulos %}{% include "usuarios/_modulo_permissoes.html" with modulo=modulo %}{% endfor %}
           </div>
         </section>
-        {% else %}<section class="usr-section"><div class="usr-section__body"><div class="usr-note">Conta de cliente: acesso exclusivo ao Portal Pós-Obra. O vínculo com imóveis e obras históricas é feito em Cadastros → Pós-Obra → Vínculos.</div></div></section>{% endif %}
+        {% else %}<section class="usr-section"><div class="usr-section__body"><div class="usr-note">Conta de cliente: acesso exclusivo ao Portal Pós-Obra. Gerencie os imóveis diretamente na seção Dados do usuário acima.</div></div></section>{% endif %}
       </div>
 
       <aside>
@@ -119,5 +103,5 @@
   });
 })();
 </script>
-<script>(function(){const tipo=document.getElementById('id_tipo_acesso');function sync(){if(!tipo)return;const cli=tipo.value==='CLIENTE';for(const n of ['cargo','cliente_vinculado']){const el=document.getElementById('id_'+n);if(el&&el.closest('.usr-field'))el.closest('.usr-field').hidden=n==='cargo'?cli:!cli;}}if(tipo){tipo.addEventListener('change',sync);sync();}})();</script>
+{% include 'usuarios/_form_script.html' %}
 {% endblock %}

@@ -19,23 +19,7 @@
     <div class="usr-card__head"><div><h2>Dados do usuário</h2><p>Informações de identificação e acesso ao ERP.</p></div></div>
     <div class="usr-card__body">
       {% if form.non_field_errors %}<div class="usr-error-box">{{ form.non_field_errors }}</div>{% endif %}
-      <div class="usr-form-grid usr-form-grid--2">
-        {% for field in form %}
-          <div class="usr-field {% if field.name == 'ativo' %}usr-field--full{% endif %}">
-            {% if field.name == 'ativo' %}
-              <label class="usr-access usr-access--compact">
-                <div><strong>{{ field.label }}</strong><small>Desmarque para cadastrar o usuário sem permitir acesso imediato ao ERP.</small></div>
-                <span class="usr-switch">{{ field }}<span></span></span>
-              </label>
-            {% else %}
-              <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="usr-required">*</span>{% endif %}</label>
-              {{ field }}
-              {% if field.help_text %}<small class="usr-help">{{ field.help_text }}</small>{% endif %}
-              {% for error in field.errors %}<small class="usr-error">{{ error }}</small>{% endfor %}
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
+      {% include 'usuarios/_dados_usuario.html' %}
     </div>
     <div class="usr-card__footer">
       <a class="usr-btn" href="{% url 'usuarios:lista_usuarios' %}">Cancelar</a>
@@ -43,5 +27,5 @@
     </div>
   </form>
 </div>
-<script>(function(){const tipo=document.getElementById('id_tipo_acesso');function sync(){if(!tipo)return;const cliente=tipo.value==='CLIENTE';['cargo'].forEach(n=>{const e=document.getElementById('id_'+n);if(e&&e.closest('.usr-field'))e.closest('.usr-field').hidden=cliente;});const e=document.getElementById('id_cliente_vinculado');if(e&&e.closest('.usr-field'))e.closest('.usr-field').hidden=!cliente;}if(tipo){tipo.addEventListener('change',sync);sync();}})();</script>
+{% include 'usuarios/_form_script.html' %}
 {% endblock %}

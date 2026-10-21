@@ -4,8 +4,8 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import transaction, IntegrityError
 from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,6 +20,18 @@ from usuarios.services import (
     salvar_configuracao_modulos_usuario,
 )
 
+
+
+def _salvar_formulario(form):
+    try:
+        with transaction.atomic():
+            return form.save()
+    except ValidationError as exc:
+        for campo, erros in getattr(exc, 'message_dict', {'__all__': exc.messages}).items():
+            form.add_error(campo if campo in form.fields else None, erros)
+    except IntegrityError:
+        form.add_error(None, 'Outro cadastro utilizou estes dados durante o salvamento. Revise e tente novamente.')
+    return None
 
 def _pode_gerenciar_usuarios(usuario):
     if not usuario.is_authenticated:
@@ -60,7 +72,7 @@ def lista_usuarios(request):
 
     usuarios = (
         User.objects
-        .select_related("perfil_erp")
+        .select_related("perfil_erp", "cliente_saari")
         .annotate(total_modulos=Count("permissoes_modulos_erp", filter=Q(permissoes_modulos_erp__ativo=True), distinct=True))
         .order_by("first_name", "last_name", "username")
     )
@@ -70,7 +82,7 @@ def lista_usuarios(request):
             Q(first_name__icontains=busca)
             | Q(last_name__icontains=busca)
             | Q(username__icontains=busca)
-            | Q(email__icontains=busca)
+            | Q(email__icontains=busca) | Q(cliente_saari__nome__icontains=busca) | Q(cliente_saari__documento__icontains=busca)
         )
     if cargo:
         usuarios = usuarios.filter(perfil_erp__cargo=cargo)
@@ -99,9 +111,11 @@ def novo_usuario(request):
         form = UsuarioSistemaForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                usuario = form.save()
+                usuario = _salvar_formulario(form)
+            if usuario is None:
+                return render(request, "usuarios/formulario.html", {"form": form, "modo_criacao": True})
             if form.cleaned_data["tipo_acesso"] == "CLIENTE":
-                messages.success(request, "Login do cliente criado e vinculado. Vincule agora o cliente a um empreendimento histórico ou concluído em Cadastros > Pós-Obra.")
+                messages.success(request, "Usuário, cadastro do cliente e obras salvos com sucesso.")
                 return redirect("usuarios:lista_usuarios")
             messages.success(request, "Usuário criado. Agora configure os módulos e permissões.")
             return redirect("usuarios:configurar_usuario", usuario_id=usuario.pk)
@@ -117,14 +131,16 @@ def novo_usuario(request):
 
 @usuarios_admin_required
 def configurar_usuario(request, usuario_id):
-    usuario_alvo = get_object_or_404(User.objects.select_related("perfil_erp"), pk=usuario_id)
+    usuario_alvo = get_object_or_404(User.objects.select_related("perfil_erp", "cliente_saari"), pk=usuario_id)
     _proteger_superusuario(request, usuario_alvo)
 
     if request.method == "POST":
         form = UsuarioSistemaForm(request.POST, instance=usuario_alvo, usuario_alvo=usuario_alvo)
         if form.is_valid():
             with transaction.atomic():
-                usuario = form.save()
+                usuario = _salvar_formulario(form)
+                if usuario is None:
+                    return render(request, "usuarios/configurar.html", {"form": form, "usuario_alvo": usuario_alvo, "modulos": obter_configuracao_modulos_usuario(usuario_alvo), "eh_cliente": Cliente.objects.filter(usuario=usuario_alvo).exists()})
                 if Cliente.objects.filter(usuario=usuario).exists():
                     if usuario.permissoes_modulos_erp.filter(ativo=True).exists():
                         raise PermissionDenied("Uma conta de cliente não pode possuir módulos internos ativos.")

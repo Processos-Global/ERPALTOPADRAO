@@ -24,7 +24,7 @@
   </div>
 
   <form class="usr-filter" method="get">
-    <input class="usr-input" type="search" name="q" value="{{ busca }}" placeholder="Buscar por nome, usuário ou e-mail">
+    <input class="usr-input" type="search" name="q" value="{{ busca }}" placeholder="Nome, usuário, e-mail ou documento do cliente">
     <select class="usr-input" name="cargo">
       <option value="">Todos os cargos</option>
       {% for valor, rotulo in cargos %}<option value="{{ valor }}" {% if cargo_selecionado == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
@@ -40,7 +40,7 @@
   <div class="usr-card">
     <div class="usr-card__head">
       <div>
-        <h2>Equipe</h2>
+        <h2>Usuários e clientes</h2>
         <p>Abra um usuário para editar dados pessoais, senha, módulos e permissões.</p>
       </div>
       <span class="usr-badge">{{ usuarios|length }} resultado(s)</span>
@@ -63,7 +63,7 @@
                 </div>
               </div>
             </td>
-            <td>{{ usuario.perfil_erp.get_cargo_display|default:"Não informado" }}</td>
+            <td>{% if usuario.cliente_saari %}Cliente · Portal{% else %}{{ usuario.perfil_erp.get_cargo_display|default:"Não informado" }}{% endif %}</td>
             <td>{% if usuario.is_active %}<span class="usr-badge usr-badge--ok">Ativo</span>{% else %}<span class="usr-badge usr-badge--danger">Inativo</span>{% endif %}</td>
             <td><strong>{{ usuario.total_modulos }}</strong> <span class="usr-muted">módulo(s)</span></td>
             <td>

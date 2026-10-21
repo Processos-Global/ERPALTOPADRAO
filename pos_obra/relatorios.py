@@ -22,6 +22,34 @@ FUNDO = colors.HexColor('#f8f7f4')
 LINHA = colors.HexColor('#dcdedc')
 
 
+def gerar_termo_aceite(aceite):
+    """Página(s) suplementar(es), preservando texto integral e a via original."""
+    from django.utils import timezone
+    memoria=BytesIO();estilos=getSampleStyleSheet()
+    corpo=ParagraphStyle('Termo',parent=estilos['BodyText'],fontSize=9,leading=14,textColor=MARROM,spaceAfter=8)
+    titulo=ParagraphStyle('TermoTitulo',parent=estilos['Heading1'],textColor=MARROM)
+    def p(texto):return Paragraph(escape(str(texto or 'Não informado')).replace('\n','<br/>'),corpo)
+    doc=aceite.documento
+    campos=[('Ordem de serviço',doc.chamado.numero),('Documento',f'{doc.tipo} · versão {doc.versao}'),
+        ('Resultado',aceite.get_resultado_display()),('Signatário',aceite.signatario),
+        ('Representação declarada',aceite.representacao),
+        ('Registrado em',timezone.localtime(aceite.criado_em).strftime('%d/%m/%Y %H:%M')),
+        ('SHA-256 do PDF original',doc.sha256),('Observações / ressalvas',aceite.observacoes)]
+    story=[Paragraph('SAARI ERP | Termo de aceite da OS',titulo),Spacer(1,5*mm)]
+    for rotulo,valor in campos:
+        story.extend([Paragraph(escape(rotulo),estilos['Heading3']),p(valor)])
+    if aceite.assinatura:
+        with aceite.assinatura.open('rb') as arquivo:imagem=arquivo.read()
+        story.extend([Paragraph('Assinatura registrada',estilos['Heading3']),Image(BytesIO(imagem),width=120*mm,height=35*mm,kind='proportional')])
+    story.extend([Spacer(1,6*mm),p('Registro eletrônico simples: autenticidade depende da identificação e das evidências de auditoria.')])
+    def rodape(canvas,documento):
+        canvas.setFont('Helvetica',8);canvas.setFillColor(CINZA)
+        canvas.drawString(19*mm,14*mm,f'SAARI ERP | {doc.chamado.numero} | Termo de aceite')
+        canvas.drawRightString(191*mm,14*mm,f'Página {documento.page}')
+    SimpleDocTemplate(memoria,pagesize=A4,leftMargin=19*mm,rightMargin=19*mm,topMargin=19*mm,bottomMargin=24*mm).build(story,onFirstPage=rodape,onLaterPages=rodape)
+    return memoria.getvalue()
+
+
 def gerar_relatorio(chamado, tipo, publico=False):
     titulos = {'vistoria': 'Relatório técnico de vistoria',
                'execucao': 'Relatório técnico de execução',
@@ -55,7 +83,7 @@ def gerar_relatorio(chamado, tipo, publico=False):
 
     def cells(items):
         return Table([[p(k, 'LabelSaari'), p(v)] for k, v in items],
-            colWidths=[35*mm, 137*mm], hAlign='LEFT', style=TableStyle([
+            colWidths=[35*mm, 137*mm], splitInRow=1, hAlign='LEFT', style=TableStyle([
                 ('BACKGROUND',(0,0),(0,-1),FUNDO),
                 ('LINEBELOW',(0,0),(-1,-1),.35,LINHA),
                 ('VALIGN',(0,0),(-1,-1),'TOP'),
@@ -96,7 +124,7 @@ def gerar_relatorio(chamado, tipo, publico=False):
               Spacer(1,3*mm), p('01  IDENTIFICAÇÃO DO ATENDIMENTO', 'SectionSaari'), cells(historia)]
 
     story += [p('02  OCORRÊNCIA REGISTRADA', 'SectionSaari'),
-              cells([('Classificação', f'{c.categoria_original} · {c.tipo_original}'),
+              cells([('Classificação', f'{c.categoria_original or c.tipo_problema.categoria} · {c.tipo_original or c.tipo_problema.nome}'),
                      ('Descrição', c.descricao)])]
     if not publico:
         story += [section('03  TRIAGEM INTERNA', c.triagem)]
@@ -145,6 +173,14 @@ def gerar_relatorio(chamado, tipo, publico=False):
         story.append(p('Arquivos vinculados ao atendimento. Os originais permanecem disponíveis no sistema conforme permissões de acesso.', 'SmallSaari'))
         for a in anexos:
             story.append(p(f'• {a.get_etapa_display()} — {Path(a.arquivo.name).name}', 'SmallSaari'))
+            if Path(a.arquivo.name).suffix.lower() in ('.png','.jpg','.jpeg','.webp'):
+                try:
+                    with a.arquivo.open('rb') as arquivo:
+                        imagem=Image(BytesIO(arquivo.read()),width=160*mm,height=90*mm,kind='proportional')
+                        story.extend([imagem,Spacer(1,4*mm)])
+                except (OSError,ValueError):
+                    story.append(p('Imagem indisponível para impressão; consulte o arquivo original.','SmallSaari'))
+
     # Assinaturas somente onde fazem sentido operacionalmente.
     if tipo == 'os':
         assinatura = Table([[p('Cliente / pessoa autorizada','SignSaari'), p('Responsável técnico / atendimento','SignSaari')]],

@@ -25,7 +25,12 @@ class IsolamentoPortalClienteMiddleware:
                 raise PermissionDenied("O acesso do cliente ao portal está desabilitado.")
             if nome == "core:index" and request.method not in ("GET", "HEAD"):
                 raise PermissionDenied("Clientes não podem modificar dados pelo menu inicial.")
-            if not nome.startswith("pos_obra:portal") and nome not in ("core:index", "pos_obra:pesquisa", "pos_obra:anexo"):
+            permitidas = {
+                'core:index', 'pos_obra:pesquisa', 'pos_obra:anexo',
+                'pos_obra:responder_agendamento', 'pos_obra:baixar_documento',
+                'pos_obra:comprovante_aceite',
+            }
+            if not nome.startswith("pos_obra:portal") and nome not in permitidas:
                 if request.method in ("GET", "HEAD"):
                     return redirect("core:index")
                 raise PermissionDenied("Clientes não podem executar operações internas do ERP.")

@@ -1,0 +1,8 @@
+
+<div class="po-form-group"><h3>01 · Imóvel e ocorrência</h3><div class="po-form-grid">
+{% for f in form.visible_fields %}{% if f.name == 'empreendimento' or f.name == 'cliente' or f.name == 'tipo_problema' or f.name == 'ambiente_padrao' or f.name == 'ambiente_ficha' or f.name == 'ambiente_detalhe' or f.name == 'descricao' %}{% include 'pos_obra/_field.html' %}{% endif %}{% endfor %}</div></div>
+<div class="po-form-group"><h3>02 · Quando podemos atender?</h3><p class="po-help">Estas datas são preferências. O agendamento será confirmado posteriormente.</p><div class="po-form-grid">
+{% for f in form.visible_fields %}{% if f.name == 'preferencia_data' or f.name == 'preferencia_periodo' or f.name == 'preferencia_inicio' or f.name == 'preferencia_fim' or f.name == 'preferencia_alternativa' or f.name == 'horario_flexivel' %}{% include 'pos_obra/_field.html' %}{% endif %}{% endfor %}</div></div>
+<div class="po-form-group"><h3>03 · Foto ou documento <small>(opcional)</small></h3><div class="po-form-grid">{% for f in form.visible_fields %}{% if f.name == 'arquivo' %}{% include 'pos_obra/_field.html' %}{% endif %}{% endfor %}</div></div>
+
+{{ form.non_field_errors }}{% for f in form.hidden_fields %}{{ f }}{{ f.errors }}{% endfor %}

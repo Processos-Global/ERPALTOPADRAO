@@ -1,0 +1,33 @@
+<div class="os-section-head">
+<div>
+<p class="po-eyebrow">Registro inicial</p>
+<h2>Solicitação recebida</h2>
+<p>Dados informados na abertura do atendimento.</p>
+</div>
+<span class="po-status">Registrada</span>
+</div>
+<div class="po-record po2-problem">
+<h3>Descrição do problema</h3>
+<div class="po-prose">{{ chamado.descricao|linebreaksbr }}</div>
+</div>
+<h3 class="po2-subheading">Dados do atendimento</h3><dl class="po-meta">
+<div>
+<dt>Cliente</dt>
+<dd>{{ chamado.cliente.nome }}</dd>
+</div>
+<div>
+<dt>Contato</dt>
+<dd>{{ chamado.cliente.telefone|default:'Não informado' }}<small>{{ chamado.cliente.email }}</small>
+</dd>
+</div>
+<div>
+<dt>Endereço</dt>
+<dd>{% if chamado.empreendimento.historica %}{{ chamado.empreendimento.endereco_historico|default:'Não informado' }}{% else %}{{ chamado.empreendimento.obra.endereco|default:'Consultar cadastro da obra' }}{% endif %}</dd>
+</div>
+<div>
+<dt>Preferência de atendimento</dt>
+<dd>{{ chamado.preferencia_data|date:'d/m/Y'|default:'Não informada' }} · {{ chamado.get_preferencia_periodo_display }}{% if chamado.preferencia_inicio %}<small>{{ chamado.preferencia_inicio|time:'H:i' }}–{{ chamado.preferencia_fim|time:'H:i' }}</small>{% endif %}</dd>
+</div>
+</dl>
+<section class="os-documents po2-block">
+<h3>Evidências da abertura</h3>{% include 'pos_obra/_upload.html' with etapa='ABERTURA' %}{% include 'pos_obra/_anexos.html' with arquivos=anexos_abertura %}</section>

@@ -4,3 +4,5 @@ from cadastros.models.pos_obra import Cliente, EmpreendimentoPosObra, VinculoCli
 from .atendimento import AgendamentoOS, HistoricoAgendamento, DocumentoOS, AceiteOS
 
 from .atendimento import NotificacaoOS, TratativaSatisfacao
+
+from .atendimento import RascunhoEtapaOS

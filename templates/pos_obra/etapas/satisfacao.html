@@ -1,0 +1,30 @@
+<div class="os-section-head">
+<div>
+<h2>Satisfação do cliente</h2>
+<p>Avaliação recebida pelo portal e acompanhamento interno da equipe.</p>
+</div>
+</div>
+<h3 class="po2-subheading">Avaliação do cliente</h3>{% if chamado.pesquisa %}<dl class="po-meta">
+<div>
+<dt>Atendimento</dt>
+<dd>{{ chamado.pesquisa.atendimento }} / 5</dd>
+</div>
+<div>
+<dt>Prazo</dt>
+<dd>{{ chamado.pesquisa.prazo }} / 5</dd>
+</div>
+<div>
+<dt>Qualidade</dt>
+<dd>{{ chamado.pesquisa.qualidade }} / 5</dd>
+</div>
+<div>
+<dt>Problema resolvido?</dt>
+<dd>{{ chamado.pesquisa.get_resolvido_display }}</dd>
+</div>
+</dl>
+<p>{{ chamado.pesquisa.comentario|linebreaksbr }}</p>{% else %}<p class="po-muted">A avaliação fica disponível no portal após a conclusão do atendimento.</p>{% endif %}<hr>
+<section class="os-form-surface po2-block">
+<h4>Tratativas administrativas</h4>{% for t in tratativas %}<p>{{ t.criado_em|date:'d/m/Y H:i' }} · {{ t.responsavel }} — {{ t.observacao }}</p>{% empty %}<p class="po-help">Nenhuma tratativa registrada.</p>{% endfor %}{% if pode_editar %}<form method="post" action="{% url 'pos_obra:registrar_tratativa' chamado.pk %}">{% csrf_token %}<label for="tratativa-observacao">Providências internas · obrigatório</label>
+<textarea id="tratativa-observacao" name="observacao" maxlength="5000" class="sa-field" rows="3" minlength="5" required placeholder="Providências após a pesquisa de satisfação">{{ tratativa_erro.valor }}</textarea>{% if tratativa_erro %}<p class="errorlist">{{ tratativa_erro.mensagem }}</p>{% endif %}
+<button class="po-button">Registrar tratativa</button>
+</form>{% endif %}</section>

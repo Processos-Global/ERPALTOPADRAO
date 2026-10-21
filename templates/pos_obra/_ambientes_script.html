@@ -31,7 +31,7 @@
    ambiente.replaceChildren(...options('Selecione o ambiente',data.ambientes));ambiente.value=previous;
    ambiente.disabled=data.historica;ambiente.required=!data.historica;
    padrao.disabled=!data.historica;padrao.required=data.historica;
-   wrapA.hidden=data.historica;wrapP.hidden=!data.historica;
+   wrapA.hidden=data.historica&&!wrapA.querySelector('.errorlist');wrapP.hidden=!data.historica&&!wrapP.querySelector('.errorlist');
    if(cliente){cliente.replaceChildren(...options('Selecione o cliente',data.clientes));cliente.disabled=false;cliente.value=previousCliente;}
    notice.textContent=(!data.historica&&!data.ambientes.length)?'Este imóvel não possui ambientes ativos na ficha técnica. Solicite o cadastro à equipe.':'';
   }catch(error){

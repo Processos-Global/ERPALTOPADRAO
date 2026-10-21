@@ -1,0 +1,56 @@
+<div class="os-section-head">
+<h2>Materiais do atendimento</h2>
+<span class="po-status">Materiais solicitados</span>
+</div>
+<p class="po2-step-intro">Confira o que já foi solicitado. Para incluir mais itens, utilize o formulário abaixo. Esta etapa é opcional.</p><div class="po-paper-material-toolbar"><strong>Materiais já incluídos</strong><span>Edite a quantidade diretamente na linha ou remova o item.</span></div><div class="po-table-wrap">
+<table class="po-table">
+<thead>
+<tr>
+<th>Material / Unidade</th>
+<th>Quantidade necessária</th>
+<th>Preço de referência</th>
+<th>Preço total estimado</th>{% if not encerrado and pode_editar and libera_materiais %}<th>Ações</th>{% endif %}</tr>
+</thead>
+<tbody>{% for m in materiais %}<tr>
+<td>
+<strong>{{ m.descricao }}</strong>
+<br>
+<span class="po-muted">{{ m.material.codigo }} · {{ m.unidade }}</span>
+</td>
+<td>{% if not encerrado and pode_editar and libera_materiais %}<form id="material-{{ m.pk }}" method="post" action="{% url 'pos_obra:editar_material' chamado.pk m.pk %}">{% csrf_token %}<div class="po-field">
+<label for="{% if material_quantidade_form.instance.pk == m.pk %}{{ material_quantidade_form.previsto.id_for_label }}{% else %}previsto-{{ m.pk }}{% endif %}">Necessário</label>
+{% if material_quantidade_form.instance.pk == m.pk %}{{ material_quantidade_form.previsto }}{{ material_quantidade_form.previsto.errors }}{% else %}<input id="previsto-{{ m.pk }}" name="previsto" type="number" value="{{ m.previsto|stringformat:'.3f' }}" min="0.001" step="0.001" required>{% endif %}
+</div>
+</form>{% else %}{{ m.previsto }}{% endif %}</td>
+<td>R$ {{ m.custo_unitario|floatformat:4 }}<p class="po-help">{{ m.observacoes }}</p>
+</td>
+<td>R$ {{ m.total_estimado|floatformat:2 }}</td>{% if not encerrado and pode_editar and libera_materiais %}<td>
+<div class="po-actions">
+<button class="po-button" type="submit" form="material-{{ m.pk }}">Salvar</button>
+<form method="post" action="{% url 'pos_obra:editar_material' chamado.pk m.pk %}">{% csrf_token %}<button class="po-button danger" name="acao" value="excluir" onclick="return confirm('Remover este material da OS?')">Remover</button>
+</form>
+</div>
+</td>{% endif %}</tr>{% empty %}<tr>
+<td colspan="5" class="po-empty">Nenhum material incluído. Se o serviço não precisar de materiais, prossiga para Execução.</td>
+</tr>{% endfor %}</tbody>
+</table>
+</div>
+{% if not encerrado and pode_editar and libera_materiais %}<hr>
+<div class="os-form-surface os-material-entry po2-block">
+<div class="os-form-caption">
+<span class="os-caption-dot">
+</span> Adicionar material</div>
+<form method="post" action="{% url 'pos_obra:material' chamado.pk %}">{% csrf_token %}<div class="po-material-search">
+<label for="material-live-search">Pesquisar material por nome ou código</label>
+<input id="material-live-search" class="sa-field" type="search" autocomplete="off" placeholder="Digite o código ou nome do material" aria-controls="material-live-results">
+<div id="material-live-results" class="po-material-results" role="group" hidden>
+</div>
+<div id="material-live-choice" class="po-help" aria-live="polite">Escolha um material para adicionar.</div>
+</div>
+<div class="po-material-fields"><div class="po-field" data-field="material"><label for="{{ material_form.material.id_for_label }}">Material do catálogo</label>{{ material_form.material }}{{ material_form.material.errors }}</div><div class="po-field" data-field="previsto"><label for="{{ material_form.previsto.id_for_label }}">Quantidade necessária</label>{{ material_form.previsto }}{{ material_form.previsto.errors }}</div></div>{{ material_form.non_field_errors }}<div class="os-actions">
+<button class="po-button primary">Adicionar material</button>
+</div>
+</form>
+</div>{% endif %}<p class="po-total">Total estimado: <strong>R$ {{ total_estimado|floatformat:2 }}</strong>
+</p>
+<p class="po-help">Preço de referência por unidade. A inclusão não movimenta estoque; o consumo real deve ser lançado no Almoxarifado.</p>

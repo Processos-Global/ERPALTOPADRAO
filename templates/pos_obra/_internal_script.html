@@ -1,0 +1,19 @@
+<script>
+(()=>{const root=document.querySelector('.po-shell');if(!root)return;const dirty=new Set(),busy=new Set();
+function mark(form){if(!form||form.method!=='post')return;dirty.add(form);if(!form.querySelector('.po-dirty-notice')){const notice=document.createElement('p');notice.className='po-dirty-notice';notice.setAttribute('role','status');notice.textContent='Alterações não salvas neste formulário.';form.append(notice)}}
+for(const type of ['input','change'])root.addEventListener(type,event=>mark(event.target.form));
+root.addEventListener('pointerdown',event=>{if(event.target.matches('.po-sign-canvas'))mark(event.target.closest('form'))});
+window.addEventListener('beforeunload',event=>{if(dirty.size){event.preventDefault();event.returnValue=''}});
+root.addEventListener('submit',event=>{const form=event.target;if(event.defaultPrevented||form.method!=='post')return;
+if(busy.has(form)){event.preventDefault();return;}
+if(form.dataset.confirm&&!confirm(form.dataset.confirm)){event.preventDefault();return;}
+if([...dirty].some(f=>f!==form)&&!confirm('Outro formulário tem alterações não salvas. Salvar este formulário recarrega a página. Continuar?')){event.preventDefault();return;}
+busy.add(form);dirty.clear();form.setAttribute('aria-busy','true');const status=form.querySelector('.po-dirty-notice')||document.createElement('p');status.className='po-save-status';status.setAttribute('role','status');status.textContent='Salvando '+(form.dataset.formName||'formulário')+'…';form.append(status);
+if(event.submitter)event.submitter.setAttribute('aria-disabled','true');});
+window.addEventListener('pageshow',()=>{busy.clear();root.querySelectorAll('[aria-busy]').forEach(f=>f.removeAttribute('aria-busy'));root.querySelectorAll('button[aria-disabled=true]').forEach(b=>b.removeAttribute('aria-disabled'));root.querySelectorAll('.po-save-status').forEach(n=>n.remove())});
+root.querySelectorAll('input[type=file]').forEach(input=>{const preview=document.createElement('div');preview.className='po-upload-preview';preview.setAttribute('aria-live','polite');input.after(preview);let url;input.addEventListener('change',()=>{if(url)URL.revokeObjectURL(url);preview.replaceChildren();input.setCustomValidity('');const file=input.files[0];if(!file)return;input.setCustomValidity(file.size>15*1024*1024?'O arquivo deve ter até 15 MB.':'');const name=document.createElement('p');name.textContent=file.name+' · '+(file.size/1024/1024).toFixed(1)+' MB';preview.append(name);if(file.type.startsWith('image/')&&file.size<=15*1024*1024){const img=document.createElement('img');url=URL.createObjectURL(file);img.src=url;img.alt='Prévia do arquivo selecionado';preview.append(img)}})});
+root.querySelectorAll('.errorlist').forEach(error=>{error.setAttribute('role','alert');for(let ancestor=error.parentElement;ancestor&&ancestor!==root;ancestor=ancestor.parentElement){if(ancestor.tagName==='DETAILS')ancestor.open=true;}});
+const error=root.querySelector('.os-panel:not([hidden]) .po-error-summary,.os-panel:not([hidden]) .errorlist,.po-error-summary');if(error){error.tabIndex=-1;error.focus();}
+root.querySelectorAll('[data-field]').forEach(row=>{const field=row.querySelector('input,textarea,select');if(field&&row.querySelector('.errorlist'))field.setAttribute('aria-invalid','true')});
+})();
+</script>

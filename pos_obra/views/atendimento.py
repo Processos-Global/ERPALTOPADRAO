@@ -21,11 +21,13 @@ from usuarios.models import ModuloSistema
 @interno
 def painel(request):
     qs=Chamado.objects.all()
-    return render(request,'pos_obra/painel.html',{'total':qs.count(),'abertos':qs.exclude(status__in=['CONCLUIDO','CANCELADO']).count(),'concluidos':qs.filter(status='CONCLUIDO').count(),'satisfacao':PesquisaSatisfacao.objects.aggregate(x=Avg('atendimento'))['x'],'chamados':qs.select_related('cliente','empreendimento__obra').order_by('-criado_em')[:12]})
+    return render(request,'pos_obra/painel.html',{'total':qs.count(),'abertos':qs.exclude(status__in=['CONCLUIDO','CANCELADO']).count(),'concluidos':qs.filter(status='CONCLUIDO').count(),'satisfacao':PesquisaSatisfacao.objects.aggregate(x=Avg('atendimento'))['x'],'compromissos':AgendamentoOS.objects.select_related('chamado__cliente','responsavel').filter(fim__gte=timezone.now(),situacao__in=['PROPOSTO','CONFIRMADO','REAGENDAMENTO']).exclude(chamado__status__in=['CONCLUIDO','CANCELADO']).order_by('inicio')[:6], 'chamados':qs.select_related('cliente','empreendimento__obra').order_by('-criado_em')[:12]})
 def filtros_chamados(request, qs):
     for name in ('status', 'prioridade'):
         if request.GET.get(name):
-            qs = qs.filter(**{name: request.GET[name]})
+            permitidos = dict(Chamado.STATUS if name == 'status' else Chamado.PRIORIDADES)
+            if request.GET[name] in permitidos:
+                qs = qs.filter(**{name: request.GET[name]})
     termo = request.GET.get('q', '').strip()
     if termo:
         qs = qs.filter(Q(numero__icontains=termo) | Q(cliente__nome__icontains=termo) |
@@ -42,7 +44,11 @@ def pagina_contexto(request):
 def lista(request):
     qs = filtros_chamados(request, Chamado.objects.select_related(
         'cliente', 'empreendimento__obra', 'tipo_problema', 'responsavel')).order_by('-criado_em', '-pk')
+    ordenacoes={'recentes':'-criado_em','antigas':'criado_em','cliente':'cliente__nome','obra':'empreendimento__nome_historico'}
+    ordenacao=request.GET.get('ordem','recentes')
+    qs=qs.order_by(ordenacoes.get(ordenacao,'-criado_em'),'-pk')
     return render(request, 'pos_obra/lista.html', {
+        'ordenacao':ordenacao,
         'chamados': Paginator(qs, 25).get_page(request.GET.get('page')),
         'status_choices': Chamado.STATUS, 'prioridade_choices': Chamado.PRIORIDADES,
         'status_atual': request.GET.get('status', ''), 'pagina_query': pagina_contexto(request)})
@@ -50,11 +56,11 @@ def lista(request):
 @interno
 def kanban(request):
     qs = filtros_chamados(request, Chamado.objects.select_related(
-        'cliente', 'empreendimento__obra', 'tipo_problema')).order_by('-criado_em', '-pk')
+        'cliente', 'empreendimento__obra', 'tipo_problema', 'responsavel')).order_by('-criado_em', '-pk')
     contagens = dict(qs.values('status').annotate(total=Count('pk')).values_list('status', 'total'))
     grupos = [{'codigo': key, 'nome': label, 'total': contagens.get(key, 0),
                'itens': list(qs.filter(status=key)[:30])} for key, label in Chamado.STATUS]
-    return render(request, 'pos_obra/kanban.html', {'grupos': grupos, 'filtros_query': pagina_contexto(request)})
+    return render(request, 'pos_obra/kanban.html', {'grupos': grupos, 'filtros_query': pagina_contexto(request), 'prioridade_choices': Chamado.PRIORIDADES})
 
 
 def registro(chamado,user,anterior,mensagem,publico=False):
@@ -122,6 +128,18 @@ def detalhe(request, pk):
     form = AtendimentoForm(request.POST if request.method == 'POST' else None, instance=c)
     etapa = request.POST.get('etapa') if request.method == 'POST' else None
     if request.method == 'POST':
+        # Rascunho persistente: aceita dados parciais, sem avançar status nem modificar a OS.
+        if request.POST.get('acao_etapa') == 'rascunho' and etapa in forms_por_etapa:
+            if encerrado or not pode_etapa(c, etapa):
+                raise PermissionDenied('Não é possível salvar rascunho desta etapa.')
+            if etapa == 'TRIAGEM' and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'atribuir_responsavel'):
+                raise PermissionDenied('Permissão insuficiente para triagem.')
+            if etapa == 'TRIAGEM' and c.responsavel_id and (c.triagem or '').strip() or (etapa == 'VISTORIA' and c.data_vistoria and c.diagnostico.strip()) or (etapa == 'EXECUCAO' and c.data_execucao and c.execucao.strip()) or (etapa == 'FINALIZACAO' and c.conclusao.strip()):
+                raise PermissionDenied('Etapa concluída não admite novos rascunhos.')
+            dados = {nome: request.POST.get(nome, '') for nome in forms_por_etapa[etapa] if nome in request.POST}
+            RascunhoEtapaOS.objects.update_or_create(chamado=c, etapa=etapa, defaults={'dados': dados, 'atualizado_por': request.user})
+            messages.success(request, 'Rascunho salvo. A etapa continua aberta e o status não foi alterado.')
+            return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#' + etapa.lower())
         if etapa not in forms_por_etapa:
             raise PermissionDenied('Etapa inválida.')
         if etapa == 'TRIAGEM' and 'responsavel' in request.POST and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'atribuir_responsavel'):
@@ -179,6 +197,7 @@ def detalhe(request, pk):
                 descricao = f'{etapa.title()}: informações salvas'
                 if anterior != novo.status:
                     descricao += f' · status automático: {novo.get_status_display()}'
+                RascunhoEtapaOS.objects.filter(chamado=novo, etapa=etapa).delete()
                 registro(novo, request.user, anterior, descricao, anterior != novo.status)
                 messages.success(request, 'Etapa salva com sucesso. Status atualizado automaticamente.' if anterior != novo.status else 'Etapa salva com sucesso.')
                 return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#' + etapa.lower())
@@ -190,11 +209,31 @@ def detalhe(request, pk):
         if chave == etapa and request.method == 'POST':
             formulario_etapas[chave] = form
         else:
-            formulario_etapas[chave] = AtendimentoForm(instance=c)
+            formulario_etapas[chave] = AtendimentoForm(instance=c, auto_id=chave.lower()+'-%s')
             for nome in list(formulario_etapas[chave].fields):
                 if nome not in campos:
                     formulario_etapas[chave].fields.pop(nome)
-    return render(request, 'pos_obra/detalhe.html', {
+    rascunhos = {r.etapa: r for r in RascunhoEtapaOS.objects.filter(chamado=c)}
+    for chave, formulario in formulario_etapas.items():
+        if chave in rascunhos and not (request.method == 'POST' and etapa == chave):
+            for campo, valor in rascunhos[chave].dados.items():
+                if campo in formulario.fields:
+                    formulario.initial[campo] = valor
+    contexto = _contexto_detalhe(request,c,formulario_etapas,etapa,encerrado)
+    contexto['rascunhos_etapas'] = rascunhos
+    return render(request, 'pos_obra/detalhe.html', contexto)
+
+def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False):
+    from ..presentation import etapas_apresentacao, proximo_compromisso
+    materiais=list(c.materiais.select_related('material'))
+    agendamentos=list(c.agendamentos.select_related('responsavel'))
+    form_agendamento=AgendamentoForm()
+    responsaveis=list(form_agendamento.fields['responsavel'].choices)
+    form_agendamento.fields['responsavel'].choices=responsaveis
+    for a in agendamentos:
+        a.form_reagendamento=AgendamentoForm(auto_id=f'reagendar-{a.pk}-%s')
+        a.form_reagendamento.fields['responsavel'].choices=responsaveis
+    contexto = {
         'chamado': c,
         'encerrado': encerrado,
         'etapa_pendente': etapa_pendente(c),
@@ -202,25 +241,70 @@ def detalhe(request, pk):
         'libera_materiais': pode_etapa(c, 'EXECUCAO'),
         'libera_execucao': pode_etapa(c, 'EXECUCAO'),
         'libera_finalizacao': pode_etapa(c, 'FINALIZACAO'),
-        'aba_ativa': etapa.lower() if etapa else 'triagem',
-        'total_materiais': sum(m.total for m in c.materiais.all()),
+        'aba_ativa': etapa.lower() if etapa else (etapa_pendente(c) or 'documentos').lower(),
+        'total_materiais': sum(m.total for m in materiais),
+        'total_estimado': sum(m.total_estimado for m in materiais),
         'form_triagem': formulario_etapas['TRIAGEM'],
         'form_vistoria': formulario_etapas['VISTORIA'],
         'form_execucao': formulario_etapas['EXECUCAO'],
         'form_finalizacao': formulario_etapas['FINALIZACAO'],
-        'materiais': c.materiais.select_related('material').all(),
+        'materiais': materiais,
         'material_form': MaterialForm(),
         'historico': Paginator(c.historico.select_related('usuario'), 25).get_page(request.GET.get('page')),
         'anexos_abertura': c.anexos.filter(etapa='ABERTURA'),
         'anexos_vistoria': c.anexos.filter(etapa='VISTORIA'),
         'anexos_execucao': c.anexos.filter(etapa='EXECUCAO'),
         'anexos_finalizacao': c.anexos.filter(etapa='FINALIZACAO'),
-        'agendamentos': c.agendamentos.select_related('responsavel').all(),
-        'form_agendamento': AgendamentoForm(),
-        'documentos': c.documentos_versionados.order_by('-criado_em'),
-        'material_catalogo': list(MaterialForm().fields['material'].queryset.values('id','codigo','nome','especificacao','unidade__sigla')[:3000]),
-        'aceite_valido': AceiteOS.objects.filter(documento__chamado=c,documento__tipo='EXECUCAO',documento__versao=latest_document_version(c),documento__criado_em__gte=ultima_alteracao_tecnica(c),resultado__in=['ACEITO','RESSALVA']).exists(),
+        'agendamentos': agendamentos,
+        'form_agendamento': form_agendamento,
+        'documentos': c.documentos_versionados.select_related('aceite').order_by('-criado_em', '-pk'),
+        
+        'aceite_valido': aceite_valido(c),
+    }
+    contexto.update({
+        'concluida_triagem': bool(c.responsavel_id and c.triagem.strip()),
+        'concluida_vistoria': bool(c.data_vistoria and c.diagnostico.strip()),
+        'concluida_execucao': bool(c.data_execucao and c.execucao.strip()),
+        'concluida_finalizacao': bool(c.conclusao.strip()),
     })
+    contexto['pode_editar']=possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia')
+    contexto['pode_finalizar']=possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'concluir_ocorrencia')
+    contexto['pode_atribuir']=possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'atribuir_responsavel')
+    contexto['pesquisa']=PesquisaSatisfacao.objects.filter(chamado=c).first()
+    contexto['tratativas']=c.tratativas_satisfacao.select_related('responsavel')
+    contexto['proximo_agendamento']=proximo_compromisso(agendamentos)
+    contexto['etapas_ui']=etapas_apresentacao(c,contexto)
+    contexto['proxima_acao_ui']={'TRIAGEM':'Definir responsável e registrar o parecer de triagem.','VISTORIA':'Registrar a data e o diagnóstico da vistoria.','EXECUCAO':'Registrar a data e os serviços executados.','FINALIZACAO':'Salvar o parecer de conclusão e conferir o aceite.'}.get(etapa_pendente(c),'Conferir o aceite e encerrar a ordem de serviço.')
+    contexto['tem_via_assinada']=c.anexos.filter(etapa='FINALIZACAO',via_assinada_conferida=True).exists()
+    contexto['pronto_finalizar']=not encerrado and contexto['concluida_triagem'] and contexto['concluida_vistoria'] and contexto['concluida_execucao'] and contexto['concluida_finalizacao'] and (contexto['aceite_valido'] or contexto['tem_via_assinada'])
+    documentos=list(contexto['documentos']);vistos=set();limite=ultima_alteracao_tecnica(c)
+    for doc in documentos:
+        doc.elegivel_aceite=not encerrado and contexto['pode_editar'] and doc.tipo not in vistos and doc.criado_em>=limite and not hasattr(doc,'aceite')
+        doc.desatualizado=doc.criado_em<limite
+        vistos.add(doc.tipo)
+    contexto['documentos']=documentos
+    for etapa_form,campos in {'TRIAGEM':['responsavel','triagem'],'VISTORIA':['data_vistoria','diagnostico'],'EXECUCAO':['data_execucao','execucao'],'FINALIZACAO':['conclusao']}.items():
+        for campo in campos:
+            if campo in formulario_etapas[etapa_form].fields:
+                formulario_etapas[etapa_form].fields[campo].required=True
+    return contexto
+
+
+def _erro_operacao(request, c, chave, form, aba, reagendamento_id=None):
+    grupos={'TRIAGEM':['prioridade','responsavel','garantia','triagem'], 'VISTORIA':['data_vistoria','diagnostico'], 'EXECUCAO':['data_execucao','execucao','materiais_observacao'], 'FINALIZACAO':['conclusao']}
+    forms={}
+    for etapa, campos in grupos.items():
+        f=AtendimentoForm(instance=c, auto_id=etapa.lower()+'-%s')
+        f.fields={n:field for n,field in f.fields.items() if n in campos}
+        forms[etapa]=f
+    contexto=_contexto_detalhe(request,c,forms,encerrado=c.status in ('CONCLUIDO','CANCELADO'))
+    contexto.update({chave:form,'aba_ativa':aba})
+    if reagendamento_id:
+        for agendamento in contexto['agendamentos']:
+            if agendamento.pk == reagendamento_id:
+                agendamento.form_reagendamento=form
+    return render(request,'pos_obra/detalhe.html',contexto)
+
 
 
 def ultimo_preco_material(material):
@@ -253,7 +337,7 @@ def adicionar_material(request, pk):
         preco, pedido_item = ultimo_preco_material(material)
         m = MaterialOS.objects.create(
             chamado=c, material=material,
-            descricao=material.descricao_completa[:255],
+            descricao=(material.especificacao or material.nome)[:255],
             unidade=material.unidade.sigla,
             previsto=form.cleaned_data['previsto'],
             utilizado=0,  # reservado para integração de consumo real do almoxarifado
@@ -262,24 +346,36 @@ def adicionar_material(request, pk):
                          if pedido_item else 'Preço não encontrado no histórico de pedidos; verificar manualmente.'),
         )
         anterior_material = c.status
-        if c.status in ('ABERTO', 'REABERTO', 'TRIAGEM', 'VISTORIA'):
-            c.status = 'AGUARDANDO_MATERIAL'
-            c.save(update_fields=['status', 'atualizado_em'])
-        registro(c, request.user, anterior_material, f'Material {material.codigo} incluído na OS' + (' · status automático: aguardando material' if anterior_material != c.status else ''))
+        # Planejar materiais não significa que exista pendência de compra/entrega.
+        registro(c, request.user, anterior_material, f'Material {material.codigo} incluído na previsão da OS')
         messages.success(request, 'Material adicionado a partir do catálogo de Compras.')
     else:
-        messages.error(request, 'Material inválido: verifique a seleção e as quantidades.')
+        return _erro_operacao(request,c,'material_form',form,'materiais')
     return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#materiais')
 
 
 def ultima_alteracao_tecnica(c):
     # Conclusão administrativa não invalida relatório de execução já assinado.
     from datetime import datetime, timezone as dt_timezone
-    registro=c.historico.filter(Q(mensagem__startswith='EXECUCAO:') | Q(mensagem__startswith='VISTORIA:') | Q(mensagem__startswith='Quantidades de') | Q(mensagem__startswith='Material ')).order_by('-criado_em').first()
-    return registro.criado_em if registro else timezone.make_aware(datetime(2000,1,1))
+    registro=c.historico.filter(Q(mensagem__istartswith='Execucao:') | Q(mensagem__istartswith='Vistoria:') | Q(mensagem__startswith='Quantidade necessária de') | Q(mensagem__startswith='Quantidades de') | Q(mensagem__startswith='Material ')).order_by('-criado_em').first()
+    datas=[registro.criado_em if registro else timezone.make_aware(datetime(2000,1,1))]
+    anexo=c.anexos.exclude(etapa__in=['FINALIZACAO','TRIAGEM']).order_by('-criado_em').first()
+    if anexo:datas.append(anexo.criado_em)
+    visibilidade=c.historico.filter(mensagem__startswith='Visibilidade de evidência técnica:').order_by('-criado_em').first()
+    if visibilidade:datas.append(visibilidade.criado_em)
+    return max(datas)
 
 def latest_document_version(c):
     return c.documentos_versionados.filter(tipo='EXECUCAO').order_by('-versao').values_list('versao',flat=True).first() or 0
+
+def aceite_valido(c):
+    limite=ultima_alteracao_tecnica(c)
+    for tipo in ('EXECUCAO','OS'):
+        doc=c.documentos_versionados.filter(tipo=tipo).order_by('-versao').first()
+        if doc and doc.criado_em >= limite and AceiteOS.objects.filter(documento=doc,resultado__in=['ACEITO','RESSALVA']).exists():
+            return True
+    return False
+
 
 @interno
 @require_POST
@@ -293,7 +389,7 @@ def finalizar_os(request, pk):
     if etapa_pendente(c) is not None:
         messages.error(request, 'Preencha vistoria, execução e relatório de conclusão antes de finalizar.')
         return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
-    if not (c.anexos.filter(etapa='FINALIZACAO').exists() or AceiteOS.objects.filter(documento__chamado=c,resultado__in=['ACEITO','RESSALVA'],documento__tipo='EXECUCAO',documento__versao=latest_document_version(c),documento__criado_em__gte=ultima_alteracao_tecnica(c)).exists()):
+    if not (c.anexos.filter(etapa='FINALIZACAO',via_assinada_conferida=True).exists() or aceite_valido(c)):
         messages.error(request, 'Registre o aceite eletrônico ou anexe a via assinada antes de finalizar.')
         return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
     if request.POST.get('confirmacao_assinatura') != 'on':
@@ -324,11 +420,19 @@ def upload(request, pk):
         return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#' + etapa_pendente(c).lower())
     form = AnexoForm(request.POST, request.FILES)
     if form.is_valid():
-        a = AnexoChamado.objects.create(chamado=c, **form.cleaned_data)
+        dados_anexo = form.cleaned_data.copy()
+        if etapa_anexo != 'FINALIZACAO':
+            dados_anexo['via_assinada_conferida'] = False
+        if etapa_anexo == 'FINALIZACAO' and not dados_anexo['via_assinada_conferida']:
+            messages.error(request, 'Para anexar via física de aceite, confirme que o documento está assinado e foi conferido.')
+            return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
+        a = AnexoChamado.objects.create(chamado=c, **dados_anexo)
         registro(c, request.user, c.status, f'Arquivo anexado na etapa {a.get_etapa_display()}.')
         messages.success(request, 'Arquivo anexado.')
     else:
         messages.error(request, ' '.join(error for errors in form.errors.values() for error in errors))
+        aba=etapa_anexo.lower() if etapa_anexo in ('ABERTURA','VISTORIA','EXECUCAO','FINALIZACAO') else 'abertura'
+        return _erro_operacao(request,c,'upload_form',form,aba)
     aba = request.POST.get('etapa', '').lower()
     if aba not in ('vistoria', 'execucao', 'finalizacao'):
         aba = 'triagem'
@@ -345,7 +449,8 @@ def publicar_anexo(request, pk):
     # Compartilhamento não altera o conteúdo de uma OS encerrada.
     a.publico = request.POST.get('publico') == '1'
     a.save(update_fields=['publico'])
-    registro(c, request.user, c.status, 'Visibilidade de anexo: ' + ('cliente' if a.publico else 'interno'))
+    prefixo='Visibilidade de evidência técnica: ' if a.etapa in ('ABERTURA','VISTORIA','EXECUCAO') else 'Visibilidade de anexo: '
+    registro(c, request.user, c.status, prefixo + ('cliente' if a.publico else 'interno'))
     messages.success(request, 'Visibilidade do documento atualizada.')
     return redirect(reverse('pos_obra:detalhe', args=[c.pk]) + '#' + (a.etapa.lower() if a.etapa in ('VISTORIA', 'EXECUCAO', 'FINALIZACAO') else 'triagem'))
 
@@ -368,13 +473,13 @@ def editar_material(request, pk, item_pk):
         messages.success(request, 'Material removido.')
     else:
         anterior = str(item.previsto)
-        form = MaterialQuantidadeForm(request.POST, instance=item)
+        form = MaterialQuantidadeForm(request.POST, instance=item, auto_id=f'material-{item.pk}-%s')
         if form.is_valid():
             form.save()
             registro(c, request.user, c.status, f'Quantidade necessária de {item.descricao}: {anterior} → {item.previsto}')
             messages.success(request, 'Quantidades atualizadas; preço de referência preservado.')
         else:
-            messages.error(request, 'Informe uma quantidade necessária maior que zero.')
+            return _erro_operacao(request,c,'material_quantidade_form',form,'materiais')
     return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#materiais')
 
 @login_required
@@ -467,9 +572,33 @@ def responder_pesquisa(request,pk):
     return render(request,'pos_obra/form.html',{'form':f,'titulo':'Pesquisa de satisfação','eh_pesquisa':True})
 # Links legados movidos para Cadastros
 @interno
-def cadastros(request,modelo):return redirect('cadastros:pos_obra_lista',modelo=modelo)
+def cadastros(request,modelo):
+    if modelo not in ('categorias','problemas'):
+        if request.method not in ('GET','HEAD'):raise PermissionDenied
+        return redirect('usuarios:lista_usuarios' if modelo in ('clientes','vinculos') else 'cadastros:pos_obra_lista', **({} if modelo in ('clientes','vinculos') else {'modelo':modelo}))
+    Model=CategoriaOcorrencia if modelo=='categorias' else TipoProblema
+    qs=Model.objects.all()
+    if modelo=='problemas':qs=qs.select_related('categoria')
+    termo=request.GET.get('q','').strip()
+    if termo:qs=qs.filter(nome__icontains=termo)
+    return render(request,'pos_obra/cadastros.html',{'modelo':modelo,'itens':Paginator(qs.order_by('nome'),25).get_page(request.GET.get('page')),'pagina_query':pagina_contexto(request)})
 @interno
-def cadastrar(request,modelo,pk=None):return redirect('cadastros:pos_obra_editar',modelo=modelo,pk=pk) if pk else redirect('cadastros:pos_obra_novo',modelo=modelo)
+def cadastrar(request,modelo,pk=None):
+    if modelo in ('clientes','vinculos'):
+        if request.method not in ('GET','HEAD'):raise PermissionDenied('Use Usuários para manter clientes e vínculos.')
+        return redirect('usuarios:lista_usuarios')
+    if modelo not in ('categorias','problemas'):
+        if request.method not in ('GET','HEAD'):raise PermissionDenied
+        return redirect('cadastros:pos_obra_editar',modelo=modelo,pk=pk) if pk else redirect('cadastros:pos_obra_novo',modelo=modelo)
+    from ..forms import CategoriaForm,TipoProblemaForm
+    if not possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia'):raise PermissionDenied
+    F=CategoriaForm if modelo=='categorias' else TipoProblemaForm
+    obj=get_object_or_404(F._meta.model,pk=pk) if pk else None
+    form=F(request.POST if request.method=='POST' else None,instance=obj)
+    if request.method=='POST' and form.is_valid():
+        form.save();messages.success(request,'Catálogo atualizado.')
+        return redirect('pos_obra:cadastros',modelo=modelo)
+    return render(request,'pos_obra/catalogo_form.html',{'form':form,'modelo':modelo})
 @interno
 def obra_historica(request):return redirect('cadastros:pos_obra_novo',modelo='empreendimentos')
 
@@ -481,6 +610,10 @@ def agendar(request,pk):
     if not possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia'):raise PermissionDenied
     c=get_object_or_404(Chamado.objects.select_for_update(),pk=pk)
     if c.status in ('CANCELADO','CONCLUIDO'):raise PermissionDenied('OS encerrada.')
+    from django.contrib.auth import get_user_model
+    responsavel_id=request.POST.get('responsavel','')
+    if responsavel_id.isdigit():
+        get_user_model().objects.select_for_update().filter(pk=responsavel_id).first()
     f=AgendamentoForm(request.POST)
     if f.is_valid():
         a=f.save(commit=False);a.chamado=c;a.criado_por=request.user;a.save()
@@ -489,7 +622,7 @@ def agendar(request,pk):
         enfileirar(c,'AGENDAMENTO',a.pk,f'SAARI | Confirme seu atendimento {c.numero}',f'Nova proposta de {a.get_tipo_display()} para {timezone.localtime(a.inicio):%d/%m/%Y %H:%M}. Confirme ou solicite reagendamento pelo portal.')
         messages.success(request,'Proposta registrada. Aguarda confirmação do cliente pelo portal.')
     else:
-        messages.error(request,' '.join(str(e) for erros in f.errors.values() for e in erros))
+        return _erro_operacao(request,c,'form_agendamento',f,'agendamentos')
     return redirect(reverse('pos_obra:detalhe',args=[pk])+'#agendamentos')
 
 @cliente
@@ -498,6 +631,7 @@ def agendar(request,pk):
 def responder_agendamento(request,pk):
     a=get_object_or_404(AgendamentoOS.objects.select_for_update().select_related('chamado'),pk=pk)
     if not pode_acessar(cliente_do_usuario(request.user),a.chamado):raise PermissionDenied
+    if a.chamado.status in ('CONCLUIDO','CANCELADO'):raise PermissionDenied('OS encerrada.')
     if a.situacao!='PROPOSTO':raise PermissionDenied('A proposta não está disponível.')
     resposta=request.POST.get('resposta')
     if resposta not in ('CONFIRMADO','REAGENDAMENTO'):raise PermissionDenied('Resposta inválida.')
@@ -549,7 +683,10 @@ def registrar_aceite(request,pk):
     import base64
     from django.core.files.base import ContentFile
     if not possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia'):raise PermissionDenied
+    doc=get_object_or_404(DocumentoOS,pk=pk)
+    c=get_object_or_404(Chamado.objects.select_for_update(),pk=doc.chamado_id)
     doc=get_object_or_404(DocumentoOS.objects.select_for_update().select_related('chamado'),pk=pk)
+    if doc.criado_em < ultima_alteracao_tecnica(c):raise PermissionDenied('O documento está desatualizado. Emita uma nova versão.')
     if doc.chamado.status in ('CONCLUIDO','CANCELADO') or doc.versao != (doc.chamado.documentos_versionados.filter(tipo=doc.tipo).order_by('-versao').values_list('versao',flat=True).first()) or AceiteOS.objects.filter(documento=doc).exists():raise PermissionDenied
     nome=request.POST.get('signatario','').strip()[:180]
     vinculo=request.POST.get('representacao','').strip()[:180]
@@ -558,10 +695,19 @@ def registrar_aceite(request,pk):
     if request.POST.get('ciencia') != 'on':raise PermissionDenied('É necessário registrar a ciência do conteúdo apresentado.')
     raw=request.POST.get('assinatura','')
     if resultado in ('ACEITO','RESSALVA'):
-        if not raw.startswith('data:image/png;base64,'):raise PermissionDenied('Assinatura não informada.')
+        if len(raw)>700_000 or not raw.startswith('data:image/png;base64,'):raise PermissionDenied('Assinatura não informada ou muito grande.')
         try: dados=base64.b64decode(raw.split(',',1)[1],validate=True)
         except (ValueError,base64.binascii.Error):raise PermissionDenied('Assinatura inválida.')
         if len(dados)>500_000 or not dados.startswith(b'\x89PNG\r\n\x1a\n'):raise PermissionDenied('Imagem da assinatura inválida.')
+        from io import BytesIO
+        from PIL import Image
+        try:
+            with Image.open(BytesIO(dados)) as imagem:
+                if imagem.format!='PNG' or imagem.width*imagem.height>4_000_000:
+                    raise ValueError('Dimensões inválidas')
+                imagem.verify()
+        except (OSError,ValueError,Image.DecompressionBombError):
+            raise PermissionDenied('Imagem da assinatura inválida.')
     a=AceiteOS(documento=doc,signatario=nome,representacao=vinculo,resultado=resultado,observacoes=request.POST.get('observacoes','')[:4000],usuario_registro=request.user)
     if resultado in ('ACEITO','RESSALVA'):
         a.assinatura.save(f'assinatura-os-{doc.chamado_id}-v{doc.versao}.png',ContentFile(dados),save=False)
@@ -575,16 +721,20 @@ def registrar_aceite(request,pk):
 def agenda(request):
     from datetime import datetime, timedelta
     from django.utils.dateparse import parse_date
-    base=parse_date(request.GET.get('data','')) or timezone.localdate()
+    try:
+        base=parse_date(request.GET.get('data','')) or timezone.localdate()
+    except ValueError:
+        base=timezone.localdate()
+        messages.warning(request, 'Data inválida. Exibindo o período atual.')
     modo=request.GET.get('modo','semana')
     if modo=='dia':inicio=fim=base
     elif modo=='mes':inicio=base.replace(day=1);fim=(inicio.replace(day=28)+timedelta(days=4)).replace(day=1)-timedelta(days=1)
     else:inicio=base-timedelta(days=base.weekday());fim=inicio+timedelta(days=6);modo='semana'
-    qs=AgendamentoOS.objects.select_related('chamado__cliente','chamado__empreendimento','responsavel').filter(inicio__date__gte=inicio,inicio__date__lte=fim).order_by('inicio')
+    qs=AgendamentoOS.objects.select_related('chamado__cliente','chamado__empreendimento__obra','responsavel').filter(inicio__date__gte=inicio,inicio__date__lte=fim).order_by('inicio')
     estado=request.GET.get('situacao','');responsavel=request.GET.get('responsavel','');busca=request.GET.get('q','').strip()
     if estado:qs=qs.filter(situacao=estado)
     if responsavel.isdigit():qs=qs.filter(responsavel_id=responsavel)
-    if busca:qs=qs.filter(Q(chamado__numero__icontains=busca)|Q(chamado__cliente__nome__icontains=busca)|Q(chamado__empreendimento__nome_historico__icontains=busca))
+    if busca:qs=qs.filter(Q(chamado__numero__icontains=busca)|Q(chamado__cliente__nome__icontains=busca)|Q(chamado__empreendimento__nome_historico__icontains=busca)|Q(chamado__empreendimento__obra__nome__icontains=busca))
     from django.contrib.auth import get_user_model
     from calendar import monthrange
     # Grade com dias completos, inclusive a borda da primeira/última semana.
@@ -605,7 +755,7 @@ def agenda(request):
     passo=timedelta(days=1 if modo=='dia' else 7 if modo=='semana' else 30)
     anterior_data=(inicio-timedelta(days=1)) if modo=='mes' else base-passo
     proxima_data=(fim+timedelta(days=1)) if modo=='mes' else base+passo
-    return render(request,'pos_obra/agenda.html',{'semanas_calendario':semanas,'data_anterior':anterior_data,'data_proxima':proxima_data,'agendamentos':Paginator(qs,50).get_page(request.GET.get('page')),'inicio':inicio,'fim':fim,'base':base,'modo':modo,'situacao':estado,'responsavel_atual':responsavel,'busca':busca,'situacoes':AgendamentoOS.SITUACOES,'responsaveis':get_user_model().objects.filter(is_active=True,cliente_saari__isnull=True).order_by('first_name','username')})
+    return render(request,'pos_obra/agenda.html',{'pagina_query':pagina_contexto(request),'semanas_calendario':semanas,'data_anterior':anterior_data,'data_proxima':proxima_data,'agendamentos':Paginator(qs,50).get_page(request.GET.get('page')),'inicio':inicio,'fim':fim,'base':base,'modo':modo,'situacao':estado,'responsavel_atual':responsavel,'busca':busca,'situacoes':AgendamentoOS.SITUACOES,'responsaveis':get_user_model().objects.filter(is_active=True,cliente_saari__isnull=True).order_by('first_name','username')})
 
 @interno
 @require_POST
@@ -616,13 +766,17 @@ def alterar_agendamento(request,pk):
     if a.chamado.status in ('CONCLUIDO','CANCELADO'):raise PermissionDenied('OS encerrada.')
     acao=request.POST.get('acao')
     anterior=a.situacao
+    if anterior not in ('PROPOSTO','CONFIRMADO','REAGENDAMENTO'):raise PermissionDenied('Este compromisso já está encerrado.')
     if acao=='REAGENDAR':
-        f=AgendamentoForm(request.POST)
+        from django.contrib.auth import get_user_model
+        raw=request.POST.get('responsavel','')
+        if raw.isdigit():get_user_model().objects.select_for_update().filter(pk=raw).first()
+        f=AgendamentoForm(request.POST,instance=a,auto_id=f'reagendar-{a.pk}-%s')
         if not f.is_valid():
             messages.error(request,' '.join(str(e) for erros in f.errors.values() for e in erros))
-            return redirect(reverse('pos_obra:detalhe',args=[a.chamado_id])+'#agendamentos')
+            return _erro_operacao(request,a.chamado,'form_reagendamento_invalido',f,'agendamentos',reagendamento_id=a.pk)
         a.situacao='SUBSTITUIDO';a.save(update_fields=['situacao'])
-        novo=f.save(commit=False);novo.chamado=a.chamado;novo.criado_por=request.user;novo.save()
+        novo=AgendamentoOS(**{k:v for k,v in f.cleaned_data.items()});novo.chamado=a.chamado;novo.criado_por=request.user;novo.save()
         HistoricoAgendamento.objects.create(agendamento=novo,usuario=request.user,para='PROPOSTO',observacao=f'Reagendamento do compromisso #{a.pk}')
         enfileirar(a.chamado,'REAGENDAMENTO',novo.pk,f'SAARI | Novo horário {a.chamado.numero}',f'Proposta de atendimento para {timezone.localtime(novo.inicio):%d/%m/%Y %H:%M}. Confirme no portal.')
     elif acao in ('CANCELADO','REALIZADO','NAO_REALIZADO'):
@@ -641,7 +795,8 @@ def registrar_tratativa(request,pk):
     if not possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia'):raise PermissionDenied
     c=get_object_or_404(Chamado,pk=pk)
     obs=request.POST.get('observacao','').strip()
-    if len(obs)<5:messages.error(request,'Informe uma tratativa detalhada.');return redirect('pos_obra:detalhe',pk=pk)
+    if len(obs)<5:
+        return _erro_operacao(request,c,'tratativa_erro',{'valor':obs,'mensagem':'Informe uma tratativa com pelo menos 5 caracteres.'},'satisfacao')
     TratativaSatisfacao.objects.create(chamado=c,responsavel=request.user,observacao=obs[:5000])
     registro(c,request.user,c.status,'Tratativa administrativa registrada para avaliação do cliente.')
     return redirect(reverse('pos_obra:detalhe',args=[pk])+'#satisfacao')
@@ -664,18 +819,7 @@ def comprovante_aceite(request,pk):
     with a.documento.arquivo.open('rb') as arquivo:original=arquivo.read()
     if hashlib.sha256(original).hexdigest()!=a.documento.sha256:raise Http404('Falha na verificação de integridade do documento.')
     writer=PdfWriter();writer.append(PdfReader(BytesIO(original)))
-    bio=BytesIO();pdf=canvas.Canvas(bio,pagesize=A4);w,h=A4
-    pdf.setFont('Helvetica-Bold',15);pdf.drawString(48,h-55,'SAARI ERP | Termo de aceite da OS')
-    pdf.setFont('Helvetica',10)
-    linhas=[('Ordem de Serviço',a.documento.chamado.numero),('Documento',f'{a.documento.tipo} - versão {a.documento.versao}'),('Resultado',a.get_resultado_display()),('Signatário',a.signatario),('Representação declarada',a.representacao),('Registrado em',timezone.localtime(a.criado_em).strftime('%d/%m/%Y %H:%M')),('SHA-256 do PDF original',a.documento.sha256)]
-    y=h-92
-    for rotulo,valor in linhas:
-        pdf.setFont('Helvetica-Bold',9);pdf.drawString(48,y,rotulo+':');y-=16
-        pdf.setFont('Helvetica',9);pdf.drawString(48,y,str(valor)[:100]);y-=28
-    if a.assinatura:
-        with a.assinatura.open('rb') as arq:imagem=arq.read()
-        pdf.drawImage(ImageReader(BytesIO(imagem)),48,y-95,width=320,height=90,preserveAspectRatio=True,anchor='sw',mask='auto');y-=110
-    pdf.setFont('Helvetica',8)
-    pdf.drawString(48,max(60,y-22),'Registro eletrônico simples: autenticidade depende da identificação e das evidências de auditoria.')
-    pdf.save();bio.seek(0);writer.append(PdfReader(bio));resultado=BytesIO();writer.write(resultado)
+    from ..relatorios import gerar_termo_aceite
+    writer.append(PdfReader(BytesIO(gerar_termo_aceite(a))))
+    resultado=BytesIO();writer.write(resultado)
     return HttpResponse(resultado.getvalue(),content_type='application/pdf',headers={'Content-Disposition':f'attachment; filename="{a.documento.chamado.numero}-aceite-v{a.documento.versao}.pdf"'})

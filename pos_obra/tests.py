@@ -49,7 +49,7 @@ class FluxoPosObraTests(TestCase):
         return self.client.post(reverse('pos_obra:detalhe',args=[c.pk]),{'etapa':'TRIAGEM','status':status,'prioridade':'NORMAL'})
     def test_status_anterior_e_historico_publico(self):
         self.login_interno();c=self.chamado()
-        self.triagem(c,'TRIAGEM');c.refresh_from_db()
+        self.client.post(reverse('pos_obra:detalhe',args=[c.pk]),{'etapa':'TRIAGEM','prioridade':'NORMAL','responsavel':self.interno.pk,'triagem':'Parecer técnico'});c.refresh_from_db()
         self.assertEqual(c.status,'TRIAGEM')
         h=c.historico.get();self.assertEqual(h.status_anterior,'ABERTO');self.assertTrue(h.publico)
     def test_nao_reabre_concluido_por_triagem(self):
@@ -58,9 +58,9 @@ class FluxoPosObraTests(TestCase):
     def test_nao_reabre_cancelado_por_triagem(self):
         self.login_interno();c=self.chamado(status='CANCELADO')
         self.triagem(c,'TRIAGEM');c.refresh_from_db();self.assertEqual(c.status,'CANCELADO')
-    def test_cancelamento_e_registrado(self):
+    def test_triagem_nao_aceita_status_arbitrario(self):
         self.login_interno();c=self.chamado()
-        self.triagem(c,'CANCELADO');c.refresh_from_db();self.assertEqual(c.status,'CANCELADO')
+        self.triagem(c,'CANCELADO');c.refresh_from_db();self.assertEqual(c.status,'ABERTO')
     def test_conclusao_exige_fluxo_de_finalizacao(self):
         self.login_interno();c=self.chamado()
         self.triagem(c,'CONCLUIDO');c.refresh_from_db();self.assertEqual(c.status,'ABERTO')
@@ -73,7 +73,7 @@ class FluxoPosObraTests(TestCase):
     def test_download_publico_e_privado(self):
         c=self.chamado();a=AnexoChamado.objects.create(chamado=c,etapa='ABERTURA',publico=True,arquivo=SimpleUploadedFile('teste.pdf',b'%PDF-test'))
         self.login_cliente();response=self.client.get(reverse('pos_obra:anexo',args=[a.pk]))
-        self.assertEqual(response.status_code,200);response.close()
+        self.assertEqual(response.status_code,200);self.assertTrue(b''.join(response.streaming_content).startswith(b'%PDF'))
         a.publico=False;a.save()
         self.assertEqual(self.client.get(reverse('pos_obra:anexo',args=[a.pk])).status_code,403)
     def test_links_pdf_somente_apos_conclusao(self):
@@ -92,7 +92,7 @@ class FluxoPosObraTests(TestCase):
         self.assertEqual(r.context['total_chamados'],51);self.assertContains(r,'Próxima')
     def test_data_edicao_iso(self):
         from pos_obra.forms import AtendimentoForm
-        c=self.chamado(data_vistoria=date(2026,10,14))
+        c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,14))
         self.assertIn('2026-10-14',str(AtendimentoForm(instance=c)['data_vistoria']))
     def test_portal_upload_abertura(self):
         self.login_cliente()
@@ -108,7 +108,7 @@ class FluxoPosObraTests(TestCase):
         self.client.post(reverse('pos_obra:finalizar',args=[c.pk]));c.refresh_from_db();self.assertEqual(c.status,'ABERTO')
     def test_finaliza_com_via_e_confirmacao(self):
         self.login_interno()
-        c=self.chamado(data_vistoria=date(2026,10,10),diagnostico='Diagnóstico',data_execucao=date(2026,10,11),execucao='Serviço executado',conclusao='Problema corrigido')
+        c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,10),diagnostico='Diagnóstico',data_execucao=date(2026,10,11),execucao='Serviço executado',conclusao='Problema corrigido')
         AnexoChamado.objects.create(chamado=c,etapa='FINALIZACAO',arquivo=SimpleUploadedFile('assinada.pdf',b'%PDF-test'))
         url=reverse('pos_obra:finalizar',args=[c.pk])
         self.client.post(url);c.refresh_from_db();self.assertEqual(c.status,'ABERTO')
@@ -135,13 +135,13 @@ class FluxoPosObraTests(TestCase):
         self.assertEqual(self.client.post(reverse('pos_obra:upload',args=[c.pk]),{'etapa':'VISTORIA','arquivo':SimpleUploadedFile('a.pdf',b'%PDF-test')}).status_code,403)
     def test_quantidades_material_preservam_preco(self):
         from decimal import Decimal
-        self.login_interno();c=self.chamado()
+        self.login_interno();c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,10),diagnostico='Vistoria')
         m=MaterialOS.objects.create(chamado=c,descricao='Material',previsto=1,utilizado=0,custo_unitario='12.3456')
         url=reverse('pos_obra:editar_material',args=[c.pk,m.pk])
         self.client.post(url,{'previsto':'2.500','utilizado':'1.200'})
-        m.refresh_from_db();self.assertEqual(m.utilizado,Decimal('1.2'));self.assertEqual(m.custo_unitario,Decimal('12.3456'))
+        m.refresh_from_db();self.assertEqual(m.utilizado,Decimal('0'));self.assertEqual(m.custo_unitario,Decimal('12.3456'))
         self.client.post(url,{'previsto':'-1','utilizado':'-2'})
-        m.refresh_from_db();self.assertEqual(m.utilizado,Decimal('1.2'))
+        m.refresh_from_db();self.assertEqual(m.utilizado,Decimal('0'))
     def test_materiais_encerrados_bloqueados(self):
         self.login_interno();c=self.chamado(status='CONCLUIDO')
         m=MaterialOS.objects.create(chamado=c,descricao='Material',previsto=1)
@@ -154,7 +154,7 @@ class FluxoPosObraTests(TestCase):
         r=self.client.get(reverse('pos_obra:detalhe',args=[c.pk]))
         self.assertNotContains(r,'Salvar triagem');self.assertNotContains(r,'Adicionar material</button>')
     def test_salvar_execucao_preserva_vistoria(self):
-        self.login_interno();c=self.chamado(data_vistoria=date(2026,10,10),diagnostico='Diagnóstico')
+        self.login_interno();c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,10),diagnostico='Diagnóstico')
         self.client.post(reverse('pos_obra:detalhe',args=[c.pk]),{'etapa':'EXECUCAO','data_execucao':'2026-10-11','execucao':'Concluído','materiais_observacao':'Sem sobras'})
         c.refresh_from_db();self.assertEqual(c.data_vistoria,date(2026,10,10));self.assertEqual(c.materiais_observacao,'Sem sobras')
     def test_pdf_concluido_e_bloqueio_alheio(self):
@@ -214,7 +214,7 @@ class IntegracaoCadastrosPosObraTests(TestCase):
         self.client.force_login(self.gestor)
         response = self.client.post(reverse('cadastros:pos_obra_novo', args=['clientes']),
             {'nome': 'Cliente incorreto', 'usuario': self.gestor.pk, 'ativo': 'on', 'portal_habilitado': 'on'})
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)
         self.assertFalse(Cliente.objects.filter(usuario=self.gestor).exists())
         from pos_obra.access import acesso_interno
         self.assertTrue(acesso_interno(self.gestor))
@@ -227,13 +227,13 @@ class IntegracaoCadastrosPosObraTests(TestCase):
         with self.assertRaises(ValidationError):
             Cliente(nome='Cliente incorreto', usuario=user).full_clean()
 
-    def test_cadastro_aceita_conta_exclusiva_de_portal(self):
+    def test_cadastro_independente_removido(self):
         self.client.force_login(self.gestor)
         user = get_user_model().objects.create_user(username='novo_portal_integracao')
         response = self.client.post(reverse('cadastros:pos_obra_novo', args=['clientes']),
             {'nome': 'Cliente válido', 'usuario': user.pk, 'ativo': 'on', 'portal_habilitado': 'on'})
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(Cliente.objects.filter(usuario=user).exists())
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Cliente.objects.filter(usuario=user).exists())
 
     def test_banco_rejeita_vinculo_duplicado(self):
         from django.db import IntegrityError, transaction
