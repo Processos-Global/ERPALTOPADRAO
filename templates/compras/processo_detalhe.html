@@ -2280,8 +2280,9 @@
                       <th class="qty-col"><span class="pc-head-label">Qtd.</span></th>
                       {% for cotacao in cotacoes %}
                         <th>
-                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk|unlocalize }}" data-supplier-name="{{ cotacao.fornecedor.nome_exibicao|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0 }}" data-supplier-discount="{{ cotacao.desconto_proposta|default:0 }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
+                          <div class="pc-approval-supplier" data-approval-supplier data-select-supplier-column data-supplier-id="{{ cotacao.fornecedor.pk|unlocalize }}" data-supplier-name="{{ cotacao.fornecedor.nome_exibicao|escape }}" data-supplier-freight="{{ cotacao.frete_aprovacao|default:0|unlocalize }}" data-supplier-discount="{{ cotacao.desconto_proposta|default:0|unlocalize }}" role="button" tabindex="0" title="Selecionar todos os itens elegíveis deste fornecedor">
                             <strong class="pc-approval-supplier__name">{{ cotacao.fornecedor.nome_exibicao }}</strong>
+                            <small style="display:block;margin-top:5px;font-size:11px;font-weight:700;color:#66534c">Frete: R$ {{ cotacao.frete_aprovacao|floatformat:2 }}</small>
                             {% if cotacao.enviada_aprovacao_em %}
                               <button type="submit" class="cp-btn cp-btn--sm pc-approval-supplier__return" data-return-negotiation formaction="{% url 'compras:devolver_cotacao_negociacao' processo.pk cotacao.pk %}" formmethod="post">Voltar à negociação</button>
                             {% endif %}

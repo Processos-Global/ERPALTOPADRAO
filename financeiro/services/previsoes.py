@@ -37,6 +37,10 @@ def _especificacao_pedido(pedido):
         if item.especificacao:
             linha += f" · Especificação: {item.especificacao.strip()}"
         linhas.append(linha)
+    linhas.append(f"Subtotal dos itens: R$ {pedido.subtotal:.2f}")
+    linhas.append(f"Descontos: R$ {pedido.descontos:.2f}")
+    linhas.append(f"Frete incluso no total: R$ {pedido.frete:.2f}")
+    linhas.append(f"Total do pedido (com frete): R$ {pedido.valor_total:.2f}")
     if pedido.observacoes:
         linhas.append(f"Observações do pedido: {pedido.observacoes.strip()}")
     return "\n".join(linhas)
