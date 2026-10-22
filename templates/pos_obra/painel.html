@@ -1,3 +1,203 @@
-{% extends 'pos_obra/_base.html' %}{% block po_content %}
-<div class="po-grid"><a class="po-stat" href="{% url 'pos_obra:lista' %}"><span class="po-stat-label">Chamados registrados</span><div class="po-stat-value">{{ total }}</div></a><section class="po-stat"><span class="po-stat-label">Em andamento</span><div class="po-stat-value">{{ abertos }}</div></section><a class="po-stat" href="{% url 'pos_obra:lista' %}?status=CONCLUIDO"><span class="po-stat-label">Concluídos</span><div class="po-stat-value">{{ concluidos }}</div></a><section class="po-stat"><span class="po-stat-label">Satisfação · Atendimento</span><div class="po-stat-value">{{ satisfacao|floatformat:1|default:'—' }} <small>/ 5</small></div></section></div>
-<section class="po-card"><div class="po-card__head"><div><h2>Próximos compromissos</h2><p>Até 6 compromissos ativos, incluindo propostas que aguardam confirmação.</p></div><a class="po-button" href="{% url 'pos_obra:agenda' %}">Abrir agenda</a></div>{% for a in compromissos %}<div class="po-row"><div><a href="{% url 'pos_obra:detalhe' a.chamado.pk %}#{% if a.tipo == 'EXECUCAO' or a.tipo == 'RETORNO' or a.tipo == 'COMPLEMENTO' %}execucao{% else %}vistoria{% endif %}"><strong>{{ a.inicio|date:'d/m · H:i' }} · {{ a.chamado.numero }}</strong></a><small>{{ a.chamado.cliente.nome }} · {% firstof a.responsavel.get_full_name a.responsavel.username 'Não atribuído' %}</small></div><span class="po-status">{{ a.get_situacao_display }}</span></div>{% empty %}<p class="po-empty">Nenhum compromisso futuro. Proponha um horário na OS quando necessário.</p>{% endfor %}</section><section class="po-card"><div class="po-card__head"><div><h2>Atendimentos recentes</h2><p>Chamados mais recentes. Abra uma OS para ver a próxima ação e os registros técnicos.</p></div><a class="po-button" href="{% url 'pos_obra:lista' %}">Ver todas as OS →</a></div><div class="po-table-wrap"><table class="po-table po-table-responsive"><thead><tr><th>OS</th><th>Imóvel</th><th>Cliente</th><th>Status</th><th>Abertura</th></tr></thead><tbody>{% for c in chamados %}<tr><td data-label="OS"><a href="{% url 'pos_obra:detalhe' c.pk %}">{{ c.numero }}</a></td><td data-label="Imóvel">{{ c.empreendimento }}</td><td data-label="Cliente">{{ c.cliente.nome }}</td><td data-label="Status"><span class="po-status" data-status="{{ c.status }}">{{ c.get_status_display }}</span></td><td data-label="Abertura">{{ c.criado_em|date:'d/m/Y' }}</td></tr>{% empty %}<tr><td colspan="5" class="po-empty">Nenhum chamado registrado.</td></tr>{% endfor %}</tbody></table></div></section>{% endblock %}
+{% extends 'pos_obra/_base.html' %}
+{% block po_content %}
+<div class="po-management po-management--painel po-dashboard">
+    {% include "pos_obra/_management_styles.html" %}
+
+    <style>
+        /* Ajustes exclusivos da visão geral. Não alteram as demais telas do Pós-Obra. */
+        .po-dashboard { --po-dash-border: #e5e9ef; --po-dash-muted: #667085; }
+        .po-dashboard .po-management-intro {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 0 0 16px; margin: 0 0 18px;
+            border-bottom: 1px solid var(--po-dash-border); min-height: 0;
+        }
+        .po-dashboard .po-management-intro h2 {
+            margin: 0; font-size: clamp(20px, 2vw, 25px); font-weight: 750;
+            line-height: 1.25; letter-spacing: -.025em;
+        }
+        .po-dashboard .po-management-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .po-dashboard .po-button {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 34px; padding: 7px 12px; font-size: 12px;
+            font-weight: 650; text-decoration: none; white-space: nowrap;
+        }
+        .po-dashboard .po-grid {
+            display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px; margin: 0 0 16px;
+        }
+        .po-dashboard .po-stat {
+            display: flex; flex-direction: column; justify-content: center;
+            gap: 7px; padding: 16px 18px; min-height: 102px;
+            margin: 0; text-decoration: none; border: 1px solid var(--po-dash-border);
+            border-radius: 10px; background: #fff; box-shadow: none;
+        }
+        .po-dashboard a.po-stat:hover { border-color: #b8c4d2; background: #fafbfd; }
+        .po-dashboard .po-stat-label { font-size: 12px; font-weight: 650; color: var(--po-dash-muted); line-height: 1.35; }
+        .po-dashboard .po-stat-value { font-size: clamp(24px, 2.5vw, 32px); line-height: 1; font-weight: 750; letter-spacing: -.035em; }
+        .po-dashboard .po-stat-value small { font-size: 13px; font-weight: 500; color: var(--po-dash-muted); }
+        .po-dashboard .po-dashboard-content { display: grid; grid-template-columns: minmax(290px, .9fr) minmax(0, 1.7fr); gap: 14px; align-items: start; }
+        .po-dashboard .po-card {
+            margin: 0; padding: 0; min-width: 0; border: 1px solid var(--po-dash-border);
+            border-radius: 10px; background: #fff; box-shadow: none; overflow: hidden;
+        }
+        .po-dashboard .po-card__head {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; padding: 14px 16px; margin: 0;
+            border-bottom: 1px solid var(--po-dash-border);
+        }
+        .po-dashboard .po-card__head h2 { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 750; }
+        .po-dashboard .po-card__head .po-button { min-height: 30px; padding: 5px 10px; }
+        .po-dashboard .po-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; margin: 0; border-bottom: 1px solid #edf0f3; }
+        .po-dashboard .po-row:last-child { border-bottom: 0; }
+        .po-dashboard .po-row > div { min-width: 0; }
+        .po-dashboard .po-row a { display: block; text-decoration: none; line-height: 1.4; }
+        .po-dashboard .po-row strong { font-size: 12px; font-weight: 700; }
+        .po-dashboard .po-row small { display: block; margin-top: 3px; color: var(--po-dash-muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+        .po-dashboard .po-status { display: inline-block; flex-shrink: 0; max-width: 100%; font-size: 11px; }
+        .po-dashboard .po-table-wrap { overflow-x: auto; margin: 0; }
+        .po-dashboard .po-table { width: 100%; margin: 0; border-collapse: collapse; font-size: 12px; }
+        .po-dashboard .po-table th { padding: 11px 12px; text-align: left; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .po-dashboard .po-table td { padding: 11px 12px; vertical-align: middle; border-top: 1px solid #edf0f3; }
+        .po-dashboard .po-table a { font-weight: 700; text-decoration: none; }
+        .po-dashboard .po-table td:nth-child(2), .po-dashboard .po-table td:nth-child(3) { overflow-wrap: anywhere; }
+        .po-dashboard .po-empty { margin: 0; padding: 24px 16px; text-align: center; color: var(--po-dash-muted); font-size: 12px; }
+        @media (max-width: 1150px) {
+            .po-dashboard .po-dashboard-content { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 720px) {
+            .po-dashboard .po-management-intro { align-items: flex-start; flex-direction: column; gap: 12px; }
+            .po-dashboard .po-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+            .po-dashboard .po-stat { padding: 13px; min-height: 88px; }
+            .po-dashboard .po-card__head { padding: 12px; }
+            .po-dashboard .po-row { padding: 11px 12px; }
+            .po-dashboard .po-table th, .po-dashboard .po-table td { padding: 10px; }
+        }
+        @media (max-width: 390px) {
+            .po-dashboard .po-management-actions { width: 100%; }
+            .po-dashboard .po-management-actions .po-button { flex: 1 1 auto; }
+        }
+
+        /* Card da navegação compartilhada do Pós-Obra. */
+        .po-module-nav-card {
+            display: flex !important; flex-wrap: wrap; align-items: center;
+            gap: 6px !important; padding: 10px 12px !important;
+            margin: 0 0 14px !important; background: #fff !important;
+            border: 1px solid #e5e9ef !important; border-radius: 10px !important;
+            box-shadow: none !important; width: 100%; box-sizing: border-box;
+            min-height: 0 !important;
+        }
+        .po-module-nav-card > a { margin: 0 !important; }
+        @media (max-width: 720px) {
+            .po-module-nav-card { gap: 4px !important; padding: 8px !important; }
+        }
+    </style>
+
+
+    <div class="po-grid" aria-label="Indicadores do pós-obra">
+        <a class="po-stat" href="{% url 'pos_obra:lista' %}">
+            <span class="po-stat-label">Total de chamados</span>
+            <span class="po-stat-value">{{ total }}</span>
+        </a>
+        <section class="po-stat">
+            <span class="po-stat-label">Em andamento</span>
+            <span class="po-stat-value">{{ abertos }}</span>
+        </section>
+        <a class="po-stat" href="{% url 'pos_obra:lista' %}?status=CONCLUIDO">
+            <span class="po-stat-label">Concluídos</span>
+            <span class="po-stat-value">{{ concluidos }}</span>
+        </a>
+        <section class="po-stat">
+            <span class="po-stat-label">Satisfação</span>
+            <span class="po-stat-value">{{ satisfacao|floatformat:1|default:'—' }} <small>/ 5</small></span>
+        </section>
+    </div>
+
+    <div class="po-dashboard-content">
+        <section class="po-card" aria-labelledby="po-proximos-title">
+            <div class="po-card__head">
+                <h2 id="po-proximos-title">Próximos compromissos</h2>
+                <a class="po-button" href="{% url 'pos_obra:agenda' %}">Agenda →</a>
+            </div>
+            {% for a in compromissos %}
+                <div class="po-row">
+                    <div>
+                        <a href="{% url 'pos_obra:detalhe' a.chamado.pk %}#{% if a.tipo == 'EXECUCAO' or a.tipo == 'RETORNO' or a.tipo == 'COMPLEMENTO' %}execucao{% else %}vistoria{% endif %}">
+                            <strong>{{ a.inicio|date:'d/m · H:i' }} · {{ a.chamado.numero }}</strong>
+                        </a>
+                        <small>{{ a.chamado.cliente.nome }} · {% firstof a.responsavel.get_full_name a.responsavel.username 'Não atribuído' %}</small>
+                    </div>
+                    <span class="po-status">{{ a.get_situacao_display }}</span>
+                </div>
+            {% empty %}
+                <p class="po-empty">Nenhum compromisso agendado.</p>
+            {% endfor %}
+        </section>
+
+        <section class="po-card" aria-labelledby="po-recentes-title">
+            <div class="po-card__head">
+                <h2 id="po-recentes-title">Atendimentos recentes</h2>
+                <a class="po-button" href="{% url 'pos_obra:lista' %}">Ver todas →</a>
+            </div>
+            <div class="po-table-wrap">
+                <table class="po-table po-table-responsive">
+                    <thead>
+                        <tr>
+                            <th scope="col">OS</th>
+                            <th scope="col">Imóvel</th>
+                            <th scope="col">Cliente</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Abertura</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in chamados %}
+                            <tr>
+                                <td data-label="OS"><a href="{% url 'pos_obra:detalhe' c.pk %}">{{ c.numero }}</a></td>
+                                <td data-label="Imóvel">{{ c.empreendimento }}</td>
+                                <td data-label="Cliente">{{ c.cliente.nome }}</td>
+                                <td data-label="Status"><span class="po-status" data-status="{{ c.status }}">{{ c.get_status_display }}</span></td>
+                                <td data-label="Abertura">{{ c.criado_em|date:'d/m/Y' }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="po-empty">Nenhum chamado registrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+    <script>
+        // Aplica o card à barra já existente no _base.html,
+        // sem duplicar links nem alterar suas URLs ou o estado ativo.
+        (function () {
+            function organizarNavegacao() {
+                const nomes = [
+                    'Visão geral', 'Ordens de serviço',
+                    'Agenda técnica', 'Quadro de atendimento'
+                ];
+                const normalizar = texto => (texto || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+                const links = Array.from(document.querySelectorAll('a'));
+                const itens = nomes.map(nome => links.find(a => normalizar(a.textContent) === normalizar(nome)));
+                if (itens.some(item => !item)) return;
+
+                let barra = itens[0].parentElement;
+                while (barra && barra !== document.body) {
+                    if (itens.every(item => barra.contains(item))) {
+                        const quantidadeLinks = barra.querySelectorAll('a').length;
+                        if (quantidadeLinks <= 8) break;
+                    }
+                    barra = barra.parentElement;
+                }
+                if (!barra || barra === document.body) return;
+                barra.classList.add('po-module-nav-card');
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', organizarNavegacao);
+            } else {
+                organizarNavegacao();
+            }
+        })();
+    </script>
+{% endblock %}

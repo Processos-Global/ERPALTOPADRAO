@@ -1,7 +1,7 @@
 {% extends 'pos_obra/_base.html' %}
 {% block po_heading %}{% endblock %}{% block po_navigation %}{% endblock %}
 {% block po_content %}
-<div class="po-detail-breadcrumb"><a href="{% url 'pos_obra:painel' %}">Operações</a><span>/</span><a href="{% url 'pos_obra:painel' %}">Pós-Obra</a><span>/</span><a href="{% url 'pos_obra:lista' %}">Ordens de serviço</a></div><header class="po-os-header po2-os-header">
+<header class="po-os-header po2-os-header">
   <div class="po-os-title">
     <div class="po-os-identification">
       <a class="po-back" href="{% url 'pos_obra:lista' %}">← Ordens de serviço</a>

@@ -60,8 +60,8 @@ html body .po-design-v2 :is(h1,h2,h3,h4){font-family:Inter,Arial,sans-serif!impo
 .po-design-v2 .po-os-facts .po-next-fact{background:#f6efe4}
 .po-design-v2 .po-next-fact dt{color:#9a8755}
 .po-design-v2 .po-workbench{display:block;min-width:0;margin-bottom:18px}
-.po-design-v2 .po-figma-stages{display:block;padding:7px;margin-bottom:16px;border:1px solid var(--po-line);border-radius:10px;background:#fff;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#c9c0ab transparent;box-shadow:0 5px 18px #3d312b06}
-.po-design-v2 .os-tabs{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:3px;min-width:860px}
+.po-design-v2 .po-figma-stages{display:block;width:100%;max-width:100%;padding:7px;margin-bottom:16px;border:1px solid var(--po-line);border-radius:10px;background:#fff;overflow-x:hidden;box-shadow:0 5px 18px #3d312b06}
+.po-design-v2 .os-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;width:100%;min-width:0}
 .po-design-v2 .os-tab{display:flex;align-items:center;gap:8px;position:relative;min-width:0;min-height:51px;border:1px solid transparent;border-radius:6px;padding:8px 10px;background:transparent;box-shadow:none;text-align:left;color:var(--po-ink);cursor:pointer;font-family:inherit}
 .po-design-v2 .os-tab:not(:last-child)::after{content:'';position:absolute;left:calc(100% - 4px);top:50%;width:15px;height:1px;background:#eae7dd;z-index:1}
 .po-design-v2 .os-tab[aria-selected=true]{border-color:#d9d3c5;background:#f7f3e9;box-shadow:0 1px 3px #3a2c2210}
@@ -206,4 +206,45 @@ html[data-theme=dark] body.app-body .po-shell.po-interno.po-design-v2 :is(input:
 @media(max-width:600px){.po-design-v2 .po-figma-stages{display:none}.po-design-v2 .po-mobile-selector{display:grid;gap:7px;font-size:11px;font-weight:500;padding:12px 14px;border:1px solid var(--po-line);border-radius:8px;background:#fff;margin-bottom:14px}.po-design-v2 .po-os-facts{grid-template-columns:1fr}.po-design-v2 .po-os-facts>div{border-right:0;border-bottom:1px solid var(--po-line)}.po-design-v2 .po-os-facts .po-next-fact{border-top:0;border-bottom:0}.po-design-v2 .po-form-grid,.po-design-v2 .po-grid-three,.po-design-v2 .po-sign-grid,.po-design-v2 .po-material-fields{grid-template-columns:1fr}.po-design-v2 .os-section-head{align-items:flex-start;flex-wrap:wrap}.po-design-v2 .os-actions{padding:14px;gap:8px}.po-design-v2 .os-actions .po-help{flex-basis:100%;max-width:none}.po-design-v2 .os-actions .po-button{flex:1}.po-design-v2 .po-button{min-height:42px;font-size:11px}.po-design-v2 .po-table-responsive{min-width:0}.po-design-v2 .po-meta{grid-template-columns:1fr}.po-design-v2 .po-toolbar>label{min-width:100%}html body .po-shell.po-interno.po-design-v2 :is(input:not([type=checkbox]):not([type=radio]),select,textarea){font-size:16px!important}.po-design-v2 .po-sign-final{padding:14px;margin:12px}.po-design-v2 .po-appointment-actions{display:block}.po-design-v2 .po-appointment-actions>details{margin-top:10px}}
 @media(prefers-reduced-motion:reduce){.po-design-v2 *{transition:none!important;scroll-behavior:auto!important}}
 @media print{body:has(.po-design-v2) :is(.sidebar,.topbar,.page-transition,.po-nav,.po-os-tools,.po-figma-stages,.po-mobile-selector,.po-figma-context,.po-os-history,.po-upload,.os-actions,.po-detail-breadcrumb){display:none!important}body:has(.po-design-v2) :is(.app-content,.page-content){margin:0!important;padding:0!important;width:100%!important}.po-shell.po-interno.po-design-v2{padding:0}.po-design-v2 .po-figma-layout{display:block}.po-design-v2 .po2-block{break-inside:avoid}.po-design-v2 .po-os-facts{grid-template-columns:repeat(3,minmax(0,1fr))}.po-design-v2 .po-stage-content,.po-design-v2 .po-os-header{box-shadow:none}}
+
+/* Ajustes de hierarquia visual SAARI — 22/10/2026 */
+.po-shell.po-interno.po-design-v2{padding-top:10px}
+.po-design-v2 .po-detail-breadcrumb{display:none!important}
+.po-design-v2 .po-os-header{border-color:#d9d0bd;box-shadow:0 8px 25px #30251a0b;margin-bottom:12px}
+.po-design-v2 .po-os-title{padding:16px 22px 15px;align-items:center}
+.po-design-v2 .po-back{display:inline-flex;margin-bottom:4px;font-size:11px;font-weight:600;color:#8b7548}
+.po-design-v2 .po-os-title-line{gap:10px;margin:3px 0 6px}
+.po-design-v2 .po-os-title h1{font-size:clamp(21px,2vw,27px);font-weight:750;letter-spacing:-.035em;line-height:1.18;color:#29241f}
+.po-design-v2 .po-os-title p{font-size:12px;line-height:1.5;color:#635b50}
+.po-design-v2 .po-os-facts{grid-template-columns:1fr 1.25fr 1fr 1.65fr;background:#faf9f6}
+.po-design-v2 .po-os-facts>div{padding:15px 19px;border-right-color:#e4ddd1}
+.po-design-v2 .po-os-facts dt{font-size:10px;font-weight:700;letter-spacing:.055em;color:#82705a;margin-bottom:7px}
+.po-design-v2 .po-os-facts dd{font-size:13px;font-weight:650;line-height:1.4;color:#2f2b26}
+.po-design-v2 .po-os-facts dd small{display:block;margin-top:4px;font-size:10px;font-weight:500}
+.po-design-v2 .po-os-facts .po-next-fact{background:#f5eddf;border-left:3px solid #a58a56}
+.po-design-v2 .po-next-fact dt{color:#806537}
+.po-design-v2 .po2-block{border-color:#ddd5c6;box-shadow:0 2px 7px #48351b08}
+.po-design-v2 .po2-block-heading{min-height:58px;padding:14px 18px;gap:12px;background:#f7f5f0;border-bottom-color:#ded6c7;border-left:4px solid #ab905d}
+.po-design-v2 .po2-block-heading h3{font-size:16px;font-weight:750;letter-spacing:-.015em;line-height:1.3;color:#302921}
+.po-design-v2 .po2-block-heading p{display:none!important}
+.po-design-v2 .po2-index{width:32px;height:32px;flex-basis:32px;font-size:11px;font-weight:700;color:#886e3c;border-color:#ded2bb}
+.po-design-v2 .os-section-head{padding:18px 22px 16px}
+.po-design-v2 .os-section-head h2{font-size:23px;font-weight:750;letter-spacing:-.025em;margin:3px 0 0}
+.po-design-v2 .os-section-head p:not(.po-eyebrow){display:none!important}
+.po-design-v2 .po-card__head h2{font-size:18px;font-weight:700;color:#302921}
+.po-design-v2 .po-card__head>div>p{display:none!important}
+@media(max-width:1250px){.po-design-v2 .po-os-facts{grid-template-columns:repeat(3,minmax(0,1fr))}.po-design-v2 .po-os-facts .po-next-fact{grid-column:1/-1}}
+@media(max-width:700px){.po-shell.po-interno.po-design-v2{padding-top:8px}.po-design-v2 .po-os-title{padding:15px}.po-design-v2 .po-os-title h1{font-size:21px}.po-design-v2 .po-os-facts>div{padding:13px 15px}.po-design-v2 .po2-block-heading{padding:12px 14px}.po-design-v2 .po2-block-heading h3{font-size:15px}}
+@media(max-width:600px){.po-design-v2 .po-os-facts{grid-template-columns:1fr}.po-design-v2 .po-os-facts .po-next-fact{grid-column:auto}}
+/* Etapas: conteúdo se ajusta à coluna sem gerar rolagem horizontal. */
+.po-design-v2 .os-tab{width:100%;max-width:100%;min-width:0}
+.po-design-v2 .os-tab strong,.po-design-v2 .os-tab small{overflow-wrap:anywhere}
+@media(max-width:900px) and (min-width:601px){
+  .po-design-v2 .po-figma-stages{padding:5px}
+  .po-design-v2 .os-tabs{gap:2px}
+  .po-design-v2 .os-tab{gap:5px;padding:7px 5px}
+  .po-design-v2 .po-stage-number{flex-basis:23px;width:23px;height:23px}
+  .po-design-v2 .os-tab strong{font-size:9px}
+  .po-design-v2 .os-tab small{font-size:8px}
+}
 </style>
