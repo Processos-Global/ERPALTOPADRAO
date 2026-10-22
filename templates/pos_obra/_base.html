@@ -2,22 +2,21 @@
 {% load static pos_obra_ui %}
 {% block title %}Pós-Obra | SAARI ERP{% endblock %}
 {% block page_name %}Pós-Obra{% endblock %}
-{% block extra_css %}{{ block.super }}{% include 'pos_obra/_styles.html' %}{% include 'pos_obra/_internal_styles.html' %}{% endblock %}
-{% block content %}
-{% permissoes_ui as ui_permissions %}<div class="po-shell po-interno">
-{% block po_heading %}<header class="po-head"><div><span class="po-eyebrow">Módulos / Assistência técnica</span><h1>Pós-Obra</h1><p>Atendimentos, garantias e ordens de serviço.</p></div>{% if ui_permissions.criar %}<a class="po-button primary" href="{% url 'pos_obra:novo' %}">+ Novo chamado</a>{% endif %}</header>{% endblock %}
-<nav class="po-nav" aria-label="Pós-Obra">
+{% block extra_css %}{{ block.super }}{% include 'pos_obra/_styles.html' %}<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">{% endblock %}
+{% block content %}{% include 'pos_obra/_internal_styles.html' %}
+{% permissoes_ui as ui_permissions %}<div class="po-shell po-interno po-design-v2" data-ui-version="pos-obra-figma-v2">
+{% block po_heading %}<header class="po-head po-head-card"><div><span class="po-eyebrow">Operações / Assistência técnica</span><h1>Pós-Obra</h1><p>Acompanhe cada atendimento, da solicitação à satisfação do cliente.</p></div>{% if ui_permissions.criar %}<a class="po-button primary" href="{% url 'pos_obra:novo' %}">+ Novo chamado</a>{% endif %}</header>{% endblock %}
+{% block po_navigation %}<nav class="po-nav" aria-label="Pós-Obra">
 <a href="{% url 'pos_obra:painel' %}" {% if request.resolver_match.url_name == 'painel' %}aria-current="page"{% endif %}>Visão geral</a>
 <a href="{% url 'pos_obra:lista' %}" {% if request.resolver_match.url_name == 'lista' or request.resolver_match.url_name == 'detalhe' %}aria-current="page"{% endif %}>Ordens de serviço</a>
 <a href="{% url 'pos_obra:agenda' %}" {% if request.resolver_match.url_name == 'agenda' %}aria-current="page"{% endif %}>Agenda técnica</a>
 <a href="{% url 'pos_obra:kanban' %}" {% if request.resolver_match.url_name == 'kanban' %}aria-current="page"{% endif %}>Quadro de atendimento</a>
 
 
-</nav>
+</nav>{% endblock %}
 
-<details class="po-context-links"><summary>Cadastros de apoio</summary><div class="po-actions"><a href="{% url 'usuarios:lista_usuarios' %}">Usuários e clientes</a><a href="{% url 'cadastros:pos_obra_lista' 'empreendimentos' %}">Obras históricas</a><a href="{% url 'pos_obra:cadastros' 'categorias' %}">Catálogo de ocorrências</a></div></details>
 {% block po_content %}{% endblock %}
-<noscript><style>.po-interno .os-panel[hidden]{display:block!important}.po-interno .po-stage-nav,.po-interno .po-workspace-shortcuts{display:none!important}</style><p class="po-help">Sem JavaScript, as etapas são exibidas em sequência. A assinatura desenhada requer JavaScript; a via física pode ser anexada na finalização.</p></noscript>
+<noscript><style>.po-interno .os-panel[hidden]{display:block!important}.po-interno .po-stage-nav,.po-interno .po-workspace-shortcuts{display:none!important}</style><p class="po-help">Sem JavaScript, as etapas são exibidas em sequência. A assinatura desenhada requer JavaScript; a assinatura digitalizada requer JavaScript.</p></noscript>
 </div>
 {% include 'pos_obra/_internal_script.html' %}
 {% endblock %}

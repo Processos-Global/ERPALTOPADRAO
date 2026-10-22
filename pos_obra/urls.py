@@ -18,6 +18,7 @@ urlpatterns=[
  path('agendamento/<int:pk>/responder/',views.responder_agendamento,name='responder_agendamento'),
  path('os/<int:pk>/documento/emitir/',views.emitir_documento,name='emitir_documento'),
  path('documento/<int:pk>/baixar/',views.baixar_documento,name='baixar_documento'),
+ path('os/<int:pk>/assinar/',views.assinar_e_concluir,name='assinar_e_concluir'),
  path('documento/<int:pk>/aceite/',views.registrar_aceite,name='registrar_aceite'),
  path('aceite/<int:pk>/comprovante/',views.comprovante_aceite,name='comprovante_aceite'),
  path('os/<int:pk>/finalizar/',views.finalizar_os,name='finalizar'),

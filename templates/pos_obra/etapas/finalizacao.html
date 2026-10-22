@@ -1,34 +1,13 @@
-<div class="os-section-head">
-<div>
-<p class="po-eyebrow">Finalização e assinatura</p>
-<h2>Finalização e assinatura</h2>
-<p>Salve o parecer e confira os requisitos antes de encerrar a OS.</p>
-</div>
-<a class="po-button" href="{% url 'pos_obra:relatorio' chamado.pk 'os' %}">Prévia em PDF</a>
-</div><div class="po2-block po2-record-block"><div class="po2-block-heading"><span class="po2-index">01</span><div><h3>Parecer de encerramento</h3><p>Documente a conclusão antes de emitir e conferir os documentos.</p></div></div>{% if form_finalizacao.errors %}{% include 'pos_obra/_form_errors.html' with form=form_finalizacao %}{% endif %}{% if concluida_finalizacao or encerrado or not pode_editar %}<p class="po-readonly-note">Registro de consulta · {% if concluida_finalizacao %}etapa salva{% else %}edição indisponível{% endif %}</p>
-<div class="po-record">
-<h3>Parecer de conclusão</h3>
-<div class="po-prose">{{ chamado.conclusao|default:'Não informado'|linebreaksbr }}</div>
-</div>{% elif libera_finalizacao %}{% if rascunhos_etapas.FINALIZACAO %}<p class="po-draft-indicator">Rascunho salvo anteriormente · Continue de onde parou.</p>{% endif %}<form method="post" class="os-step-form" data-form-name="Finalização e assinatura">{% csrf_token %}<input type="hidden" name="etapa" value="FINALIZACAO">{% for hidden in form_finalizacao.hidden_fields %}{{ hidden }}{{ hidden.errors }}{% endfor %}
-<section class="po-paper-field-group"><div class="po-paper-field-head"><span class="po-paper-field-number">01</span><div><h3>Parecer de conclusão</h3><p>Registre o parecer para finalizar o atendimento.</p></div></div><div class="po-form-grid po-paper-field-grid">
-{% include "pos_obra/_field.html" with f=form_finalizacao.conclusao %}
-</div></section><div class="os-actions">
-<span class="po-help">O rascunho pode ser editado. Concluir registra a etapa e bloqueia a edição comum.</span>
-<button class="po-button" type="submit" name="acao_etapa" value="rascunho" formnovalidate>Salvar rascunho</button><button class="po-button primary" type="submit" name="acao_etapa" value="concluir" data-po-confirm-stage>Concluir conclusão</button>
-</div>
-</form>{% else %}<p class="po-alert">{% if not libera_finalizacao %}A atribuição do responsável exige permissão específica.{% else %}Conclua as etapas anteriores para preencher este registro.{% endif %}</p>{% endif %}</div><section class="os-documents">
-<h3>Via física assinada</h3>{% if libera_finalizacao %}{% include 'pos_obra/_upload.html' with etapa='FINALIZACAO' %}{% endif %}{% include 'pos_obra/_anexos.html' with arquivos=anexos_finalizacao %}</section>
-<section class="po-closeout">
-<h3>Conferência para encerramento</h3>
-<ul class="po-checklist">
-<li>{% if concluida_triagem %}✓{% else %}Pendente ·{% endif %} Responsável e triagem</li>
-<li>{% if concluida_vistoria %}✓{% else %}Pendente ·{% endif %} Data e diagnóstico de vistoria</li>
-<li>{% if concluida_execucao %}✓{% else %}Pendente ·{% endif %} Data e serviços executados</li>
-<li>{% if concluida_finalizacao %}✓{% else %}Pendente ·{% endif %} Parecer de conclusão</li>
-<li>{% if aceite_valido or tem_via_assinada %}✓{% else %}Pendente ·{% endif %} Aceite eletrônico válido ou via física assinada conferida <button class="po-link-button" type="button" data-po-go="documentos">Consultar documentos</button>
-</li>
-</ul>{% if chamado.status == 'CONCLUIDO' %}<p class="po-alert">Finalizada em {{ chamado.finalizado_em|date:'d/m/Y H:i' }}.</p>{% elif not encerrado and pode_finalizar %}<form method="post" action="{% url 'pos_obra:finalizar' chamado.pk %}" data-confirm="Encerrar esta OS e bloquear os registros técnicos?" data-form-name="Encerramento da OS">{% csrf_token %}<label class="po-check">
-<input type="checkbox" name="confirmacao_assinatura" required>Conferi os relatórios e o aceite eletrônico válido ou a via física assinada.</label>
-<div class="os-actions">
-<button class="po-button primary" {% if not pronto_finalizar %}disabled{% endif %}>Encerrar ordem de serviço</button>
-</div>{% if not pronto_finalizar %}<p class="po-help">Resolva os itens pendentes acima para encerrar.</p>{% endif %}</form>{% endif %}</section>
+<div class="os-section-head po-cp-section-head"><div><p class="po-eyebrow">Assinatura e encerramento</p><h2>Assinatura da OS</h2></div></div>
+{% if chamado.status == 'CONCLUIDO' %}<p class="po-alert">OS concluída. A assinatura está incorporada ao PDF definitivo.</p><button type="button" class="po-button primary" data-po-go="documentos">Visualizar documento final</button>
+{% elif not concluida_execucao %}<p class="po-alert">Conclua a execução para liberar a assinatura.</p>
+{% elif pode_finalizar %}
+<form method="post" action="{% url 'pos_obra:assinar_e_concluir' chamado.pk %}" class="po-accept-form po-sign-final po-cp-stage-form" data-form-name="Assinatura da OS">{% csrf_token %}
+<p class="po-help">Apresente ao signatário o registro da vistoria e os serviços executados antes da coleta.</p>
+<div class="po-sign-grid po-cp-sign-grid"><div class="po-field"><label for="signatario-final">Nome completo do signatário *</label><input id="signatario-final" name="signatario" required maxlength="180"></div>
+<div class="po-field"><label for="representacao-final">Vínculo com o imóvel *</label><select id="representacao-final" name="representacao" required class="sa-field"><option value="">Selecione</option><option value="Proprietário">Proprietário</option><option value="Representante autorizado">Representante autorizado</option><option value="Outro vínculo">Outro vínculo</option></select></div></div>
+<div class="po-sign-grid po-cp-sign-grid"><div class="po-field"><label for="resultado-final">Resultado *</label><select id="resultado-final" name="resultado" class="sa-field"><option value="ACEITO">Aceito</option><option value="RESSALVA">Aceito com ressalvas</option><option value="RECUSADO">Não aceito</option></select></div><div class="po-field"><label for="observacoes-final">Ressalvas</label><textarea name="observacoes" id="observacoes-final" rows="2" maxlength="4000"></textarea></div></div>
+<div class="po-field po-signature"><label>Assinatura manuscrita (dedo, caneta ou mouse)</label><canvas class="po-sign-canvas" width="700" height="200" aria-label="Área de assinatura"></canvas><input type="hidden" name="assinatura" class="po-signature-value"><button type="button" class="po-button po-clear-sign">Limpar assinatura</button></div>
+<label class="po-check"><input type="checkbox" name="ciencia" required> O signatário teve acesso ao conteúdo da OS e confirma o resultado registrado.</label>
+<div class="os-actions po-cp-form-actions"><button class="po-button primary" type="submit">Registrar assinatura e concluir OS</button></div></form>
+{% else %}<p class="po-alert">Você não possui permissão para encerrar esta OS.</p>{% endif %}

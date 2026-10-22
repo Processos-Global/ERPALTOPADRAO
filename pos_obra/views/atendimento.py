@@ -100,7 +100,7 @@ def etapa_pendente(c):
         return 'VISTORIA'
     if not c.data_execucao or not (c.execucao or '').strip():
         return 'EXECUCAO'
-    if not (c.conclusao or '').strip():
+    if not aceite_valido(c):
         return 'FINALIZACAO'
     return None
 
@@ -118,10 +118,10 @@ def detalhe(request, pk):
     qs = Chamado.objects.select_for_update() if request.method == 'POST' else Chamado.objects.all()
     c = get_object_or_404(qs, pk=pk)
     forms_por_etapa = {
-        'TRIAGEM': ['prioridade', 'responsavel', 'garantia', 'triagem'],
+        'TRIAGEM': ['prioridade', 'responsavel', 'triagem'],
         'VISTORIA': ['data_vistoria', 'diagnostico'],
-        'EXECUCAO': ['data_execucao', 'execucao', 'materiais_observacao'],
-        'FINALIZACAO': ['conclusao'],
+        'EXECUCAO': ['data_execucao', 'execucao'],
+        'FINALIZACAO': [],
     }
     anterior = c.status
     encerrado = anterior in ('CONCLUIDO', 'CANCELADO')
@@ -140,7 +140,7 @@ def detalhe(request, pk):
             RascunhoEtapaOS.objects.update_or_create(chamado=c, etapa=etapa, defaults={'dados': dados, 'atualizado_por': request.user})
             messages.success(request, 'Rascunho salvo. A etapa continua aberta e o status não foi alterado.')
             return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#' + etapa.lower())
-        if etapa not in forms_por_etapa:
+        if etapa not in forms_por_etapa or etapa == 'FINALIZACAO':
             raise PermissionDenied('Etapa inválida.')
         if etapa == 'TRIAGEM' and 'responsavel' in request.POST and not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'atribuir_responsavel'):
             raise PermissionDenied('Você não pode atribuir responsáveis.')
@@ -169,8 +169,12 @@ def detalhe(request, pk):
             if not form.errors:
                 if etapa == 'TRIAGEM' and (not novo.responsavel_id or not (novo.triagem or '').strip()):
                     form.add_error(None, 'Informe o responsável e o parecer da triagem.')
+                if etapa == 'VISTORIA' and not c.agendamentos.filter(tipo='VISTORIA', situacao__in=['PROPOSTO','CONFIRMADO','REALIZADO']).exists():
+                    form.add_error(None, 'Envie uma proposta de agendamento antes de concluir a vistoria.')
                 if etapa == 'VISTORIA' and not (novo.data_vistoria and (novo.diagnostico or '').strip()):
                     form.add_error(None, 'Preencha a data e o diagnóstico da vistoria.')
+                if etapa == 'EXECUCAO' and not c.agendamentos.filter(tipo__in=['EXECUCAO','RETORNO','COMPLEMENTO'], situacao__in=['PROPOSTO','CONFIRMADO','REALIZADO']).exists():
+                    form.add_error(None, 'Envie uma proposta de agendamento antes de concluir a execução.')
                 if etapa == 'EXECUCAO' and not (novo.data_execucao and (novo.execucao or '').strip()):
                     form.add_error(None, 'Preencha a data e os serviços executados.')
                 if etapa == 'FINALIZACAO' and not (novo.conclusao or '').strip():
@@ -258,6 +262,7 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
         'agendamentos': agendamentos,
         'form_agendamento': form_agendamento,
         'documentos': c.documentos_versionados.select_related('aceite').order_by('-criado_em', '-pk'),
+        'documento_final': c.documentos_versionados.filter(tipo='OS', aceite__resultado__in=['ACEITO','RESSALVA']).order_by('-criado_em').first(),
         
         'aceite_valido': aceite_valido(c),
     }
@@ -265,7 +270,7 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
         'concluida_triagem': bool(c.responsavel_id and c.triagem.strip()),
         'concluida_vistoria': bool(c.data_vistoria and c.diagnostico.strip()),
         'concluida_execucao': bool(c.data_execucao and c.execucao.strip()),
-        'concluida_finalizacao': bool(c.conclusao.strip()),
+        'concluida_finalizacao': aceite_valido(c),
     })
     contexto['pode_editar']=possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia')
     contexto['pode_finalizar']=possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'concluir_ocorrencia')
@@ -274,16 +279,16 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
     contexto['tratativas']=c.tratativas_satisfacao.select_related('responsavel')
     contexto['proximo_agendamento']=proximo_compromisso(agendamentos)
     contexto['etapas_ui']=etapas_apresentacao(c,contexto)
-    contexto['proxima_acao_ui']={'TRIAGEM':'Definir responsável e registrar o parecer de triagem.','VISTORIA':'Registrar a data e o diagnóstico da vistoria.','EXECUCAO':'Registrar a data e os serviços executados.','FINALIZACAO':'Salvar o parecer de conclusão e conferir o aceite.'}.get(etapa_pendente(c),'Conferir o aceite e encerrar a ordem de serviço.')
+    contexto['proxima_acao_ui']={'TRIAGEM':'Definir responsável e registrar o parecer de triagem.','VISTORIA':'Registrar a data e o diagnóstico da vistoria.','EXECUCAO':'Registrar a data e os serviços executados.','FINALIZACAO':'Coletar assinatura e emitir o PDF final.'}.get(etapa_pendente(c),'Conferir o aceite e encerrar a ordem de serviço.')
     contexto['tem_via_assinada']=c.anexos.filter(etapa='FINALIZACAO',via_assinada_conferida=True).exists()
-    contexto['pronto_finalizar']=not encerrado and contexto['concluida_triagem'] and contexto['concluida_vistoria'] and contexto['concluida_execucao'] and contexto['concluida_finalizacao'] and (contexto['aceite_valido'] or contexto['tem_via_assinada'])
+    contexto['pronto_finalizar']=not encerrado and contexto['concluida_triagem'] and contexto['concluida_vistoria'] and contexto['concluida_execucao'] and contexto['aceite_valido']
     documentos=list(contexto['documentos']);vistos=set();limite=ultima_alteracao_tecnica(c)
     for doc in documentos:
         doc.elegivel_aceite=not encerrado and contexto['pode_editar'] and doc.tipo not in vistos and doc.criado_em>=limite and not hasattr(doc,'aceite')
         doc.desatualizado=doc.criado_em<limite
         vistos.add(doc.tipo)
     contexto['documentos']=documentos
-    for etapa_form,campos in {'TRIAGEM':['responsavel','triagem'],'VISTORIA':['data_vistoria','diagnostico'],'EXECUCAO':['data_execucao','execucao'],'FINALIZACAO':['conclusao']}.items():
+    for etapa_form,campos in {'TRIAGEM':['responsavel','triagem'],'VISTORIA':['data_vistoria','diagnostico'],'EXECUCAO':['data_execucao','execucao'],'FINALIZACAO':[]}.items():
         for campo in campos:
             if campo in formulario_etapas[etapa_form].fields:
                 formulario_etapas[etapa_form].fields[campo].required=True
@@ -291,7 +296,7 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
 
 
 def _erro_operacao(request, c, chave, form, aba, reagendamento_id=None):
-    grupos={'TRIAGEM':['prioridade','responsavel','garantia','triagem'], 'VISTORIA':['data_vistoria','diagnostico'], 'EXECUCAO':['data_execucao','execucao','materiais_observacao'], 'FINALIZACAO':['conclusao']}
+    grupos={'TRIAGEM':['prioridade','responsavel','triagem'], 'VISTORIA':['data_vistoria','diagnostico'], 'EXECUCAO':['data_execucao','execucao'], 'FINALIZACAO':[]}
     forms={}
     for etapa, campos in grupos.items():
         f=AtendimentoForm(instance=c, auto_id=etapa.lower()+'-%s')
@@ -389,7 +394,7 @@ def finalizar_os(request, pk):
     if etapa_pendente(c) is not None:
         messages.error(request, 'Preencha vistoria, execução e relatório de conclusão antes de finalizar.')
         return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
-    if not (c.anexos.filter(etapa='FINALIZACAO',via_assinada_conferida=True).exists() or aceite_valido(c)):
+    if not aceite_valido(c):
         messages.error(request, 'Registre o aceite eletrônico ou anexe a via assinada antes de finalizar.')
         return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
     if request.POST.get('confirmacao_assinatura') != 'on':
@@ -716,6 +721,53 @@ def registrar_aceite(request,pk):
     messages.success(request,'Resposta vinculada à versão do documento.')
     return redirect(reverse('pos_obra:detalhe',args=[doc.chamado_id])+'#documentos')
 
+
+
+@interno
+@require_POST
+@transaction.atomic
+def assinar_e_concluir(request, pk):
+    """Coleta em campo: cria documento base, grava aceite e produz PDF definitivo assinado."""
+    import hashlib
+    from django.core.files.base import ContentFile
+    from ..relatorios import gerar_relatorio
+    if not possui_permissao_acao(request.user, ModuloSistema.POS_OBRA, 'concluir_ocorrencia'):
+        raise PermissionDenied('Sem permissão para concluir a OS.')
+    c = get_object_or_404(Chamado.objects.select_for_update(), pk=pk)
+    if c.status in ('CONCLUIDO', 'CANCELADO') or not (c.data_vistoria and c.diagnostico and c.data_execucao and c.execucao):
+        raise PermissionDenied('Complete a vistoria e a execução antes de coletar assinatura.')
+    # Compatibilidade com a validação do aceite original, sem expor versões intermediárias.
+    base = gerar_relatorio(c, 'os', publico=True).content
+    previous = c.documentos_versionados.filter(tipo='OS').order_by('-versao').first()
+    versao = previous.versao + 1 if previous else 1
+    doc = DocumentoOS(chamado=c, tipo='OS', versao=versao, sha256=hashlib.sha256(base).hexdigest(), criado_por=request.user)
+    doc.arquivo.save(f'{c.numero}-temporario-v{versao}.pdf', ContentFile(base), save=False)
+    doc.save()
+    registrar_aceite(request, doc.pk)
+    aceite = AceiteOS.objects.get(documento=doc)
+    # O PDF definitivo é composto APÓS o registro da assinatura, sem modificar o arquivo depois do hash.
+    if aceite.resultado in ('ACEITO', 'RESSALVA'):
+        c.status = 'CONCLUIDO'  # refletir status concluído no próprio PDF
+    definitivo = gerar_relatorio(c, 'os', publico=True, aceite=aceite).content
+    arquivo_temporario = doc.arquivo.name
+    doc.arquivo.save(f'{c.numero}-OS-final-v{versao}.pdf', ContentFile(definitivo), save=False)
+    if arquivo_temporario != doc.arquivo.name:
+        doc.arquivo.storage.delete(arquivo_temporario)
+    doc.sha256 = hashlib.sha256(definitivo).hexdigest()
+    doc.save(update_fields=['arquivo', 'sha256'])
+    if aceite.resultado in ('ACEITO', 'RESSALVA'):
+        anterior = c.status
+        c.status = 'CONCLUIDO'
+        c.finalizado_em = timezone.now()
+        c.save(update_fields=['status','finalizado_em','atualizado_em'])
+        registro(c, request.user, anterior, 'OS encerrada com assinatura integrada ao PDF definitivo', True)
+        enfileirar(c,'CONCLUSAO',c.pk,f'SAARI | Chamado {c.numero} concluído',f'A ordem de serviço {c.numero} foi concluída. O PDF está disponível no portal.')
+        enfileirar(c,'PESQUISA',c.pk,f'SAARI | Avalie o atendimento {c.numero}',f'Avalie a OS {c.numero} pelo portal do cliente.')
+        messages.success(request, 'Assinatura salva e OS concluída. PDF final disponível.')
+    else:
+        registro(c, request.user, c.status, 'Cliente recusou o aceite; OS permanece aberta para tratamento', True)
+        messages.warning(request, 'Recusa registrada. A OS permanece aberta para tratamento.')
+    return redirect(reverse('pos_obra:detalhe', args=[pk]) + '#finalizacao')
 
 @interno
 def agenda(request):

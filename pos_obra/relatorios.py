@@ -50,7 +50,7 @@ def gerar_termo_aceite(aceite):
     return memoria.getvalue()
 
 
-def gerar_relatorio(chamado, tipo, publico=False):
+def gerar_relatorio(chamado, tipo, publico=False, aceite=None):
     titulos = {'vistoria': 'Relatório técnico de vistoria',
                'execucao': 'Relatório técnico de execução',
                'os': 'Ordem de serviço'}
@@ -140,7 +140,6 @@ def gerar_relatorio(chamado, tipo, publico=False):
                          ('Serviços realizados', c.execucao)])]
         indice += 1
     if tipo == 'os':
-        story += [section(f'{indice:02d}  CONCLUSÃO TÉCNICA', c.conclusao)]
         indice += 1
         materiais = list(c.materiais.all())
         story.append(p(f'{indice:02d}  MATERIAIS UTILIZADOS', 'SectionSaari'))
@@ -181,14 +180,22 @@ def gerar_relatorio(chamado, tipo, publico=False):
                 except (OSError,ValueError):
                     story.append(p('Imagem indisponível para impressão; consulte o arquivo original.','SmallSaari'))
 
-    # Assinaturas somente onde fazem sentido operacionalmente.
-    if tipo == 'os':
-        assinatura = Table([[p('Cliente / pessoa autorizada','SignSaari'), p('Responsável técnico / atendimento','SignSaari')]],
-            colWidths=[84*mm, 84*mm], hAlign='CENTER')
-        assinatura.setStyle(TableStyle([('LINEABOVE',(0,0),(-1,-1),.65,MARROM),
-            ('TOPPADDING',(0,0),(-1,-1),9), ('LEFTPADDING',(0,0),(-1,-1),4)]))
-        story.append(KeepTogether([Spacer(1,20*mm), assinatura, Spacer(1,5*mm),
-                     p('Local e data: __________________________________________', 'SignSaari')]))
+    if tipo == 'os' and aceite is not None:
+        story.append(p('ACEITE E ASSINATURA DO CLIENTE', 'SectionSaari'))
+        story.append(cells([('Signatário', aceite.signatario),
+                            ('Vínculo com o imóvel', aceite.representacao),
+                            ('Resultado', aceite.get_resultado_display()),
+                            ('Ressalvas', aceite.observacoes or 'Nenhuma'),
+                            ('Data do aceite', __import__('django.utils.timezone', fromlist=['localtime']).localtime(aceite.criado_em).strftime('%d/%m/%Y %H:%M'))]))
+        if aceite.assinatura:
+            try:
+                with aceite.assinatura.open('rb') as assinatura_arquivo:
+                    imagem = Image(BytesIO(assinatura_arquivo.read()), width=88*mm, height=27*mm, kind='proportional')
+                    story.extend([Spacer(1, 5*mm), imagem, p('Assinatura manuscrita registrada no atendimento', 'SmallSaari')])
+            except (OSError, ValueError):
+                story.append(p('Imagem de assinatura indisponível.', 'SmallSaari'))
+    elif tipo == 'os':
+        story.append(p('DOCUMENTO DE CONSULTA · SEM ASSINATURA', 'SectionSaari'))
 
     def pagina(canvas, doc):
         canvas.saveState()

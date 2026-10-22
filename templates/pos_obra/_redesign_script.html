@@ -1,0 +1,18 @@
+<script>
+(() => {
+  const root = document.querySelector('.po-interno');
+  if (!root) return;
+  root.querySelectorAll('[data-po-history]').forEach(button=>button.addEventListener('click',()=>{const history=document.getElementById('historico');if(history){history.open=true;history.scrollIntoView({block:'start'});}}));
+  root.querySelectorAll('[data-po-print]').forEach(button => button.addEventListener('click', () => window.print()));
+  root.querySelectorAll('.po-more-actions').forEach(menu => {
+    menu.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { menu.open = false; menu.querySelector('summary').focus(); }
+    });
+    menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+      menu.open = false;
+      if (link.hash === '#historico') { const history = document.getElementById('historico'); if (history) history.open = true; }
+    }));
+    document.addEventListener('click', event => { if (!menu.contains(event.target)) menu.open = false; });
+  });
+})();
+</script>

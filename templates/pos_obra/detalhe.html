@@ -1,32 +1,50 @@
 {% extends 'pos_obra/_base.html' %}
-{% block po_heading %}{% endblock %}
+{% block po_heading %}{% endblock %}{% block po_navigation %}{% endblock %}
 {% block po_content %}
-<header class="po-os-header po2-os-header"><div class="po-os-title"><div><a class="po-back" href="{% url 'pos_obra:lista' %}">← Ordens de serviço</a><h1>{{ chamado.numero }} <span class="po-status" data-status="{{ chamado.status }}">{{ chamado.get_status_display }}</span></h1><p>{{ chamado.cliente.nome }} · {{ chamado.empreendimento }}</p></div><span class="po-priority" data-priority="{{ chamado.prioridade }}">{{ chamado.get_prioridade_display }}</span></div>
-<dl class="po-os-facts"><div><dt>Ocorrência</dt><dd>{% firstof chamado.tipo_original chamado.tipo_problema.nome %}<small>{{ chamado.ambiente_padrao|default:chamado.ambiente_ficha|default:'Ambiente não informado' }} {{ chamado.ambiente_detalhe }}</small></dd></div><div><dt>Responsável</dt><dd>{% firstof chamado.responsavel.get_full_name chamado.responsavel.username 'A definir' %}</dd></div><div><dt>Próxima visita</dt><dd>{% if proximo_agendamento %}{{ proximo_agendamento.inicio|date:'d/m/Y · H:i' }}<small>{{ proximo_agendamento.get_tipo_display }} · {{ proximo_agendamento.get_situacao_display }}</small>{% else %}Não agendada{% endif %}</dd></div><div><dt>Abertura</dt><dd>{{ chamado.criado_em|date:'d/m/Y · H:i' }}</dd></div></dl>
-{% if not encerrado %}<div class="po2-next po-sketch-next"><span>Próximo passo</span><strong>{{ proxima_acao_ui }}</strong><button type="button" class="po-button primary" data-po-go="{% if etapa_pendente %}{{ etapa_pendente|lower }}{% else %}finalizacao{% endif %}">Abrir etapa →</button></div>{% endif %}</header>
+<div class="po-detail-breadcrumb"><a href="{% url 'pos_obra:painel' %}">Operações</a><span>/</span><a href="{% url 'pos_obra:painel' %}">Pós-Obra</a><span>/</span><a href="{% url 'pos_obra:lista' %}">Ordens de serviço</a></div><header class="po-os-header po2-os-header">
+  <div class="po-os-title">
+    <div class="po-os-identification">
+      <a class="po-back" href="{% url 'pos_obra:lista' %}">← Ordens de serviço</a>
+      <div class="po-os-title-line"><h1>{{ chamado.numero }}</h1><span class="po-priority" data-priority="{{ chamado.prioridade }}">Prioridade {{ chamado.get_prioridade_display|lower }}</span><span class="po-status" data-status="{{ chamado.status }}">{{ chamado.get_status_display }}</span></div>
+      <p>{{ chamado.cliente.nome }} <span aria-hidden="true">·</span> {{ chamado.empreendimento }} <span aria-hidden="true">·</span> {% firstof chamado.tipo_original chamado.tipo_problema.nome %}</p>
+    </div>
+    <div class="po-os-tools">
+      <button class="po-button" type="button" data-po-print>Imprimir OS</button>
+      <details class="po-more-actions"><summary>Mais ações <span aria-hidden="true">⋯</span></summary><div class="po-action-menu"><button type="button" class="po-button" data-po-go="documentos">Documentos da OS</button><a class="po-button" href="#historico">Histórico do atendimento</a><a class="po-button" href="{% url 'pos_obra:agenda' %}">Agenda técnica</a></div></details>
+    </div>
+  </div>
+  <dl class="po-os-facts">
+    <div><dt>Responsável técnico</dt><dd>{% firstof chamado.responsavel.get_full_name chamado.responsavel.username 'A definir' %}</dd></div>
+    <div><dt>Próximo compromisso</dt><dd>{% if proximo_agendamento %}{{ proximo_agendamento.get_tipo_display }} · {{ proximo_agendamento.inicio|date:'d/m · H:i' }}<small>{{ proximo_agendamento.get_situacao_display }}</small>{% else %}Nenhuma visita agendada{% endif %}</dd></div>
+    <div><dt>Abertura</dt><dd>{{ chamado.criado_em|date:'d/m/Y · H:i' }}</dd></div>
+    <div class="po-next-fact"><dt>Próximo passo</dt><dd>{{ proxima_acao_ui }}</dd></div>
+  </dl>
+</header>
 {% if not pode_editar %}<p class="po-alert">Somente leitura. Sua conta pode consultar esta OS.</p>{% elif encerrado %}<p class="po-alert">Atendimento {{ chamado.get_status_display|lower }}. Registros técnicos bloqueados; documentos e histórico permanecem disponíveis.</p>{% endif %}
 <div class="po-workbench po-sketch-workbench" data-active-panel="{{ aba_ativa }}">
-  <div class="po-sketch-heading"><div><span class="po-eyebrow">Preenchimento da ordem de serviço</span><h2>Atendimento técnico</h2><p>Escolha uma etapa. Agendamentos ficam dentro de Vistoria e Execução.</p></div><span class="po-sketch-progress">{{ chamado.get_status_display }}</span></div>
-  <nav class="po-sketch-nav" aria-label="Etapas e informações da OS">
-    <div class="os-tabs" role="tablist" aria-label="Etapas da ordem de serviço">
-      {% for e in etapas_ui %}{% if e.codigo == 'triagem' or e.codigo == 'vistoria' or e.codigo == 'materiais' or e.codigo == 'execucao' or e.codigo == 'finalizacao' %}
+  <nav class="po-figma-stages" aria-label="Etapas da ordem de serviço">
+    <div class="os-tabs" role="tablist" aria-label="Fluxo da ordem de serviço" aria-orientation="horizontal">
+    {% for e in etapas_ui %}
       <button id="tab-{{ e.codigo }}" type="button" class="os-tab" data-os-tab="{{ e.codigo }}" data-stage-state="{{ e.estado }}" role="tab" aria-controls="os-{{ e.codigo }}" aria-selected="false" tabindex="-1" {% if e.bloqueada %}disabled title="Conclua as etapas anteriores"{% endif %}>
-        <span class="po-stage-number" aria-hidden="true">{% if e.estado == 'concluida' %}✓{% else %}{{ e.numero }}{% endif %}</span>
-        <span class="po-sketch-tab-copy"><strong>{{ e.titulo }}</strong><small>{{ e.estado_texto }}</small></span><span class="po-dirty-dot" hidden aria-label="Alterações não salvas">●</span>
-      </button>{% endif %}{% endfor %}
-    </div>
-    <div class="po-sketch-extras" aria-label="Informações complementares">
-      {% for e in etapas_ui %}{% if e.codigo == 'abertura' or e.codigo == 'satisfacao' %}
-      <button id="tab-{{ e.codigo }}" type="button" class="os-tab po-sketch-extra" data-os-tab="{{ e.codigo }}" data-stage-state="{{ e.estado }}" role="tab" aria-controls="os-{{ e.codigo }}" aria-selected="false" tabindex="-1" {% if e.bloqueada %}disabled{% endif %}><strong>{% if e.codigo == 'abertura' %}Informações da OS{% else %}Satisfação{% endif %}</strong><span class="po-dirty-dot" hidden>●</span></button>
-      {% endif %}{% endfor %}
-      <button id="tab-documentos" type="button" class="os-tab po-sketch-extra" data-os-tab="documentos" role="tab" aria-controls="os-documentos" aria-selected="false" tabindex="-1"><strong>Documentos e aceite</strong></button>
+        <span class="po-stage-number" aria-hidden="true">{% if e.estado == 'concluida' %}✓{% else %}{{ forloop.counter|stringformat:'02d' }}{% endif %}</span>
+        <span class="po-sketch-tab-copy"><strong>{{ e.titulo }}</strong><small>{{ e.estado_texto }}</small></span>
+        <span class="po-dirty-dot" hidden aria-label="Alterações não salvas">●</span>
+      </button>
+    {% endfor %}
+      <button id="tab-documentos" class="os-tab po-figma-doc-tab" type="button" data-os-tab="documentos" role="tab" aria-controls="os-documentos" aria-selected="false" tabindex="-1" hidden>Documentos</button>
     </div>
   </nav>
-  <label class="po-mobile-selector" for="po-section-select">Selecionar etapa<select id="po-section-select" class="sa-field">{% for e in etapas_ui %}<option value="{{ e.codigo }}" {% if e.bloqueada %}disabled{% endif %}>{{ e.titulo }} — {{ e.estado_texto }}</option>{% endfor %}<option value="documentos">Documentos e aceite</option></select></label>
-  <div class="po-stage-content" aria-label="Área de trabalho da OS">
+  <label class="po-mobile-selector" for="po-section-select">Selecionar etapa<select id="po-section-select" class="sa-field">{% for e in etapas_ui %}<option value="{{ e.codigo }}" {% if e.bloqueada %}disabled{% endif %}>{{ e.titulo }} — {{ e.estado_texto }}</option>{% endfor %}<option value="documentos">Documento final</option></select></label>
+  <div class="po-figma-layout"><div class="po-stage-content" aria-label="Área de trabalho da OS">
   {% for e in etapas_ui %}<section class="os-panel" id="os-{{ e.codigo }}" role="tabpanel" aria-labelledby="tab-{{ e.codigo }}" tabindex="0" {% if e.codigo != aba_ativa %}hidden{% endif %}>
   {% if e.codigo == 'abertura' %}{% include 'pos_obra/etapas/abertura.html' %}{% elif e.codigo == 'triagem' %}{% include 'pos_obra/etapas/triagem.html' %}{% elif e.codigo == 'vistoria' %}{% include 'pos_obra/etapas/vistoria.html' %}{% elif e.codigo == 'materiais' %}{% include 'pos_obra/etapas/materiais.html' %}{% elif e.codigo == 'execucao' %}{% include 'pos_obra/etapas/execucao.html' %}{% elif e.codigo == 'finalizacao' %}{% include 'pos_obra/etapas/finalizacao.html' %}{% elif e.codigo == 'satisfacao' %}{% include 'pos_obra/etapas/satisfacao.html' %}{% endif %}</section>{% endfor %}
   <section class="os-panel" id="os-documentos" role="tabpanel" aria-labelledby="tab-documentos" tabindex="0" {% if aba_ativa != 'documentos' %}hidden{% endif %}>{% include 'pos_obra/etapas/documentos.html' %}</section>
   </div>
+  <aside class="po-figma-context" aria-label="Resumo da ordem de serviço">
+    <div class="po-figma-context-header"><h3>Resumo da OS</h3></div>
+    <dl><div><dt>Ocorrência</dt><dd>{% firstof chamado.tipo_original chamado.tipo_problema.nome 'Não informada' %}<small>{{ chamado.ambiente_padrao|default:chamado.ambiente_ficha|default:'Ambiente não informado' }}</small></dd></div><div><dt>Cliente</dt><dd>{{ chamado.cliente.nome }}<small>{{ chamado.cliente.telefone|default:'Contato não informado' }}</small></dd></div><div><dt>Imóvel</dt><dd>{{ chamado.empreendimento }}<small>{% if chamado.empreendimento.historica %}{{ chamado.empreendimento.endereco_historico }}{% else %}{{ chamado.empreendimento.obra.endereco }}{% endif %}</small></dd></div></dl>
+    <div class="po-figma-context-header"><h3>Atividade recente</h3></div><div class="po-context-history">{% for h in historico|slice:':3' %}<p><strong>{{ h.mensagem }}</strong><small>{{ h.criado_em|date:'d/m · H:i' }} · {{ h.usuario|default:'Sistema' }}</small></p>{% empty %}<p class="po-help">Nenhuma atividade registrada.</p>{% endfor %}</div>
+    <div class="po-context-actions"><button class="po-button" type="button" data-po-go="documentos">Documentos da OS →</button><button class="po-link-button" type="button" data-po-history>Ver histórico completo</button></div>
+  </aside></div>
 </div>
-{% include 'pos_obra/_history.html' %}{% include 'pos_obra/_workspace_script.html' %}{% endblock %}
+{% include 'pos_obra/_history.html'  %}{% include 'pos_obra/_workspace_script.html' %}{% include 'pos_obra/_redesign_script.html' %}{% endblock %}

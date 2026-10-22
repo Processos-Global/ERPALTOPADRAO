@@ -9,7 +9,7 @@ def etapas_apresentacao(chamado, contexto):
            ('vistoria','Vistoria',contexto['concluida_vistoria'],contexto['libera_vistoria'],'Registrar data e diagnóstico'),
            ('materiais','Materiais',False,contexto['libera_materiais'],'Opcional · planejar materiais'),
            ('execucao','Execução',contexto['concluida_execucao'],contexto['libera_execucao'],'Registrar serviços executados'),
-           ('finalizacao','Finalização',chamado.status=='CONCLUIDO',contexto['libera_finalizacao'],'Conferir parecer e aceite'),
+           ('finalizacao','Assinatura',chamado.status=='CONCLUIDO',contexto['libera_finalizacao'],'Coletar assinatura e concluir a OS'),
            ('satisfacao','Satisfação',contexto['pesquisa'] is not None,True,'Avaliação e tratativas')]
     etapas=[]
     for numero,(codigo,titulo,concluida,liberada,ajuda) in enumerate(specs):

@@ -1,9 +1,9 @@
-<div class="os-section-head">
+<div class="os-section-head po-cp-section-head">
 <h2>Materiais do atendimento</h2>
 <span class="po-status">Materiais solicitados</span>
 </div>
 <p class="po2-step-intro">Confira o que já foi solicitado. Para incluir mais itens, utilize o formulário abaixo. Esta etapa é opcional.</p><div class="po-paper-material-toolbar"><strong>Materiais já incluídos</strong><span>Edite a quantidade diretamente na linha ou remova o item.</span></div><div class="po-table-wrap">
-<table class="po-table">
+<table class="po-table po-cp-table">
 <thead>
 <tr>
 <th>Material / Unidade</th>
@@ -36,7 +36,7 @@
 </table>
 </div>
 {% if not encerrado and pode_editar and libera_materiais %}<hr>
-<div class="os-form-surface os-material-entry po2-block">
+<div class="os-form-surface os-material-entry po2-block po-cp-panel">
 <div class="os-form-caption">
 <span class="os-caption-dot">
 </span> Adicionar material</div>
@@ -47,7 +47,7 @@
 </div>
 <div id="material-live-choice" class="po-help" aria-live="polite">Escolha um material para adicionar.</div>
 </div>
-<div class="po-material-fields"><div class="po-field" data-field="material"><label for="{{ material_form.material.id_for_label }}">Material do catálogo</label>{{ material_form.material }}{{ material_form.material.errors }}</div><div class="po-field" data-field="previsto"><label for="{{ material_form.previsto.id_for_label }}">Quantidade necessária</label>{{ material_form.previsto }}{{ material_form.previsto.errors }}</div></div>{{ material_form.non_field_errors }}<div class="os-actions">
+<div class="po-material-fields po-cp-material-grid"><div class="po-field" data-field="material"><label for="{{ material_form.material.id_for_label }}">Material do catálogo</label>{{ material_form.material }}{{ material_form.material.errors }}</div><div class="po-field" data-field="previsto"><label for="{{ material_form.previsto.id_for_label }}">Quantidade necessária</label>{{ material_form.previsto }}{{ material_form.previsto.errors }}</div></div>{{ material_form.non_field_errors }}<div class="os-actions po-cp-form-actions">
 <button class="po-button primary">Adicionar material</button>
 </div>
 </form>
