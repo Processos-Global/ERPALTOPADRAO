@@ -11,7 +11,7 @@
 @media(max-width:760px){.po-refined .po-management-intro{align-items:flex-start;flex-direction:column}.po-refined .po-management-intro>.po-button{width:100%}.po-refined .po-card__head{padding:16px}.po-refined .po-toolbar{padding:14px 16px}.po-refined .po-toolbar label{min-width:calc(50% - 7px)}.po-refined .po-toolbar .po-button{flex:1}.po-refined .po-table{min-width:710px}.po-refined .po-kanban{padding:13px;gap:10px}.po-refined .po-column{flex-basis:270px;width:270px}.po-refined .po-calendar-nav{padding:12px;gap:7px}.po-refined .po-calendar-nav strong{font-size:11px}.po-refined .po-calendar-nav .po-button{padding:7px;font-size:10px}.po-refined .po-agenda-list{padding:12px}.po-refined .po-agenda-list>article{grid-template-columns:1fr;gap:6px}}
 </style>
 
-<div class="po-management-intro"><div><h2>Agenda técnica</h2></div><a class="po-button" href="{% url 'pos_obra:lista' %}">Ordens de serviço →</a></div><section class="po-card"><div class="po-card__head"><div><h2>Compromissos programados</h2><p>Compromissos de {{ inicio|date:'d/m/Y' }} a {{ fim|date:'d/m/Y' }} · Agenda de atendimentos</p></div></div>
+<section class="po-card"><div class="po-card__head"><div><h2>Compromissos programados</h2><p>Compromissos de {{ inicio|date:'d/m/Y' }} a {{ fim|date:'d/m/Y' }} · Agenda de atendimentos</p></div></div>
 <form method="get" class="po-toolbar">
 <label>Visualização <select name="modo" class="sa-field"><option value="dia" {% if modo == 'dia' %}selected{% endif %}>Dia</option><option value="semana" {% if modo == 'semana' %}selected{% endif %}>Semana</option><option value="mes" {% if modo == 'mes' %}selected{% endif %}>Mês</option></select></label>
 <label>Data <input type="date" name="data" value="{{ base|date:'Y-m-d' }}" class="sa-field"></label>

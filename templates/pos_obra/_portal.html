@@ -3,7 +3,21 @@
 {% block title %}Portal do Cliente | SAARI ERP{% endblock %}
 {% block page_name %}Área do cliente{% endblock %}
 {% block extra_css %}{{ block.super }}{% include 'pos_obra/_styles.html' %}{% endblock %}
-{% block content %}<div class="po-shell po-portal">
-<nav class="po-nav" aria-label="Portal do cliente"><a href="{% url 'pos_obra:portal' %}">Minha área</a><a href="{% url 'pos_obra:portal' %}#meus-chamados">Minhas solicitações</a><a href="{% url 'pos_obra:portal_novo' %}" {% if request.resolver_match.url_name == 'portal_novo' %}aria-current="page"{% endif %}>Nova solicitação</a></nav>
-
-{% block portal_content %}{% endblock %}</div>{% include 'pos_obra/_internal_script.html' %}{% endblock %}
+{% block content %}
+<div class="po-shell po-portal">
+  <div class="pc-top">
+    <a class="pc-brand" href="{% url 'pos_obra:portal' %}" aria-label="SAARI, início do portal do cliente">
+      <span class="pc-brand__symbol"><img src="{% static 'img/saari/saari-simbolo-gold.png' %}" alt=""></span>
+      <span><span class="pc-brand__word">SAARI</span><span class="pc-brand__caption">Portal de assistência técnica</span></span>
+    </a>
+    <nav class="po-nav" aria-label="Navegação do portal">
+      <a href="{% url 'pos_obra:portal' %}" {% if request.resolver_match.url_name == 'portal' %}aria-current="page"{% endif %}>Minha área</a>
+      <a href="{% url 'pos_obra:portal' %}#meus-chamados">Minhas solicitações</a>
+      <a href="{% url 'pos_obra:portal_novo' %}" {% if request.resolver_match.url_name == 'portal_novo' or request.resolver_match.url_name == 'pesquisa' %}aria-current="page"{% endif %}>Nova solicitação</a>
+    </nav>
+  </div>
+  <main id="conteudo-portal">{% block portal_content %}{% endblock %}</main>
+  <footer class="pc-footer"><span>SAARI ERP · Assistência técnica</span><span>Seu imóvel e seus atendimentos, em um só lugar.</span></footer>
+</div>
+{% include 'pos_obra/_internal_script.html' %}
+{% endblock %}

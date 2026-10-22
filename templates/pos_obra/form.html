@@ -1,1 +1,38 @@
-{% extends 'pos_obra/_portal.html' %}{% block portal_content %}<header class="po-head"><div><span class="po-eyebrow">Assistência técnica</span><h1>{% if eh_pesquisa %}Avalie o atendimento{% else %}Nova solicitação{% endif %}</h1><p>{% if eh_pesquisa %}Sua opinião ajuda a melhorar nossos próximos atendimentos.{% else %}Conte o que aconteceu no imóvel e como podemos ajudar.{% endif %}</p></div><a href="{% url 'pos_obra:portal' %}" class="po-button">Minha área</a></header><section class="po-card"><form method="post" enctype="multipart/form-data" id="po-chamado-form" data-form-name="{% if eh_pesquisa %}Avaliação{% else %}Solicitação{% endif %}">{% csrf_token %}{% if eh_pesquisa %}<p class="po-help">Notas de 1 (menor satisfação) a 5 (maior satisfação). O comentário é opcional.</p>{% include 'pos_obra/_fields.html' with form=form %}{% else %}{% include 'pos_obra/_opening_fields.html' %}{% endif %}<div class="po-form-footer"><a class="po-button" href="{% url 'pos_obra:portal' %}">Cancelar</a><button class="po-button primary">{% if eh_pesquisa %}Enviar avaliação{% else %}Registrar solicitação{% endif %}</button></div></form></section>{% include 'pos_obra/_ambientes_script.html' %}{% include 'pos_obra/_availability_script.html' %}{% endblock %}
+{% extends 'pos_obra/_portal.html' %}
+{% block portal_content %}
+<header class="pc-form-heading">
+  <h1>{% if eh_pesquisa %}Avaliar atendimento{% else %}Nova solicitação{% endif %}</h1>
+</header>
+
+<div class="pc-form-layout">
+  <section class="po-card pc-form-card">
+    <form method="post" enctype="multipart/form-data" id="po-chamado-form" data-form-name="{% if eh_pesquisa %}Avaliação{% else %}Solicitação{% endif %}">{% csrf_token %}
+      {% if eh_pesquisa %}
+        <div class="po-form-group pc-section-card">
+          <div class="pc-section-card__head"><span class="pc-section-card__step">01</span><div><h3>Avaliação do atendimento</h3></div></div>
+          {% include 'pos_obra/_fields.html' with form=form %}
+        </div>
+      {% else %}
+        {% include 'pos_obra/_opening_fields.html' %}
+      {% endif %}
+      <div class="po-form-footer"><a class="po-button" href="{% url 'pos_obra:portal' %}">Cancelar</a><button type="submit" class="po-button primary">{% if eh_pesquisa %}Enviar avaliação{% else %}Registrar solicitação{% endif %} →</button></div>
+    </form>
+  </section>
+  <aside class="pc-form-aside">
+    <h2>{% if eh_pesquisa %}Obrigado por avaliar{% else %}Seu atendimento, passo a passo{% endif %}</h2>
+    {% if eh_pesquisa %}
+      <p>Sua resposta será registrada com segurança e ajudará nossa equipe a aprimorar a experiência dos clientes.</p>
+    {% else %}
+      <ol>
+        <li><strong>Informe o ocorrido.</strong> Selecione o imóvel, o tipo de ocorrência e descreva o problema com clareza.</li>
+        <li><strong>Indique sua disponibilidade.</strong> Informe dias e horários preferenciais para facilitar o contato da equipe.</li>
+        <li><strong>Anexe um arquivo se desejar.</strong> Fotos e documentos podem ajudar no entendimento da solicitação.</li>
+        <li><strong>Acompanhe pelo portal.</strong> Depois do envio, consulte atualizações, agendamentos e documentos na sua área.</li>
+      </ol>
+      <div class="pc-form-tip"><strong>Dica:</strong> quanto mais detalhes você informar, mais rápido conseguimos direcionar o atendimento.</div>
+    {% endif %}
+  </aside>
+</div>
+{% include 'pos_obra/_ambientes_script.html' %}
+{% include 'pos_obra/_availability_script.html' %}
+{% endblock %}

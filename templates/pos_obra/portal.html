@@ -1,5 +1,48 @@
-{% extends 'pos_obra/_portal.html' %}{% block portal_content %}
-<header class="po-head"><div><span class="po-eyebrow">SAARI ERP · Área do cliente</span><h1>Olá, {{ cliente.nome }}</h1><p>Acompanhe seus imóveis e o atendimento da assistência técnica.</p></div><a class="po-button primary" href="{% url 'pos_obra:portal_novo' %}">+ Nova solicitação</a></header>
-<div class="po-grid po-grid-three"><div class="po-stat"><span class="po-stat-label">Imóveis disponíveis</span><div class="po-stat-value">{{ imoveis|length }}</div></div><div class="po-stat"><span class="po-stat-label">Solicitações registradas</span><div class="po-stat-value">{{ total_chamados }}</div></div><div class="po-stat"><span class="po-stat-label">Em andamento</span><div class="po-stat-value">{{ em_andamento }}</div></div></div>
-<details class="po-card"><summary>Meus imóveis · {{ imoveis|length }}</summary>{% for e in imoveis %}<div class="po-row"><strong>{{ e }}</strong><span class="po-status">Disponível para atendimento</span></div>{% empty %}<p class="po-empty">Nenhum imóvel liberado para atendimento. Entre em contato com a equipe.</p>{% endfor %}</details>
-<section class="po-card" id="meus-chamados"><div class="po-card__head"><div><h2>Minhas solicitações</h2><p>Consulte o status e os documentos de cada atendimento.</p></div></div><div class="po-table-wrap"><table class="po-table po-table-responsive"><thead><tr><th>Solicitação</th><th>Imóvel</th><th>Ocorrência</th><th>Status</th><th>Abertura</th></tr></thead><tbody>{% for c in chamados %}<tr><td data-label="Solicitação"><a href="{% url 'pos_obra:portal_detalhe' c.pk %}">{{ c.numero }} →</a></td><td data-label="Imóvel">{{ c.empreendimento }}</td><td data-label="Ocorrência">{{ c.tipo_problema.nome }}</td><td data-label="Status"><span class="po-status" data-status="{{ c.status }}">{{ c.get_status_display }}</span></td><td data-label="Abertura">{{ c.criado_em|date:'d/m/Y' }}</td></tr>{% empty %}<tr><td colspan="5" class="po-empty">Você ainda não registrou solicitações.</td></tr>{% endfor %}</tbody></table></div>{% include 'pos_obra/_pagination.html' with pagina=chamados ancora='#meus-chamados' %}</section>{% endblock %}
+{% extends 'pos_obra/_portal.html' %}
+{% block portal_content %}
+<section class="pc-hero" aria-labelledby="pc-welcome">
+  <div class="pc-hero__content">
+    <span class="pc-kicker">Bem-vindo à sua área exclusiva</span>
+    <h1 id="pc-welcome">Olá, {{ cliente.nome }}!</h1>
+    <p>Estamos aqui para cuidar do seu imóvel. Acompanhe seus atendimentos, consulte seus protocolos e conte com nossa equipe sempre que precisar abrir uma nova solicitação.</p>
+  </div>
+  <a class="po-button primary" href="{% url 'pos_obra:portal_novo' %}">+ Nova solicitação</a>
+</section>
+
+<section class="pc-metrics" aria-label="Resumo dos seus atendimentos">
+  <div class="pc-metric">
+    <div class="pc-metric__head"><span>Meus imóveis</span><span class="pc-metric__icon" aria-hidden="true">⌂</span></div>
+    <div class="pc-metric__number">{{ imoveis|length }}</div>
+  </div>
+  <div class="pc-metric">
+    <div class="pc-metric__head"><span>Solicitações registradas</span><span class="pc-metric__icon" aria-hidden="true">☷</span></div>
+    <div class="pc-metric__number">{{ total_chamados }}</div>
+  </div>
+  <div class="pc-metric">
+    <div class="pc-metric__head"><span>Em andamento</span><span class="pc-metric__icon" aria-hidden="true">◷</span></div>
+    <div class="pc-metric__number">{{ em_andamento }}</div>
+  </div>
+</section>
+
+<section class="po-card" aria-labelledby="pc-properties">
+  <div class="po-card__head">
+    <div>
+      <div class="pc-section-title"><h2 id="pc-properties">Meus imóveis</h2><span class="pc-count">{{ imoveis|length }}</span></div>
+      <p>Imóveis vinculados ao seu atendimento.</p>
+    </div>
+  </div>
+  <div class="pc-property-list">{% for e in imoveis %}<div class="pc-property"><span class="pc-property__icon" aria-hidden="true">⌂</span><div><strong>{{ e }}</strong><small>Disponível para atendimento</small></div></div>{% empty %}<p class="po-empty">Nenhum imóvel liberado para atendimento. Entre em contato com nossa equipe.</p>{% endfor %}</div>
+</section>
+
+<section class="po-card" id="meus-chamados" aria-labelledby="pc-requests">
+  <div class="po-card__head">
+    <div>
+      <h2 id="pc-requests">Minhas solicitações</h2>
+      <p>Consulte o andamento de cada atendimento e acesse seus documentos.</p>
+    </div>
+    <a class="po-button" href="{% url 'pos_obra:portal_novo' %}">+ Nova solicitação</a>
+  </div>
+  <div class="po-table-wrap"><table class="po-table po-table-responsive"><thead><tr><th>Protocolo</th><th>Imóvel</th><th>Ocorrência</th><th>Situação</th><th>Aberta em</th></tr></thead><tbody>{% for c in chamados %}<tr><td data-label="Protocolo"><a class="pc-number-link" href="{% url 'pos_obra:portal_detalhe' c.pk %}">{{ c.numero }} ↗</a></td><td data-label="Imóvel">{{ c.empreendimento }}</td><td data-label="Ocorrência">{{ c.tipo_problema.nome }}</td><td data-label="Situação"><span class="po-status" data-status="{{ c.status }}">{{ c.get_status_display }}</span></td><td data-label="Aberta em">{{ c.criado_em|date:'d/m/Y' }}</td></tr>{% empty %}<tr><td colspan="5" class="po-empty">Você ainda não registrou solicitações. Quando precisar, nossa equipe estará aqui.</td></tr>{% endfor %}</tbody></table></div>
+  {% include 'pos_obra/_pagination.html' with pagina=chamados ancora='#meus-chamados' %}
+</section>
+{% endblock %}
