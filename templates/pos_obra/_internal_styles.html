@@ -247,4 +247,44 @@ html[data-theme=dark] body.app-body .po-shell.po-interno.po-design-v2 :is(input:
   .po-design-v2 .os-tab strong{font-size:9px}
   .po-design-v2 .os-tab small{font-size:8px}
 }
+
+/* Organização guiada das etapas: conserva os forms originais e ações POST. */
+.po-design-v2 #os-triagem,.po-design-v2 #os-vistoria,.po-design-v2 #os-execucao{display:flex;flex-direction:column;align-items:stretch}
+.po-design-v2 #os-triagem>.os-step-form,.po-design-v2 #os-vistoria>.os-step-form,.po-design-v2 #os-execucao>.os-step-form{display:contents}
+.po-design-v2 #os-triagem>.os-section-head,.po-design-v2 #os-vistoria>.os-section-head,.po-design-v2 #os-execucao>.os-section-head{order:0}
+.po-design-v2 #os-triagem>.os-step-form>.po2-block:first-of-type{order:10}
+.po-design-v2 #os-triagem>.po2-schedule{order:20}
+.po-design-v2 #os-triagem>.os-step-form>.po2-block:nth-of-type(2){order:30}
+.po-design-v2 #os-triagem>.os-actions{order:40}
+.po-design-v2 #os-vistoria>.po2-schedule{order:10}
+.po-design-v2 #os-vistoria>.os-step-form>.po2-block:first-of-type,.po-design-v2 #os-vistoria>.po2-block:first-of-type:not(.po2-schedule){order:20}
+.po-design-v2 #os-vistoria>.os-step-form>.po2-block:nth-of-type(2){order:30}
+.po-design-v2 #os-vistoria>.os-step-form~.po2-block:not(.po2-schedule){order:40}
+.po-design-v2 #os-vistoria>.os-actions{order:50}
+.po-design-v2 #os-execucao>.os-step-form>.po2-block:first-of-type,.po-design-v2 #os-execucao>.po2-block:first-of-type:not(.po2-schedule){order:10}
+.po-design-v2 #os-execucao>.po2-schedule{order:20}
+.po-design-v2 #os-execucao>.os-step-form>.po2-block:nth-of-type(2){order:30}
+.po-design-v2 #os-execucao>.os-step-form~.po2-block:not(.po2-schedule){order:40}
+.po-design-v2 #os-execucao>.os-actions{order:50}
+.po-design-v2 #os-triagem>.po-draft-indicator,.po-design-v2 #os-vistoria>.po-draft-indicator,.po-design-v2 #os-execucao>.po-draft-indicator{order:5}
+/* Compactação do termo de aceite sem reduzir a área de assinatura. */
+.po-design-v2 .po-sign-final{gap:11px;padding:15px;margin:12px 16px}
+.po-design-v2 .po-sign-final .po-sign-identity{grid-template-columns:minmax(0,1.6fr) minmax(160px,.85fr);gap:12px}
+.po-design-v2 .po-sign-final .po-sign-decision{grid-template-columns:minmax(150px,.7fr) minmax(0,1.8fr);gap:12px;align-items:start}
+.po-design-v2 .po-sign-final .po-sign-grid .po-field{min-width:0;margin:0}
+.po-design-v2 .po-sign-final .po-sign-grid :is(input,select){min-height:37px;height:37px}
+.po-design-v2 .po-sign-final .po-sign-decision textarea{min-height:37px;height:54px;resize:vertical}
+.po-design-v2 .po-sign-final .po-sign-grid label{margin-bottom:4px}
+.po-design-v2 .po-sign-final .po-signature{margin-top:2px}
+@media(max-width:650px){.po-design-v2 .po-sign-final .po-sign-identity,.po-design-v2 .po-sign-final .po-sign-decision{grid-template-columns:1fr}}
+
+/* Mesmo posicionamento para etapas já concluídas/somente leitura. */
+.po-design-v2 #os-triagem>.po2-block:first-of-type{order:10}
+.po-design-v2 #os-triagem>.po2-block:nth-of-type(2):not(.po2-schedule){order:30}
+.po-design-v2 #os-vistoria>.po2-block:nth-of-type(2):not(.po2-schedule){order:30}
+.po-design-v2 #os-vistoria>.po2-block:nth-of-type(3):not(.po2-schedule){order:40}
+.po-design-v2 #os-execucao>.po2-block:nth-of-type(2):not(.po2-schedule){order:30}
+.po-design-v2 #os-execucao>.po2-block:nth-of-type(3):not(.po2-schedule){order:40}
+.po-design-v2 #os-triagem>.po-alert,.po-design-v2 #os-vistoria>.po-alert,.po-design-v2 #os-execucao>.po-alert{order:5}
+.po-design-v2 :is(#os-triagem,#os-vistoria,#os-execucao)[hidden]{display:none!important}
 </style>

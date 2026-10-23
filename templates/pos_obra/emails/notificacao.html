@@ -1,0 +1,62 @@
+{% extends "pos_obra/emails/base_email.html" %}
+{% block content %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;">
+    <tr>
+        <td style="background:#503d2d;padding:26px 28px;border-radius:18px 18px 0 0;color:#ffffff;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td style="vertical-align:middle;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td style="vertical-align:middle;padding-right:14px;">
+                                    {% if logo_url %}
+                                    <img src="{{ logo_url }}" alt="SAARI" width="52" height="56" style="display:block;width:52px;height:56px;border:0;outline:none;text-decoration:none;">
+                                    {% endif %}
+                                </td>
+                                <td style="vertical-align:middle;">
+                                    <div style="font-size:14px;letter-spacing:0.20em;text-transform:uppercase;color:#e6c89b;margin-bottom:5px;">SAARI ERP</div>
+                                    <div style="font-size:21px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;">Pós-Obra</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td align="right" style="vertical-align:top;">
+                        <span style="display:inline-block;padding:8px 12px;border-radius:999px;background:#6b5541;border:1px solid #816a53;font-size:12px;font-weight:600;">{{ tag }}</span>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td style="background:#ffffff;padding:0 28px 28px 28px;border-left:1px solid #e5dace;border-right:1px solid #e5dace;border-bottom:1px solid #e5dace;border-radius:0 0 18px 18px;">
+            <div style="margin-top:18px;background:#fffcf8;border:1px solid #e5dace;border-radius:18px;padding:18px 20px;">
+                <div style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#9b7650;margin-bottom:9px;">{{ eyebrow }}</div>
+                <div style="font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-0.03em;color:#382a20;margin-bottom:10px;">{{ titulo }}</div>
+                <div style="font-size:15px;line-height:1.7;color:#756453;">{{ descricao }}</div>
+            </div>
+
+            <div style="padding-top:22px;font-size:15px;line-height:1.7;color:#5b4738;">
+                <div style="margin-bottom:16px;">Olá,</div>
+                <div style="margin-bottom:0;">{{ mensagem_html|safe }}</div>
+            </div>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:24px;border-collapse:separate;border-spacing:0 10px;">
+                {% for rotulo, valor in resumo_os %}
+                <tr>
+                    <td width="34%" style="padding:13px 15px;background:#f7f2eb;border:1px solid #e8ded2;border-right:none;border-radius:14px 0 0 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:#8a735d;">{{ rotulo }}</td>
+                    <td style="padding:13px 15px;background:#fffcf8;border:1px solid #e8ded2;border-left:none;border-radius:0 14px 14px 0;font-size:14px;font-weight:600;color:#503d2d;">{{ valor|default:'-' }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            <div style="padding-top:14px;">
+                <a href="{{ portal_url }}" style="display:inline-block;background:#503d2d;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:700;letter-spacing:0.01em;">{{ cta_label }}</a>
+            </div>
+
+            <div style="margin-top:24px;padding:18px 18px 0 18px;border-top:1px solid #e8ded2;font-size:13px;line-height:1.7;color:#817064;">
+                Acompanhe sua ordem de serviço, documentos, histórico de atendimento e novas atualizações diretamente no portal do cliente.
+            </div>
+        </td>
+    </tr>
+</table>
+{% endblock %}

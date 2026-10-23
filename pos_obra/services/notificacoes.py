@@ -5,10 +5,12 @@ Sem worker externo, o envio é síncrono após a transação; falhas ficam para 
 """
 import logging
 from datetime import timedelta
+from urllib.parse import urljoin
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.html import escape
 
@@ -18,20 +20,118 @@ logger = logging.getLogger(__name__)
 MAX_TENTATIVAS = 5
 
 
+EVENTOS_EMAIL = {
+    'ABERTURA': {
+        'eyebrow': 'Solicitação recebida',
+        'titulo': 'Recebemos seu chamado',
+        'descricao': 'Sua solicitação foi registrada com sucesso e já está em acompanhamento pela equipe de Pós-Obra.',
+        'tag': 'Abertura',
+    },
+    'AGENDAMENTO': {
+        'eyebrow': 'Novo agendamento',
+        'titulo': 'Há um atendimento aguardando sua confirmação',
+        'descricao': 'Confira os detalhes do agendamento e confirme o atendimento pelo portal do cliente.',
+        'tag': 'Agendamento',
+    },
+    'REAGENDAMENTO': {
+        'eyebrow': 'Atualização de agenda',
+        'titulo': 'Há uma nova proposta de atendimento',
+        'descricao': 'O horário do atendimento foi atualizado. Confira os detalhes no portal.',
+        'tag': 'Reagendamento',
+    },
+    'RESPOSTA_AGENDAMENTO': {
+        'eyebrow': 'Resposta registrada',
+        'titulo': 'Sua resposta ao agendamento foi registrada',
+        'descricao': 'Recebemos sua confirmação ou solicitação de ajuste de horário com sucesso.',
+        'tag': 'Agenda',
+    },
+    'ALTERACAO_AGENDAMENTO': {
+        'eyebrow': 'Agenda atualizada',
+        'titulo': 'O agendamento do seu atendimento foi atualizado',
+        'descricao': 'Houve uma atualização no status do agendamento. Consulte o portal para ver os detalhes.',
+        'tag': 'Agenda',
+    },
+    'CONCLUSAO': {
+        'eyebrow': 'Atendimento concluído',
+        'titulo': 'Sua ordem de serviço foi concluída',
+        'descricao': 'Os documentos e o histórico do atendimento já estão disponíveis no portal do cliente.',
+        'tag': 'Conclusão',
+    },
+    'PESQUISA': {
+        'eyebrow': 'Sua opinião é importante',
+        'titulo': 'Avalie o atendimento realizado',
+        'descricao': 'Sua avaliação ajuda a melhorar continuamente a experiência do Pós-Obra SAARI.',
+        'tag': 'Pesquisa',
+    },
+    'LEMBRETE': {
+        'eyebrow': 'Lembrete de atendimento',
+        'titulo': 'Seu atendimento está próximo',
+        'descricao': 'Este é um lembrete do atendimento confirmado. Consulte os detalhes e orientações no portal.',
+        'tag': 'Lembrete',
+    },
+}
+
+
 def _destinatario(chamado):
     return (getattr(chamado.cliente, 'email', '') or '').strip()
 
 
+def _site_url():
+    return (getattr(settings, 'SITE_URL', '') or '').rstrip('/')
+
+
+def _portal_url():
+    site_url = _site_url()
+    return f'{site_url}/pos-obra/portal/' if site_url else '#'
+
+
+def _logo_url():
+    site_url = _site_url()
+    logo_path = 'static/img/saari/saari-simbolo-gold.png'
+    return urljoin(f'{site_url}/', logo_path) if site_url else ''
+
+
+def _dados_evento(notificacao):
+    base = {
+        'eyebrow': 'Atualização do Pós-Obra',
+        'titulo': 'Sua ordem de serviço recebeu uma atualização',
+        'descricao': 'Acompanhe as informações mais recentes do seu atendimento no portal do cliente.',
+        'tag': 'Pós-Obra',
+    }
+    base.update(EVENTOS_EMAIL.get(notificacao.evento, {}))
+    return base
+
+
+def _resumo_os(notificacao):
+    chamado = notificacao.chamado
+    cliente = getattr(chamado, 'cliente', None)
+    empreendimento = getattr(chamado, 'empreendimento', None)
+    return [
+        ('Protocolo', chamado.numero),
+        ('Status atual', chamado.get_status_display() if hasattr(chamado, 'get_status_display') else chamado.status),
+        ('Cliente', getattr(cliente, 'nome', '') or getattr(cliente, 'razao_social', '') or '-'),
+        ('Empreendimento', getattr(empreendimento, 'nome', '') or str(empreendimento or '-')),
+    ]
+
+
+def _email_context(notificacao):
+    portal = _portal_url()
+    dados_evento = _dados_evento(notificacao)
+    mensagem_formatada = escape(notificacao.mensagem).replace('\n', '<br>')
+    return {
+        'notificacao': notificacao,
+        'chamado': notificacao.chamado,
+        'portal_url': portal,
+        'logo_url': _logo_url(),
+        'mensagem_html': mensagem_formatada,
+        'resumo_os': _resumo_os(notificacao),
+        'cta_label': 'Acessar Portal do Cliente',
+        **dados_evento,
+    }
+
+
 def _email_html(notificacao):
-    portal = (getattr(settings, 'SITE_URL', '') or '').rstrip('/') + '/pos-obra/portal/'
-    # URL é apenas navegação; portal deve exigir autenticação e autorização.
-    texto = escape(notificacao.mensagem).replace('\n', '<br>')
-    return (
-        '<div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;line-height:1.6">'
-        '<h2 style="color:#6c513e">SAARI ERP · Pós-Obra</h2>'
-        f'<p>{texto}</p><p><a href="{escape(portal, quote=True)}">Acessar meu portal</a></p>'
-        '<hr><small>Mensagem automática. Consulte os detalhes no portal.</small></div>'
-    )
+    return render_to_string('pos_obra/emails/notificacao.html', _email_context(notificacao))
 
 
 def enviar_notificacao(pk):
@@ -41,7 +141,9 @@ def enviar_notificacao(pk):
     Exceções de SMTP são registradas, sem desfazer a ação de negócio.
     """
     with transaction.atomic():
-        obj = NotificacaoOS.objects.select_for_update().filter(pk=pk).first()
+        obj = NotificacaoOS.objects.select_for_update().select_related(
+            'chamado__cliente', 'chamado__empreendimento'
+        ).filter(pk=pk).first()
         if not obj or obj.situacao == 'ENVIADO' or obj.tentativas >= MAX_TENTATIVAS:
             return False, False
         obj.tentativas += 1

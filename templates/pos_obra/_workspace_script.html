@@ -14,9 +14,11 @@ tabs.forEach(tab=>{tab.addEventListener('click',()=>show(tab.dataset.osTab));tab
 selector.addEventListener('change',()=>show(selector.value));
 document.querySelectorAll('[data-po-go]').forEach(b=>b.addEventListener('click',()=>{show(b.dataset.poGo);document.getElementById('os-'+b.dataset.poGo)?.focus()}));
 const invalid=root.querySelector('.errorlist'),panel=invalid?.closest('.os-panel');
-const requested=location.hash.slice(1);const agendaLegacy=requested==='agendamentos';const wanted=panel?panel.id.slice(3):(agendaLegacy||root.dataset.activePanel==='agendamentos'?(document.getElementById('tab-vistoria')?.disabled?'triagem':'vistoria'):requested||root.dataset.activePanel);
-show(tabs.some(t=>t.dataset.osTab===wanted&&!t.disabled)?wanted:(tabs.find(t=>t.dataset.stageState==='atual'&&!t.disabled)?.dataset.osTab||'abertura'),false,location.hash!=='#historico');
-if(agendaLegacy){document.getElementById(document.getElementById('tab-vistoria')?.disabled?'agenda-triagem-vistoria':'agenda-vistoria')?.scrollIntoView({block:'start'});}
+const requested=location.hash.slice(1);const agendaLegacy=requested==='agendamentos';
+const current=tabs.find(t=>t.dataset.stageState==='atual'&&!t.disabled)?.dataset.osTab;
+const wanted=panel?panel.id.slice(3):(current||root.dataset.activePanel||'abertura');
+show(tabs.some(t=>t.dataset.osTab===wanted&&!t.disabled)?wanted:(tabs.find(t=>!t.disabled)?.dataset.osTab||'abertura'),false,location.hash!=='#historico');
+
 root.querySelectorAll('.po2-schedule').forEach(section=>section.querySelectorAll('form').forEach((form,index)=>form.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{const previous=el.id;el.id=section.id+'-'+index+'-'+previous;const label=el.closest('.po-field')?.querySelector('label');if(label)label.htmlFor=el.id;})));
 root.addEventListener('input',event=>{const panel=event.target.closest('.os-panel');if(panel){const dot=document.querySelector('#tab-'+panel.id.slice(3)+' .po-dirty-dot');if(dot)dot.hidden=false}});
 })();

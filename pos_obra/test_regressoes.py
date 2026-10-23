@@ -75,6 +75,26 @@ class RegressaoOperacionalTests(TestCase):
         self.assertEqual(r.status_code,200);self.assertContains(r,'Manter observação de reagendamento')
         a.refresh_from_db();self.assertEqual(a.situacao,'PROPOSTO')
 
+    def test_agendamento_bloqueado_apos_conclusao_da_etapa(self):
+        from pos_obra.models import AgendamentoOS
+        c=self.chamado(data_vistoria=timezone.localdate(),diagnostico='Vistoria concluída')
+        self.client.force_login(self.user)
+        inicio=timezone.localtime(timezone.now()+timedelta(days=2))
+        dados={'tipo':'VISTORIA','inicio':inicio.strftime('%Y-%m-%dT%H:%M'),'fim':(inicio+timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M'),'responsavel':self.user.pk}
+        resposta=self.client.post(reverse('pos_obra:agendar',args=[c.pk]),dados)
+        self.assertEqual(resposta.status_code,403)
+        self.assertFalse(AgendamentoOS.objects.filter(chamado=c).exists())
+        dados['tipo']='EXECUCAO'
+        resposta=self.client.post(reverse('pos_obra:agendar',args=[c.pk]),dados)
+        self.assertEqual(resposta.status_code,302)
+        c.data_execucao=timezone.localdate();c.execucao='Execução concluída';c.save()
+        resposta=self.client.post(reverse('pos_obra:agendar',args=[c.pk]),dados)
+        self.assertEqual(resposta.status_code,403)
+        a=AgendamentoOS.objects.get(chamado=c)
+        resposta=self.client.post(reverse('pos_obra:alterar_agendamento',args=[a.pk]),dict(dados,acao='REAGENDAR'))
+        self.assertEqual(resposta.status_code,403)
+        a.refresh_from_db();self.assertEqual(a.situacao,'PROPOSTO')
+
     @classmethod
     def setUpTestData(cls):
         cls.user=get_user_model().objects.create_superuser('gestor_reg',password='senha')

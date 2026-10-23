@@ -110,6 +110,19 @@ def pode_etapa(c, etapa):
     pendente = etapa_pendente(c)
     return etapa in ordem and (pendente is None or ordem.index(etapa) <= ordem.index(pendente))
 
+def pode_agendar_etapa(c, tipo):
+    """Agendamentos somente enquanto a etapa correspondente estiver aberta."""
+    if c.status in ('CONCLUIDO', 'CANCELADO'):
+        return False
+    vistoria_concluida = bool(c.data_vistoria and (c.diagnostico or '').strip())
+    execucao_concluida = bool(c.data_execucao and (c.execucao or '').strip())
+    if tipo == 'VISTORIA':
+        return not vistoria_concluida
+    if tipo in ('EXECUCAO', 'RETORNO', 'COMPLEMENTO'):
+        return vistoria_concluida and not execucao_concluida
+    return False
+
+
 @interno
 @transaction.atomic
 def detalhe(request, pk):
@@ -260,6 +273,8 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
         'anexos_execucao': c.anexos.filter(etapa='EXECUCAO'),
         'anexos_finalizacao': c.anexos.filter(etapa='FINALIZACAO'),
         'agendamentos': agendamentos,
+        'pode_agendar_vistoria': pode_agendar_etapa(c, 'VISTORIA'),
+        'pode_agendar_execucao': pode_agendar_etapa(c, 'EXECUCAO'),
         'form_agendamento': form_agendamento,
         'documentos': c.documentos_versionados.select_related('aceite').order_by('-criado_em', '-pk'),
         'documento_final': c.documentos_versionados.filter(tipo='OS', aceite__resultado__in=['ACEITO','RESSALVA']).order_by('-criado_em').first(),
@@ -554,7 +569,10 @@ def portal_novo(request):
 def portal_detalhe(request,pk):
     c=get_object_or_404(Chamado.objects.select_related('empreendimento__obra','tipo_problema'),pk=pk)
     if not pode_acessar(cliente_do_usuario(request.user),c):raise PermissionDenied
-    return render(request,'pos_obra/portal_detalhe.html',{'chamado':c,'historico':c.historico.filter(publico=True),'agendamentos':c.agendamentos.all(),'pesquisa':PesquisaSatisfacao.objects.filter(chamado=c).first(),'anexos':c.anexos.filter(publico=True)})
+    agendamentos=list(c.agendamentos.all())
+    for agendamento in agendamentos:
+        agendamento.pode_responder = agendamento.situacao == 'PROPOSTO' and pode_agendar_etapa(c, agendamento.tipo)
+    return render(request,'pos_obra/portal_detalhe.html',{'chamado':c,'historico':c.historico.filter(publico=True),'agendamentos':agendamentos,'pesquisa':PesquisaSatisfacao.objects.filter(chamado=c).first(),'anexos':c.anexos.filter(publico=True)})
 @cliente
 def portal_pdf(request,pk,tipo):
     c=get_object_or_404(Chamado,pk=pk)
@@ -621,6 +639,8 @@ def agendar(request,pk):
         get_user_model().objects.select_for_update().filter(pk=responsavel_id).first()
     f=AgendamentoForm(request.POST)
     if f.is_valid():
+        if not pode_agendar_etapa(c, f.cleaned_data['tipo']):
+            raise PermissionDenied('A etapa correspondente está concluída ou ainda não foi liberada para agendamento.')
         a=f.save(commit=False);a.chamado=c;a.criado_por=request.user;a.save()
         HistoricoAgendamento.objects.create(agendamento=a,usuario=request.user,para=a.situacao,observacao='Proposta criada')
         registro(c,request.user,c.status,'Proposta de agendamento cadastrada',True)
@@ -638,6 +658,7 @@ def responder_agendamento(request,pk):
     if not pode_acessar(cliente_do_usuario(request.user),a.chamado):raise PermissionDenied
     if a.chamado.status in ('CONCLUIDO','CANCELADO'):raise PermissionDenied('OS encerrada.')
     if a.situacao!='PROPOSTO':raise PermissionDenied('A proposta não está disponível.')
+    if not pode_agendar_etapa(a.chamado, a.tipo):raise PermissionDenied('A etapa desse agendamento já foi concluída.')
     resposta=request.POST.get('resposta')
     if resposta not in ('CONFIRMADO','REAGENDAMENTO'):raise PermissionDenied('Resposta inválida.')
     a.situacao=resposta;a.confirmado_em=timezone.now() if resposta=='CONFIRMADO' else None
@@ -820,10 +841,14 @@ def alterar_agendamento(request,pk):
     anterior=a.situacao
     if anterior not in ('PROPOSTO','CONFIRMADO','REAGENDAMENTO'):raise PermissionDenied('Este compromisso já está encerrado.')
     if acao=='REAGENDAR':
+        if not pode_agendar_etapa(a.chamado, a.tipo):
+            raise PermissionDenied('A etapa desse agendamento já foi concluída.')
         from django.contrib.auth import get_user_model
         raw=request.POST.get('responsavel','')
         if raw.isdigit():get_user_model().objects.select_for_update().filter(pk=raw).first()
         f=AgendamentoForm(request.POST,instance=a,auto_id=f'reagendar-{a.pk}-%s')
+        if f.is_valid() and not pode_agendar_etapa(a.chamado, f.cleaned_data['tipo']):
+            raise PermissionDenied('A etapa do novo agendamento não está aberta.')
         if not f.is_valid():
             messages.error(request,' '.join(str(e) for erros in f.errors.values() for e in erros))
             return _erro_operacao(request,a.chamado,'form_reagendamento_invalido',f,'agendamentos',reagendamento_id=a.pk)

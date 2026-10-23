@@ -554,3 +554,5 @@ if SAARI_DRIVE_ENABLED:
         'default': {'BACKEND': 'core.storage.SaariPublicStorage'},
         'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
     }
+
+SITE_URL = "https://altopadraoerp-processosglobal.pythonanywhere.com/"
