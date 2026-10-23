@@ -185,7 +185,7 @@ def ficha_tecnica(request, obra_id):
     ambiente_selecionado = None
     if ambiente_id and str(ambiente_id).isdigit():
         ambiente_selecionado = next((a for a in ambientes if a.pk == int(ambiente_id)), None)
-    if not ambiente_selecionado and ambientes:
+    if not ambiente_selecionado and ambientes and str(etapa) == "3":
         ambiente_selecionado = ambientes[0]
 
     categorias_obra, categorias_ambiente = _categorias_por_escopo()
@@ -289,6 +289,26 @@ def ficha_tecnica_acao(request, obra_id):
             )
             messages.success(request, "Ambiente adicionado.")
 
+    elif acao == "editar_ambiente":
+        ambiente = get_object_or_404(AmbienteFichaTecnica, pk=_pk_post(request, "ambiente_id"), pavimento__ficha=ficha)
+        pav = get_object_or_404(PavimentoFichaTecnica, pk=_pk_post(request, "pavimento"), ficha=ficha)
+        tipo = get_object_or_404(TipoAmbiente, pk=_pk_post(request, "tipo_ambiente"), ativo=True)
+        caracteristica = get_object_or_404(CaracteristicaAmbiente, pk=_pk_post(request, "caracteristica"), ativo=True)
+        identificacao = (request.POST.get("identificacao") or "").strip()
+        area = _decimal(request.POST.get("area_m2"))
+        if not identificacao or len(identificacao) > 160 or area <= 0:
+            messages.error(request, "Informe identificação válida e área maior que zero.")
+        elif AmbienteFichaTecnica.objects.filter(pavimento=pav, identificacao=identificacao).exclude(pk=ambiente.pk).exists():
+            messages.error(request, "Já existe um ambiente com essa identificação nesse pavimento.")
+        else:
+            ambiente.pavimento = pav
+            ambiente.tipo_ambiente = tipo
+            ambiente.caracteristica = caracteristica
+            ambiente.identificacao = identificacao
+            ambiente.area_m2 = area
+            ambiente.save(update_fields=["pavimento", "tipo_ambiente", "caracteristica", "identificacao", "area_m2"])
+            messages.success(request, "Ambiente atualizado.")
+
     elif acao == "excluir_ambiente":
         ambiente = get_object_or_404(AmbienteFichaTecnica, pk=_pk_post(request, "ambiente_id"), pavimento__ficha=ficha)
         ambiente.delete()
@@ -370,6 +390,37 @@ def ficha_tecnica_acao(request, obra_id):
         messages.success(request, "Item incluído na ficha técnica.")
         ambiente_param = f"&ambiente={aplicacao.ambiente_id}" if aplicacao.ambiente_id else ""
         return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=4{ambiente_param}")
+
+    elif acao == "editar_item":
+        item = get_object_or_404(ItemFichaTecnica, pk=_pk_post(request, "item_id"), aplicacao_categoria__ficha=ficha)
+        aplicacao = item.aplicacao_categoria
+        ambiente_param = f"&ambiente={aplicacao.ambiente_id}" if aplicacao.ambiente_id else ""
+        destino = f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=4{ambiente_param}"
+        if (aplicacao.ambiente_id is None and aplicacao.categoria.nome.upper() == NOME_CAT_AR_SISTEMA
+                and item.tipo_item_id is None and item.descricao_item.upper() == NOME_CAT_AR_SISTEMA):
+            messages.error(request, "Altere o sistema de ar-condicionado nas categorias gerais.")
+            return redirect(destino)
+        tipo_id = _pk_post(request, "tipo_item")
+        tipo = get_object_or_404(TipoItemGrandeFornecedor, pk=tipo_id, categoria=aplicacao.categoria, ativo=True) if tipo_id else None
+        unidade_id = _pk_post(request, "unidade")
+        unidade = get_object_or_404(UnidadeMedida, pk=unidade_id, ativo=True) if unidade_id else None
+        opcao_id = _pk_post(request, "opcao_especificacao")
+        opcao = get_object_or_404(OpcaoEspecificacaoGrandeFornecedor, pk=opcao_id, categoria=aplicacao.categoria, ativo=True) if opcao_id else None
+        descricao = (request.POST.get("descricao_item") or "").strip()
+        qtd = _decimal(request.POST.get("quantidade"))
+        if qtd <= 0 or not (tipo or descricao) or len(descricao) > 180:
+            messages.error(request, "Informe item e quantidade maior que zero.")
+            return redirect(destino)
+        item.tipo_item = tipo
+        item.descricao_item = descricao
+        item.quantidade = qtd
+        item.unidade = unidade
+        item.opcao_especificacao = opcao
+        item.especificacao = (request.POST.get("especificacao") or "").strip()
+        item.observacao = (request.POST.get("observacao") or "").strip()
+        item.save(update_fields=["tipo_item", "descricao_item", "quantidade", "unidade", "opcao_especificacao", "especificacao", "observacao", "atualizado_em"])
+        messages.success(request, "Item atualizado.")
+        return redirect(destino)
 
     elif acao == "excluir_item":
         item = get_object_or_404(ItemFichaTecnica, pk=_pk_post(request, "item_id"), aplicacao_categoria__ficha=ficha)

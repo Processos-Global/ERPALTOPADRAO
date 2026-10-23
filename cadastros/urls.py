@@ -1,9 +1,13 @@
 from django.urls import path
 from cadastros import views
 from cadastros.views.empresa import empresa
+from cadastros.views.modelos_vistoria import modelos_vistoria_lista, modelo_vistoria_editar
 
 app_name = "cadastros"
 urlpatterns = [
+    path("modelos-vistorias/", modelos_vistoria_lista, name="modelos_vistoria_lista"),
+    path("modelos-vistorias/novo/", modelo_vistoria_editar, name="modelo_vistoria_novo"),
+    path("modelos-vistorias/<int:pk>/", modelo_vistoria_editar, name="modelo_vistoria_editar"),
     path("empresa/", empresa, name="empresa"),
     path("pos-obra/<slug:modelo>/", views.pos_obra_views.lista, name="pos_obra_lista"),
     path("pos-obra/<slug:modelo>/novo/", views.pos_obra_views.editar, name="pos_obra_novo"),

@@ -5,6 +5,20 @@
 
 {% block extra_css %}
 {% include "obras/_styles.html" %}
+<style>
+.ft-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid #e7dccd;border-radius:12px;background:#faf8f5}
+.ft-picker label{font-size:12px;font-weight:800;color:#665047}
+.ft-picker select{flex:1;min-width:240px;max-width:520px;padding:11px 12px;border:1px solid #ddceba;border-radius:9px;background:#fff;color:#50362c;font:inherit;font-size:13px}
+.ft-picker-count{font-size:12px;color:#866f61}
+.ft-row-actions{display:flex;gap:6px;align-items:center}.ft-row-actions form{margin:0}
+.ft-edit-row[hidden]{display:none!important}.ft-edit-row td{background:#fbf8f3!important;padding:16px!important}
+.ft-edit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.ft-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#725b50}
+.ft-edit-grid input,.ft-edit-grid select,.ft-edit-grid textarea{width:100%;min-width:0;padding:10px;border:1px solid #dfd4c5;border-radius:8px;background:#fff;color:#49342c;font:inherit;font-size:12px}
+.ft-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+@media(max-width:1000px){.ft-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ft-edit-grid{grid-template-columns:1fr}.ft-picker select{min-width:100%}}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -96,8 +110,21 @@
               {% for a in ambientes %}
               <tr>
                 <td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.caracteristica.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td>
-                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+                <td><div class="ft-row-actions"><button type="button" class="ft-icon-btn" data-edit-row="amb-{{ a.pk }}">Editar</button><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}"><button class="ft-icon-btn danger" type="submit" onclick="return confirm('Excluir este ambiente e seus itens?')">Excluir</button></form></div></td>
               </tr>
+              <tr id="amb-{{ a.pk }}" class="ft-edit-row" hidden><td colspan="6">
+                <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+                  {% csrf_token %}<input type="hidden" name="acao" value="editar_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}">
+                  <div class="ft-edit-grid">
+                    <label>Pavimento<select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}" {% if p.pk == a.pavimento_id %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}</select></label>
+                    <label>Ambiente<input name="identificacao" value="{{ a.identificacao }}" maxlength="160" required></label>
+                    <label>Tipo<select name="tipo_ambiente" required>{% for tipo in tipos_ambiente %}<option value="{{ tipo.pk|unlocalize }}" {% if tipo.pk == a.tipo_ambiente_id %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
+                    <label>Característica<select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}" {% if c.pk == a.caracteristica_id %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></label>
+                    <label>Área (m²)<input name="area_m2" inputmode="decimal" value="{{ a.area_m2|floatformat:2 }}" required></label>
+                  </div>
+                  <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="amb-{{ a.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
+                </form>
+              </td></tr>
               {% empty %}<tr><td colspan="6" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
             </tbody>
           </table>
@@ -142,20 +169,9 @@
         <div class="ft-form-box" id="ft-ambiente-panel">
           <div class="ft-form-title">Categorias por ambiente</div>
           <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
-          <div class="ft-tabs">
-            {% for a in ambientes %}
-              <a data-ambiente-link class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_categorias_ativas %} is-filled{% endif %}" href="?etapa=3&ambiente={{ a.pk|unlocalize }}">
-                <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
-                {% if a.total_categorias_ativas %}
-                  <span class="ft-tab-status" title="{{ a.total_categorias_ativas }} categoria{{ a.total_categorias_ativas|pluralize }} selecionada{{ a.total_categorias_ativas|pluralize }} neste ambiente">
-                    <span class="check">✓</span> {{ a.total_categorias_ativas }}
-                  </span>
-                {% endif %}
-              </a>
-            {% empty %}
-              <span class="ft-empty">Cadastre os ambientes primeiro.</span>
-            {% endfor %}
-          </div>
+          <div class="ft-picker"><label for="ft-select-categorias">Ambiente</label><select id="ft-select-categorias" data-ambiente-select>
+            {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=3&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_categorias_ativas }} categorias</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
+          </select><span class="ft-picker-count">{{ total_ambientes }} ambientes cadastrados</span></div>
 
           {% if ambiente_selecionado %}
             <div class="ft-context">
@@ -183,19 +199,10 @@
       {% elif etapa == '4' %}
       <div class="ft-panel-head"><h2>Itens</h2></div>
       <div class="ft-panel-body">
-        <div class="ft-tabs">
-          <a class="{% if not ambiente_selecionado %}active{% endif %}" href="?etapa=4">Gerais</a>
-          {% for a in ambientes %}
-            <a class="{% if ambiente_selecionado.pk == a.pk %}active{% endif %}{% if a.total_itens_ativos %} is-filled{% endif %}" href="?etapa=4&ambiente={{ a.pk|unlocalize }}">
-              <span>{{ a.pavimento.nome }} · {{ a.identificacao }}</span>
-              {% if a.total_itens_ativos %}
-                <span class="ft-tab-status" title="{{ a.total_itens_ativos }} item{{ a.total_itens_ativos|pluralize }} cadastrado{{ a.total_itens_ativos|pluralize }} neste ambiente">
-                  <span class="check">✓</span> {{ a.total_itens_ativos }}
-                </span>
-              {% endif %}
-            </a>
-          {% endfor %}
-        </div>
+        <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select>
+          <option value="?etapa=4" {% if not ambiente_selecionado %}selected{% endif %}>Itens gerais da obra</option>
+          {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=4&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_itens_ativos }} itens</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
+        </select><span class="ft-picker-count">{{ total_ambientes }} ambientes · {{ total_itens }} itens</span></div>
 
         {% if ambiente_selecionado %}
           <div class="ft-context">
@@ -339,6 +346,19 @@
     window.location.reload();
   });
 
+  document.addEventListener('click', function(event){
+    const button = event.target.closest('[data-edit-row]');
+    if (!button) return;
+    const row = document.getElementById(button.dataset.editRow);
+    if (row) { row.hidden = !row.hidden; if (!row.hidden) row.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  });
+  document.addEventListener('change', function(event){
+    const select = event.target.closest('[data-ambiente-select]');
+    if (!select || !select.value) return;
+    const link = document.createElement('a'); link.href = select.value;
+    if (select.id === 'ft-select-categorias') { trocarAmbiente(link); }
+    else window.location.assign(select.value);
+  });
   iniciarArSistema();
 })();
 </script>

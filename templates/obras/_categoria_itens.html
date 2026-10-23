@@ -40,15 +40,33 @@
               {% if ap.categoria.nome == "AR CONDICIONADO - SISTEMA" and not ap.ambiente_id and not item.tipo_item_id and item.descricao_item == "AR CONDICIONADO - SISTEMA" %}
                 <span class="ft-sync">Definido nas categorias</span>
               {% else %}
+                <div class="ft-row-actions"><button type="button" class="ft-icon-btn" data-edit-row="item-{{ item.pk }}">Editar</button>
                 <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
                   {% csrf_token %}
                   <input type="hidden" name="acao" value="excluir_item">
                   <input type="hidden" name="item_id" value="{{ item.pk|unlocalize }}">
                   <button class="ft-icon-btn danger" type="submit" title="Excluir item">Excluir</button>
-                </form>
+                </form></div>
               {% endif %}
             </td>
           </tr>
+          {% if ap.categoria.nome != "AR CONDICIONADO - SISTEMA" or ap.ambiente_id or item.tipo_item_id or item.descricao_item != "AR CONDICIONADO - SISTEMA" %}
+          <tr id="item-{{ item.pk }}" class="ft-edit-row" hidden><td colspan="6">
+            <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+              {% csrf_token %}<input type="hidden" name="acao" value="editar_item"><input type="hidden" name="item_id" value="{{ item.pk|unlocalize }}">
+              <div class="ft-edit-grid">
+                <label>Item<select name="tipo_item"><option value="">Descrição livre</option>{% for tipo in ap.categoria.tipos_itens.all %}{% if tipo.ativo %}<option value="{{ tipo.pk|unlocalize }}" {% if item.tipo_item_id == tipo.pk %}selected{% endif %}>{{ tipo.nome }}</option>{% endif %}{% endfor %}</select></label>
+                <label>Descrição livre<input name="descricao_item" value="{{ item.descricao_item }}" maxlength="180"></label>
+                <label>Quantidade<input name="quantidade" value="{{ item.quantidade|floatformat:2 }}" inputmode="decimal" required></label>
+                <label>Unidade<select name="unidade"><option value="">—</option>{% for u in unidades %}<option value="{{ u.pk|unlocalize }}" {% if item.unidade_id == u.pk %}selected{% endif %}>{{ u.sigla }}</option>{% endfor %}</select></label>
+                <label>Especificação padrão<select name="opcao_especificacao"><option value="">Nenhuma</option>{% for o in ap.categoria.opcoes_especificacao.all %}{% if o.ativo %}<option value="{{ o.pk|unlocalize }}" {% if item.opcao_especificacao_id == o.pk %}selected{% endif %}>{{ o.nome }}</option>{% endif %}{% endfor %}</select></label>
+                <label style="grid-column:span 3">Especificação<textarea name="especificacao" rows="2">{{ item.especificacao }}</textarea></label>
+                <label style="grid-column:span 2">Observação<textarea name="observacao" rows="2">{{ item.observacao }}</textarea></label>
+              </div>
+              <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="item-{{ item.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
+            </form>
+          </td></tr>
+          {% endif %}
           {% endif %}
         {% endfor %}
       </tbody>

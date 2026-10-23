@@ -26,3 +26,4 @@ from .fvs import ModeloFVS, ItemModeloFVS
 from .pos_obra import Cliente, EmpreendimentoPosObra, VinculoCliente, CategoriaOcorrencia, TipoProblema
 
 from .pos_obra import Cliente, EmpreendimentoPosObra, VinculoCliente, CategoriaOcorrencia, TipoProblema
+from .modelo_vistoria import ModeloVistoria, CampoModeloVistoria

@@ -20,3 +20,4 @@ from .diario import DiarioObra, FotoDiarioObra
 from .fvs import FVS, FVSItem, FVSHistorico, FotoFVSItem
 
 from .vistoria import VistoriaItem, VistoriaHistorico
+from .vistoria_cautelar import VistoriaCautelar, OcorrenciaCautelar, FotoCautelar

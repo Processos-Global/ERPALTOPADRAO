@@ -1,8 +1,17 @@
 from django.urls import path
 from obras import views
+from obras.views import vistoria_cautelar as cautelar
 
 app_name = "obras"
 urlpatterns = [
+    path("vistorias/cautelares/", cautelar.cautelares_lista, name="cautelares_lista"),
+    path("vistorias/cautelares/nova/", cautelar.cautelar_nova, name="cautelar_nova"),
+    path("vistorias/cautelares/<int:pk>/", cautelar.cautelar_detalhe, name="cautelar_detalhe"),
+    path("vistorias/cautelares/<int:pk>/salvar/", cautelar.cautelar_salvar, name="cautelar_salvar"),
+    path("vistorias/cautelares/<int:pk>/ocorrencia/", cautelar.cautelar_ocorrencia, name="cautelar_ocorrencia"),
+    path("vistorias/cautelares/<int:pk>/ocorrencia/<int:oid>/excluir/", cautelar.cautelar_ocorrencia_excluir, name="cautelar_ocorrencia_excluir"),
+    path("vistorias/cautelares/<int:pk>/foto/", cautelar.cautelar_foto, name="cautelar_foto"),
+    path("vistorias/cautelares/<int:pk>/pdf/", cautelar.cautelar_pdf, name="cautelar_pdf"),
     path("pos-obra/liberacoes/", __import__("obras.views.pos_obra",fromlist=["liberacoes"]).liberacoes, name="pos_obra_liberacoes"),
     path("pos-obra/<int:obra_id>/liberar/", __import__("obras.views.pos_obra",fromlist=["liberar"]).liberar, name="pos_obra_liberar"),
     path("", views.menu, name="menu"),

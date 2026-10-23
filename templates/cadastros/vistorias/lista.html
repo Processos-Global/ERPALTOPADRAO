@@ -1,0 +1,5 @@
+{% extends 'cadastros/base_cadastros.html' %}
+{% block cadastros_content %}
+<div class="cad-head"><div class="cad-head__copy"><div class="cad-eyebrow">Vistorias técnicas</div><h1 class="cad-title">Modelos de Vistoria</h1><p class="cad-sub">Gerencie perguntas, campos e seções reutilizáveis.</p></div><a class="cad-btn" href="{% url 'cadastros:modelo_vistoria_novo' %}">+ Novo modelo</a></div>
+<div class="cad-table-wrap"><table class="cad-table"><thead><tr><th>Modelo</th><th>Versão</th><th>Campos</th><th>Situação</th><th></th></tr></thead><tbody>{% for modelo in modelos %}<tr><td>{{ modelo.nome }}</td><td>{{ modelo.versao }}</td><td>{{ modelo.campos.count }}</td><td>{% if modelo.ativo %}Ativo{% else %}Inativo{% endif %}</td><td><a class="cad-link" href="{% url 'cadastros:modelo_vistoria_editar' modelo.pk %}">Editar</a></td></tr>{% empty %}<tr><td colspan="5">Nenhum modelo cadastrado.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

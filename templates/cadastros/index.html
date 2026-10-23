@@ -55,6 +55,7 @@
     <div class="cad-card__footer"><span>Acessar modelos</span><span>→</span></div>
   </a>
 
+  <a class="cad-card" href="{% url 'cadastros:modelos_vistoria_lista' %}"><div class="cad-card__top"><span class="cad-card__icon">VC</span></div><h3>Modelos de Vistoria</h3><p>Configure os campos e as seções das vistorias técnicas cautelares.</p><div class="cad-card__footer"><span>Gerenciar modelos</span><span>→</span></div></a>
   <a class="cad-card" href="{% url 'cadastros:pos_obra_lista' 'empreendimentos' %}"><div class="cad-card__top"><span class="cad-card__icon">PO</span></div><h3>Empreendimentos Pós-Obra</h3><p>Liberação e cadastro de obras concluídas.</p><div class="cad-card__footer"><span>Gerenciar imóveis</span><span>→</span></div></a>
 </div>
 {% endblock %}
