@@ -555,4 +555,4 @@ if SAARI_DRIVE_ENABLED:
         'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
     }
 
-SITE_URL = "https://altopadraoerp-processosglobal.pythonanywhere.com/"
+SITE_URL = "https://www.saarigroup.app.br/"
