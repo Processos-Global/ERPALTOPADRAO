@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Atualizar Orçamento | ERP Alto Padrão{% endblock %}
+{% block page_name %}Orçamento{% endblock %}
+
+{% block extra_css %}
+<style>
+.cad-page{max-width:900px;margin:0 auto;padding:24px 28px 36px;color:#10243e;font-family:Inter,"Segoe UI",sans-serif}
+.cad-head{margin-bottom:18px}.cad-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#2F6F7E;margin-bottom:5px}.cad-title{font-size:27px;line-height:1.1;font-weight:760;letter-spacing:-.035em;margin:0}.cad-sub{margin:7px 0 0;color:#64748b;font-size:13px;max-width:720px}
+.cad-form-card{background:#fff;border:1px solid #e2e8f0;border-radius:10px;max-width:640px;overflow:hidden;margin-bottom:20px}.cad-form-card__head{padding:15px 18px;border-bottom:1px solid #e2e8f0;background:#fbfcfd}.cad-form-card__head strong{font-size:13px}.cad-form-card__body{padding:18px}
+.cad-hint{margin:8px 0 0;color:#64748b;font-size:11.5px}
+.cad-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:8px;padding:9px 13px;min-height:38px;border:1px solid #2F6F7E;background:#2F6F7E;color:white;text-decoration:none;font-weight:700;font-size:12.5px;cursor:pointer}.cad-btn:hover{filter:brightness(.97)}
+.cad-checkbox{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:12.5px;color:#334155}
+.cad-summary{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px;font-size:12.5px}
+.cad-summary dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.cad-summary dt{color:#64748b}.cad-summary dd{margin:0;font-weight:600}
+.cad-summary pre{white-space:pre-wrap;background:#fff1f0;border:1px solid #f3c7c2;color:#912018;padding:10px;border-radius:8px;margin-top:12px;font-size:11.5px}
+@media(max-width:900px){.cad-page{padding:18px}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cad-page">
+  <div class="cad-head">
+    <div class="cad-eyebrow">Orçamento</div>
+    <h1 class="cad-title">Atualizar Orçamento</h1>
+    <p class="cad-sub">
+      Busca no Google Drive uma planilha de orçamento por obra, lê a aba
+      "00 - Orçamento" de cada uma, cria as obras que ainda não existem e
+      substitui os insumos importados de cada uma.
+    </p>
+  </div>
+
+  <div class="cad-form-card">
+    <div class="cad-form-card__head"><strong>Atualização a partir do Drive</strong></div>
+    <div class="cad-form-card__body">
+      <form method="post" action="{% url 'orcamento:atualizar_executar' %}">
+        {% csrf_token %}
+        <label class="cad-checkbox">
+          <input type="checkbox" name="forcar" value="1">
+          Forçar reimportação mesmo de arquivos sem alteração
+        </label>
+        <button class="cad-btn" type="submit">Atualizar orçamento</button>
+      </form>
+    </div>
+  </div>
+
+  {% if ultima_importacao %}
+  <div class="cad-summary">
+    <strong>Última atualização</strong>
+    <dl style="margin-top:10px;">
+      <dt>Status</dt><dd>{{ ultima_importacao.get_status_display }}</dd>
+      <dt>Obras criadas</dt><dd>{{ ultima_importacao.obras_criadas }}</dd>
+      <dt>Obras atualizadas</dt><dd>{{ ultima_importacao.obras_atualizadas }}</dd>
+      <dt>Sem alteração</dt><dd>{{ ultima_importacao.obras_ignoradas }}</dd>
+      <dt>Itens importados</dt><dd>{{ ultima_importacao.total_itens_importados }}</dd>
+      <dt>Quando</dt><dd>{{ ultima_importacao.finalizou_em|default:ultima_importacao.criado_em }}</dd>
+    </dl>
+    {% if ultima_importacao.erro_detalhado %}
+      <pre>{{ ultima_importacao.erro_detalhado }}</pre>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

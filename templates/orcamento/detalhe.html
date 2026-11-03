@@ -1,0 +1,295 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Orçamento | {{ obra.nome }} | ERP Alto Padrão{% endblock %}
+{% block page_name %}Orçamento{% endblock %}
+
+{% block extra_css %}
+<style>
+:root{--orc-blue:#2F6F7E;--orc-blue-dark:#1F4F5B;--orc-blue-soft:#EAF4F6;--orc-border:#e2e8f0;--orc-sidebar:#0a4054}
+.orc-page{max-width:1480px;margin:0 auto;padding:24px 28px 48px;color:#10243e;font-family:Inter,"Segoe UI",sans-serif}
+.orc-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:22px;flex-wrap:wrap}
+.orc-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--orc-blue);margin-bottom:5px}
+.orc-title{font-size:27px;line-height:1.1;font-weight:760;letter-spacing:-.035em;margin:0}
+.orc-sub{margin:7px 0 0;color:#64748b;font-size:13px}
+.orc-back{font-size:12px;font-weight:700;color:var(--orc-blue);text-decoration:none}
+.orc-back:hover{text-decoration:underline}
+
+.orc-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
+.orc-card{background:#fff;border:1px solid var(--orc-border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden}
+.orc-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--orc-blue)}
+.orc-card__label{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:700}
+.orc-card__value{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:6px;color:#10243e}
+.orc-card--mo::before{background:#c2703d}
+.orc-card--itens::before{background:#5b6b73}
+
+.orc-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.orc-search{position:relative;flex:1;max-width:400px}
+.orc-search input{width:100%;box-sizing:border-box;border:1px solid #dde4e8;border-radius:11px;padding:11px 38px 11px 40px;font-size:13px;color:#10243e;background:#fff;box-shadow:0 1px 2px rgba(16,36,62,.04);transition:border-color .15s,box-shadow .15s}
+.orc-search input::placeholder{color:#94a3b8}
+.orc-search input:focus{outline:none;border-color:var(--orc-blue);box-shadow:0 0 0 4px rgba(47,111,126,.12)}
+.orc-search__icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;display:flex}
+.orc-search__icon svg{width:16px;height:16px}
+.orc-search:focus-within .orc-search__icon{color:var(--orc-blue)}
+.orc-search__clear{position:absolute !important;right:8px;top:50%;transform:translateY(-50%);width:22px;height:22px;border:none;background:#f1f5f9;color:#64748b;border-radius:999px;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:12px;line-height:1;overflow:hidden}
+.orc-search__clear:hover{background:#e2e8f0}
+.orc-search.has-value .orc-search__clear{display:flex}
+.orc-search-empty{padding:24px;text-align:center;color:#64748b;font-size:12.5px;display:none}
+
+.orc-filtro-cat{display:inline-flex;gap:3px;background:#fff;border:1px solid var(--orc-border);border-radius:11px;padding:3px;box-shadow:0 1px 2px rgba(16,36,62,.04);flex-shrink:0}
+.orc-filtro-cat__btn{border:none;background:transparent;color:#64748b;font-size:12px;font-weight:700;padding:8px 13px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
+.orc-filtro-cat__btn:hover{background:#f1f5f9}
+.orc-filtro-cat__btn.is-ativo{background:var(--orc-blue);color:#fff}
+.orc-filtro-cat__btn.is-ativo:hover{background:var(--orc-blue)}
+
+.orc-tree-wrap{background:#fff;border:1px solid var(--orc-border);border-radius:14px;overflow:hidden}
+.orc-tree-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--orc-border);background:#fbfcfd;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:750}
+.orc-tree-head span{flex-shrink:0}
+.orc-tree-body{padding:6px 10px 16px}
+
+.orc-node{border-radius:8px}
+.orc-node__row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;cursor:default}
+.orc-node__row[role="button"]{cursor:pointer}
+.orc-node__row:hover{background:#f8fafc}
+.orc-node__toggle{width:20px;height:20px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#94a3b8}
+.orc-node__toggle[data-leaf]{visibility:hidden}
+.orc-chevron{display:inline-block;transition:transform .15s ease;font-size:10px}
+.orc-node:not(.is-collapsed) > .orc-node__row .orc-chevron{transform:rotate(90deg)}
+.orc-node__codigo{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#64748b;flex-shrink:0;min-width:88px}
+.orc-node__descricao{flex:1;min-width:0;font-size:12.5px;color:#1b2528;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orc-node__col{flex-shrink:0;font-size:12px;color:#334155;text-align:right}
+.orc-node__col--unid{width:56px}
+.orc-node__col--num{width:100px}
+.orc-node__col--total{width:130px;font-weight:750;color:#10243e}
+.orc-node__actions{display:flex;width:177px;gap:6px;flex-shrink:0}
+.orc-node__filhos{margin-left:26px;border-left:1px dashed #dbe4e8;padding-left:6px}
+.orc-node.is-collapsed > .orc-node__filhos{display:none}
+.orc-node.is-hidden-busca{display:none}
+
+/* Cascata visual por nível: 1=fundo cinza, 2=negrito, 3=normal, 4=fino
+   (só existe quando a EAP tem 5 níveis). O insumo (folha) sempre fica
+   por cima dessa regra, com a cor do menu lateral. */
+.orc-node--nivel1 > .orc-node__row{background:#f1f5f7}
+.orc-node--nivel1 > .orc-node__row .orc-node__descricao{font-weight:800;text-transform:uppercase;letter-spacing:.01em;font-size:13px}
+.orc-node--nivel1{margin-bottom:4px}
+
+.orc-node--nivel2 > .orc-node__row .orc-node__descricao{font-weight:700}
+
+.orc-node--nivel3 > .orc-node__row .orc-node__descricao{font-weight:400}
+
+.orc-node--nivel4 > .orc-node__row .orc-node__descricao{font-weight:500;font-style:italic;color:#5b6b73}
+
+.orc-node--folha > .orc-node__row .orc-node__descricao{font-weight:500;color:var(--orc-sidebar)}
+.orc-node--folha > .orc-node__row .orc-node__codigo{color:var(--orc-sidebar);opacity:.75}
+.orc-node--folha > .orc-node__row .orc-node__col--total{color:var(--orc-sidebar);font-weight:800}
+
+.orc-tag{display:inline-flex;padding:2px 6px;border-radius:999px;font-size:9.5px;font-weight:800;margin-left:6px;vertical-align:middle}
+.orc-tag--mo{background:#fdf1e7;color:#9a4e1c}
+.orc-tag--alerta{background:#fff1f0;color:#912018}
+
+.orc-btn-disabled{border:1px solid #e2e8f0;background:#f8fafc;color:#94a3b8;font-size:10.5px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:not-allowed}
+
+.orc-empty{padding:40px;text-align:center;color:#64748b;font-size:13px}
+
+@media(max-width:1100px){.orc-node__filhos{margin-left:16px}}
+
+@media(max-width:720px){
+  .orc-page{padding:16px 14px 32px}
+  .orc-title{font-size:21px}
+  .orc-head{gap:10px}
+  .orc-summary{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+  .orc-card{padding:12px 13px}
+  .orc-card__value{font-size:17px}
+  .orc-toolbar{margin-bottom:12px;flex-wrap:wrap}
+  .orc-search{max-width:none;width:100%}
+  .orc-search input{font-size:16px;padding:10px 36px 10px 38px}
+  .orc-filtro-cat{width:100%;overflow-x:auto}
+  .orc-filtro-cat__btn{flex:1;text-align:center}
+
+  .orc-tree-wrap{border-radius:12px}
+  .orc-tree-head{display:none}
+  .orc-tree-body{padding:4px 4px 12px}
+
+  .orc-node__row{flex-wrap:wrap;padding:10px 6px;row-gap:5px}
+  .orc-node__toggle{order:1}
+  .orc-node__codigo{order:1;font-size:10px;min-width:0}
+  .orc-node__descricao{white-space:normal;overflow:visible;text-overflow:clip;flex-basis:100%;order:2;font-size:12px;line-height:1.35}
+
+  .orc-node__col{order:3;width:auto !important;flex:0 1 auto;font-size:11px}
+  .orc-node__col--unid::before{content:"Un ";color:#94a3b8;font-weight:700}
+  .orc-node__col--quant::before{content:"Qtd ";color:#94a3b8;font-weight:700}
+  .orc-node__col--custo::before{content:"Custo ";color:#94a3b8;font-weight:700}
+  .orc-node__col--total{order:3;margin-left:auto;font-size:12.5px}
+
+  .orc-node__actions{order:4;width:auto;flex-basis:100%;justify-content:flex-end;gap:5px;margin-top:2px}
+  .orc-node__actions:empty{display:none}
+  .orc-node__actions:empty{display:none;flex-basis:0;margin-top:0}
+  .orc-btn-disabled{padding:4px 7px;font-size:9.5px}
+  .orc-node__filhos{margin-left:10px;padding-left:5px}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="orc-page">
+  <div class="orc-head">
+    <div>
+      <div class="orc-eyebrow">Orçamento</div>
+      <h1 class="orc-title">{{ obra.nome }}</h1>
+      <p class="orc-sub">Estrutura EAP de {{ obra.estrutura_eap }} níveis · atualizado a partir do Google Drive</p>
+    </div>
+    <a class="orc-back" href="{% url 'orcamento:obras' %}">&larr; Voltar para obras</a>
+  </div>
+
+  <div class="orc-summary">
+    <div class="orc-card">
+      <div class="orc-card__label">Valor total orçado</div>
+      <div class="orc-card__value">R$ {{ valor_total|floatformat:2 }}</div>
+    </div>
+    <div class="orc-card orc-card--mo">
+      <div class="orc-card__label">Mão de obra orçada</div>
+      <div class="orc-card__value">R$ {{ valor_mao_de_obra|floatformat:2 }}</div>
+    </div>
+    <div class="orc-card orc-card--itens">
+      <div class="orc-card__label">Itens de insumo</div>
+      <div class="orc-card__value">{{ quantidade_insumos }}</div>
+    </div>
+  </div>
+
+  <div class="orc-toolbar">
+    <div class="orc-search" id="orc-search-wrap">
+      <span class="orc-search__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </span>
+      <input type="text" id="orc-busca" placeholder="Buscar por código ou descrição...">
+      <button type="button" class="orc-search__clear" id="orc-busca-limpar" aria-label="Limpar busca">&times;</button>
+    </div>
+
+    <div class="orc-filtro-cat" id="orc-filtro-categoria" role="tablist">
+      <button type="button" class="orc-filtro-cat__btn is-ativo" data-categoria="todos">Todos</button>
+      <button type="button" class="orc-filtro-cat__btn" data-categoria="material">Materiais</button>
+      <button type="button" class="orc-filtro-cat__btn" data-categoria="mao-de-obra">Mão de obra</button>
+    </div>
+  </div>
+
+  <div class="orc-tree-wrap">
+    <div class="orc-tree-head">
+      <span style="width:30px"></span>
+      <span style="min-width:88px">Código</span>
+      <span style="flex:1">Descrição</span>
+      <span style="width:56px;text-align:right">Unid.</span>
+      <span style="width:100px;text-align:right">Quant.</span>
+      <span style="width:100px;text-align:right">Custo</span>
+      <span style="width:130px;text-align:right">Total</span>
+      <span style="width:177px;text-align:right">Ações</span>
+    </div>
+
+    <div class="orc-tree-body" id="orc-tree">
+      {% for fase in fases %}
+        {% include "orcamento/_no_orcamento.html" with no=fase %}
+      {% empty %}
+        <div class="orc-empty">Nenhum orçamento importado para esta obra ainda.</div>
+      {% endfor %}
+    </div>
+
+    <div class="orc-search-empty" id="orc-busca-vazia">Nenhum item encontrado para essa busca.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var arvore = document.getElementById("orc-tree");
+
+  arvore.addEventListener("click", function (evento) {
+    if (evento.target.closest(".orc-node__actions")) return;
+
+    var linha = evento.target.closest(".orc-node__row");
+    if (!linha || linha.getAttribute("role") !== "button") return;
+
+    linha.closest(".orc-node").classList.toggle("is-collapsed");
+  });
+
+  function normalizar(texto) {
+    return (texto || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "");
+  }
+
+  var campoBusca = document.getElementById("orc-busca");
+  var mensagemVazia = document.getElementById("orc-busca-vazia");
+  var wrapBusca = document.getElementById("orc-search-wrap");
+  var botaoLimpar = document.getElementById("orc-busca-limpar");
+  var todosOsNos = arvore.querySelectorAll(".orc-node");
+  var botoesCategoria = document.querySelectorAll("#orc-filtro-categoria .orc-filtro-cat__btn");
+  var categoriaAtual = "todos";
+
+  botaoLimpar.addEventListener("click", function () {
+    campoBusca.value = "";
+    aplicarFiltros();
+    campoBusca.focus();
+  });
+
+  campoBusca.addEventListener("input", aplicarFiltros);
+
+  botoesCategoria.forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      categoriaAtual = botao.getAttribute("data-categoria");
+
+      botoesCategoria.forEach(function (b) {
+        b.classList.toggle("is-ativo", b === botao);
+      });
+
+      aplicarFiltros();
+    });
+  });
+
+  function passaCategoria(no) {
+    if (categoriaAtual === "todos") return true;
+
+    if (!no.classList.contains("orc-node--folha")) return false;
+
+    var valorEsperado = categoriaAtual === "mao-de-obra" ? "1" : "0";
+    return no.getAttribute("data-mao-de-obra") === valorEsperado;
+  }
+
+  function aplicarFiltros() {
+    var termo = normalizar(campoBusca.value.trim());
+    wrapBusca.classList.toggle("has-value", campoBusca.value.length > 0);
+
+    todosOsNos.forEach(function (no) {
+      var texto = no.getAttribute("data-busca") || "";
+      var baterBusca = !termo || texto.indexOf(termo) !== -1;
+      var baterCategoria = passaCategoria(no);
+
+      no.classList.remove("is-hidden-busca");
+      no.dataset.match = (baterBusca && baterCategoria) ? "1" : "0";
+    });
+
+    var algumVisivel = false;
+    var expandirAutomaticamente = !!termo;
+
+    // Um nó fica visível se ele mesmo bate nos filtros ou se algum
+    // descendente bate. Ancestrais de um item batido são expandidos
+    // apenas quando há busca por texto ativa.
+    todosOsNos.forEach(function (no) {
+      var bateEleOuDescendente = no.dataset.match === "1" || !!no.querySelector('.orc-node[data-match="1"]');
+
+      if (bateEleOuDescendente) {
+        algumVisivel = true;
+        no.classList.remove("is-hidden-busca");
+        if (expandirAutomaticamente) no.classList.remove("is-collapsed");
+      } else {
+        no.classList.add("is-hidden-busca");
+      }
+    });
+
+    mensagemVazia.style.display = algumVisivel ? "none" : "block";
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+<div class="orc-node orc-node--nivel{{ no.nivel }} {% if no.eh_servico_final %}orc-node--folha{% endif %} {% if no.filhos %}is-collapsed{% endif %}" data-busca="{{ no.busca }}" data-mao-de-obra="{% if no.mao_de_obra %}1{% else %}0{% endif %}">
+  <div class="orc-node__row" {% if no.filhos %}role="button" tabindex="0"{% endif %}>
+    <span class="orc-node__toggle" {% if not no.filhos %}data-leaf="1"{% endif %}>
+      {% if no.filhos %}<span class="orc-chevron">&#9656;</span>{% endif %}
+    </span>
+
+    <span class="orc-node__codigo">{{ no.codigo }}</span>
+    <span class="orc-node__descricao">
+      {{ no.descricao }}
+      {% if no.mao_de_obra %}<span class="orc-tag orc-tag--mo">M.O</span>{% endif %}
+      {% if no.placeholder %}<span class="orc-tag orc-tag--alerta">sem cadastro</span>{% endif %}
+    </span>
+
+    {% if no.eh_servico_final %}
+      <span class="orc-node__col orc-node__col--unid">{{ no.unid|default:"—" }}</span>
+      <span class="orc-node__col orc-node__col--num orc-node__col--quant">{{ no.quant|floatformat:2 }}</span>
+      <span class="orc-node__col orc-node__col--num orc-node__col--custo">R$ {{ no.custo|floatformat:2 }}</span>
+    {% else %}
+      <span class="orc-node__col orc-node__col--unid"></span>
+      <span class="orc-node__col orc-node__col--num"></span>
+      <span class="orc-node__col orc-node__col--num"></span>
+    {% endif %}
+
+    <span class="orc-node__col orc-node__col--total">R$ {{ no.total|floatformat:2 }}</span>
+
+    {% if no.eh_servico_final and no.mao_de_obra %}
+      <span class="orc-node__actions">
+        <button type="button" class="orc-btn-disabled" disabled title="Ainda não disponível">Contrato</button>
+        <button type="button" class="orc-btn-disabled" disabled title="Ainda não disponível">FVS</button>
+        <button type="button" class="orc-btn-disabled" disabled title="Ainda não disponível">Medição</button>
+      </span>
+    {% else %}
+      <span class="orc-node__actions"></span>
+    {% endif %}
+  </div>
+
+  {% if no.filhos %}
+    <div class="orc-node__filhos">
+      {% for filho in no.filhos %}
+        {% include "orcamento/_no_orcamento.html" with no=filho %}
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>

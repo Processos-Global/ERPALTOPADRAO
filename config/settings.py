@@ -294,6 +294,20 @@ GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = env(
     default="",
 )
 
+# Pasta que contém um arquivo CSV de orçamento por obra.
+# O nome de cada arquivo (sem extensão) é usado para localizar/criar a obra.
+ORCAMENTO_FOLDER_ID = env(
+    "ORCAMENTO_FOLDER_ID",
+    default="1Pxhy9XdoFdgyOoQ349GUQEoZYmf1cYft",
+)
+
+# Programa padrão atribuído a obras criadas automaticamente durante a
+# atualização de orçamento, quando ainda não existem no ERP.
+ORCAMENTO_PROGRAMA_PADRAO = env(
+    "ORCAMENTO_PROGRAMA_PADRAO",
+    default="MCMV",
+)
+
 
 # ============================================================
 # IMPORTAÃ‡ÃƒO DO CRONOGRAMA

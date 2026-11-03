@@ -8,6 +8,7 @@ class ObraAdmin(admin.ModelAdmin):
     list_display = [
         "codigo",
         "nome",
+        "programa",
         "tipo_obra",
         "status",
         "area_construida",
@@ -16,6 +17,7 @@ class ObraAdmin(admin.ModelAdmin):
     ]
 
     list_filter = [
+        "programa",
         "tipo_obra",
         "status",
         "ativa",

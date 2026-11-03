@@ -8,7 +8,10 @@
 <style>
 .cad-page{max-width:1480px;margin:0 auto;padding:24px 28px 36px;color:#10243e;font-family:Inter,"Segoe UI",sans-serif}
 .cad-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}.cad-head__copy{min-width:0}.cad-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#2F6F7E;margin-bottom:5px}.cad-title{font-size:27px;line-height:1.1;font-weight:760;letter-spacing:-.035em;margin:0}.cad-sub{margin:7px 0 0;color:#64748b;font-size:13px;max-width:720px}
-.cad-table-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto}.cad-table{width:100%;border-collapse:collapse;min-width:880px}.cad-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;background:#f8fafc;text-align:left;padding:10px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap}.cad-table td{padding:11px 12px;border-bottom:1px solid #eef2f7;font-size:12.5px;vertical-align:middle}.cad-table tbody tr:hover{background:#fbfdfd}.cad-table tr:last-child td{border-bottom:0}.cad-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#475569}.cad-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10.5px;font-weight:750;background:#EAF4F6;color:#1F4F5B}.cad-badge.off{background:#f1f5f9;color:#64748b}.cad-empty{padding:28px;text-align:center;color:#64748b}
+.cad-table-wrap{background:#fff;border:1px solid #e2e8f0;border-radius:10px;overflow:auto}.cad-table{width:100%;border-collapse:collapse;min-width:760px}.cad-table th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;background:#f8fafc;text-align:left;padding:10px 12px;border-bottom:1px solid #e2e8f0;white-space:nowrap}.cad-table td{padding:11px 12px;border-bottom:1px solid #eef2f7;font-size:12.5px;vertical-align:middle}.cad-table tbody tr:hover{background:#fbfdfd}.cad-table tr:last-child td{border-bottom:0}.cad-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#475569}.cad-badge{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10.5px;font-weight:750;background:#EAF4F6;color:#1F4F5B}.cad-badge.off{background:#f1f5f9;color:#64748b}.cad-empty{padding:28px;text-align:center;color:#64748b}
+.cad-obra-link{color:#10243e;font-weight:700;text-decoration:none}.cad-obra-link:hover{color:#2F6F7E;text-decoration:underline}
+.cad-mini-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #BFD6DB;background:#EAF4F6;color:#1F4F5B;font-weight:700;font-size:11.5px;padding:6px 10px;border-radius:7px;text-decoration:none}.cad-mini-btn:hover{background:#dcedf0}
+.cad-orc-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #2F6F7E;background:#2F6F7E;color:#fff;font-weight:700;font-size:11.5px;padding:6px 11px;border-radius:7px;text-decoration:none}.cad-orc-btn:hover{filter:brightness(.95)}.cad-orc-btn svg{width:13px;height:13px}
 @media(max-width:900px){.cad-page{padding:18px}.cad-head{align-items:flex-start;flex-direction:column}}
 </style>
 {% endblock %}
@@ -29,22 +32,36 @@
         <tr>
           <th>Código</th>
           <th>Obra</th>
-          <th>Tipo</th>
-          <th>Cidade/UF</th>
-          <th>Status</th>
+          <th>Insumos</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for obra in obras %}
         <tr>
           <td class="cad-code">{{ obra.codigo }}</td>
-          <td><strong>{{ obra.nome }}</strong></td>
-          <td>{{ obra.get_tipo_obra_display }}</td>
-          <td>{{ obra.cidade|default:"—" }}{% if obra.estado %}/{{ obra.estado }}{% endif %}</td>
-          <td><span class="cad-badge {% if not obra.ativa %}off{% endif %}">{{ obra.get_status_display }}</span></td>
+          <td>
+            <a class="cad-obra-link" href="{% url 'orcamento:detalhe_orcamento' obra.pk %}">
+              {{ obra.nome }}
+            </a>
+          </td>
+          <td>
+            <a class="cad-mini-btn" href="{% url 'orcamento:insumos' obra.pk %}">
+              Ver insumos
+            </a>
+          </td>
+          <td>
+            <a class="cad-orc-btn" href="{% url 'orcamento:detalhe_orcamento' obra.pk %}">
+              Orçamento
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </a>
+          </td>
         </tr>
         {% empty %}
-        <tr><td class="cad-empty" colspan="5">Nenhuma obra cadastrada.</td></tr>
+        <tr><td class="cad-empty" colspan="4">Nenhuma obra cadastrada.</td></tr>
         {% endfor %}
       </tbody>
     </table>
