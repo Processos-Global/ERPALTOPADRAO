@@ -89,10 +89,10 @@ MODULOS_ERP = [
     },
     {
         "codigo": ModuloSistema.RELATORIOS,
-        "titulo": "Relatórios",
-        "descricao": "Indicadores consolidados",
+        "titulo": "Indicadores",
+        "descricao": "Desempenho gerencial",
         "icone": "chart",
-        "url_name": "",
+        "url_name": "relatorios:indicadores",
     },
     {
         "codigo": ModuloSistema.INTEGRACOES,

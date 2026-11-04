@@ -78,6 +78,7 @@ def erp_layout(request):
     obras_acesso = bool(permissoes.get(ModuloSistema.OBRAS))
     cadastros_acesso = bool(permissoes.get(ModuloSistema.CADASTROS))
     financeiro_acesso = bool(permissoes.get(ModuloSistema.FINANCEIRO))
+    indicadores_acesso = bool(permissoes.get(ModuloSistema.RELATORIOS))
 
     if request.user.is_superuser:
         usuarios_acesso = True
@@ -98,6 +99,7 @@ def erp_layout(request):
         "obras_acesso": obras_acesso,
         "cadastros_acesso": cadastros_acesso,
         "financeiro_acesso": financeiro_acesso,
+        "indicadores_acesso": indicadores_acesso,
         "usuarios_acesso": usuarios_acesso,
         "notificacoes_nao_lidas": notificacoes_nao_lidas,
         "sidebar_dashboard": {

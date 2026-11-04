@@ -920,6 +920,13 @@
                         </a>
                     {% endif %}
 
+                    {% if indicadores_acesso %}
+                    <a href="{% url 'relatorios:indicadores' %}" class="sidebar-link {% if request.resolver_match.namespace == 'relatorios' %}sidebar-link--active{% endif %}" data-transition-link title="Indicadores">
+                        <span class="sidebar-link__icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
+                        <span class="sidebar-link__text">Indicadores</span>
+                    </a>
+                    {% endif %}
+
                     {% if cadastros_acesso %}
                         <a
                             href="{% url 'cadastros:index' %}"
