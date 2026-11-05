@@ -259,6 +259,45 @@
 </div>
 <script>
 (function(){
+  // Preserva a posicao de leitura ao salvar qualquer formulario da Ficha Tecnica.
+  // O POST e o redirecionamento permanecem sob controle do Django.
+  const scrollKey = 'saari:ficha-tecnica:scroll:' + window.location.pathname;
+
+  document.addEventListener('submit', function(event){
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.closest('.ft-page')) return;
+    if ((form.method || '').toLowerCase() !== 'post') return;
+    try {
+      sessionStorage.setItem(scrollKey, JSON.stringify({
+        x: window.scrollX,
+        y: window.scrollY,
+        etapa: new URLSearchParams(window.location.search).get('etapa') || '1',
+        momento: Date.now()
+      }));
+    } catch (_) { /* Armazenamento indisponivel: envio normal */ }
+  }, true);
+
+  function restaurarPosicaoAposSalvar(){
+    let registro;
+    try {
+      const salvo = sessionStorage.getItem(scrollKey);
+      if (!salvo) return;
+      sessionStorage.removeItem(scrollKey); // Uma restauracao por salvamento
+      registro = JSON.parse(salvo);
+    } catch (_) { return; }
+    if (!registro || Date.now() - registro.momento > 120000) return;
+    const etapaAtual = new URLSearchParams(window.location.search).get('etapa') || '1';
+    if (registro.etapa !== etapaAtual) return;
+
+    // Evita que o navegador e o nosso script disputem a restauracao.
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    const restaurar = function(){ window.scrollTo({left: registro.x, top: registro.y, behavior: 'instant'}); };
+    requestAnimationFrame(function(){ requestAnimationFrame(restaurar); });
+    window.addEventListener('load', restaurar, {once: true});
+    setTimeout(restaurar, 180);
+  }
+  restaurarPosicaoAposSalvar();
+
   function iniciarArSistema(){
     const toggle = document.querySelector('[data-ar-sistema-toggle]');
     const box = document.querySelector('[data-ar-sistema-box]');
