@@ -1,93 +1,330 @@
 {% extends "layouts/base.html" %}
-{% block title %}{{ titulo|default:'Relatórios' }} | SAARI ERP{% endblock %}
-{% block page_name %}Relatórios{% endblock %}
+{% block title %}{{ titulo|default:'Indicadores' }} | SAARI ERP{% endblock %}
+{% block page_name %}Indicadores{% endblock %}
 {% block extra_css %}
 <style>
-/* Relatórios SAARI: identidade visual de Compras e Planejamento. Escopo local. */
-.sr-page{--sr-ink:#453330;--sr-text:#4b3a35;--sr-muted:#85776f;--sr-subtle:#a39890;--sr-accent:#77655c;--sr-gold:#b9aa72;--sr-paper:#fff;--sr-line:#ded7c8;--sr-line-soft:#eee8dc;--sr-soft:#f8f4ed;--sr-track:#eee9e1;--sr-shadow:0 2px 9px rgba(45,32,28,.045);width:100%;max-width:1750px;margin:0 auto;padding:18px 22px 45px;color:var(--sr-text);font-size:13px}
-.sr-page,.sr-page *{box-sizing:border-box}.sr-page button,.sr-page input,.sr-page select{font:inherit}.sr-page [hidden]{display:none!important}
-.sr-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:16px}.sr-titlewrap{display:flex;align-items:center;gap:13px;min-width:0}.sr-titleicon{display:grid;place-items:center;flex:none;width:43px;height:43px;border:1px solid #ded2b6;border-radius:10px;background:#f5f0e7;color:var(--sr-ink)}.sr-titleicon svg{width:21px;height:21px}.sr-eyebrow{margin:0 0 3px;color:var(--sr-muted);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.07em}.sr-title{margin:0;color:var(--sr-ink);font-size:25px;font-weight:780;letter-spacing:-.035em;line-height:1.15}.sr-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sr-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:37px;padding:8px 13px;border:1px solid var(--sr-line);background:#fff;border-radius:7px;color:var(--sr-text);text-decoration:none;font-size:11px!important;font-weight:750!important;cursor:pointer;transition:background .18s,border-color .18s,transform .18s;white-space:nowrap}.sr-btn:hover{border-color:var(--sr-gold);background:#faf7f1;color:var(--sr-ink)}.sr-btn-primary{background:var(--sr-ink);border-color:var(--sr-ink);color:#fff}.sr-btn-primary:hover{background:#66534c;color:#fff;border-color:#66534c}.sr-btn svg{height:15px;width:15px}
-.sr-nav{display:flex;align-items:center;gap:3px;border-bottom:1px solid var(--sr-line);margin-bottom:15px;overflow-x:auto;scrollbar-width:thin}.sr-nav a{display:inline-flex;align-items:center;justify-content:center;position:relative;min-height:42px;padding:10px 16px;color:var(--sr-muted);text-decoration:none;font-size:11px;font-weight:750;white-space:nowrap;border-bottom:2px solid transparent}.sr-nav a:hover{color:var(--sr-ink);background:var(--sr-soft)}.sr-nav a.is-active{color:var(--sr-ink);border-bottom-color:var(--sr-ink)}
-.sr-filter{display:grid;grid-template-columns:minmax(210px,1.3fr) minmax(145px,.8fr) minmax(145px,.8fr) auto;gap:11px;align-items:end;padding:14px;margin-bottom:15px;background:var(--sr-paper);border:1px solid var(--sr-line);border-radius:9px;box-shadow:var(--sr-shadow)}.sr-field label{display:block;margin-bottom:6px;color:#66534c;text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.04em}.sr-field input,.sr-field select{display:block;width:100%;height:38px;padding:8px 10px;background:#fff;color:var(--sr-text);border:1px solid #d9d0c2;border-radius:6px;font-size:12px;outline:none}.sr-field input:focus,.sr-field select:focus,.sr-search:focus{border-color:var(--sr-gold);box-shadow:0 0 0 3px rgba(185,170,114,.14)}.sr-filter-actions{display:flex;align-items:center;gap:8px}.sr-clear{font-size:11px;font-weight:700;color:var(--sr-muted);padding:8px;text-decoration:none}.sr-clear:hover{color:var(--sr-ink)}
-.sr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:22px}.sr-kpi{min-width:0;position:relative;overflow:hidden;background:var(--sr-paper);border:1px solid var(--sr-line);border-radius:9px;padding:16px 16px 15px;box-shadow:var(--sr-shadow)}.sr-kpi:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--sr-gold)}.sr-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.sr-kpi-label{font-size:11px;font-weight:750;color:var(--sr-muted)}.sr-kpi-mark{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:var(--sr-soft);color:var(--sr-accent)}.sr-kpi-mark svg{width:15px;height:15px}.sr-kpi-value{display:block;color:var(--sr-ink);font-size:clamp(19px,2vw,27px);line-height:1.2;font-weight:800;letter-spacing:-.035em;overflow-wrap:anywhere;margin-top:13px;font-variant-numeric:tabular-nums}.sr-kpi-detail{display:block;margin-top:7px;color:var(--sr-muted);font-size:10px;line-height:1.45}
-.sr-overview{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}.sr-heading{margin:0;color:var(--sr-ink);font-size:17px;font-weight:780;letter-spacing:-.015em}.sr-overview-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.sr-searchwrap{position:relative}.sr-searchwrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);height:15px;width:15px;color:var(--sr-muted);pointer-events:none}.sr-search{height:37px;width:245px;max-width:100%;padding:8px 10px 8px 34px;border:1px solid var(--sr-line);background:#fff;border-radius:7px;color:var(--sr-text);font-size:11px;outline:none}.sr-count{display:inline-flex;align-items:center;white-space:nowrap;font-size:10px;color:var(--sr-muted)}
-.sr-section{margin:0 0 19px}.sr-sectionhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:0 1px}.sr-sectionhead h2{display:flex;align-items:center;gap:9px;margin:0;color:var(--sr-ink);font-size:14px;font-weight:800}.sr-sectionhead h2:before{content:"";width:3px;height:16px;background:var(--sr-gold);border-radius:5px}.sr-sectionhead small{color:var(--sr-muted);font-size:10px}.sr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sr-panel{min-width:0;background:var(--sr-paper);border:1px solid var(--sr-line);border-radius:9px;overflow:hidden;box-shadow:var(--sr-shadow)}.sr-panelhead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:15px 16px 13px;border-bottom:1px solid var(--sr-line-soft)}.sr-panelhead h3{margin:0;color:var(--sr-ink);font-size:13px;font-weight:800;line-height:1.4}.sr-caption{margin:5px 0 0;color:var(--sr-muted);font-size:10px;line-height:1.5}.sr-chart-switch{display:inline-flex;gap:2px;flex:none;padding:3px;border:1px solid var(--sr-line-soft);background:var(--sr-soft);border-radius:7px}.sr-switch{display:inline-flex;align-items:center;justify-content:center;min-height:27px;padding:4px 8px;border:0;background:transparent;color:var(--sr-muted);border-radius:5px;font-size:10px!important;font-weight:800!important;cursor:pointer}.sr-switch[aria-pressed="true"]{background:#fff;color:var(--sr-ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}.sr-panelbody{padding:13px 16px 16px}.sr-chart{display:grid;gap:12px}.sr-baritem{display:grid;grid-template-columns:minmax(100px,1.1fr) minmax(70px,1.55fr) minmax(65px,.8fr);align-items:center;gap:11px}.sr-barlabel{color:var(--sr-text);font-size:11px;font-weight:650;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sr-track{width:100%;height:10px;background:var(--sr-track);border-radius:4px;overflow:hidden}.sr-fill{height:100%;min-width:0;background:linear-gradient(90deg,#77655c,#b9aa72);border-radius:4px;transition:width .45s ease}.sr-barvalue{text-align:right;color:var(--sr-ink);font-size:11px;font-weight:800;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.sr-tablewrap{overflow-x:auto}.sr-table{width:100%;border-collapse:collapse}.sr-table th{text-align:left;color:var(--sr-muted);font-size:10px;text-transform:uppercase;letter-spacing:.03em;padding:9px 10px;border-bottom:1px solid var(--sr-line)}.sr-table td{font-size:11px;padding:10px;border-bottom:1px solid var(--sr-line-soft);color:var(--sr-text)}.sr-table td:last-child,.sr-table th:last-child{text-align:right;font-weight:750;white-space:nowrap}.sr-table tr:last-child td{border-bottom:0}.sr-empty{display:flex;align-items:center;justify-content:center;min-height:100px;text-align:center;padding:16px;color:var(--sr-muted);font-size:11px}.sr-noresults{display:none;border:1px dashed var(--sr-line);border-radius:8px;padding:30px;text-align:center;color:var(--sr-muted);background:#fff}
-.sr-notice{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:15px 17px;border:1px solid var(--sr-line);border-radius:9px;background:var(--sr-soft);margin-top:14px}.sr-notice strong{color:var(--sr-ink);font-size:12px}.sr-notice p{margin:4px 0 0;font-size:11px;color:var(--sr-muted);line-height:1.5}.sr-foot{margin:16px 2px 0;font-size:10px;line-height:1.6;color:var(--sr-muted)}
-html[data-theme="dark"] .sr-page{--sr-ink:#e8dcd0;--sr-text:#dfd0c3;--sr-muted:#b8a89c;--sr-subtle:#a99b90;--sr-accent:#cfbda0;--sr-gold:#c6ae77;--sr-paper:#272322;--sr-line:#544842;--sr-line-soft:#463c38;--sr-soft:#352e2a;--sr-track:#51443c;--sr-shadow:none}html[data-theme="dark"] .sr-page .sr-btn,html[data-theme="dark"] .sr-page .sr-field input,html[data-theme="dark"] .sr-page .sr-field select,html[data-theme="dark"] .sr-page .sr-search{background:var(--sr-paper);color:var(--sr-text);border-color:var(--sr-line);color-scheme:dark}html[data-theme="dark"] .sr-page .sr-btn-primary{background:#77655c;color:#fff}html[data-theme="dark"] .sr-page .sr-titleicon{background:var(--sr-soft);border-color:var(--sr-line)}html[data-theme="dark"] .sr-page .sr-switch[aria-pressed="true"]{background:#51443c;color:#fff}html[data-theme="dark"] .sr-page .sr-kpi-mark{background:var(--sr-soft)}html[data-theme="dark"] .sr-page .sr-noresults{background:var(--sr-paper)}
-@media(max-width:1150px){.sr-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sr-filter{grid-template-columns:repeat(3,minmax(0,1fr))}.sr-filter-actions{grid-column:1/-1}}@media(max-width:850px){.sr-grid{grid-template-columns:1fr}.sr-page{padding:14px 12px 36px}}@media(max-width:620px){.sr-page{padding:10px 5px 30px}.sr-filter{grid-template-columns:1fr}.sr-filter-actions{grid-column:auto}.sr-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.sr-kpi{padding:12px}.sr-kpi-value{font-size:21px}.sr-title{font-size:21px}.sr-actions{width:100%}.sr-actions .sr-btn{flex:1}.sr-panelhead{flex-wrap:wrap}.sr-baritem{grid-template-columns:minmax(80px,.9fr) minmax(50px,1fr) minmax(65px,.7fr);gap:7px}.sr-search{width:100%}.sr-searchwrap{flex:1;min-width:190px}.sr-overview-controls{width:100%}.sr-sectionhead small{display:none}}
-@media print{@page{size:A4 landscape;margin:12mm}.sr-page{padding:0;max-width:none;color:#453330!important}.sr-actions,.sr-nav,.sr-filter,.sr-chart-switch,.sr-overview-controls{display:none!important}.sr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sr-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.sr-panel,.sr-kpi,.sr-section{break-inside:avoid;box-shadow:none}.sr-panel [data-view="table"]{display:none!important}.sr-panel [data-view="chart"]{display:grid!important}.sr-section{page-break-inside:avoid}}
+/* SAARI ERP | BI híbrido: estilos isolados neste módulo. */
+.sa-bi{--sa-bg:#f7f5f1;--sa-card:#fff;--sa-ink:#453330;--sa-text:#574a42;--sa-muted:#81756d;--sa-line:#e7e1d9;--sa-soft:#f3efe8;--sa-gold:#b9aa72;--sa-bar:#947d65;--sa-success:#407764;max-width:1680px;margin:0 auto;padding:24px 28px 60px;color:var(--sa-text);font-size:13px}
+.sa-bi *{box-sizing:border-box}.sa-bi [hidden]{display:none!important}.sa-bi button,.sa-bi input,.sa-bi select{font:inherit}.sa-bi a{text-decoration:none}.sa-bi :is(button,a,input,select,summary):focus-visible{outline:2px solid var(--sa-gold);outline-offset:3px}.sa-bi :is(h1,h2,h3,h4,p){margin-top:0}.sa-bi :is(h1,h2,h3,h4){color:var(--sa-ink)}
+.sa-top{display:flex;justify-content:space-between;gap:22px;align-items:flex-start;margin-bottom:22px}.sa-crumb{font-size:10px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;color:var(--sa-bar);margin:0 0 8px}.sa-heading{font-size:clamp(24px,2.25vw,32px);font-weight:800;letter-spacing:-.045em;line-height:1.16;margin:0 0 8px}.sa-subtitle{font-size:12px;color:var(--sa-muted);line-height:1.55;margin:0;max-width:700px}.sa-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.sa-button{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 13px;background:var(--sa-card);border:1px solid var(--sa-line);color:var(--sa-ink);border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}.sa-button:hover{border-color:var(--sa-gold);background:var(--sa-soft);color:var(--sa-ink)}.sa-button--dark{background:var(--sa-ink);color:white;border-color:var(--sa-ink)}.sa-button--dark:hover{background:#604b40;color:#fff}.sa-button svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sa-navigation{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;padding:5px;background:var(--sa-soft);border:1px solid var(--sa-line);border-radius:10px;margin-bottom:18px}.sa-navigation a{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;padding:10px 15px;border-radius:7px;color:var(--sa-muted);font-weight:700;font-size:12px;transition:background .15s,color .15s}.sa-navigation a:hover{color:var(--sa-ink);background:var(--sa-card)}.sa-navigation a[aria-current="page"]{background:var(--sa-card);box-shadow:0 1px 5px #45333014;color:var(--sa-ink)}.sa-navigation a[aria-current="page"]::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sa-gold)}
+.sa-filters{display:grid;grid-template-columns:minmax(180px,1.8fr) repeat(2,minmax(135px,1fr)) auto;align-items:end;gap:12px;padding:17px 18px;background:var(--sa-card);border:1px solid var(--sa-line);border-radius:10px;margin-bottom:28px}.sa-field{min-width:0}.sa-field label{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--sa-muted);margin-bottom:7px}.sa-field :is(select,input){width:100%;height:38px;padding:7px 10px;border:1px solid var(--sa-line);border-radius:6px;background:var(--sa-card);color:var(--sa-text);min-width:0}.sa-field :is(select,input):focus{border-color:var(--sa-gold);outline:2px solid #b9aa7244;outline-offset:0}.sa-filter-actions{display:flex;gap:7px;align-items:center}
+.sa-section-title{font-size:17px;font-weight:800;letter-spacing:-.025em;margin:0 0 5px}.sa-section-desc{color:var(--sa-muted);font-size:11px;line-height:1.55;margin:0}.sa-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 14px}.sa-context{font-size:10px;color:var(--sa-muted);white-space:nowrap}.sa-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:15px}.sa-kpi{min-width:0;min-height:142px;background:var(--sa-card);border:1px solid var(--sa-line);border-radius:10px;padding:18px 19px 16px;position:relative;overflow:hidden;display:flex;flex-direction:column}.sa-kpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--sa-gold);opacity:.8}.sa-kpi__label{color:var(--sa-muted);font-size:11px;font-weight:650;line-height:1.4}.sa-kpi__value{display:block;font-size:clamp(23px,2.25vw,32px);letter-spacing:-.045em;color:var(--sa-ink);line-height:1.16;margin:15px 0 9px;overflow-wrap:anywhere;font-weight:800;font-variant-numeric:tabular-nums}.sa-kpi__note{font-size:10px;color:var(--sa-muted);margin-top:auto;line-height:1.5}.sa-kpi--empty{grid-column:1/-1}
+.sa-more{border:1px solid var(--sa-line);border-radius:10px;background:var(--sa-card);overflow:hidden;margin-bottom:29px}.sa-more>summary{display:flex;align-items:center;gap:12px;cursor:pointer;padding:14px 18px;list-style:none;color:var(--sa-ink);font-size:12px;font-weight:750}.sa-more>summary::-webkit-details-marker{display:none}.sa-more>summary:after{content:"+";font-size:21px;line-height:1;margin-left:auto;color:var(--sa-muted);font-weight:400}.sa-more[open]>summary:after{content:"−"}.sa-more[open]>summary{border-bottom:1px solid var(--sa-line)}.sa-more__sub{font-size:10px;font-weight:500;color:var(--sa-muted)}.sa-more__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}.sa-more__item{padding:16px 18px;border-right:1px solid var(--sa-line);border-bottom:1px solid var(--sa-line);min-width:0}.sa-more__item strong{display:block;margin:9px 0;font-size:22px;letter-spacing:-.03em;color:var(--sa-ink);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.sa-more__item small{display:block;color:var(--sa-muted);font-size:10px;line-height:1.4}
+.sa-analysis-top{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:25px 0 13px}.sa-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.sa-searchwrap{position:relative;display:flex;align-items:center}.sa-searchwrap svg{position:absolute;left:12px;width:15px;height:15px;stroke:var(--sa-muted);stroke-width:2;fill:none;pointer-events:none}.sa-search{height:38px;min-width:230px;max-width:100%;border:1px solid var(--sa-line);background:var(--sa-card);border-radius:7px;color:var(--sa-text);padding:8px 12px 8px 36px;font-size:12px}.sa-search:focus{outline:2px solid #b9aa7266}.sa-jumplabel{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;color:var(--sa-muted);white-space:nowrap}.sa-jump{display:flex;align-items:center;gap:9px;margin-bottom:24px;padding:11px 13px;border:1px solid var(--sa-line);border-radius:9px;background:var(--sa-card);overflow-x:auto;scrollbar-width:thin}.sa-jump__links{display:flex;align-items:center;gap:6px;min-width:0}.sa-jump__link{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--sa-text);font-size:11px;font-weight:700;border:1px solid transparent;border-radius:6px;padding:7px 10px;background:var(--sa-soft)}.sa-jump__link:hover,.sa-jump__link.is-active{background:var(--sa-ink);color:#fff}.sa-jump__count{font-size:10px;opacity:.72}
+.sa-topic{scroll-margin-top:90px;margin:0 0 30px}.sa-topic__head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 13px}.sa-topic__name{display:flex;align-items:center;gap:11px}.sa-topic__marker{width:4px;height:27px;border-radius:5px;background:var(--sa-gold);flex:0 0 auto}.sa-topic h3{font-size:16px;letter-spacing:-.015em;font-weight:800;margin:0}.sa-topic__count{font-size:10px;color:var(--sa-muted);white-space:nowrap}.sa-panels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.sa-panel{border:1px solid var(--sa-line);border-radius:10px;background:var(--sa-card);min-width:0;overflow:hidden;display:flex;flex-direction:column}.sa-panel:first-child:nth-last-child(n+2){grid-column:span 2}.sa-panel:first-child:nth-last-child(n+2) .sa-panel__body{min-height:245px}.sa-panel__head{padding:17px 19px 13px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--sa-line)}.sa-panel__title{font-size:13px;font-weight:800;color:var(--sa-ink);line-height:1.35;margin:0}.sa-panel__caption{font-size:10px;color:var(--sa-muted);line-height:1.55;margin:5px 0 0;max-width:660px}.sa-panel__body{padding:20px 19px 23px;flex:1;min-height:180px;display:flex;flex-direction:column;justify-content:center}.sa-toggle{display:flex;align-items:center;gap:2px;padding:3px;background:var(--sa-soft);border:1px solid var(--sa-line);border-radius:6px;flex-shrink:0}.sa-toggle button{appearance:none;border:0;cursor:pointer;color:var(--sa-muted);font-size:10px;font-weight:750;background:transparent;padding:6px 9px;border-radius:4px}.sa-toggle button[aria-pressed="true"]{background:var(--sa-card);color:var(--sa-ink);box-shadow:0 1px 4px #45333016}.sa-bars{display:grid;gap:15px}.sa-bars__item{display:grid;grid-template-columns:minmax(110px,1.05fr) minmax(100px,2.15fr) minmax(65px,.75fr);gap:12px;align-items:center}.sa-bars__label{color:var(--sa-text);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sa-bars__track{height:10px;position:relative;border-radius:4px;background:var(--sa-soft);overflow:hidden}.sa-bars__fill{height:100%;width:var(--sa-width);max-width:100%;background:var(--sa-bar);border-radius:4px;min-width:0}.sa-bars__number{font-size:11px;color:var(--sa-ink);font-weight:800;text-align:right;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.sa-timeline{display:flex;align-items:stretch;gap:11px;overflow-x:auto;padding:15px 4px 0;min-height:220px;scrollbar-width:thin}.sa-timeline__item{display:flex;flex:1 0 42px;min-width:42px;align-items:center;flex-direction:column;justify-content:flex-end;gap:8px}.sa-timeline__value{font-size:10px;font-weight:700;color:var(--sa-muted);white-space:nowrap}.sa-timeline__track{height:145px;display:flex;align-items:flex-end;width:74%;max-width:50px;border-bottom:1px solid var(--sa-line)}.sa-timeline__bar{width:100%;height:var(--sa-height);min-height:2px;background:var(--sa-bar);border-radius:5px 5px 0 0}.sa-timeline__item:nth-child(2n) .sa-timeline__bar{background:var(--sa-gold)}.sa-timeline__label{font-size:10px;color:var(--sa-muted);white-space:nowrap;padding-bottom:5px}.sa-tablewrap{overflow-x:auto;width:100%}.sa-table{border-collapse:collapse;width:100%;font-size:11px}.sa-table :is(th,td){padding:12px 9px;border-bottom:1px solid var(--sa-line);text-align:left}.sa-table th{font-size:10px;color:var(--sa-muted);font-weight:750;background:var(--sa-soft)}.sa-table td:last-child,.sa-table th:last-child{text-align:right}.sa-table td:last-child{font-weight:750;color:var(--sa-ink);font-variant-numeric:tabular-nums}.sa-table tbody tr:last-child td{border-bottom:0}.sa-table tbody tr:hover{background:var(--sa-soft)}.sa-empty{padding:35px 14px;text-align:center;font-size:11px;color:var(--sa-muted)}.sa-zero-search{display:none;border:1px dashed var(--sa-line);border-radius:9px;text-align:center;padding:28px;color:var(--sa-muted)}
+.sa-planning{display:flex;align-items:center;justify-content:space-between;gap:15px;border:1px solid var(--sa-line);background:var(--sa-card);padding:17px 19px;border-radius:10px;margin:25px 0 15px}.sa-planning strong{color:var(--sa-ink);font-size:12px}.sa-planning p{font-size:11px;color:var(--sa-muted);margin:5px 0 0;line-height:1.5}.sa-note{margin:17px 0 0;padding:15px 18px;border-left:3px solid var(--sa-gold);border-radius:0 7px 7px 0;background:var(--sa-soft);color:var(--sa-muted);font-size:11px;line-height:1.65}.sa-note strong{color:var(--sa-ink)}.sa-back{display:flex;justify-content:flex-end;margin-top:20px}.sa-back a{font-size:11px;color:var(--sa-muted);font-weight:700}.sa-back a:hover{color:var(--sa-ink)}
+html[data-theme="dark"] .sa-bi{--sa-bg:#241f1c;--sa-card:#2b2521;--sa-ink:#f1e6da;--sa-text:#ded2c7;--sa-muted:#b8a69a;--sa-line:#52443d;--sa-soft:#352d28;--sa-gold:#c6ae7d;--sa-bar:#b79c7c}html[data-theme="dark"] .sa-bi .sa-button--dark,html[data-theme="dark"] .sa-bi .sa-jump__link.is-active{background:#88715b;border-color:#88715b;color:#fff}
+@media(max-width:1180px){.sa-kpis,.sa-more__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sa-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.sa-filter-actions{grid-column:1/-1;justify-content:flex-end}}@media(max-width:850px){.sa-bi{padding:16px 14px 40px}.sa-top{flex-direction:column}.sa-actions{justify-content:flex-start}.sa-panels{grid-template-columns:1fr}.sa-panel:first-child:nth-last-child(n+2){grid-column:span 1}.sa-analysis-top{align-items:flex-start;flex-direction:column}.sa-toolbar{width:100%}.sa-searchwrap,.sa-search{width:100%;min-width:0}.sa-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.sa-filters{grid-template-columns:1fr}.sa-filter-actions{grid-column:auto;justify-content:stretch}.sa-filter-actions .sa-button{flex:1}.sa-kpis{gap:9px}.sa-kpi{padding:15px;min-height:130px}.sa-kpi__value{font-size:25px}.sa-more__grid{grid-template-columns:1fr}.sa-panel__head{flex-wrap:wrap;padding:15px}.sa-panel__body{padding:17px 14px}.sa-bars__item{grid-template-columns:minmax(85px,1.2fr) minmax(65px,1.4fr) minmax(60px,.8fr);gap:7px}.sa-planning{align-items:flex-start;flex-direction:column}.sa-section-head{align-items:flex-start;flex-direction:column}.sa-context{white-space:normal}}
+@media print{@page{size:A4 landscape;margin:11mm}.sa-bi{max-width:none;padding:0}.sa-actions,.sa-navigation,.sa-filters,.sa-jump,.sa-toolbar,.sa-toggle,.sa-back{display:none!important}.sa-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}.sa-panel,.sa-kpi,.sa-topic{break-inside:avoid}.sa-more{display:none}.sa-panels{grid-template-columns:repeat(2,minmax(0,1fr))}.sa-panel:first-child:nth-last-child(n+2){grid-column:span 2}.sa-panel [data-sa-view="table"]{display:none!important}.sa-panel [data-sa-view="chart"]{display:block!important}.sa-planning{display:none}.sa-bi{color:#453330!important}}
+
+/* SAARI BI 2.0 — gráficos ECharts com fallback CSS para operação sem CDN */
+.sa-chart{height:290px;width:100%;min-width:0;position:relative}.sa-panel:first-child:nth-last-child(n+2) .sa-chart{height:325px}.sa-chart[hidden]{display:none!important}.sa-fallback[hidden]{display:none!important}.sa-panel__body:has(.sa-chart){justify-content:flex-start}.sa-chart-tools{display:flex;align-items:center;gap:6px;margin:0 0 9px;flex-wrap:wrap}.sa-chart-tools button{border:1px solid var(--sa-line);color:var(--sa-muted);background:var(--sa-card);font-size:10px;padding:5px 9px;border-radius:6px;cursor:pointer;font-weight:700}.sa-chart-tools button[aria-pressed=true]{background:var(--sa-soft);color:var(--sa-ink);border-color:var(--sa-gold)}.sa-chart-tools .sa-chart-download{margin-left:auto}.sa-chart-status{font-size:10px;color:var(--sa-muted);margin:0 0 10px}.sa-panel__head{min-height:76px}.sa-panel{box-shadow:0 2px 10px #45333007}.sa-kpi{box-shadow:0 2px 12px #45333007}.sa-kpi:hover,.sa-panel:hover{border-color:var(--sa-gold)}.sa-kpi__value{font-size:clamp(25px,2.35vw,34px)}.sa-navigation{position:sticky;top:0;z-index:12;box-shadow:0 3px 12px #4533300a}.sa-jump{position:sticky;top:57px;z-index:11;box-shadow:0 3px 12px #45333008}.sa-panel:first-child:nth-last-child(n+2) .sa-panel__body{min-height:0}.sa-table th button{border:0;background:none;color:inherit;font:inherit;font-weight:inherit;cursor:pointer;text-align:inherit;padding:0;width:100%}.sa-table th:last-child button{text-align:right}.sa-table th button:hover{text-decoration:underline}
+@media(max-width:850px){.sa-chart{height:265px}.sa-panel:first-child:nth-last-child(n+2) .sa-chart{height:290px}.sa-navigation,.sa-jump{position:static}}@media(max-width:560px){.sa-chart{height:245px}.sa-panel:first-child:nth-last-child(n+2) .sa-chart{height:255px}.sa-chart-tools .sa-chart-download{margin-left:0}}@media print{.sa-navigation,.sa-jump,.sa-chart-tools{display:none!important}.sa-chart{height:230px!important}.sa-fallback{display:none!important}.sa-panel{box-shadow:none}.sa-bi .sa-panel [data-sa-view=chart]{display:block!important}}
+
+/* Hierarquia tipográfica e navegação: sem alterar cards ou gráficos */
+.sa-bi .sa-heading{font-size:clamp(30px,2.9vw,40px);font-weight:850;letter-spacing:-.045em;margin-bottom:0}
+.sa-bi .sa-top{align-items:center}
+.sa-bi .sa-navigation{gap:7px;padding:6px}
+.sa-bi .sa-navigation a{font-size:12px;font-weight:800;padding:11px 18px;border:1px solid transparent}
+.sa-bi .sa-navigation a[aria-current="page"]{background:var(--sa-ink);color:#fff;border-color:var(--sa-ink);box-shadow:0 2px 6px #4533301c}
+.sa-bi .sa-navigation a[aria-current="page"]::before{background:var(--sa-gold)}
+.sa-bi .sa-navigation a:hover:not([aria-current="page"]){border-color:var(--sa-line)}
+.sa-bi .sa-note-details{margin-top:20px}.sa-bi .sa-note-details .sa-note{border:0;border-radius:0;margin:0}
+
+/* Cabeçalho no padrão dos cards do SAARI, sem alterar painéis ou gráficos. */
+.sa-bi .sa-top{background:var(--sa-card);border:1px solid var(--sa-line);border-radius:10px;padding:22px 24px;margin-bottom:18px;align-items:center;box-shadow:0 2px 10px #45333005}
+.sa-bi .sa-heading{margin:0;font-size:clamp(30px,2.9vw,40px);line-height:1.15}
+.sa-bi .sa-crumb{margin-bottom:8px}
+.sa-bi .sa-analysis-top{margin-top:27px}
+@media(max-width:850px){.sa-bi .sa-top{align-items:flex-start;padding:18px;gap:15px}}
+@media print{.sa-bi .sa-top{border:0;box-shadow:none;padding:0}}
 </style>
 {% endblock %}
 {% block content %}
-<main class="sr-page" id="sr-page">
-  <header class="sr-top">
-    <div class="sr-titlewrap">
-      <div class="sr-titleicon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 16v-4m5 4V8m5 8v-6"/></svg></div>
-      <div><p class="sr-eyebrow">SAARI ERP / Inteligência gerencial</p><h1 class="sr-title">{{ titulo|default:'Relatórios e indicadores' }}</h1></div>
+<main class="sa-bi" id="sa-bi-dashboard">
+  <header class="sa-top" id="sa-top">
+    <div>
+      <p class="sa-crumb">SAARI ERP · INDICADORES</p>
+      <h1 class="sa-heading">{{ titulo|default:'Indicadores' }}</h1>
     </div>
-    <div class="sr-actions">
-      <a class="sr-btn" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}exportar=csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-4-4 4 4 4-4M4 17v3h16v-3"/></svg>Exportar CSV</a>
-      <button class="sr-btn" type="button" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Imprimir / PDF</button>
+    <div class="sa-actions" aria-label="Ações do relatório">
+      <a class="sa-button" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}exportar=csv" aria-label="Exportar indicadores filtrados para CSV">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg> Exportar CSV
+      </a>
+      <button class="sa-button" type="button" onclick="window.print()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 15h12v6H6z"/></svg> Imprimir
+      </button>
     </div>
   </header>
-  <nav class="sr-nav" aria-label="Áreas de relatórios">
-    <a href="{% url 'relatorios:indicadores' %}" class="{% if pagina == 'geral' %}is-active{% endif %}" {% if pagina == 'geral' %}aria-current="page"{% endif %}>Visão geral</a>
-    <a href="{% url 'relatorios:projetos' %}" class="{% if pagina == 'projetos' %}is-active{% endif %}" {% if pagina == 'projetos' %}aria-current="page"{% endif %}>Projetos</a>
-    <a href="{% url 'relatorios:obras' %}" class="{% if pagina == 'obras' %}is-active{% endif %}" {% if pagina == 'obras' %}aria-current="page"{% endif %}>Obras</a>
-    <a href="{% url 'relatorios:suprimentos' %}" class="{% if pagina == 'suprimentos' %}is-active{% endif %}" {% if pagina == 'suprimentos' %}aria-current="page"{% endif %}>Suprimentos</a>
-    <a href="{% url 'relatorios:pos_obra' %}" class="{% if pagina == 'pos_obra' %}is-active{% endif %}" {% if pagina == 'pos_obra' %}aria-current="page"{% endif %}>Pós-Obra</a>
+
+  <nav class="sa-navigation" aria-label="Áreas de indicadores">
+    <a href="{% url 'relatorios:indicadores' %}" {% if pagina == 'geral' %}aria-current="page"{% endif %}>Visão geral</a>
+    <a href="{% url 'relatorios:projetos' %}" {% if pagina == 'projetos' %}aria-current="page"{% endif %}>Projetos</a>
+    <a href="{% url 'relatorios:obras' %}" {% if pagina == 'obras' %}aria-current="page"{% endif %}>Obras</a>
+    <a href="{% url 'relatorios:suprimentos' %}" {% if pagina == 'suprimentos' %}aria-current="page"{% endif %}>Suprimentos</a>
+    <a href="{% url 'relatorios:pos_obra' %}" {% if pagina == 'pos_obra' %}aria-current="page"{% endif %}>Pós-Obra</a>
   </nav>
-  <form class="sr-filter" method="get" aria-label="Filtros dos relatórios">
+
+  <form class="sa-filters" method="get" aria-label="Filtrar indicadores">
     {% if pagina != 'pos_obra' %}
-      <div class="sr-field"><label for="sr-obra">Obra</label><select id="sr-obra" name="obra"><option value="">Todas as obras</option>{% for obra in obras_filtro %}<option value="{{ obra.id }}" {% if obra.id == obra_id %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+      <div class="sa-field"><label for="sa-obra">Obra</label><select id="sa-obra" name="obra"><option value="">Todas as obras</option>{% for obra in obras_filtro %}<option value="{{ obra.id }}" {% if obra.id == obra_id %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
     {% else %}
-      <div class="sr-field"><label for="sr-emp">Empreendimento</label><select id="sr-emp" name="empreendimento"><option value="">Todos os empreendimentos</option>{% for e in empreendimentos_filtro %}<option value="{{ e.id }}" {% if e.id == empreendimento_id %}selected{% endif %}>{{ e.nome }}</option>{% endfor %}</select></div>
+      <div class="sa-field"><label for="sa-empreendimento">Empreendimento</label><select id="sa-empreendimento" name="empreendimento"><option value="">Todos os empreendimentos</option>{% for emp in empreendimentos_filtro %}<option value="{{ emp.id }}" {% if emp.id == empreendimento_id %}selected{% endif %}>{{ emp.nome }}</option>{% endfor %}</select></div>
     {% endif %}
-    <div class="sr-field"><label for="sr-inicio">Data inicial</label><input type="date" id="sr-inicio" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
-    <div class="sr-field"><label for="sr-fim">Data final</label><input type="date" id="sr-fim" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
-    <div class="sr-filter-actions"><button type="submit" class="sr-btn sr-btn-primary">Aplicar filtros</button><a class="sr-clear" href="{{ request.path }}">Limpar</a></div>
+    <div class="sa-field"><label for="sa-inicio">Data inicial</label><input id="sa-inicio" name="inicio" type="date" value="{{ inicio|date:'Y-m-d' }}"></div>
+    <div class="sa-field"><label for="sa-fim">Data final</label><input id="sa-fim" name="fim" type="date" value="{{ fim|date:'Y-m-d' }}"></div>
+    <div class="sa-filter-actions"><button class="sa-button sa-button--dark" type="submit">Aplicar</button><a class="sa-button" href="{{ request.path }}">Limpar</a></div>
   </form>
-  <section class="sr-kpis" aria-label="Indicadores principais">
-    {% for c in cards %}
-      <article class="sr-kpi"><div class="sr-kpi-top"><span class="sr-kpi-label">{{ c.label }}</span><span class="sr-kpi-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18V10m5 8V6m5 12v-8m5 8V3"/></svg></span></div><strong class="sr-kpi-value">{{ c.value }}</strong>{% if c.subtitle %}<small class="sr-kpi-detail">{{ c.subtitle }}</small>{% endif %}</article>
-    {% empty %}<article class="sr-kpi"><span class="sr-kpi-label">Indicadores</span><strong class="sr-kpi-value">—</strong><small class="sr-kpi-detail">Não há dados no período selecionado.</small></article>{% endfor %}
+
+  <section aria-labelledby="sa-executive-title">
+    <div class="sa-section-head">
+      <div><h2 class="sa-section-title" id="sa-executive-title">Resumo executivo</h2></div>
+      <span class="sa-context">{% if inicio or fim %}Período selecionado{% else %}Todos os períodos{% endif %}</span>
+    </div>
+    <div class="sa-kpis">
+      {% for c in destaques %}
+      <article class="sa-kpi"><span class="sa-kpi__label">{{ c.label }}</span><strong class="sa-kpi__value">{{ c.value }}</strong>{% if c.subtitle %}<span class="sa-kpi__note">{{ c.subtitle }}</span>{% endif %}</article>
+      {% empty %}<article class="sa-kpi sa-kpi--empty"><span class="sa-kpi__label">Nenhum indicador disponível para este período.</span></article>{% endfor %}
+    </div>
+    {% if complementares %}
+    <details class="sa-more" id="sa-complementares">
+      <summary><span>Indicadores complementares <span class="sa-more__sub">({{ complementares|length }})</span></span></summary>
+      <div class="sa-more__grid">{% for c in complementares %}<div class="sa-more__item"><span class="sa-kpi__label">{{ c.label }}</span><strong>{{ c.value }}</strong>{% if c.subtitle %}<small>{{ c.subtitle }}</small>{% endif %}</div>{% endfor %}</div>
+    </details>
+    {% endif %}
   </section>
-  <div class="sr-overview"><h2 class="sr-heading">Análises e comparativos</h2><div class="sr-overview-controls"><span class="sr-count" id="sr-count" aria-live="polite"></span><label class="sr-searchwrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input class="sr-search" id="sr-search" type="search" placeholder="Buscar análise..." aria-label="Buscar análise"></label></div></div>
-  {% for section in sections %}
-    <section class="sr-section" aria-label="{{ section.title }}">
-      <header class="sr-sectionhead"><h2>{{ section.title }}</h2><small>Dados do período selecionado</small></header>
-      <div class="sr-grid">
+
+  <section aria-labelledby="sa-analysis-title" id="sa-analises">
+    <div class="sa-analysis-top">
+      <div><h2 class="sa-section-title" id="sa-analysis-title">Análises</h2></div>
+</div>
+
+
+    {% for section in sections %}
+    <section class="sa-topic" id="sa-topic-{{ forloop.counter }}" aria-labelledby="sa-topic-title-{{ forloop.counter }}">
+      <div class="sa-topic__head"><div class="sa-topic__name"><span class="sa-topic__marker" aria-hidden="true"></span><h3 id="sa-topic-title-{{ forloop.counter }}">{{ section.title }}</h3></div><span class="sa-topic__count">{{ section.panels|length }} análise{{ section.panels|length|pluralize }}</span></div>
+      <div class="sa-panels">
         {% for panel in section.panels %}
-          <article class="sr-panel" data-search="{{ section.title|lower }} {{ panel.title|lower }} {{ panel.caption|default:''|lower }}">
-            <div class="sr-panelhead"><div><h3>{{ panel.title }}</h3>{% if panel.caption %}<p class="sr-caption">{{ panel.caption }}</p>{% endif %}</div>
-              {% if panel.rows %}<div class="sr-chart-switch" role="group" aria-label="Modo de visualização"><button type="button" class="sr-switch" data-switch="chart" aria-pressed="true" title="Ver gráfico">Gráfico</button><button type="button" class="sr-switch" data-switch="table" aria-pressed="false" title="Ver tabela">Tabela</button></div>{% endif %}
+        <article class="sa-panel" >
+          <header class="sa-panel__head">
+            <div><h4 class="sa-panel__title" {% if panel.caption %}title="{{ panel.caption }}"{% endif %}>{{ panel.title }}</h4></div>
+            {% if panel.rows %}<div class="sa-toggle" role="group" aria-label="Visualização de {{ panel.title }}"><button type="button" data-sa-switch="chart" aria-pressed="true">Gráfico</button><button type="button" data-sa-switch="table" aria-pressed="false">Tabela</button></div>{% endif %}
+          </header>
+          <div class="sa-panel__body">
+            {% if panel.rows %}
+            <div data-sa-view="chart" data-sa-kind="{{ panel.kind|default:'rank' }}">
+              <div class="sa-chart-tools" hidden aria-label="Opções do gráfico">
+                <button type="button" data-chart-mode="auto" aria-pressed="true">Padrão</button>
+                <button type="button" data-chart-mode="bar" aria-pressed="false">Barras</button>
+                <button type="button" data-chart-mode="line" aria-pressed="false">Linha</button>
+                <button type="button" data-chart-mode="pie" aria-pressed="false" hidden>Rosca</button>
+                <button type="button" class="sa-chart-download" data-chart-download title="Salvar imagem do gráfico">Salvar PNG</button>
+              </div>
+              <div class="sa-chart" hidden role="img" aria-label="Gráfico interativo: {{ panel.title }}"></div>
+              <div class="sa-fallback">
+              {% if panel.kind == 'timeline' %}
+              <div class="sa-timeline" role="img" aria-label="Evolução temporal: {{ panel.title }}">
+                {% for r in panel.rows %}<div class="sa-timeline__item" title="{{ r.label }}: {{ r.value }}"><span class="sa-timeline__value">{{ r.value }}</span><div class="sa-timeline__track"><div class="sa-timeline__bar" style="--sa-height:{{ r.width|stringformat:'f' }}%"></div></div><span class="sa-timeline__label">{{ r.label }}</span></div>{% endfor %}
+              </div>
+              {% else %}
+              <div class="sa-bars" role="list" aria-label="Comparativo de {{ panel.title }}">
+                {% for r in panel.rows %}<div class="sa-bars__item" role="listitem"><span class="sa-bars__label" title="{{ r.label }}">{{ r.label }}</span><div class="sa-bars__track" role="img" aria-label="{{ r.label }}: {{ r.value }}"><div class="sa-bars__fill" style="--sa-width:{{ r.width|stringformat:'f' }}%"></div></div><span class="sa-bars__number">{{ r.value }}</span></div>{% endfor %}
+              </div>
+              {% endif %}
+              </div>
             </div>
-            <div class="sr-panelbody">
-              {% if panel.rows %}
-                <div class="sr-chart" data-view="chart">
-                  {% for r in panel.rows %}
-                    <div class="sr-baritem"><span class="sr-barlabel" title="{{ r.label }}">{{ r.label }}</span><div class="sr-track" role="img" aria-label="{{ r.label }}: {{ r.value }}"><div class="sr-fill" style="width:{{ r.width|stringformat:'f' }}%"></div></div><span class="sr-barvalue">{{ r.value }}</span></div>
-                  {% endfor %}
-                </div>
-                <div class="sr-tablewrap" data-view="table" hidden><table class="sr-table"><thead><tr><th scope="col">Categoria</th><th scope="col">Valor</th></tr></thead><tbody>{% for r in panel.rows %}<tr><td>{{ r.label }}</td><td>{{ r.value }}</td></tr>{% endfor %}</tbody></table></div>
-              {% else %}<div class="sr-empty">Sem informações para os filtros selecionados.</div>{% endif %}
-            </div>
-          </article>
+            <div class="sa-tablewrap" data-sa-view="table" hidden><table class="sa-table"><thead><tr><th scope="col"><button type="button" data-sort="label" aria-label="Ordenar por categoria">Categoria / Período ↕</button></th><th scope="col"><button type="button" data-sort="value" aria-label="Ordenar por valor">Valor ↕</button></th></tr></thead><tbody>{% for r in panel.rows %}<tr><td>{{ r.label }}</td><td>{{ r.value }}</td></tr>{% endfor %}</tbody></table></div>
+            {% else %}<div class="sa-empty">Nenhum registro encontrado para os filtros aplicados.</div>{% endif %}
+          </div>
+        </article>
         {% endfor %}
       </div>
     </section>
-  {% endfor %}
-  <div class="sr-noresults" id="sr-noresults" role="status">Nenhuma análise encontrada para essa pesquisa.</div>
-  {% if planejamento_link %}<aside class="sr-notice"><div><strong>Planejamento de obras</strong><p>Acompanhe o cronograma e o avanço físico em detalhes no módulo Planejamento.</p></div><a class="sr-btn" href="{% url 'planejamento:menu' %}">Abrir Planejamento</a></aside>{% endif %}
-  {% if nota %}<p class="sr-foot">{{ nota }}</p>{% endif %}
+    {% endfor %}
+  </section>
 </main>
+<script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js" defer></script>
 <script>
-(function(){
+window.addEventListener("DOMContentLoaded", function () {
+(function () {
   'use strict';
-  var page=document.getElementById('sr-page');if(!page)return;
-  page.querySelectorAll('.sr-chart-switch').forEach(function(group){group.addEventListener('click',function(event){var button=event.target.closest('[data-switch]');if(!button)return;var panel=group.closest('.sr-panel');var mode=button.getAttribute('data-switch');panel.querySelectorAll('[data-view]').forEach(function(view){view.hidden=view.getAttribute('data-view')!==mode});group.querySelectorAll('[data-switch]').forEach(function(b){b.setAttribute('aria-pressed',String(b===button))})})});
-  var input=document.getElementById('sr-search'),count=document.getElementById('sr-count'),empty=document.getElementById('sr-noresults');
-  if(input){var update=function(){var term=input.value.toLocaleLowerCase('pt-BR').trim(),visible=0;page.querySelectorAll('.sr-panel').forEach(function(panel){var match=(panel.getAttribute('data-search')||'').toLocaleLowerCase('pt-BR').includes(term);panel.hidden=!match;if(match)visible++});page.querySelectorAll('.sr-section').forEach(function(section){section.hidden=!section.querySelector('.sr-panel:not([hidden])')});if(count)count.textContent=visible+(visible===1?' análise':' análises');if(empty)empty.style.display=visible?'none':'block'};input.addEventListener('input',update);update()}
+  var root = document.getElementById('sa-bi-dashboard');
+  if (!root) return;
+  // Alternar gráfico/tabela em cada análise, preservando os dados originais.
+  root.addEventListener('click', function (event) {
+    var button = event.target.closest('[data-sa-switch]');
+    if (!button || !root.contains(button)) return;
+    var panel = button.closest('.sa-panel');
+    if (!panel) return;
+    var mode = button.getAttribute('data-sa-switch');
+    panel.querySelectorAll('[data-sa-view]').forEach(function (view) {
+      view.hidden = view.getAttribute('data-sa-view') !== mode;
+    });
+    panel.querySelectorAll('[data-sa-switch]').forEach(function (item) {
+      item.setAttribute('aria-pressed', String(item === button));
+    });
+  });
+  // Retém filtros de data e obra na navegação, sem mudar as URLs nomeadas do Django.
+  // O parâmetro de exportação CSV continua usando exatamente o contrato original.
+  var query = new URLSearchParams(window.location.search);
+  query.delete('exportar');
+  root.querySelectorAll('.sa-navigation a').forEach(function (link) {
+    var destination = new URL(link.href, window.location.href);
+    ['inicio', 'fim'].forEach(function (key) {
+      if (query.get(key)) destination.searchParams.set(key, query.get(key));
+    });
+    link.href = destination.toString();
+  });
+  // Renderiza somente números efetivamente presentes nas tabelas Django.
+  // Sem alterações em views.py: a tabela continua sendo a fonte fiel e visível dos valores.
+  function asNumber(input) {
+    var raw = String(input || '').trim().replace(/\s|R\$|%/g, '');
+    if (!raw || !/^[+-]?[\d.,]+$/.test(raw)) return NaN;
+    var lastComma = raw.lastIndexOf(','), lastDot = raw.lastIndexOf('.');
+    if (lastComma >= 0 && lastDot >= 0) {
+      raw = lastComma > lastDot ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, '');
+    } else if (lastComma >= 0) {
+      raw = /,\d{1,2}$/.test(raw) ? raw.replace(',', '.') : raw.replace(/,/g, '');
+    } else if (lastDot >= 0 && /^\d{1,3}(\.\d{3})+$/.test(raw)) {
+      raw = raw.replace(/\./g, '');
+    }
+    return Number(raw);
+  }
+  function colorVar(name) { return getComputedStyle(root).getPropertyValue(name).trim(); }
+  function safeText(v) { return String(v).replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];}); }
+  var instances = new Map();
+  function chartPalette() {
+    return {ink: colorVar('--sa-ink'),muted: colorVar('--sa-muted'),line: colorVar('--sa-line'),
+      bar: colorVar('--sa-bar'),gold: colorVar('--sa-gold'),soft: colorVar('--sa-soft'),
+      colors:[colorVar('--sa-bar'),colorVar('--sa-gold'),'#a68a7f','#6f8d7f','#c9a78b','#b6aaa0','#6f5e54']};
+  }
+  function makeOptions(entry, requestedMode) {
+    var p = chartPalette(), rows = entry.rows, mode = requestedMode === 'auto' ? entry.defaultMode : requestedMode;
+    var labels=rows.map(function (r) {return r.label;}), values=rows.map(function (r) {return r.number;});
+    var compact = entry.el.clientWidth < 480;
+    var axisCommon={axisLabel:{color:p.muted,fontSize:10,hideOverlap:true},axisLine:{lineStyle:{color:p.line}},axisTick:{show:false}};
+    var base={backgroundColor:'transparent',color:p.colors,animationDuration:650,
+      tooltip:{trigger:mode==='pie'?'item':'axis',confine:true,backgroundColor:p.ink,
+        borderWidth:0,textStyle:{color:'#fff',fontSize:12},
+        formatter:function (params) {
+          var item=Array.isArray(params)?params[0]:params;
+          return safeText(item.name)+'<br/><b>'+safeText(entry.rows[item.dataIndex].display)+'</b>';
+        }},
+      aria:{enabled:true,description:entry.title},
+      toolbox:{show:false}};
+    if (mode==='pie') {
+      base.tooltip.trigger='item';
+      base.legend={type:'scroll',orient:'horizontal',bottom:0,textStyle:{color:p.muted,fontSize:10},itemHeight:9,itemWidth:10};
+      base.series=[{type:'pie',radius:compact?['48%','72%']:['51%','75%'],center:['50%','43%'],
+        itemStyle:{borderColor:colorVar('--sa-card'),borderWidth:3,borderRadius:4},
+        label:{show:false},emphasis:{scale:true,scaleSize:5},
+        data:rows.map(function (r) {return {name:r.label,value:r.number};})}];
+      return base;
+    }
+    if (mode==='line') {
+      base.grid={top:22,left:compact?10:15,right:15,bottom:compact?44:32,containLabel:true};
+      base.xAxis={type:'category',data:labels,boundaryGap:false,axisLabel:{color:p.muted,fontSize:10,hideOverlap:true,rotate:compact&&labels.length>5?28:0},axisTick:{show:false},axisLine:{lineStyle:{color:p.line}}};
+      base.yAxis={type:'value',axisLabel:{color:p.muted,fontSize:10},splitLine:{lineStyle:{color:p.line,type:'dashed'}},axisLine:{show:false}};
+      base.series=[{name:entry.title,type:'line',data:values,smooth:0.28,showSymbol:values.length<13,symbolSize:7,
+        lineStyle:{width:3,color:p.bar},itemStyle:{color:p.bar},areaStyle:{opacity:.17,color:{type:'linear',x:0,y:0,x2:0,y2:1,
+        colorStops:[{offset:0,color:p.gold},{offset:1,color:colorVar('--sa-card')}]}}}];
+      base.dataZoom=labels.length>16?[{type:'inside',start:0,end:Math.round(1600/labels.length)}]:[];
+      return base;
+    }
+    var vertical=entry.kind==='timeline' && requestedMode==='auto';
+    if (vertical) {
+      base.grid={left:14,right:14,top:20,bottom:compact?45:34,containLabel:true};
+      base.xAxis={type:'category',data:labels,axisLabel:{color:p.muted,fontSize:10,rotate:compact&&labels.length>6?30:0,hideOverlap:true},axisTick:{show:false},axisLine:{lineStyle:{color:p.line}}};
+      base.yAxis={type:'value',axisLabel:{color:p.muted,fontSize:10},splitLine:{lineStyle:{color:p.line,type:'dashed'}}};
+      base.series=[{type:'bar',data:values,barMaxWidth:38,itemStyle:{color:p.bar,borderRadius:[5,5,0,0]}}];
+    } else {
+      var reversed=rows.slice().reverse();
+      base.grid={left:12,right:20,top:8,bottom:15,containLabel:true};
+      base.xAxis={type:'value',axisLabel:{color:p.muted,fontSize:10},splitLine:{lineStyle:{color:p.line,type:'dashed'}}};
+      base.yAxis={type:'category',data:reversed.map(function(r){return r.label;}),axisLabel:{color:p.muted,fontSize:10,width:compact?95:160,overflow:'truncate'},axisTick:{show:false},axisLine:{show:false}};
+      base.series=[{type:'bar',data:reversed.map(function(r){return r.number;}),barMaxWidth:20,itemStyle:{color:p.bar,borderRadius:[0,5,5,0]}}];
+      base.tooltip.formatter=function(params){var item=Array.isArray(params)?params[0]:params;return safeText(item.name)+'<br/><b>'+safeText(reversed[item.dataIndex].display)+'</b>';};
+    }
+    return base;
+  }
+  function renderChart(entry) {
+    if (!entry.instance || entry.chart.hidden || entry.panel.hidden) return;
+    entry.instance.setOption(makeOptions(entry, entry.mode),true);
+    entry.instance.resize();
+  }
+  function activateChart(entry) {
+    if (!window.echarts || entry.instance || !entry.rows.length) return;
+    entry.chart.hidden=false;
+    entry.fallback.hidden=true;
+    entry.controls.hidden=false;
+    entry.instance=echarts.init(entry.chart,null,{renderer:'canvas'});
+    instances.set(entry.chart,entry);
+    renderChart(entry);
+  }
+  // Um valor textual não numérico jamais será convertido silenciosamente em porcentagem.
+  // Nesses casos o gráfico CSS original e a tabela ficam preservados.
+  root.querySelectorAll('.sa-panel').forEach(function(panel){
+    var table=panel.querySelector('[data-sa-view="table"] table');
+    var holder=panel.querySelector('.sa-chart');
+    if (!table || !holder) return;
+    var rows=Array.from(table.querySelectorAll('tbody tr')).map(function(tr){
+      var cells=tr.querySelectorAll('td');
+      return {label:cells[0].textContent.trim(),display:cells[1].textContent.trim(),number:asNumber(cells[1].textContent)};
+    });
+    if (!rows.length || rows.some(function(r){return !Number.isFinite(r.number);})) return;
+    var chartView=panel.querySelector('[data-sa-view="chart"]');
+    var kind=chartView.getAttribute('data-sa-kind');
+    var title=panel.querySelector('.sa-panel__title').textContent.trim();
+    var pieAllowed=rows.length>=2 && rows.length<=9 && rows.every(function(r){return r.number>=0;}) && rows.some(function(r){return r.number>0;}) && /distribui|composi|participa|por (tipo|categoria|status|situaç|classificaç)/i.test(title);
+    var entry={panel:panel,el:holder,chart:holder,instance:null,rows:rows,kind:kind,title:title,
+      mode:'auto',defaultMode:kind==='timeline'?(rows.length>=3?'line':'bar'):'bar',
+      fallback:panel.querySelector('.sa-fallback'),controls:panel.querySelector('.sa-chart-tools')};
+    var pieButton=entry.controls.querySelector('[data-chart-mode="pie"]');
+    if (pieAllowed) pieButton.hidden=false;
+    if (window.echarts) activateChart(entry);
+    else window.addEventListener('load',function(){activateChart(entry);},{once:true});
+    entry.controls.addEventListener('click',function(e){
+      var modeButton=e.target.closest('[data-chart-mode]');
+      if (modeButton && !modeButton.hidden){
+        entry.mode=modeButton.getAttribute('data-chart-mode');
+        entry.controls.querySelectorAll('[data-chart-mode]').forEach(function(b){b.setAttribute('aria-pressed',String(b===modeButton));});
+        renderChart(entry);
+      }
+      if(e.target.closest('[data-chart-download]') && entry.instance){
+        var a=document.createElement('a');
+        a.download='saari-'+title.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').slice(0,65)+'.png';
+        a.href=entry.instance.getDataURL({type:'png',pixelRatio:2,backgroundColor:colorVar('--sa-card')});a.click();
+      }
+    });
+    // Ordenação da tabela existente, sem recalcular os totais do backend.
+    table.querySelectorAll('[data-sort]').forEach(function(button){
+      var ascending=true;
+      button.addEventListener('click',function(){
+        var tbody=table.tBodies[0],col=button.getAttribute('data-sort')==='label'?0:1;
+        Array.from(tbody.rows).sort(function(a,b){
+          var x=a.cells[col].textContent.trim(),y=b.cells[col].textContent.trim();
+          return (col?asNumber(x)-asNumber(y):x.localeCompare(y,'pt-BR',{numeric:true}))*(ascending?1:-1);
+        }).forEach(function(tr){tbody.appendChild(tr);});
+        ascending=!ascending;
+      });
+    });
+  });
+  // Mantém os SVGs sincronizados ao trocar gráficos/tabelas ou filtrar os assuntos.
+  root.addEventListener('click',function(e){
+    if(!e.target.closest('[data-sa-switch="chart"]')) return;
+    var panel=e.target.closest('.sa-panel');
+    requestAnimationFrame(function(){instances.forEach(function(v){if(v.panel===panel) renderChart(v);});});
+  });
+  if(window.ResizeObserver){
+    var resizeObserver=new ResizeObserver(function(){instances.forEach(function(v){if(v.instance && !v.chart.hidden && !v.panel.hidden) v.instance.resize();});});
+    resizeObserver.observe(root);
+  }else window.addEventListener('resize',function(){instances.forEach(function(v){if(v.instance) v.instance.resize();});});
+  new MutationObserver(function(){instances.forEach(function(v){if(v.instance) renderChart(v);});})
+    .observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  window.addEventListener('beforeprint',function(){instances.forEach(function(v){if(v.instance)v.instance.resize();});});
 })();
+});
 </script>
 {% endblock %}

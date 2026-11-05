@@ -1,6 +1,7 @@
 """Indicadores gerenciais adicionais: nenhuma alteração de dados/banco."""
 from datetime import timedelta, datetime, time
 from decimal import Decimal
+from statistics import median
 from django.db.models import Avg, Count, F, Q, Sum, ExpressionWrapper, DecimalField
 from django.utils import timezone
 from obras.models import FVSItem, FVSHistorico, DiarioObra, MovimentoEstoque, VistoriaCautelar, OcorrenciaCautelar, Obra
@@ -101,7 +102,8 @@ def supplier_details(processes, orders, f, card, panel, group):
         qty=Decimal(row.quantidade or 0)
         initial=Decimal(row.item_cotado.valor_unitario_cotado or 0)
         final=Decimal(row.valor_unitario_final or 0)
-        if qty <= 0: continue
+        # Sem referência de preço inicial positiva, não há economia comparável.
+        if qty <= 0 or initial <= 0 or final < 0: continue
         original += qty*initial
         negotiated += qty*final
         compared+=1
@@ -136,18 +138,19 @@ def supplier_details(processes, orders, f, card, panel, group):
         else:late_days.append(delay)
     late_orders=orders.exclude(status='ENTREGUE').filter(Q(previsao_entrega_atual__lt=today)|Q(previsao_entrega_atual__isnull=True,previsao_entrega_original__lt=today))
     by_sup=list(orders.values('fornecedor__nome').annotate(total=Count('id'),late=Count('id',filter=Q(id__in=late_orders.values('id')))).filter(total__gte=1))
-    poor=sorted([{'label':r['fornecedor__nome'] or 'Não informado','value':f"{r['late']}/{r['total']} atrasados",'width':round(100*r['late']/r['total'],1)} for r in by_sup],key=lambda r:r['width'],reverse=True)[:10]
+    # Evita destacar como 'pior fornecedor' quem possui só 1 ou 2 pedidos.
+    poor=sorted([{'label':r['fornecedor__nome'] or 'Não informado','value':f"{r['late']}/{r['total']} atrasados",'width':round(100*r['late']/r['total'],1)} for r in by_sup if r['total'] >= 3],key=lambda r:(r['width'],r['value']),reverse=True)[:10]
     approvals=AprovacaoCompra.objects.filter(processo__in=processes)
     revisions=HistoricoPrevisaoPedido.objects.filter(pedido__in=orders)
     revisions=range_dt(revisions,'criado_em',f)
-    return ([card('Economia comparável',economy,'Cotação inicial menos valor final adjudicado, sem frete/desconto global',money=True),
+    return ([card('Economia negociada comparável',economy,f'Cotação inicial menos adjudicação final; {compared} itens com preço-base válido, sem frete/desconto global',money=True),
              card('Economia percentual',percent(economy,original),'Somente itens adjudicados comparáveis'),
              card('Tempo médio até contratar',days(sum(completed)/len(completed)) if completed else '—'),
              card('Entrega integral no prazo original',percent(punctual,have_deadline),'Pedidos entregues com previsão e data de recebimento'),
              card('Atraso médio nas entregas tardias',days(sum(late_days)/len(late_days)) if late_days else '—'),
              card('Reprogramações de entrega',revisions.count())],
             [panel('Tempo médio por etapa',stage_rows,'Dias corridos; datas de conclusão registradas no processo'),
-             panel('Fornecedores com pedidos abertos atrasados',poor,'Fração dos pedidos atuais do fornecedor que estão vencidos'),
+             panel('Fornecedores com pedidos abertos atrasados',poor,'Pedidos vencidos / total de pedidos não cancelados do fornecedor no filtro; mínimo de 3 pedidos'),
              panel('Decisões de aprovação',group(approvals,'decisao')),
              panel('Compras por responsável',group(orders,'responsavel__username'))])
 
@@ -191,12 +194,13 @@ def post_details(qs, active, surveys, f, card, panel, group):
     maxcost=max((float(r['total'] or 0) for r in material_by_type),default=0)
     cost_rows=[{'label':r['chamado__tipo_problema__nome'] or 'Sem tipo','value':'R$ '+f"{r['total'] or 0:,.2f}".replace(',','@').replace('.',',').replace('@','.'),
                 'width':round(float(r['total'] or 0)*100/maxcost,1) if maxcost else 0} for r in material_by_type]
-    return ([card('Tempo médio de resolução',days(sum(solved)/len(solved)) if solved else '—','Somente OS com datas válidas'),
+    return ([card('Tempo médio de resolução',days(sum(solved)/len(solved)) if solved else '—','Somente OS concluídas com datas válidas'),
+             card('Tempo mediano de resolução',days(median(solved)) if solved else '—','Metade das OS válidas é concluída até este tempo'),
              card('OS encerradas no prazo',percent(ontime,deadlines),'Somente encerradas com prazo cadastrado'),
              card('OS abertas há mais de 30 / 60 / 90 dias',f'{age30} / {age60} / {age90}','Contagens cumulativas da coorte filtrada'),
              card('Agendamentos remarcados',rescheduled,'Agendamentos com situação ou histórico de remarcação'),
              card('Possíveis grupos reincidentes',recurrent,'Mesmo cliente, empreendimento, tipo e ambiente'),
-             card('Taxa de resposta da pesquisa',percent(surveys.count(),closed.count()),'Respondidas / OS concluídas no filtro')],
+             card('Pesquisas por OS concluída',percent(surveys.values('chamado_id').distinct().count(),qs.filter(status='CONCLUIDO').count()),'OS distintas com pesquisa / OS concluídas no filtro; não é taxa de convite')],
             [panel('Notas médias da pesquisa',survey_rows,'Escala original de 1 a 5'),
              panel('OS por 100 unidades (obras atuais)',per100,'Históricos sem quantidade de unidades são excluídos; filtro por abertura'),
              panel('Custo de materiais por tipo de problema',cost_rows,'Não inclui mão de obra, deslocamento ou terceirizados'),

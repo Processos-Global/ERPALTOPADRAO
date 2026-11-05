@@ -66,7 +66,7 @@ def _money(value):
 
 
 def _card(label, value, subtitle='', money=False):
-    return {'label':label,'value':('R$ '+_money(value)) if money else str(value),'subtitle':subtitle}
+    return {'label':label, 'value':('R$ '+_money(value)) if money else str(value), 'subtitle':subtitle}
 
 
 def _group(qs, field, label=None, limit=8, money=False):
@@ -97,7 +97,56 @@ def _series(qs, field, money=None):
 
 
 def _panel(title, rows, caption=''):
-    return {'title':title,'rows':rows,'caption':caption}
+    # Séries mensais possuem `raw`; demais painéis são classificações/rankings.
+    kind = 'timeline' if rows and 'raw' in rows[0] else 'ranking'
+    return {'title': title, 'rows': rows, 'caption': caption, 'kind': kind}
+
+
+# Seções determinadas pelo significado dos indicadores, jamais pelo número de gráficos.
+PANEL_SECTIONS = {
+    'geral': [
+        ('Evolução dos módulos', ['Pedidos por mês', 'OS abertas por mês']),
+        ('Situação dos atendimentos', ['Situação das OS abertas no período']),
+    ],
+    'projetos': [
+        ('Situação documental', ['Distribuição documental', 'Menor conclusão documental por obra']),
+        ('Pendências e prioridades', ['Pendências por obra', 'Pendências documentais críticas', 'Pendências por grupo']),
+        ('Alterações e histórico', ['Alterações por disciplina', 'Alterações registradas por mês']),
+    ],
+    'obras': [
+        ('Qualidade das inspeções', ['Situação das FVS', 'Não conformidades por item de verificação', 'Não conformidade por empresa executora']),
+        ('Evolução e distribuição', ['FVS emitidas por mês', 'FVS por obra', 'FVS por empresa executora']),
+        ('Vistorias e registros de obra', ['Vistorias por situação', 'Ocorrências cautelares por manifestação', 'Diários por obra']),
+        ('Materiais e almoxarifado', ['Movimentações de estoque por tipo', 'Saídas de materiais mais frequentes']),
+    ],
+    'suprimentos': [
+        ('Contratações e valores', ['Pedidos por mês', 'Compras por obra', 'Compras por fornecedor']),
+        ('Fluxo de compras', ['Etapas dos processos', 'Tempo médio por etapa', 'Decisões de aprovação']),
+        ('Entregas e fornecedores', ['Situação dos pedidos', 'Fornecedores com pedidos abertos atrasados']),
+        ('Gestão das compras', ['Compras por responsável']),
+    ],
+    'pos_obra': [
+        ('Volume e evolução', ['Abertura de OS por mês', 'OS por situação', 'OS por empreendimento']),
+        ('Problemas e prioridades', ['Tipos de problema', 'Tipos de problema mais frequentes', 'Prioridade dos chamados', 'OS por 100 unidades (obras atuais)']),
+        ('Atendimento e experiência', ['Notas médias da pesquisa', 'Resolução informada pelo cliente', 'Resolução declarada pelo cliente', 'OS por responsável']),
+        ('Custos', ['Custo de materiais por tipo de problema']),
+    ],
+}
+
+
+def _sections_for(page, panels):
+    by_title = {p['title']: p for p in panels}
+    assigned = set()
+    sections = []
+    for title, names in PANEL_SECTIONS.get(page, []):
+        entries = [by_title[n] for n in names if n in by_title and n not in assigned]
+        assigned.update(p['title'] for p in entries)
+        if entries:
+            sections.append({'title': title, 'panels': entries})
+    others = [p for p in panels if p['title'] not in assigned]
+    if others:
+        sections.append({'title': 'Outras análises', 'panels': others})
+    return sections
 
 
 def _render(request, title, page, cards, panels, f, note='', warning='', planning=False):
@@ -116,20 +165,9 @@ def _render(request, title, page, cards, panels, f, note='', warning='', plannin
             writer.writerow([]); writer.writerow([safe(block['title']), 'Valor', safe(block['caption'])])
             for row in block['rows']:writer.writerow([safe(row['label']),safe(row['value'])])
         return response
-    sections_map = {
-      'geral':['Indicadores consolidados','Evolução e composição'],
-      'projetos':['Situação documental','Pendências e histórico'],
-      'obras':['Qualidade e inspeções','Controle operacional','Análises de execução'],
-      'suprimentos':['Compras e processos','Eficiência e fornecedores'],
-      'pos_obra':['Operação da assistência','Experiência do cliente','Custos e recorrência']}
-    labels=sections_map.get(page,['Análises'])
-    portion=max(1, (len(panels)+len(labels)-1)//len(labels))
-    sections=[{'title':label,'panels':panels[i*portion:(i+1)*portion]} for i,label in enumerate(labels)]
-    if len(panels)>len(labels)*portion:
-        sections[-1]['panels']+=panels[len(labels)*portion:]
-    sections=[section for section in sections if section['panels']]
+    sections = _sections_for(page, panels)
     return render(request,'relatorios/painel.html',{'titulo':title,'pagina':page,'cards':cards,'panels':panels,
-      'sections':sections,'nota':note,'aviso':warning,'planejamento_link':planning,**f})
+      'sections':sections,'destaques':cards[:4],'complementares':cards[4:], 'total_analises':len(panels),'nota':note,'aviso':warning,'planejamento_link':planning,**f})
 
 
 @login_required
@@ -145,7 +183,7 @@ def visao_geral(request):
            _card('FVS abertas',fvs.count(),'Emitidas no período'),
            _card('Valor dos pedidos',pedidos.aggregate(v=Sum('valor_total'))['v'], 'Pedidos não cancelados',True),
            _card('OS abertas',os.count(),'Abertas no período'),
-           _card('OS ainda não concluídas',os.exclude(status__in=['CONCLUIDO','CANCELADO']).count(),'Da coorte aberta no período')]
+           _card('OS ainda não concluídas',os.exclude(status__in=['CONCLUIDO','CANCELADO']).count(),'Das OS abertas no período')]
     aplicaveis=projetos.exclude(status='NAO_SE_APLICA')
     finished=aplicaveis.filter(status__in=['FINALIZADO','RECEBIDO']).count()
     n_app=aplicaveis.count()
@@ -252,4 +290,4 @@ def pos_obra(request):
     add_cards, add_panels = analises.post_details(qs,active,survey,f,_card,_panel,_group)
     cards += add_cards; panels += add_panels
     return _render(request,'Pós-Obra','pos_obra',cards,panels,f,
-       'Apenas custos de materiais utilizados são contabilizados. Indicadores de prazo e status apresentam situação atual das OS abertas no período selecionado.')
+       'Os custos representam somente materiais utilizados; métricas de status e prazo consideram a situação atual das OS abertas dentro do período selecionado.')
