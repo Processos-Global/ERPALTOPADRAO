@@ -14,7 +14,7 @@ from obras.models import Obra, FVS, FVSItem, VistoriaItem, DiarioObra, Movimento
 from projetos.models import ChecklistProjetoResposta, AlteracaoProjeto
 from compras.models import ProcessoCompra, PedidoCompra
 from pos_obra.models import Chamado, MaterialOS, PesquisaSatisfacao
-from relatorios.services import analises
+from relatorios.services import analises, estrategicos
 
 
 def _auth(user):
@@ -125,6 +125,15 @@ PANEL_SECTIONS = {
         ('Entregas e fornecedores', ['Situação dos pedidos', 'Fornecedores com pedidos abertos atrasados']),
         ('Gestão das compras', ['Compras por responsável']),
     ],
+    'planejamento': [
+        ('Desempenho físico', ['Avanço executado por obra', 'Desvio físico por obra']),
+        ('Marcos do cronograma', ['Situação dos marcos']),
+        ('Cronograma de suprimentos', ['Contratações pendentes vencidas por obra', 'Suprimentos programados por categoria']),
+    ],
+    'financeiro': [
+        ('Desembolso e previsão', ['Previsão financeira por mês', 'Pagamentos efetivados por mês']),
+        ('Composição das previsões', ['Previsões por nível de certeza']),
+    ],
     'pos_obra': [
         ('Volume e evolução', ['Abertura de OS por mês', 'OS por situação', 'OS por empreendimento']),
         ('Problemas e prioridades', ['Tipos de problema', 'Tipos de problema mais frequentes', 'Prioridade dos chamados', 'OS por 100 unidades (obras atuais)']),
@@ -196,6 +205,10 @@ def visao_geral(request):
     cards += [_card('Conclusão documental',f'{finished/n_app*100:.1f}%' if n_app else '—', 'Itens aplicáveis cadastrados no período'),
               _card('Não conformidade das FVS',f'{n_nc/total_itens*100:.1f}%' if total_itens else '—','Itens NC / itens verificados das FVS no período'),
               _card('Pedidos com entrega vencida',overdue.count(),'Situação atual dos pedidos emitidos no período')]
+    # Destaques físicos: somente se houver importação ativa com dados.
+    plan_cards, _, _ = estrategicos.planejamento(f, _card, _ranking_panel)
+    if plan_cards and plan_cards[0]['value'] != '0':
+        cards = plan_cards[:3] + cards
     panels=[_panel('Pedidos por mês',_series(pedidos,'data','valor_total'),'Valores de pedidos emitidos; não representam pagamentos.'),
             _panel('OS abertas por mês',_series(os,'criado_em'),'Por data de abertura da OS.'),
             _panel('Situação das OS abertas no período',_group(os,'status'))]
@@ -291,3 +304,28 @@ def pos_obra(request):
     cards += add_cards; panels += add_panels
     return _render(request,'Pós-Obra','pos_obra',cards,panels,f,
        'Os custos representam somente materiais utilizados; métricas de status e prazo consideram a situação atual das OS abertas dentro do período selecionado.')
+
+
+@login_required
+def planejamento(request):
+    _auth(request.user)
+    f = _filters(request)
+    cards, panels, warning = estrategicos.planejamento(f, _card, _ranking_panel)
+    return _render(request, 'Planejamento', 'planejamento', cards, panels, f,
+        'Avanços físicos não são somados nem promediados entre obras. Data inicial não elimina os snapshots anteriores; data final limita a posição do cronograma.',
+        warning=warning, planning=True)
+
+
+@login_required
+def financeiro(request):
+    _auth(request.user)
+    f = _filters(request)
+    cards, panels = estrategicos.financeiro(f, _card, _ranking_panel)
+    return _render(request, 'Financeiro', 'financeiro', cards, panels, f,
+        'Previsões, títulos e pagamentos são visões diferentes; não devem ser somados. Sem versões congeladas, não é calculado erro histórico de previsão.')
+
+
+def _ranking_panel(title, rows, caption=''):
+    data = _panel(title, rows, caption)
+    data['kind'] = 'ranking'
+    return data
