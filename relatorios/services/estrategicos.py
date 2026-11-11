@@ -4,6 +4,8 @@ Leitura apenas; sem migrar estruturas ou estimar dados faltantes.
 """
 from collections import defaultdict
 from datetime import date
+from decimal import Decimal
+from relatorios.services.presentation import chart, number
 
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
@@ -21,7 +23,7 @@ def _num(value):
 
 def _pct(value):
     """Os campos de progresso físico do cronograma estão em escala 0–1."""
-    return round(float(value) * 100, 1) if value is not None else None
+    return Decimal(value) * 100 if value is not None else None
 
 
 def _ranking(lines, limit=12):
@@ -34,10 +36,10 @@ def _ranking(lines, limit=12):
 
 def _line(label, value, suffix='', precision=1):
     return {'label': label, 'value': f'{value:,.{precision}f}'.replace(',', 'X').replace('.', ',').replace('X', '.') + suffix,
-            'raw': round(value, precision)}
+            'raw': number(value)}
 
 
-def planejamento(f, card, panel):
+def planejamento(f, card, panel, *, summary_only=False):
     """Só considera a importação física ativa e a importação ativa de suprimentos.
 
     Snapshot mais recente por (obra, projeto), evitando contar a mesma
@@ -81,40 +83,68 @@ def planejamento(f, card, panel):
                 no_base += 1
                 continue
             qualified.append((row, executed, planned))
-            if executed < planned - .1: late += 1
-            if executed > planned + .1: ahead += 1
+            if executed < planned: late += 1
+            if executed > planned: ahead += 1
         cards.extend([
             card('Cronogramas acompanhados', len(snapshots), 'Último RESUMO GERAL por obra/projeto na importação ativa'),
-            card('Cronogramas atrás do previsto', late, 'Comparação do avanço físico, não atraso confirmado da conclusão'),
+            card('Cronogramas atrás do previsto', late, 'Comparação do avanço físico, não atraso confirmado da conclusão', severity='warning' if late else None),
             card('Cronogramas à frente', ahead, 'Avanço executado superior ao previsto'),
             card('Sem percentuais comparáveis', no_base, 'Sem base suficiente para comparação'),
         ])
+        if summary_only:
+            return cards, [], ''
         # Não sumarizamos percentuais de obras distintas como média da empresa:
         # os pesos e contratos não seriam comparáveis.
         rows=[]
         diffs=[]
         for row, executed, planned in qualified:
-            name = row['obra__nome'] or row['projeto']
+            name = f"{row['obra__nome'] or 'Sem obra'} · {row['projeto']}"
             if not row['obra_id']:
                 name += ' (sem vínculo de obra)'
-            rows.append({'label':name, 'value':f'{executed:.1f}%', 'raw': executed})
-            diffs.append(_line(name, executed-planned))
-        panels.append(panel('Avanço executado por obra', _ranking(sorted(rows, key=lambda x:x['label'])),
-                            'Percentual executado do último resumo por obra/projeto; não é média do portfólio.'))
+            rows.append({'label':name, 'value':f'{executed:.1f}%', 'raw': number(executed)})
+            diffs.append(_line(name, executed-planned, ' p.p.'))
         panels.append(panel('Desvio físico por obra', _ranking(sorted(diffs, key=lambda x:x['raw'])),
-                            'Pontos percentuais: executado menos previsto. Valor negativo indica atraso físico.'))
+                            'Executado menos previsto; até 12 obras/projetos com menor desvio.', chart=chart(unit='percentage_point', precision=1, min=None, negative=True, sort='asc')))
+        comparison = sorted(qualified, key=lambda item: (item[0]['obra__nome'] or '', item[0]['projeto']))[:12]
+        comparison_rows = [{'label':f"{r['obra__nome'] or 'Sem obra'} · {r['projeto']}", 'value':f'{e:.1f}%', 'raw':number(e), 'width':0} for r,e,p in comparison]
+        panels.append(panel('Previsto e executado por obra/projeto', comparison_rows, 'Último resumo; até 12 obras/projetos.', chart=chart(unit='percent', precision=1, max=100), series=[{'name':'Previsto','values':[number(p) for r,e,p in comparison]}, {'name':'Executado','values':[number(e) for r,e,p in comparison]}]))
+        dated = {}
+        for r in sorted(summaries, key=lambda item:(item['semana'] or -1,item['id'])):
+            if r['data_atualizacao'] is not None:
+                if f['inicio'] and r['data_atualizacao'] < f['inicio']:
+                    continue
+                key=(r['obra_id'],r['projeto'])
+                dated.setdefault(key,{})[r['data_atualizacao']]=r
+        histories = [(key,points) for key,points in sorted(dated.items(), key=lambda item:str(item[0])) if len(points)>1]
+        for key, points in histories[:3]:
+            selected=sorted(points.items())[-12:]
+            rows_history=[]; planned_history=[]; executed_history=[]
+            for dt,r in selected:
+                e=_pct(r['percentual_executado'] if r['percentual_executado'] is not None else r['percentual_concluida'])
+                p=_pct(r['percentual_previsto'] if r['percentual_previsto'] is not None else r['percentual_previsto_tarefa'])
+                rows_history.append({'label':dt.isoformat(),'value':f'{e:.1f}%' if e is not None else '—','raw':number(e),'width':0})
+                planned_history.append(number(p)); executed_history.append(number(e))
+            panels.append(panel(f"Evolução física · {selected[-1][1]['obra__nome'] or 'Sem obra'} · {key[1]}", rows_history, 'Até 3 cronogramas por identificação e 12 datas no período; somente observações da importação ativa, sem interpolação.', chart=chart(orientation='vertical', unit='percent', precision=1, max=100, sort='chronological', allowed_types=['bar']), series=[{'name':'Previsto','values':planned_history},{'name':'Executado','values':executed_history}]))
 
         # Marcos: apenas a semana mais recente de cada obra/projeto, jamais
         # contar todos os snapshots da importação como eventos novos.
         marks = list(base.filter(disciplina__iexact='MARCOS').values(
-            'obra_id','projeto','semana','data_atualizacao','termino_base','termino_real',
+            'id','chave_atividade','local_tarefa','nome_tarefa','obra_id','projeto','semana','data_atualizacao','termino_base','termino_real',
             'percentual_concluida','percentual_executado'))
         total_mark=finished=overdue=finished_late=0
+        unique_marks = {}
         for m in marks:
             key=(m['obra_id'],m['projeto'])
             if key not in latest: continue
             anchor=latest[key][1]
-            if m['semana'] != anchor['semana']: continue
+            if (m['semana'],m['data_atualizacao']) != (anchor['semana'],anchor['data_atualizacao']): continue
+            identity=m['chave_atividade'] or (m['local_tarefa'],m['nome_tarefa'])
+            if not identity or identity == ('',''):
+                identity=('unidentified',m['id'])
+            mark_key=(key,identity)
+            if mark_key not in unique_marks or m['id'] > unique_marks[mark_key]['id']:
+                unique_marks[mark_key]=m
+        for m in unique_marks.values():
             total_mark+=1
             value = m['percentual_concluida'] if m['percentual_concluida'] is not None else m['percentual_executado']
             complete = value is not None and float(value)>=.999
@@ -138,6 +168,8 @@ def planejamento(f, card, panel):
     else:
         warning.append('Cronograma físico sem importação ativa concluída.')
 
+    if summary_only:
+        return cards, [], ' '.join(warning)
     supply = (ImportacaoCronogramaSuprimentos.objects
               .filter(ativa=True, status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA)
               .order_by('-id').first())
@@ -153,9 +185,9 @@ def planejamento(f, card, panel):
         delayed_open = qs.filter(data_real_contratacao__isnull=True,prazo_limite_contratacao__lt=today).count()
         contracted_late = done.filter(data_real_contratacao__gt=django_f('prazo_limite_contratacao')).count()
         cards.extend([
-            card('Suprimentos programados',total,'Importação de suprimentos ativa'),
+            card('Suprimentos programados',total,'Importação ativa; data final filtra prazo-limite, não estado histórico'),
             card('Contratações realizadas',contracted,'Data real de contratação informada'),
-            card('Contratações pendentes vencidas',delayed_open,'Prazo-limite anterior à data atual'),
+            card('Contratações pendentes vencidas',delayed_open,'Prazo-limite anterior à data atual',severity='warning' if delayed_open else None),
             card('Contratações realizadas fora do prazo',contracted_late,'Data real posterior ao prazo-limite'),
         ])
         by_work = qs.filter(data_real_contratacao__isnull=True,prazo_limite_contratacao__lt=today).values(
@@ -200,30 +232,58 @@ def financeiro(f, card, panel):
     today=timezone.localdate()
     vencidos=titulos.exclude(status=TituloPagar.Status.PAGO).filter(vencimento__lt=today)
     vencido_valor=vencidos.aggregate(v=Sum('valor_original'))['v'] or 0
+    balance = overdue_balance = liquid = Decimal('0')
+    inconsistent = no_due = overdue_count = 0
+    for title in titulos.select_related('pagamento').iterator(chunk_size=500):
+        net = title.valor_liquido
+        remaining = title.saldo_aberto
+        paid = title.total_pago
+        balance += remaining
+        liquid += net
+        if title.vencimento is None:
+            no_due += 1
+        if title.vencimento and title.vencimento < today and remaining > 0:
+            overdue_balance += remaining
+            overdue_count += 1
+        if ((title.status == TituloPagar.Status.PAGO) != (paid > 0)) or (paid > 0 and paid != net):
+            inconsistent += 1
     cards=[card('Previsão financeira ativa',previsto,'Por data prevista, não equivale a contas a pagar',True),
            card('Pagamentos efetivados',pago,'Por data de pagamento; estornos excluídos',True),
            card('Valor original dos títulos',total_titulo,'Por vencimento; não é saldo em aberto',True),
            card('Títulos vencidos',vencidos.count(),'Títulos não marcados como pagos'),
            card('Valor original dos títulos vencidos',vencido_valor,'Não representa saldo líquido devido',True)]
+    cards = [card('Saldo em aberto',balance,'Líquido menos pagamento atualmente efetivado; por vencimento',True),
+             card('Saldo vencido',overdue_balance,'Saldo positivo com vencimento anterior a hoje',True,severity='warning' if overdue_balance > 0 else None),
+             card('Obrigações líquidas',liquid,'Original + acréscimos − desconto monetário, limitado a zero por título',True),
+             card('Títulos com saldo vencido',overdue_count,severity='warning' if overdue_count else None)] + cards
+    cards += [card('Títulos sem vencimento',no_due,'No universo filtrado; filtros de data excluem vencimentos nulos'),
+              card('Inconsistências de pagamento',inconsistent,'Divergência entre status, pagamento efetivado e valor líquido',severity='warning' if inconsistent else None)]
     # Sem snapshots históricos, não calcular "erro da previsão".
     planned=previsoes.values('data_prevista__year','data_prevista__month').annotate(v=Sum('valor_previsto'))
     actual=pagamentos.values('data_pagamento__year','data_pagamento__month').annotate(v=Sum('valor'))
-    periods=defaultdict(lambda:{'previsto':0,'realizado':0})
+    periods=defaultdict(lambda:{'previsto':Decimal('0'),'realizado':Decimal('0')})
     for r in planned:
         if r['data_prevista__year'] and r['data_prevista__month']:
-            periods[(r['data_prevista__year'],r['data_prevista__month'])]['previsto']+=float(r['v'] or 0)
+            periods[(r['data_prevista__year'],r['data_prevista__month'])]['previsto']+=r['v'] or Decimal('0')
     for r in actual:
         if r['data_pagamento__year'] and r['data_pagamento__month']:
-            periods[(r['data_pagamento__year'],r['data_pagamento__month'])]['realizado']+=float(r['v'] or 0)
+            periods[(r['data_pagamento__year'],r['data_pagamento__month'])]['realizado']+=r['v'] or Decimal('0')
+    # Contiguous calendar months: absent activity is zero, not a skipped interval.
+    if periods:
+        first, last = min(periods), max(periods)
+        last_index = last[0] * 12 + last[1] - 1
+        first_index = max(first[0] * 12 + first[1] - 1, last_index - 11)
+        periods = {(index // 12, index % 12 + 1): periods[(index // 12, index % 12 + 1)]
+                   for index in range(first_index, last_index + 1)}
     def fmt(v):return 'R$ '+f'{v:,.2f}'.replace(',','X').replace('.',',').replace('X','.')
     panels=[panel('Previsão financeira por mês',_ranking([
-        {'label':f'{m:02d}/{y}','raw':values['previsto'],'value':fmt(values['previsto'])}
-        for (y,m), values in sorted(periods.items())][-12:]),'Previsões ativas por data prevista.'),
+        {'label':f'{m:02d}/{y}','raw':number(values['previsto']),'value':fmt(values['previsto'])}
+        for (y,m), values in sorted(periods.items())][-12:]),'Até 12 meses consecutivos; previsões ativas por data prevista.', chart=chart(type='line', orientation='vertical', unit='currency', precision=2, sort='chronological', allowed_types=['line','bar'])),
         panel('Pagamentos efetivados por mês',_ranking([
-        {'label':f'{m:02d}/{y}','raw':values['realizado'],'value':fmt(values['realizado'])}
-        for (y,m), values in sorted(periods.items())][-12:]),'Somente pagamentos não estornados.'),
+        {'label':f'{m:02d}/{y}','raw':number(values['realizado']),'value':fmt(values['realizado'])}
+        for (y,m), values in sorted(periods.items())][-12:]),'Até 12 meses consecutivos; pagamentos atualmente não estornados.', chart=chart(type='line', orientation='vertical', unit='currency', precision=2, sort='chronological', allowed_types=['line','bar'])),
         panel('Previsões por nível de certeza',_ranking([
-        {'label':r['certeza'] or 'Sem classificação','raw':float(r['v'] or 0),'value':fmt(float(r['v'] or 0))}
+        {'label':r['certeza'] or 'Sem classificação','raw':float(r['v'] or 0),'value':fmt(r['v'] or 0)}
         for r in previsoes.values('certeza').annotate(v=Sum('valor_previsto')).order_by('-v')]),
-        'Não somar novamente com os títulos e pagamentos.')]
+        'Não somar novamente com os títulos e pagamentos.', chart=chart(unit='currency', precision=2, sort='desc'))]
     return cards,panels
