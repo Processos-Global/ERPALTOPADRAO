@@ -1,0 +1,17 @@
+{% extends "layouts/base.html" %}
+{% block title %}Saída de estoque | {{ obra.codigo }}{% endblock %}{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block content %}<div class="op-page"><section class="op-head"><div class="op-head-copy"><span class="op-eyebrow">Almoxarifado · {{ obra.codigo }}</span><h1>Registrar saída</h1><p>Registre o consumo ou retirada de material do estoque físico da obra.</p></div><div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Voltar</a></div></section>
+<form method="post" class="op-form">{% csrf_token %}
+  <div class="op-grid">
+    <div class="op-field c12"><label>Material</label><select name="item" required><option value="">Selecione...</option>{% for linha in estoque %}<option value="{{ linha.chave }}" {% if chave_selecionada == linha.chave %}selected{% endif %}>{{ linha.material_nome }} · saldo {{ linha.saldo|floatformat:4 }} {{ linha.unidade }}</option>{% endfor %}</select></div>
+  </div>
+  {% if item %}<div class="op-stock-preview"><strong>{{ item.material_nome }}</strong><br><span>Saldo disponível: {{ item.saldo|floatformat:4 }} {{ item.unidade }}</span></div>{% endif %}
+  <div class="op-grid">
+    <div class="op-field c4"><label>Quantidade</label><input type="text" name="quantidade" inputmode="decimal" required placeholder="0,0000"></div>
+    <div class="op-field c8"><label>Finalidade / local de uso</label><input type="text" name="finalidade" maxlength="255" placeholder="Ex.: execução do pavimento térreo"></div>
+    <div class="op-field c6"><label>Documento / referência</label><input type="text" name="documento_referencia" maxlength="100" placeholder="Opcional"></div>
+    <div class="op-field c12"><label>Observação</label><textarea name="observacao" placeholder="Informações adicionais, responsável pela retirada, frente de serviço..."></textarea></div>
+    <div class="c12 op-actions"><button class="op-btn" type="submit">Registrar saída</button><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Cancelar</a></div>
+  </div>
+</form></div>{% endblock %}

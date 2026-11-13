@@ -1,0 +1,18 @@
+<script>
+(()=>{
+ const tipo=document.getElementById('id_tipo_acesso');if(!tipo)return;
+ const form=tipo.form,legacy=document.getElementById('id_cliente_vinculado');
+ const data=JSON.parse(document.getElementById('usr-clientes-legados').textContent);
+ function sync(){const cli=tipo.value==='CLIENTE';document.querySelectorAll('[data-user-section]').forEach(s=>{s.hidden=s.dataset.userSection!=='acesso'&&!cli});['cargo','telefone'].forEach(n=>{let e=document.querySelector('[data-user-field="'+n+'"]');if(e)e.hidden=cli});document.getElementById('id_cargo').required=!cli;document.getElementById('id_cliente_nome').required=cli;}
+ tipo.addEventListener('change',sync);sync();
+ if(legacy)legacy.addEventListener('change',()=>{const c=data.find(x=>String(x.id)===legacy.value);if(!c)return;for(const n of ['nome','documento','email','telefone','ativo']){const f=document.getElementById('id_cliente_'+n);if(f.type==='checkbox')f.checked=c[n];else f.value=c[n]||'';}document.getElementById('id_portal_habilitado').checked=c.portal_habilitado;document.querySelectorAll('#id_empreendimentos_cliente input').forEach(e=>e.checked=c.obras_ativas.includes(Number(e.value)));filter();});
+ const search=document.getElementById('usr-obra-search'),box=document.getElementById('id_empreendimentos_cliente'),count=document.getElementById('usr-obra-count');
+ function filter(){if(!box)return;const term=search.value.toLocaleLowerCase('pt-BR');let visible=0;box.querySelectorAll(':scope > div').forEach(row=>{row.hidden=!row.textContent.toLocaleLowerCase('pt-BR').includes(term);if(!row.hidden)visible++});count.textContent=box.querySelectorAll('input:checked').length+' obra(s) selecionada(s) · '+visible+' resultado(s)';}
+ search?.addEventListener('input',filter);box?.addEventListener('change',filter);filter();
+ let dirty=false,busy=false;form.addEventListener('input',()=>dirty=true);form.addEventListener('change',()=>dirty=true);
+ window.addEventListener('beforeunload',e=>{if(dirty&&!busy){e.preventDefault();e.returnValue='';}});
+ form.addEventListener('submit',e=>{if(e.defaultPrevented)return;if(busy){e.preventDefault();return;}busy=true;form.setAttribute('aria-busy','true');if(e.submitter)e.submitter.textContent='Salvando…';});
+ window.addEventListener('pageshow',()=>{busy=false;form.removeAttribute('aria-busy')});
+ const invalid=form.querySelector('[aria-invalid=true]');if(invalid){invalid.closest('[data-user-section]')?.removeAttribute('hidden');invalid.focus();}
+})();
+</script>

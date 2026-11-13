@@ -1,5 +1,44 @@
-﻿from django.urls import path
+from django.urls import path
+from obras import views
+from obras.views import vistoria_cautelar as cautelar
 
 app_name = "obras"
+urlpatterns = [
+    path("vistorias/cautelares/", cautelar.cautelares_lista, name="cautelares_lista"),
+    path("vistorias/cautelares/nova/", cautelar.cautelar_nova, name="cautelar_nova"),
+    path("vistorias/cautelares/<int:pk>/", cautelar.cautelar_detalhe, name="cautelar_detalhe"),
+    path("vistorias/cautelares/<int:pk>/salvar/", cautelar.cautelar_salvar, name="cautelar_salvar"),
+    path("vistorias/cautelares/<int:pk>/ocorrencia/", cautelar.cautelar_ocorrencia, name="cautelar_ocorrencia"),
+    path("vistorias/cautelares/<int:pk>/ocorrencia/<int:oid>/excluir/", cautelar.cautelar_ocorrencia_excluir, name="cautelar_ocorrencia_excluir"),
+    path("vistorias/cautelares/<int:pk>/foto/", cautelar.cautelar_foto, name="cautelar_foto"),
+    path("vistorias/cautelares/<int:pk>/pdf/", cautelar.cautelar_pdf, name="cautelar_pdf"),
+    path("pos-obra/liberacoes/", __import__("obras.views.pos_obra",fromlist=["liberacoes"]).liberacoes, name="pos_obra_liberacoes"),
+    path("pos-obra/<int:obra_id>/liberar/", __import__("obras.views.pos_obra",fromlist=["liberar"]).liberar, name="pos_obra_liberar"),
+    path("", views.menu, name="menu"),
 
-urlpatterns = []
+    path("vistorias/", views.vistorias_lista, name="vistorias_lista"),
+    path("vistorias/<int:atividade_id>/alterar/", views.vistoria_alterar, name="vistoria_alterar"),
+
+    path("fvs/", views.fvs_lista, name="fvs_lista"),
+    path("fvs/nova/", views.fvs_nova, name="fvs_nova"),
+    path("fvs/ambientes/", views.fvs_ambientes, name="fvs_ambientes"),
+    path("fvs/<int:pk>/", views.fvs_detalhe, name="fvs_detalhe"),
+    path("fvs/<int:pk>/enviar-aprovacao/", views.fvs_enviar_aprovacao, name="fvs_enviar_aprovacao"),
+    path("fvs/<int:pk>/decidir/", views.fvs_decidir, name="fvs_decidir"),
+
+    path("fichas/", views.fichas_tecnicas, name="fichas_tecnicas"),
+    path("fichas/<int:obra_id>/", views.ficha_tecnica, name="ficha_tecnica"),
+    path("fichas/<int:obra_id>/acao/", views.ficha_tecnica_acao, name="ficha_tecnica_acao"),
+
+    path("almoxarifado/", views.almoxarifado_dashboard, name="almoxarifado_dashboard"),
+    path("almoxarifado/<int:obra_id>/", views.almoxarifado_obra, name="almoxarifado_obra"),
+    path("almoxarifado/<int:obra_id>/saida/", views.saida_estoque, name="saida_estoque"),
+    path("almoxarifado/<int:obra_id>/relatorio-transferencias/", views.relatorio_transferencias, name="relatorio_transferencias"),
+    path("almoxarifado/<int:obra_id>/transferencia/", views.transferencia_estoque, name="transferencia_estoque"),
+
+    path("diario/", views.diario_lista, name="diario_lista"),
+    path("diario/novo/", views.diario_novo, name="diario_novo"),
+    # Mantido para links antigos já salvos/favoritados.
+    path("diario/<int:obra_id>/novo/", views.diario_novo, name="diario_novo_obra"),
+    path("diario/registro/<int:diario_id>/editar/", views.diario_editar, name="diario_editar"),
+]

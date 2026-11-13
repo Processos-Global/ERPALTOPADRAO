@@ -3,7 +3,6 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.db.models import Avg, Count, Max, Min, Q
@@ -13,6 +12,9 @@ from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
 from planejamento.models import ImportacaoCronogramaSuprimentos, ItemCronogramaSuprimento
+from usuarios.decorators import algum_modulo_required, modulo_required, possui_permissao_acao
+from django.core.exceptions import PermissionDenied
+from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma_suprimentos import (
     ImportacaoCronogramaSuprimentosError,
     importar_cronograma_suprimentos,
@@ -21,7 +23,7 @@ from planejamento.services.cronograma_suprimentos import (
 )
 
 
-@login_required
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def painel_cronograma_suprimentos(request):
     contexto = montar_painel_cronograma_suprimentos(
         obra_id=request.GET.get("obra") or None,
@@ -38,7 +40,7 @@ def painel_cronograma_suprimentos(request):
     )
 
 
-@login_required
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def kanban_cronograma_suprimentos(request):
     contexto = montar_kanban_cronograma_suprimentos(
         obra_id=request.GET.get("obra") or None,
@@ -52,16 +54,11 @@ def kanban_cronograma_suprimentos(request):
     )
 
 
-@login_required
+@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.ADMINISTRADOR)
 @require_POST
 def atualizar_cronograma_suprimentos(request):
-    if not request.user.is_superuser:
-        messages.error(
-            request,
-            "Você não tem permissão para atualizar o cronograma de suprimentos.",
-        )
-        return redirect("planejamento:painel_cronograma_suprimentos")
-
+    if not possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, 'editar_planejamento'):
+        raise PermissionDenied('Você não pode atualizar o cronograma de suprimentos.')
     try:
         resultado = importar_cronograma_suprimentos(
             usuario=request.user,
@@ -105,7 +102,7 @@ def _data_post(request, campo):
     return data
 
 
-@login_required
+@modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.EDICAO)
 @require_POST
 def salvar_datas_item_cronograma_suprimentos(request, item_id):
     """
@@ -115,6 +112,8 @@ def salvar_datas_item_cronograma_suprimentos(request, item_id):
     interface. No futuro esta mesma camada poderá ser atualizada pelo módulo de
     Compras sem alterar a regra de cálculo do cronograma.
     """
+    if not possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, 'editar_planejamento'):
+        raise PermissionDenied('Você não pode alterar o planejamento de suprimentos.')
     item = get_object_or_404(
         ItemCronogramaSuprimento.objects.select_related(
             "cronograma_obra",
@@ -172,7 +171,7 @@ def _formatar_moeda(valor):
     return f"R$ {texto}"
 
 
-@login_required
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def historico_item_cronograma_suprimentos(request, item_id):
     item = get_object_or_404(
         ItemCronogramaSuprimento.objects.select_related(
@@ -249,7 +248,7 @@ def historico_item_cronograma_suprimentos(request, item_id):
     })
 
 
-@login_required
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def historico_importacoes_cronograma_suprimentos(request):
     importacoes = (
         ImportacaoCronogramaSuprimentos.objects

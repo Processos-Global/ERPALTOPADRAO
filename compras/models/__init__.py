@@ -24,6 +24,18 @@ from .pedido import (
     RecebimentoPedidoItem,
 )
 from .historico import HistoricoProcessoCompra
+
+from .grande_fornecedor import (
+    GrandeFornecedorProcesso,
+    GrandeFornecedorParticipante,
+    GrandeFornecedorItem,
+    GrandeFornecedorOferta,
+    HistoricoValorGrandeFornecedor,
+    ParcelaGrandeFornecedor,
+    RateioParcelaGrandeFornecedor,
+)
 from .historico_suprimentos import HistoricoCompraSuprimento, SuprimentoReferencia
+
+from .contrato import ContratoCompra, HistoricoContratoCompra
 
 __all__ = [name for name in globals() if not name.startswith("_")]

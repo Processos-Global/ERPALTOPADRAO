@@ -31,6 +31,12 @@ class Fornecedor(ModeloAtivoTimestamp):
         validators=[MinValueValidator(Decimal("0")), MaxValueValidator(Decimal("5"))],
         help_text="Avaliação comercial de 0 a 5.",
     )
+    banco = models.CharField(max_length=120, blank=True)
+    agencia = models.CharField(max_length=30, blank=True, verbose_name="Agência")
+    conta_corrente = models.CharField(max_length=40, blank=True, verbose_name="Conta corrente")
+    operacao_bancaria = models.CharField(max_length=30, blank=True, verbose_name="Operação")
+    pix = models.CharField(max_length=255, blank=True, verbose_name="PIX")
+    titular_conta = models.CharField(max_length=255, blank=True, verbose_name="Titular")
     observacao = models.TextField(blank=True)
 
     class Meta:
@@ -57,6 +63,12 @@ class Fornecedor(ModeloAtivoTimestamp):
         self.contato = (self.contato or "").strip()
         self.cidade = (self.cidade or "").strip()
         self.estado = (self.estado or "").strip().upper()
+        self.banco = (self.banco or "").strip()
+        self.agencia = (self.agencia or "").strip()
+        self.conta_corrente = (self.conta_corrente or "").strip()
+        self.operacao_bancaria = (self.operacao_bancaria or "").strip()
+        self.pix = (self.pix or "").strip()
+        self.titular_conta = (self.titular_conta or "").strip()
         self.observacao = (self.observacao or "").strip()
         criando = self.pk is None
         super().save(*args, **kwargs)

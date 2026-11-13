@@ -73,6 +73,62 @@ class PermissaoCompras(models.Model):
         verbose_name="Administrar Compras",
     )
 
+    receber_emails = models.BooleanField(
+        default=True,
+        verbose_name="Receber e-mails de Compras",
+        help_text="Controla somente os e-mails. As notificações dentro do ERP continuam funcionando.",
+    )
+
+    email_solicitar_compra = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: solicitação de compra",
+    )
+
+    email_executar_cotacao = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: cotação",
+    )
+
+    email_compatibilizar = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: compatibilização",
+    )
+
+    email_negociar = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: negociação",
+    )
+
+    email_aprovar_compra = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: aprovação",
+    )
+
+    email_gerenciar_pedidos = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: pedidos",
+    )
+
+    email_receber_pedidos = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: recebimentos",
+    )
+
+    email_cancelar_pedidos = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: cancelamentos",
+    )
+
+    email_visualizar = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: avisos gerais de Compras",
+    )
+
+    email_administrar = models.BooleanField(
+        default=True,
+        verbose_name="E-mail: administração de Compras",
+    )
+
     ativo = models.BooleanField(
         default=True,
         verbose_name="Permissões de Compras ativas",

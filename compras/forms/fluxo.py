@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from django import forms
 
+from core.validators import validar_documento_upload
+
 from compras.models import (
     AdjudicacaoCompra,
     AprovacaoCompra,
@@ -36,6 +38,16 @@ CONDICOES_PAGAMENTO_CHOICES = [
     ("Parcelado", "Parcelado"),
     ("A combinar", "A combinar"),
 ]
+
+
+def _parcelas_da_condicao(valor):
+    texto = (valor or "").strip()
+    if texto.startswith("Parcelado em ") and texto.endswith("x"):
+        try:
+            return int(texto.replace("Parcelado em ", "").replace("x", ""))
+        except (TypeError, ValueError):
+            return None
+    return None
 
 
 def _numero_para_input(valor):
@@ -100,6 +112,37 @@ class NecessidadeCompraForm(forms.Form):
         _aplicar_classe_campos(self)
 
 
+class SolicitacaoCotacaoEnvioForm(forms.Form):
+    """Fornecedor escolhido pelo comprador no momento em que o envio é confirmado."""
+
+    fornecedor = forms.ModelChoiceField(
+        queryset=Fornecedor.objects.none(),
+        label="Fornecedor",
+        empty_label="Selecione um fornecedor",
+    )
+    meio_envio = forms.ChoiceField(
+        required=False,
+        label="Forma de envio",
+        choices=[("", "Não informar"), *SolicitacaoCotacaoFornecedor.MeioEnvio.choices],
+    )
+    observacao_envio = forms.CharField(
+        required=False,
+        label="Observação",
+        widget=forms.TextInput(attrs={"placeholder": "Opcional"}),
+    )
+
+    def __init__(self, *args, processo=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome")
+        if processo is not None:
+            ja_vinculados = processo.solicitacoes_cotacao.exclude(
+                status=SolicitacaoCotacaoFornecedor.Status.CANCELADA
+            ).values_list("fornecedor_id", flat=True)
+            fornecedores = fornecedores.exclude(pk__in=ja_vinculados)
+        self.fields["fornecedor"].queryset = fornecedores
+        _aplicar_classe_campos(self)
+
+
 class CotacaoFornecedorForm(forms.Form):
     fornecedor = forms.ModelChoiceField(
         queryset=Fornecedor.objects.filter(ativo=True).order_by("nome")
@@ -124,9 +167,10 @@ class CotacaoFornecedorForm(forms.Form):
         widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
     )
     frete = forms.DecimalField(required=True, min_value=0, decimal_places=2, initial=0, label="Frete (R$)")
+    desconto_proposta = forms.DecimalField(required=False, min_value=0, decimal_places=2, initial=0, label="Desconto da proposta (R$)")
     validade = forms.DateField(required=True, widget=forms.DateInput(attrs={"type": "date"}))
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
-    documento = forms.FileField(required=False)
+    documento = forms.FileField(required=False, validators=[validar_documento_upload])
 
     def __init__(self, *args, processo=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -221,23 +265,32 @@ class PropostaCompletaForm(forms.Form):
         decimal_places=2,
         initial=0,
         label="Frete (R$)",
-        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
+        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0", "data-proposta-frete": "1"}),
+    )
+    desconto_proposta = forms.DecimalField(
+        required=False,
+        min_value=0,
+        decimal_places=2,
+        initial=0,
+        label="Desconto da proposta (R$)",
+        widget=forms.NumberInput(attrs={"step": "0.01", "min": "0", "data-proposta-desconto-geral": "1"}),
     )
     validade = forms.DateField(
         required=True,
         label="Validade",
         widget=forms.DateInput(attrs={"type": "date"}),
     )
-    documento = forms.FileField(required=False, label="Proposta / anexo")
+    documento = forms.FileField(required=False, label="Proposta / anexo", validators=[validar_documento_upload])
     observacoes = forms.CharField(
         required=False,
         label="Observações comerciais",
         widget=forms.Textarea(attrs={"rows": 3, "placeholder": "Informações gerais da proposta"}),
     )
 
-    def __init__(self, *args, processo, cotacao=None, **kwargs):
+    def __init__(self, *args, processo, cotacao=None, necessidades=None, **kwargs):
         self.processo = processo
         self.cotacao = cotacao
+        self.necessidades_precarregadas = necessidades
         super().__init__(*args, **kwargs)
 
         fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome")
@@ -259,6 +312,7 @@ class PropostaCompletaForm(forms.Form):
                         else None
                     ),
                     "frete": _numero_para_input(cotacao.frete),
+                    "desconto_proposta": _numero_para_input(cotacao.desconto_proposta),
                     "validade": cotacao.validade,
                     "observacoes": cotacao.observacoes,
                 }
@@ -275,17 +329,28 @@ class PropostaCompletaForm(forms.Form):
 
         self.fields["fornecedor"].queryset = fornecedores
 
+        # O navegador também sinaliza a obrigatoriedade na criação; a validação
+        # server-side no clean() continua sendo a regra definitiva.
+        if not cotacao or not cotacao.documento:
+            self.fields["documento"].widget.attrs["required"] = "required"
+
         itens_existentes = {}
         if cotacao:
+            itens_cache = getattr(cotacao, "_prefetched_objects_cache", {}).get("itens")
+            if itens_cache is None:
+                itens_cache = cotacao.itens.select_related("necessidade").all()
             itens_existentes = {
                 item.necessidade_id: item
-                for item in cotacao.itens.select_related("necessidade").all()
+                for item in itens_cache
             }
 
         self.linhas = []
-        necessidades = list(
-            processo.necessidades.filter(situacao="ATIVA").order_by("descricao", "id")
-        )
+        if self.necessidades_precarregadas is not None:
+            necessidades = [n for n in self.necessidades_precarregadas if n.situacao == "ATIVA"]
+        else:
+            necessidades = list(
+                processo.necessidades.filter(situacao="ATIVA").order_by("descricao", "id")
+            )
         for necessidade in necessidades:
             item = itens_existentes.get(necessidade.pk)
             sufixo = str(necessidade.pk)
@@ -391,6 +456,11 @@ class PropostaCompletaForm(forms.Form):
         if data_proposta and validade and validade < data_proposta:
             self.add_error("validade", "A validade não pode ser anterior à data da proposta.")
 
+        # O anexo é obrigatório na criação. Em edição, o documento já salvo
+        # continua válido caso o usuário não selecione um novo arquivo.
+        if not cleaned.get("documento") and not (self.cotacao and self.cotacao.documento):
+            self.add_error("documento", "Anexe o arquivo da proposta do fornecedor.")
+
         if not self.processo.necessidades.filter(situacao="ATIVA").exists():
             raise forms.ValidationError("Inclua ao menos um item na compra antes de registrar propostas.")
 
@@ -459,24 +529,33 @@ class CompatibilizacaoForm(forms.Form):
 class AnaliseTecnicaLoteForm(forms.Form):
     """Decisões técnicas inline, agrupadas por necessidade."""
 
-    def __init__(self, *args, processo, cotacao=None, **kwargs):
+    def __init__(self, *args, processo, cotacao=None, itens=None, **kwargs):
         self.processo = processo
         self.cotacao = cotacao
         super().__init__(*args, **kwargs)
 
-        filtro = {
-            "cotacao__processo": processo,
-            "cotacao__enviada_compatibilizacao_em__isnull": False,
-        }
-        if cotacao is not None:
-            filtro["cotacao"] = cotacao
+        if itens is None:
+            filtro = {
+                "cotacao__processo": processo,
+                "cotacao__enviada_compatibilizacao_em__isnull": False,
+            }
+            if cotacao is not None:
+                filtro["cotacao"] = cotacao
 
-        itens = list(
-            CotacaoFornecedorItem.objects.filter(**filtro)
-            .select_related("cotacao__fornecedor", "necessidade")
-            .prefetch_related("compatibilizacoes")
-            .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
-        )
+            itens = list(
+                CotacaoFornecedorItem.objects.filter(**filtro)
+                .select_related("cotacao__fornecedor", "necessidade")
+                .prefetch_related("compatibilizacoes")
+                .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
+            )
+        else:
+            itens = sorted(
+                list(itens),
+                key=lambda item: (
+                    item.necessidade.descricao or "",
+                    item.cotacao.fornecedor.nome or "",
+                ),
+            )
         grupos = defaultdict(list)
         self.linhas = []
         for item in itens:
@@ -552,6 +631,9 @@ class NegociacaoForm(forms.Form):
     condicao_pagamento_negociada = forms.ChoiceField(
         required=False, choices=CONDICOES_PAGAMENTO_CHOICES
     )
+    parcelas_pagamento_negociada = forms.IntegerField(
+        required=False, min_value=2, max_value=120, label="Número de parcelas"
+    )
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
 
     def __init__(self, *args, processo=None, **kwargs):
@@ -562,6 +644,18 @@ class NegociacaoForm(forms.Form):
                 processo,
             ).select_related("cotacao__fornecedor", "necessidade")
         _aplicar_classe_campos(self)
+
+    def clean(self):
+        cleaned = super().clean()
+        pagamento = cleaned.get("condicao_pagamento_negociada")
+        parcelas = cleaned.get("parcelas_pagamento_negociada")
+        if pagamento == "Parcelado":
+            if not parcelas:
+                self.add_error("parcelas_pagamento_negociada", "Informe o número de parcelas.")
+            else:
+                cleaned["condicao_pagamento_negociada"] = f"Parcelado em {parcelas}x"
+        cleaned.pop("parcelas_pagamento_negociada", None)
+        return cleaned
 
 
 class AdjudicacaoForm(forms.Form):
@@ -654,7 +748,15 @@ class DecisaoComercialLoteForm(forms.Form):
                 required=False,
                 choices=_choices_com_valor_atual(CONDICOES_PAGAMENTO_CHOICES, pagamento_atual),
                 label="Pagamento negociado",
-                initial=pagamento_atual,
+                initial=("Parcelado" if _parcelas_da_condicao(pagamento_atual) else pagamento_atual),
+            )
+            self.fields[f"parcelas_{sid}"] = forms.IntegerField(
+                required=False,
+                min_value=2,
+                max_value=120,
+                label="Número de parcelas",
+                initial=_parcelas_da_condicao(pagamento_atual),
+                widget=forms.NumberInput(attrs={"min": "2", "max": "120", "step": "1", "placeholder": "Ex.: 3"}),
             )
             self.fields[f"observacoes_{sid}"] = forms.CharField(
                 required=False,
@@ -680,6 +782,7 @@ class DecisaoComercialLoteForm(forms.Form):
                 "frete": self[f"frete_{sid}"],
                 "prazo": self[f"prazo_{sid}"],
                 "pagamento": self[f"pagamento_{sid}"],
+                "parcelas": self[f"parcelas_{sid}"],
                 "observacoes": self[f"observacoes_{sid}"],
             }
             self.linhas.append(linha)
@@ -692,16 +795,30 @@ class DecisaoComercialLoteForm(forms.Form):
                 linha["menor_preco"] = menor_preco is not None and linha["item"].valor_unitario_cotado == menor_preco
             self.grupos.append({"necessidade": necessidade, "linhas": linhas, "menor_preco": menor_preco})
 
+    def clean(self):
+        cleaned = super().clean()
+        for linha in self.linhas:
+            sid = str(linha["item"].pk)
+            pagamento = cleaned.get(f"pagamento_{sid}", "")
+            parcelas = cleaned.get(f"parcelas_{sid}")
+            if pagamento == "Parcelado" and not parcelas:
+                self.add_error(f"parcelas_{sid}", "Informe o número de parcelas.")
+        return cleaned
+
     def dados_linhas(self):
         for linha in self.linhas:
             item = linha["item"]
             sid = str(item.pk)
+            pagamento = self.cleaned_data.get(f"pagamento_{sid}", "")
+            parcelas = self.cleaned_data.get(f"parcelas_{sid}")
+            if pagamento == "Parcelado" and parcelas:
+                pagamento = f"Parcelado em {parcelas}x"
             yield {
                 "item": item,
                 "valor_unitario_negociado": self.cleaned_data.get(f"valor_{sid}"),
                 "frete_negociado": self.cleaned_data.get(f"frete_{sid}"),
                 "prazo_entrega_dias_negociado": self.cleaned_data.get(f"prazo_{sid}"),
-                "condicao_pagamento_negociada": self.cleaned_data.get(f"pagamento_{sid}", ""),
+                "condicao_pagamento_negociada": pagamento,
                 "observacoes": self.cleaned_data.get(f"observacoes_{sid}", ""),
             }
 
@@ -768,7 +885,18 @@ class AprovacaoForm(forms.Form):
         for item in selecionados:
             totais[item.necessidade_id] += item.quantidade or Decimal("0")
 
-        for necessidade in self.processo.necessidades.filter(situacao="ATIVA"):
+        # Só é possível exigir seleção para necessidades que realmente possuem
+        # ao menos uma oferta elegível nesta rodada de aprovação. Necessidades
+        # sem nenhuma oferta cotada/elegível aparecem no mapa como "Não cotado"
+        # e, portanto, não podem bloquear a aprovação dos demais itens.
+        necessidades_com_oferta_elegivel = {
+            item.necessidade_id for item in self.itens_elegiveis
+        }
+
+        for necessidade in self.processo.necessidades.filter(
+            situacao="ATIVA",
+            pk__in=necessidades_com_oferta_elegivel,
+        ):
             total = totais[necessidade.pk]
             esperado = necessidade.quantidade_incluida or Decimal("0")
             if total != esperado:
@@ -794,6 +922,7 @@ class DocumentoContratacaoForm(forms.Form):
         required=True,
         label="Documento anexo",
         help_text="Anexe contrato, pedido assinado ou outro documento complementar relacionado ao fornecedor.",
+        validators=[validar_documento_upload],
     )
 
     def __init__(self, *args, processo=None, **kwargs):

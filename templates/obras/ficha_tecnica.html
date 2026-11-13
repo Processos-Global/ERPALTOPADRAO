@@ -1,0 +1,404 @@
+{% extends "layouts/base.html" %}
+{% load l10n %}
+{% block title %}Ficha Técnica | {{ obra.nome }}{% endblock %}
+{% block page_name %}Ficha Técnica{% endblock %}
+
+{% block extra_css %}
+{% include "obras/_styles.html" %}
+<style>
+.ft-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid #e7dccd;border-radius:12px;background:#faf8f5}
+.ft-picker label{font-size:12px;font-weight:800;color:#665047}
+.ft-picker select{flex:1;min-width:240px;max-width:520px;padding:11px 12px;border:1px solid #ddceba;border-radius:9px;background:#fff;color:#50362c;font:inherit;font-size:13px}
+.ft-picker-count{font-size:12px;color:#866f61}
+.ft-row-actions{display:flex;gap:6px;align-items:center}.ft-row-actions form{margin:0}
+.ft-edit-row[hidden]{display:none!important}.ft-edit-row td{background:#fbf8f3!important;padding:16px!important}
+.ft-edit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.ft-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#725b50}
+.ft-edit-grid input,.ft-edit-grid select,.ft-edit-grid textarea{width:100%;min-width:0;padding:10px;border:1px solid #dfd4c5;border-radius:8px;background:#fff;color:#49342c;font:inherit;font-size:12px}
+.ft-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+@media(max-width:1000px){.ft-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.ft-edit-grid{grid-template-columns:1fr}.ft-picker select{min-width:100%}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ft-page">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="ft-message">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="ft-top">
+    <div class="ft-head-copy">
+      <span class="ft-eyebrow">Ficha Técnica</span>
+      <h1>{{ obra.nome }}</h1>
+      <small>{{ obra.codigo }} · Estrutura, ambientes, categorias e itens da obra</small>
+    </div>
+    <span class="ft-status">{{ ficha.get_status_display }}</span>
+  </div>
+
+  <nav class="ft-flow">
+    <a class="{% if etapa == '1' %}active{% endif %}" href="?etapa=1">1. Pavimentos</a>
+    <a class="{% if etapa == '2' %}active{% endif %}" href="?etapa=2">2. Ambientes</a>
+    <a class="{% if etapa == '3' %}active{% endif %}" href="?etapa=3">3. Categorias GF</a>
+    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">4. Itens</a>
+    <a class="{% if etapa == '5' %}active{% endif %}" href="?etapa=5">5. Resumo</a>
+  </nav>
+
+  <div class="ft-layout">
+    <main class="ft-panel">
+
+      {% if etapa == '1' %}
+      <div class="ft-panel-head"><h2>Pavimentos</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Adicionar pavimento</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="adicionar_pavimento">
+            <input type="hidden" name="etapa" value="1">
+            <div class="ft-grid">
+              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" required>{% for p in tipos_pavimento %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c5"><label>Nome na obra</label><input name="nome" placeholder="Ex.: Térreo, 1º Pavimento"></div>
+              <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="ft-section-bar"><strong>Pavimentos cadastrados</strong><span>{{ pavimentos|length }}</span></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Ordem</th><th>Pavimento</th><th>Ambientes</th><th></th></tr></thead>
+            <tbody>
+              {% for p in pavimentos %}
+              <tr>
+                <td>{{ p.ordem }}</td><td><strong>{{ p.nome }}</strong></td><td>{{ p.ambientes.count }}</td>
+                <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_pavimento"><input type="hidden" name="etapa" value="1"><input type="hidden" name="pavimento_id" value="{{ p.pk|unlocalize }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
+              </tr>
+              {% empty %}<tr><td colspan="4" class="ft-empty">Nenhum pavimento cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% elif etapa == '2' %}
+      <div class="ft-panel-head"><h2>Ambientes</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Adicionar ambiente</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="acao" value="adicionar_ambiente">
+            <input type="hidden" name="etapa" value="2">
+            <div class="ft-grid">
+              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" required>{% for a in tipos_ambiente %}<option value="{{ a.pk|unlocalize }}">{{ a.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Identificação</label><input name="identificacao" placeholder="Ex.: Quarto 01" required></div>
+              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}">{{ c.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Área (m²)</label><input name="area_m2" required inputmode="decimal" placeholder="12,50"></div>
+              <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="ft-section-bar"><strong>Ambientes cadastrados</strong><span>{{ total_ambientes }}</span></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Pavimento</th><th>Ambiente</th><th>Tipo</th><th>Característica</th><th>Área</th><th></th></tr></thead>
+            <tbody>
+              {% for a in ambientes %}
+              <tr>
+                <td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.caracteristica.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td>
+                <td><div class="ft-row-actions"><button type="button" class="ft-icon-btn" data-edit-row="amb-{{ a.pk }}">Editar</button><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}"><button class="ft-icon-btn danger" type="submit" onclick="return confirm('Excluir este ambiente e seus itens?')">Excluir</button></form></div></td>
+              </tr>
+              <tr id="amb-{{ a.pk }}" class="ft-edit-row" hidden><td colspan="6">
+                <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+                  {% csrf_token %}<input type="hidden" name="acao" value="editar_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}">
+                  <div class="ft-edit-grid">
+                    <label>Pavimento<select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}" {% if p.pk == a.pavimento_id %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}</select></label>
+                    <label>Ambiente<input name="identificacao" value="{{ a.identificacao }}" maxlength="160" required></label>
+                    <label>Tipo<select name="tipo_ambiente" required>{% for tipo in tipos_ambiente %}<option value="{{ tipo.pk|unlocalize }}" {% if tipo.pk == a.tipo_ambiente_id %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
+                    <label>Característica<select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}" {% if c.pk == a.caracteristica_id %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></label>
+                    <label>Área (m²)<input name="area_m2" inputmode="decimal" value="{{ a.area_m2|floatformat:2 }}" required></label>
+                  </div>
+                  <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="amb-{{ a.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
+                </form>
+              </td></tr>
+              {% empty %}<tr><td colspan="6" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {% elif etapa == '3' %}
+      <div class="ft-panel-head"><h2>Categorias de Grandes Fornecedores</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-form-box">
+          <div class="ft-form-title">Categorias gerais da obra</div>
+          <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+            {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_obra"><input type="hidden" name="etapa" value="3">
+            <div class="ft-cats">
+              {% for c in categorias_obra %}
+                <div class="ft-cat-wrap">
+                  <label class="ft-cat">
+                    <input type="checkbox" name="categorias" value="{{ c.pk|unlocalize }}" {% if c.pk in aplicacoes_obra_ids %}checked{% endif %}{% if c.pk == ar_sistema_categoria_id %} data-ar-sistema-toggle{% endif %}>
+                    <span>
+                      <strong>{{ c.nome }}</strong>
+                      {% if c.pk == ar_sistema_categoria_id %}<small>Selecione também o tipo do sistema</small>{% endif %}
+                    </span>
+                  </label>
+                  {% if c.pk == ar_sistema_categoria_id %}
+                    <div class="ft-system-choice" data-ar-sistema-box {% if c.pk not in aplicacoes_obra_ids %}hidden{% endif %}>
+                      <label>Tipo do sistema de ar-condicionado</label>
+                      <select name="tipo_sistema_ar" data-ar-sistema-select>
+                        <option value="">Selecionar...</option>
+                        {% for tipo in tipos_sistema_ar %}
+                          <option value="{{ tipo }}" {% if ar_sistema_tipo_atual == tipo %}selected{% endif %}>{{ tipo|title }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  {% endif %}
+                </div>
+              {% empty %}<div class="ft-empty">Nenhuma categoria geral disponível.</div>{% endfor %}
+            </div>
+            <div style="margin-top:10px"><button class="ft-btn">Salvar</button></div>
+          </form>
+        </div>
+
+        <div class="ft-form-box" id="ft-ambiente-panel">
+          <div class="ft-form-title">Categorias por ambiente</div>
+          <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
+          <div class="ft-picker"><label for="ft-select-categorias">Ambiente</label><select id="ft-select-categorias" data-ambiente-select>
+            {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=3&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_categorias_ativas }} categorias</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
+          </select><span class="ft-picker-count">{{ total_ambientes }} ambientes cadastrados</span></div>
+
+          {% if ambiente_selecionado %}
+            <div class="ft-context">
+              <span><strong>{{ ambiente_selecionado.identificacao }}</strong></span>
+              <span>{{ ambiente_selecionado.pavimento.nome }}</span>
+              <span>{{ ambiente_selecionado.area_m2|floatformat:2 }} m²</span>
+              <span>{{ ambiente_selecionado.caracteristica.nome }}</span>
+            </div>
+
+            <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+              {% csrf_token %}<input type="hidden" name="acao" value="salvar_categorias_ambiente"><input type="hidden" name="etapa" value="3"><input type="hidden" name="ambiente_id" value="{{ ambiente_selecionado.pk|unlocalize }}">
+              <div class="ft-cats">
+                {% for c in categorias_ambiente %}
+                  {% if not c.somente_area_molhada or ambiente_selecionado.caracteristica.codigo == 'AREA_MOLHADA' %}
+                  <label class="ft-cat"><input type="checkbox" name="categorias" value="{{ c.pk|unlocalize }}" {% if c.pk in aplicacoes_ambiente_ids %}checked{% endif %}><span><strong>{{ c.nome }}</strong></span></label>
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <div style="margin-top:10px"><button class="ft-btn">Salvar</button></div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      {% elif etapa == '4' %}
+      <div class="ft-panel-head"><h2>Itens</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select>
+          <option value="?etapa=4" {% if not ambiente_selecionado %}selected{% endif %}>Itens gerais da obra</option>
+          {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=4&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_itens_ativos }} itens</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
+        </select><span class="ft-picker-count">{{ total_ambientes }} ambientes · {{ total_itens }} itens</span></div>
+
+        {% if ambiente_selecionado %}
+          <div class="ft-context">
+            <span><strong>{{ ambiente_selecionado.identificacao }}</strong></span>
+            <span>{{ ambiente_selecionado.pavimento.nome }}</span>
+            <span>{{ ambiente_selecionado.area_m2|floatformat:2 }} m²</span>
+            <span>{{ ambiente_selecionado.caracteristica.nome }}</span>
+          </div>
+          {% for ap in aplicacoes_ambiente %}{% include "obras/_categoria_itens.html" with ap=ap %}{% empty %}<div class="ft-empty">Nenhuma categoria selecionada para este ambiente.</div>{% endfor %}
+        {% else %}
+          {% for ap in aplicacoes_obra %}{% include "obras/_categoria_itens.html" with ap=ap %}{% empty %}<div class="ft-empty">Nenhuma categoria geral selecionada.</div>{% endfor %}
+        {% endif %}
+      </div>
+
+      {% else %}
+      <div class="ft-panel-head"><h2>Resumo</h2></div>
+      <div class="ft-panel-body">
+        <div class="ft-review-grid">
+          <div class="ft-review-card"><span>Pavimentos</span><strong>{{ pavimentos|length }}</strong></div>
+          <div class="ft-review-card"><span>Ambientes</span><strong>{{ total_ambientes }}</strong></div>
+          <div class="ft-review-card"><span>Categorias</span><strong>{{ total_categorias }}</strong></div>
+          <div class="ft-review-card"><span>Itens</span><strong>{{ total_itens }}</strong></div>
+        </div>
+
+        <div class="ft-section-bar"><strong>Ambientes</strong></div>
+        <div class="ft-table-wrap">
+          <table class="ft-table">
+            <thead><tr><th>Pavimento</th><th>Ambiente</th><th>Tipo</th><th>Área</th><th>Característica</th></tr></thead>
+            <tbody>
+              {% for a in ambientes %}
+              <tr><td>{{ a.pavimento.nome }}</td><td><strong>{{ a.identificacao }}</strong></td><td>{{ a.tipo_ambiente.nome }}</td><td>{{ a.area_m2|floatformat:2 }} m²</td><td>{{ a.caracteristica.nome }}</td></tr>
+              {% empty %}<tr><td colspan="5" class="ft-empty">Nenhum ambiente cadastrado.</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endif %}
+    </main>
+
+    <aside class="ft-side">
+      <div class="ft-side-card">
+        <h3>Resumo</h3>
+        <div class="ft-kpis">
+          <div class="ft-kpi"><span>Pavimentos</span><strong>{{ pavimentos|length }}</strong></div>
+          <div class="ft-kpi"><span>Ambientes</span><strong>{{ total_ambientes }}</strong></div>
+          <div class="ft-kpi"><span>Categorias</span><strong>{{ total_categorias }}</strong></div>
+          <div class="ft-kpi"><span>Itens</span><strong>{{ total_itens }}</strong></div>
+        </div>
+      </div>
+
+      <a class="ft-btn secondary" href="{% url 'obras:fichas_tecnicas' %}">Voltar</a>
+    </aside>
+  </div>
+</div>
+<script>
+(function(){
+  // Preserva a posicao de leitura ao salvar qualquer formulario da Ficha Tecnica.
+  // O POST e o redirecionamento permanecem sob controle do Django.
+  const scrollKey = 'saari:ficha-tecnica:scroll:' + window.location.pathname;
+
+  document.addEventListener('submit', function(event){
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.closest('.ft-page')) return;
+    if ((form.method || '').toLowerCase() !== 'post') return;
+    try {
+      sessionStorage.setItem(scrollKey, JSON.stringify({
+        x: window.scrollX,
+        y: window.scrollY,
+        etapa: new URLSearchParams(window.location.search).get('etapa') || '1',
+        momento: Date.now()
+      }));
+    } catch (_) { /* Armazenamento indisponivel: envio normal */ }
+  }, true);
+
+  function restaurarPosicaoAposSalvar(){
+    let registro;
+    try {
+      const salvo = sessionStorage.getItem(scrollKey);
+      if (!salvo) return;
+      sessionStorage.removeItem(scrollKey); // Uma restauracao por salvamento
+      registro = JSON.parse(salvo);
+    } catch (_) { return; }
+    if (!registro || Date.now() - registro.momento > 120000) return;
+    const etapaAtual = new URLSearchParams(window.location.search).get('etapa') || '1';
+    if (registro.etapa !== etapaAtual) return;
+
+    // Evita que o navegador e o nosso script disputem a restauracao.
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    const restaurar = function(){ window.scrollTo({left: registro.x, top: registro.y, behavior: 'instant'}); };
+    requestAnimationFrame(function(){ requestAnimationFrame(restaurar); });
+    window.addEventListener('load', restaurar, {once: true});
+    setTimeout(restaurar, 180);
+  }
+  restaurarPosicaoAposSalvar();
+
+  function iniciarArSistema(){
+    const toggle = document.querySelector('[data-ar-sistema-toggle]');
+    const box = document.querySelector('[data-ar-sistema-box]');
+    const select = document.querySelector('[data-ar-sistema-select]');
+    if (!toggle || !box || !select) return;
+
+    function atualizar(){
+      box.hidden = !toggle.checked;
+      select.required = toggle.checked;
+      if (!toggle.checked) select.value = '';
+    }
+
+    toggle.addEventListener('change', atualizar);
+    atualizar();
+  }
+
+  async function trocarAmbiente(link){
+    if (link.dataset.loading === '1') return;
+
+    const blocoAtual = document.querySelector('#ft-ambiente-panel');
+    if (!blocoAtual) {
+      window.location.assign(link.href);
+      return;
+    }
+
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const href = link.href;
+
+    link.dataset.loading = '1';
+    blocoAtual.classList.add('ft-panel-loading');
+
+    try {
+      const resposta = await fetch(href, {
+        method: 'GET',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'text/html'
+        },
+        credentials: 'same-origin',
+        cache: 'no-store'
+      });
+
+      if (!resposta.ok) throw new Error('Falha ao carregar o ambiente.');
+
+      const html = await resposta.text();
+      const documento = new DOMParser().parseFromString(html, 'text/html');
+      const novoBloco = documento.querySelector('#ft-ambiente-panel');
+
+      if (!novoBloco) throw new Error('Bloco de categorias do ambiente não encontrado.');
+
+      blocoAtual.replaceWith(novoBloco);
+      history.pushState({ fichaTecnicaAmbiente: true }, '', href);
+      iniciarArSistema();
+
+      requestAnimationFrame(function(){
+        window.scrollTo(scrollX, scrollY);
+      });
+    } catch (erro) {
+      console.error(erro);
+      window.location.assign(href);
+    } finally {
+      const atual = document.querySelector('#ft-ambiente-panel');
+      if (atual) atual.classList.remove('ft-panel-loading');
+    }
+  }
+
+  // Usa capture=true para impedir que qualquer listener global do base.html
+  // transforme o clique em uma navegação completa antes desta rotina.
+  document.addEventListener('click', function(event){
+    const alvo = event.target instanceof Element ? event.target : event.target.parentElement;
+    const link = alvo && alvo.closest('a[data-ambiente-link]');
+    if (!link) return;
+
+    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    if (typeof event.button === 'number' && event.button !== 0) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    trocarAmbiente(link);
+  }, true);
+
+  window.addEventListener('popstate', function(){
+    window.location.reload();
+  });
+
+  document.addEventListener('click', function(event){
+    const button = event.target.closest('[data-edit-row]');
+    if (!button) return;
+    const row = document.getElementById(button.dataset.editRow);
+    if (row) { row.hidden = !row.hidden; if (!row.hidden) row.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  });
+  document.addEventListener('change', function(event){
+    const select = event.target.closest('[data-ambiente-select]');
+    if (!select || !select.value) return;
+    const link = document.createElement('a'); link.href = select.value;
+    if (select.id === 'ft-select-categorias') { trocarAmbiente(link); }
+    else window.location.assign(select.value);
+  });
+  iniciarArSistema();
+})();
+</script>
+{% endblock %}

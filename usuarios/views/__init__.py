@@ -1,4 +1,4 @@
-from .autenticacao import login_view, logout_view
+from .autenticacao import ERPPasswordResetView, login_view, logout_view
 from .notificacoes import (
     abrir_notificacao,
     lista_notificacoes,
@@ -14,6 +14,7 @@ from .usuarios import (
 )
 
 __all__ = [
+    "ERPPasswordResetView",
     "abrir_notificacao",
     "alternar_status_usuario",
     "configurar_usuario",

@@ -13,6 +13,7 @@ from .comercial import (
     item_tecnicamente_aprovado,
     processo_em_analise_ou_negociacao,
 )
+from .valores import preco_final_valido
 
 
 # ============================================================
@@ -311,6 +312,10 @@ def adjudicar(
         if negociacao
         else item_cotado.valor_unitario_cotado
     )
+    if not preco_final_valido(valor):
+        raise ValidationError(
+            "A proposta selecionada possui preço final zerado e não pode ser adjudicada."
+        )
 
     prazo_entrega = (
         negociacao.prazo_entrega_dias_negociado

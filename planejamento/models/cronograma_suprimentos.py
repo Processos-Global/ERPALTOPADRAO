@@ -102,6 +102,10 @@ class CronogramaSuprimentosObra(models.Model):
 
 
 class ItemCronogramaSuprimento(models.Model):
+    class TipoFluxoCompra(models.TextChoices):
+        NORMAL = "NORMAL", "Fluxo normal"
+        GRANDE_FORNECEDOR = "GRANDE_FORNECEDOR", "Grande fornecedor"
+
     """
     Cada item possui duas camadas de datas:
 
@@ -116,6 +120,28 @@ class ItemCronogramaSuprimento(models.Model):
         NEGOCIACAO = "NEGOCIACAO", "Negociação"
         CONTRATACAO = "CONTRATACAO", "Contratação"
         CONCLUIDO = "CONCLUIDO", "Concluído"
+
+    tipo_fluxo_compra = models.CharField(
+        max_length=30,
+        choices=TipoFluxoCompra.choices,
+        default=TipoFluxoCompra.NORMAL,
+        db_index=True,
+        help_text=(
+            "Define se o suprimento usa o fluxo comum ou o fluxo paralelo de Grandes Fornecedores. "
+            "Cronogramas sem classificação explícita usam o fluxo normal principal como padrão."
+        ),
+    )
+    categoria_grande_fornecedor = models.ForeignKey(
+        "cadastros.CategoriaGrandeFornecedor",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="itens_cronograma_suprimentos",
+        help_text=(
+            "Categoria técnica de Grande Fornecedor identificada a partir da categoria do cronograma. "
+            "É esta relação que conecta Planejamento, Ficha Técnica e Compras."
+        ),
+    )
 
     cronograma_obra = models.ForeignKey(
         CronogramaSuprimentosObra,
@@ -189,15 +215,33 @@ class ItemCronogramaSuprimento(models.Model):
         return f"{self.cronograma_obra.nome_aba} - {self.item}"
 
     @property
+    def usa_fluxo_grande_fornecedor(self) -> bool:
+        """Retorna o fluxo comercial efetivo do suprimento.
+
+        Grande Fornecedor exige identificação técnica explícita. Isso evita
+        que uma categoria comum da planilha seja enviada ao fluxo paralelo
+        apenas por possuir um nome de categoria preenchido.
+        """
+        return bool(self.categoria_grande_fornecedor_id)
+
+    @property
     def exige_compatibilizacao(self) -> bool:
         texto = unicodedata.normalize("NFKD", str(self.categoria or "")).encode("ascii", "ignore").decode("ascii").upper()
         return not ("MATERIA" in texto and "VARIAD" in texto)
 
     @property
     def percentual_andamento(self) -> int:
-        datas = [self.data_real_cotacao, self.data_real_negociacao, self.data_real_contratacao]
-        if self.exige_compatibilizacao:
-            datas.insert(1, self.data_real_compatibilizacao)
+        # Grande Fornecedor não possui etapa de cotação separada.
+        if self.usa_fluxo_grande_fornecedor:
+            datas = [
+                self.data_real_compatibilizacao,
+                self.data_real_negociacao,
+                self.data_real_contratacao,
+            ]
+        else:
+            datas = [self.data_real_cotacao, self.data_real_negociacao, self.data_real_contratacao]
+            if self.exige_compatibilizacao:
+                datas.insert(1, self.data_real_compatibilizacao)
         concluidas = sum(bool(data) for data in datas)
         return round((concluidas / len(datas)) * 100) if datas else 0
 
@@ -240,6 +284,14 @@ class ItemCronogramaSuprimento(models.Model):
 
     @property
     def etapa_atual(self) -> str:
+        if self.usa_fluxo_grande_fornecedor:
+            if not self.data_real_compatibilizacao:
+                return self.Etapa.COMPATIBILIZACAO
+            if not self.data_real_negociacao:
+                return self.Etapa.NEGOCIACAO
+            if not self.data_real_contratacao:
+                return self.Etapa.CONTRATACAO
+            return self.Etapa.CONCLUIDO
         if not self.data_real_cotacao:
             return self.Etapa.COTACAO
         if self.exige_compatibilizacao and not self.data_real_compatibilizacao:

@@ -1,11 +1,37 @@
 from django.urls import path
-
 from cadastros import views
+from cadastros.views.empresa import empresa
+from cadastros.views.modelos_vistoria import modelos_vistoria_lista, modelo_vistoria_editar
 
 app_name = "cadastros"
-
 urlpatterns = [
+    path("modelos-vistorias/", modelos_vistoria_lista, name="modelos_vistoria_lista"),
+    path("modelos-vistorias/novo/", modelo_vistoria_editar, name="modelo_vistoria_novo"),
+    path("modelos-vistorias/<int:pk>/", modelo_vistoria_editar, name="modelo_vistoria_editar"),
+    path("empresa/", empresa, name="empresa"),
+    path("pos-obra/<slug:modelo>/", views.pos_obra_views.lista, name="pos_obra_lista"),
+    path("pos-obra/<slug:modelo>/novo/", views.pos_obra_views.editar, name="pos_obra_novo"),
+    path("pos-obra/<slug:modelo>/<int:pk>/editar/", views.pos_obra_views.editar, name="pos_obra_editar"),
+    path("pos-obra/empreendimento/<int:pk>/liberar/", views.pos_obra_views.liberar, name="pos_obra_liberar"),
+    path("fvs/", views.modelos_fvs_lista, name="modelos_fvs_lista"),
+    path("fvs/novo/", views.modelo_fvs_novo, name="modelo_fvs_novo"),
+    path("fvs/<int:pk>/editar/", views.modelo_fvs_editar, name="modelo_fvs_editar"),
+    path("checklists-projetos/", views.checklist_projetos_lista, name="checklist_projetos_lista"),
+    path("checklists-projetos/grupo/novo/", views.checklist_grupo_novo, name="checklist_grupo_novo"),
+    path("checklists-projetos/grupo/<int:pk>/editar/", views.checklist_grupo_editar, name="checklist_grupo_editar"),
+    path("checklists-projetos/item/novo/", views.checklist_item_novo, name="checklist_item_novo"),
+    path("checklists-projetos/item/<int:pk>/editar/", views.checklist_item_editar, name="checklist_item_editar"),
+    path("checklists-projetos/item/<int:pk>/excluir/", views.checklist_item_excluir, name="checklist_item_excluir"),
     path("", views.index, name="index"),
+    path("ficha-tecnica/", views.ficha_tecnica_cadastros, name="ficha_tecnica_cadastros"),
+    path("ficha-tecnica/<slug:tipo>/", views.ficha_tecnica_lista, name="ficha_tecnica_lista"),
+    path("ficha-tecnica/<slug:tipo>/novo/", views.ficha_tecnica_novo, name="ficha_tecnica_novo"),
+    path("ficha-tecnica/<slug:tipo>/<int:pk>/editar/", views.ficha_tecnica_editar, name="ficha_tecnica_editar"),
+    path("ficha-tecnica/<slug:tipo>/<int:pk>/excluir/", views.ficha_tecnica_excluir, name="ficha_tecnica_excluir"),
+    path("unidades/", views.unidades_lista, name="unidades_lista"),
+    path("unidades/nova/", views.unidade_nova, name="unidade_nova"),
+    path("unidades/<int:pk>/editar/", views.unidade_editar, name="unidade_editar"),
+    path("unidades/<int:pk>/excluir/", views.unidade_excluir, name="unidade_excluir"),
     path("materiais/", views.materiais_lista, name="materiais_lista"),
     path("materiais/novo/", views.material_novo, name="material_novo"),
     path("materiais/<int:pk>/editar/", views.material_editar, name="material_editar"),

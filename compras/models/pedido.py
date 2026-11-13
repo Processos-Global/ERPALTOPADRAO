@@ -3,6 +3,9 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
+
+from core.storage import private_media_storage
 
 from .core import NecessidadeCompra, ProcessoCompra
 
@@ -67,7 +70,18 @@ class PedidoCompra(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.numero} - {self.fornecedor.nome}"
+        return f"{self.numero} - {self.fornecedor.nome_exibicao}"
+
+    @property
+    def atrasado(self):
+        previsao = self.previsao_entrega_atual or self.previsao_entrega_original
+        return bool(previsao and previsao < timezone.localdate() and self.status not in (self.Status.CANCELADO, self.Status.ENTREGUE) and self.percentual_recebido < 100)
+
+    @property
+    def dias_atraso(self):
+        if not self.atrasado:
+            return 0
+        return (timezone.localdate() - (self.previsao_entrega_atual or self.previsao_entrega_original)).days
 
     @property
     def percentual_recebido(self):
@@ -176,7 +190,7 @@ class HistoricoPrevisaoPedido(models.Model):
 class RecebimentoPedido(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="recebimentos")
     numero_nota_fiscal = models.CharField(max_length=80, null=True, blank=True)
-    arquivo_nota_fiscal = models.FileField(upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
+    arquivo_nota_fiscal = models.FileField(storage=private_media_storage, upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
     valor_total_nota = models.DecimalField(
         max_digits=18,
         decimal_places=2,
@@ -238,7 +252,7 @@ class RecebimentoPedidoItem(models.Model):
 
 class PedidoCompraAnexo(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.CASCADE, related_name="anexos")
-    arquivo = models.FileField(upload_to="compras/pedidos/%Y/%m/")
+    arquivo = models.FileField(storage=private_media_storage, upload_to="compras/pedidos/%Y/%m/")
     descricao = models.CharField(max_length=255, blank=True)
     enviado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,

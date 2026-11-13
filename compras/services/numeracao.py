@@ -8,5 +8,5 @@ def gerar_numero(tipo: str) -> str:
     seq, _ = SequenciaDocumentoCompra.objects.select_for_update().get_or_create(tipo=tipo, ano=ano)
     seq.ultimo_numero += 1
     seq.save(update_fields=["ultimo_numero"])
-    prefixo = {"PROCESSO": "PC", "PEDIDO": "PED"}[tipo]
+    prefixo = {"PROCESSO": "PC", "PEDIDO": "PED", "CONTRATO": "CT"}[tipo]
     return f"{prefixo}-{ano}-{seq.ultimo_numero:04d}"

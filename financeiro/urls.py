@@ -1,5 +1,43 @@
-﻿from django.urls import path
+from django.urls import path
+
+from financeiro import views
 
 app_name = "financeiro"
 
-urlpatterns = []
+urlpatterns = [
+    path("arquivos/titulos/<int:pk>/", views.baixar_documento_titulo, name="baixar_documento_titulo"),
+    path("arquivos/titulos/<int:titulo_pk>/anexos/<int:anexo_pk>/", views.baixar_anexo_titulo, name="baixar_anexo_titulo"),
+    path("arquivos/titulos/<int:titulo_pk>/pedido-anexos/<int:anexo_pk>/", views.baixar_anexo_pedido_titulo, name="baixar_anexo_pedido_titulo"),
+    path("arquivos/titulos/<int:titulo_pk>/notas-fiscais/<int:recebimento_pk>/", views.baixar_nota_fiscal_pedido_titulo, name="baixar_nota_fiscal_pedido_titulo"),
+    path("arquivos/pagamentos/<int:pk>/", views.baixar_comprovante_pagamento, name="baixar_comprovante_pagamento"),
+    path("", views.dashboard, name="dashboard"),
+    path("indicadores/", views.indicadores, name="indicadores"),
+    path("contas-a-pagar/", views.titulos_lista, name="titulos"),
+    path("contas-a-pagar/novo/", views.titulo_novo, name="titulo_novo"),
+    path("contas-a-pagar/<int:pk>/", views.titulo_detalhe, name="titulo_detalhe"),
+    path("contas-a-pagar/<int:pk>/editar/", views.titulo_editar, name="titulo_editar"),
+    path("contas-a-pagar/<int:pk>/anexos/<int:anexo_pk>/excluir/", views.titulo_excluir_anexo, name="titulo_excluir_anexo"),
+    path("contas-a-pagar/<int:pk>/documento-anterior/excluir/", views.titulo_excluir_documento_legacy, name="titulo_excluir_documento_legacy"),
+    path("contas-a-pagar/<int:pk>/configurar/", views.titulo_configurar, name="titulo_configurar"),
+    path("contas-a-pagar/<int:pk>/enviar-aprovacao/", views.titulo_enviar_aprovacao, name="titulo_enviar_aprovacao"),
+    path("contas-a-pagar/<int:pk>/decidir/", views.titulo_decidir, name="titulo_decidir"),
+    path("contas-a-pagar/<int:pk>/cancelar/", views.titulo_cancelar, name="titulo_cancelar"),
+    path("aprovacoes/", views.aprovacoes_lista, name="aprovacoes"),
+    path("aprovacoes/lote/", views.aprovacoes_lote, name="aprovacoes_lote"),
+    path("previsoes/", views.previsoes_lista, name="previsoes"),
+    path("previsoes/nova/", views.previsao_nova, name="previsao_nova"),
+    path("previsoes/sincronizar/", views.sincronizar_compras, name="sincronizar_previsoes"),
+    path("pagamentos/", views.pagamentos_lista, name="pagamentos"),
+    path("relatorios-pagamento/", views.relatorios_pagamento, name="relatorios_pagamento"),
+    path("relatorios-pagamento/emitir/", views.relatorio_pagamento_emitir, name="relatorio_pagamento_emitir"),
+    path("relatorios-pagamento/<int:pk>/excel/", views.relatorio_pagamento_excel, name="relatorio_pagamento_excel"),
+    path("pagamentos/titulo/<int:titulo_id>/novo/", views.pagamento_novo, name="pagamento_novo"),
+    path("pagamentos/titulo/<int:titulo_id>/confirmar/", views.pagamento_confirmar_direto, name="pagamento_confirmar_direto"),
+    path("pagamentos/<int:pk>/estornar/", views.pagamento_estornar, name="pagamento_estornar"),
+    path("gastos/", views.gastos, name="gastos"),
+    path("analises/", views.analises, name="analises"),
+    path("configuracoes/plano-financeiro/", views.plano_financeiro, name="plano_financeiro"),
+    path("configuracoes/plano-financeiro/<int:pk>/", views.plano_financeiro, name="plano_financeiro_editar"),
+    path("configuracoes/despesas-recorrentes/", views.despesas_recorrentes, name="despesas_recorrentes"),
+    path("configuracoes/despesas-recorrentes/<int:pk>/", views.despesas_recorrentes, name="despesa_recorrente_editar"),
+]

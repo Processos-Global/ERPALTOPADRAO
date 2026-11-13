@@ -1,3 +1,5 @@
+from decimal import Decimal
+from core.validators import validar_documento_upload
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -18,6 +20,7 @@ from compras.forms import (
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )
 from compras.models import (
     AdjudicacaoCompra,
@@ -28,6 +31,7 @@ from compras.models import (
     PedidoCompra,
     PedidoCompraAnexo,
     ProcessoCompra,
+    NecessidadeCompra,
     SolicitacaoCotacaoFornecedor,
 )
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
@@ -51,8 +55,8 @@ from compras.services.pedidos import (
     gerar_pedidos, registrar_recebimento,
 )
 from compras.services.permissoes import compras_acao_required, possui_acao_compras
-from compras.services.processos import incluir_necessidade
-from compras.services.solicitacoes_cotacao import marcar_solicitacao_enviada
+from compras.services.processos import editar_necessidade, excluir_necessidade, incluir_necessidade
+from compras.services.solicitacoes_cotacao import criar_e_marcar_solicitacao_enviada, marcar_solicitacao_enviada
 
 
 def _processo(pk):
@@ -91,6 +95,86 @@ def acao_incluir_necessidade(request, pk):
         else:
             messages.error(request, "Revise os dados da necessidade.")
     return _voltar(processo)
+
+
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def acao_editar_necessidade(request, pk, necessidade_id):
+    processo = _processo(pk)
+    necessidade = get_object_or_404(NecessidadeCompra, pk=necessidade_id, processo=processo)
+    if request.method == "POST":
+        form = NecessidadeCompraForm(request.POST, processo=processo)
+        if form.is_valid():
+            try:
+                editar_necessidade(
+                    processo=processo, necessidade=necessidade,
+                    material=form.cleaned_data["material"], quantidade=form.cleaned_data["quantidade"],
+                    observacao=form.cleaned_data["observacao"], usuario=request.user,
+                )
+                messages.success(request, "Item atualizado com sucesso.")
+            except ValidationError as exc:
+                _erro(request, exc)
+        else:
+            messages.error(request, "Revise os dados do item.")
+    return _voltar(processo)
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def acao_excluir_necessidade(request, pk, necessidade_id):
+    processo = _processo(pk)
+    necessidade = get_object_or_404(
+        NecessidadeCompra.objects.select_related("processo"),
+        pk=necessidade_id,
+        processo=processo,
+    )
+
+    if request.method == "POST":
+        try:
+            descricao, propostas_afetadas = excluir_necessidade(
+                processo=processo,
+                necessidade=necessidade,
+                usuario=request.user,
+            )
+            complemento = (
+                f" O item também foi retirado de {propostas_afetadas} proposta(s) ainda aberta(s)."
+                if propostas_afetadas
+                else ""
+            )
+            messages.success(request, f"Item {descricao} excluído da compra.{complemento}")
+        except ValidationError as exc:
+            _erro(request, exc)
+
+    resposta = _voltar(processo)
+    resposta["Location"] += "#itens-compra"
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.COTAR)
+def acao_enviar_solicitacao_fornecedor(request, pk):
+    processo = _processo(pk)
+    if request.method == "POST":
+        form = SolicitacaoCotacaoEnvioForm(request.POST, processo=processo)
+        if form.is_valid():
+            try:
+                solicitacao = criar_e_marcar_solicitacao_enviada(
+                    processo=processo,
+                    fornecedor=form.cleaned_data["fornecedor"],
+                    usuario=request.user,
+                    meio_envio=form.cleaned_data.get("meio_envio", ""),
+                    observacao=form.cleaned_data.get("observacao_envio", ""),
+                )
+                messages.success(
+                    request,
+                    f"Envio para {solicitacao.fornecedor.nome} registrado. A proposta desse fornecedor já pode ser preenchida.",
+                )
+            except ValidationError as exc:
+                _erro(request, exc)
+        else:
+            for erros in form.errors.values():
+                for erro in erros:
+                    messages.error(request, erro)
+    resposta = _voltar(processo)
+    resposta["Location"] += "#cotacao"
+    return resposta
 
 
 @compras_acao_required(AcaoCompra.COTAR)
@@ -216,6 +300,7 @@ def acao_salvar_proposta_completa(request, pk):
                 "prazo_entrega_dias": form.cleaned_data.get("prazo_entrega_dias"),
                 "condicao_pagamento": form.cleaned_data.get("condicao_pagamento", ""),
                 "frete": form.cleaned_data.get("frete"),
+                "desconto_proposta": form.cleaned_data.get("desconto_proposta") or Decimal("0"),
                 "validade": form.cleaned_data.get("validade"),
                 "observacoes": form.cleaned_data.get("observacoes", ""),
             }
@@ -498,7 +583,7 @@ def acao_decisao_comercial_lote(request, pk):
             for erro in erros:
                 messages.error(request, erro)
         resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
+        resposta["Location"] += "#negociacao"
         return resposta
 
     try:
@@ -537,11 +622,11 @@ def acao_decisao_comercial_lote(request, pk):
     except ValidationError as exc:
         _erro(request, exc)
         resposta = _voltar(processo)
-        resposta["Location"] += "#comparacao"
+        resposta["Location"] += "#negociacao"
         return resposta
 
     resposta = _voltar(processo)
-    resposta["Location"] += "#comparacao"
+    resposta["Location"] += "#negociacao"
     return resposta
 
 
@@ -555,7 +640,7 @@ def acao_enviar_cotacao_aprovacao(request, pk, cotacao_id):
             messages.success(request, f"Proposta de {cotacao.fornecedor.nome} enviada individualmente para aprovação.")
         except ValidationError as exc:
             _erro(request, exc)
-    resposta = _voltar(processo); resposta["Location"] += "#comparacao"; return resposta
+    resposta = _voltar(processo); resposta["Location"] += "#negociacao"; return resposta
 
 
 @compras_acao_required(AcaoCompra.APROVAR)
@@ -719,7 +804,7 @@ def acao_aprovar(request, pk):
                     )
                     processo_atualizado = ProcessoCompra.objects.get(pk=processo.pk)
                     resposta = _voltar(processo_atualizado)
-                    resposta["Location"] += "#comparacao"
+                    resposta["Location"] += "#negociacao"
                     return resposta
 
                 if decisao == AprovacaoCompra.Decisao.REPROVADO:
@@ -790,14 +875,20 @@ def acao_anexar_arquivo_pedido(request, pedido_id):
         if not arquivos:
             messages.error(request, "Selecione ao menos um arquivo para anexar.")
         else:
-            for arquivo in arquivos:
-                PedidoCompraAnexo.objects.create(
-                    pedido=pedido,
-                    arquivo=arquivo,
-                    descricao=descricao,
-                    enviado_por=request.user,
-                )
-            messages.success(request, f"{len(arquivos)} arquivo(s) anexado(s) ao pedido {pedido.numero}.")
+            try:
+                for arquivo in arquivos:
+                    validar_documento_upload(arquivo)
+            except ValidationError as exc:
+                _erro(request, exc)
+            else:
+                for arquivo in arquivos:
+                    PedidoCompraAnexo.objects.create(
+                        pedido=pedido,
+                        arquivo=arquivo,
+                        descricao=descricao,
+                        enviado_por=request.user,
+                    )
+                messages.success(request, f"{len(arquivos)} arquivo(s) anexado(s) ao pedido {pedido.numero}.")
     origem = request.POST.get("origem")
     if origem == "processo":
         resposta = _voltar(pedido.processo)
@@ -853,6 +944,8 @@ def acao_receber_pedido(request, pedido_id):
             if valor_item not in (None, ""):
                 valores_itens[item.pk] = valor_item
         try:
+            arquivo_nota_fiscal = request.FILES.get("arquivo_nota_fiscal")
+            validar_documento_upload(arquivo_nota_fiscal)
             recebimento = registrar_recebimento(
                 pedido=pedido,
                 quantidades=quantidades,
@@ -860,7 +953,7 @@ def acao_receber_pedido(request, pedido_id):
                 usuario=request.user,
                 numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
                 valor_total_nota=request.POST.get("valor_total_nota", ""),
-                arquivo_nota_fiscal=request.FILES.get("arquivo_nota_fiscal"),
+                arquivo_nota_fiscal=arquivo_nota_fiscal,
                 observacao=request.POST.get("observacao", ""),
             )
             messages.success(

@@ -1,0 +1,155 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ titulo|default:'Indicadores' }} | SAARI ERP{% endblock %}
+
+{% block page_name %}Indicadores{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'relatorios/painel.css' %}">{% endblock %}
+
+{% block content %}
+
+<main class="sa-bi" id="sa-bi-dashboard" data-page="{{ pagina }}">
+
+  <header class="sa-top" id="sa-top">
+
+    <div>
+
+      <h1 class="sa-heading">{{ titulo|default:'Indicadores' }}</h1>
+
+    </div>
+
+    <div class="sa-actions" aria-label="Ações do relatório">
+
+      {% if pode_exportar %}<a class="sa-button" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}exportar=csv" aria-label="Exportar indicadores filtrados para CSV">
+
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg> Exportar CSV
+
+      </a>{% endif %}
+
+      <button class="sa-button" type="button" onclick="window.print()">
+
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 15h12v6H6z"/></svg> Imprimir
+
+      </button>
+
+    </div>
+
+  </header>
+
+
+
+  <nav class="sa-navigation" aria-label="Áreas de indicadores">
+
+    <a href="{% url 'relatorios:indicadores' %}" {% if pagina == 'geral' %}aria-current="page"{% endif %}>Visão geral</a>
+
+    <a href="{% url 'relatorios:projetos' %}" {% if pagina == 'projetos' %}aria-current="page"{% endif %}>Projetos</a>
+
+    <a href="{% url 'relatorios:obras' %}" {% if pagina == 'obras' %}aria-current="page"{% endif %}>Obras</a>
+
+    <a href="{% url 'relatorios:suprimentos' %}" {% if pagina == 'suprimentos' %}aria-current="page"{% endif %}>Suprimentos</a>
+
+    <a href="{% url 'relatorios:planejamento' %}" {% if pagina == 'planejamento' %}aria-current="page"{% endif %}>Planejamento</a>
+
+    <a href="{% url 'relatorios:financeiro' %}" {% if pagina == 'financeiro' %}aria-current="page"{% endif %}>Financeiro</a>
+
+    <a data-area="pos_obra" href="{% url 'relatorios:pos_obra' %}" {% if pagina == 'pos_obra' %}aria-current="page"{% endif %}>Pós-Obra</a>
+
+  </nav>
+
+
+
+  <form class="sa-filters" method="get" aria-label="Filtrar indicadores">
+
+    {% if pagina != 'pos_obra' %}
+
+      <div class="sa-field"><label for="sa-obra">Obra</label><select id="sa-obra" name="obra"><option value="">Todas as obras</option>{% for obra in obras_filtro %}<option value="{{ obra.id }}" {% if obra.id == obra_id %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+
+    {% else %}
+
+      <div class="sa-field"><label for="sa-empreendimento">Empreendimento</label><select id="sa-empreendimento" name="empreendimento"><option value="">Todos os empreendimentos</option>{% for emp in empreendimentos_filtro %}<option value="{{ emp.id }}" {% if emp.id == empreendimento_id %}selected{% endif %}>{{ emp.nome }}</option>{% endfor %}</select></div>
+
+    {% endif %}
+
+    <div class="sa-field"><label for="sa-inicio">Data inicial</label><input id="sa-inicio" name="inicio" type="date" value="{{ inicio|date:'Y-m-d' }}"></div>
+
+    <div class="sa-field"><label for="sa-fim">Data final</label><input id="sa-fim" name="fim" type="date" value="{{ fim|date:'Y-m-d' }}"></div>
+
+    <div class="sa-filter-actions"><button class="sa-button sa-button--dark" type="submit">Aplicar</button><a class="sa-button" href="{{ request.path }}">Limpar</a></div>
+
+  </form>
+
+
+
+  {% if aviso %}<div role="status" style="margin:0 0 15px;padding:11px 14px;background:var(--sa-soft);border:1px solid var(--sa-line);border-radius:8px;font-size:12px;color:var(--sa-muted)">{{ aviso }}</div>{% endif %}
+
+  <section aria-labelledby="sa-executive-title">
+
+    <div class="sa-section-head">
+
+      <div><h2 class="sa-section-title" id="sa-executive-title">Resumo executivo</h2></div>
+
+    </div>
+
+    <div class="sa-kpis">
+
+      {% for c in destaques %}
+
+      <article class="sa-kpi{% if c.severity == 'warning' or c.severity == 'danger' %} sa-kpi--{{ c.severity }}{% endif %}"><span class="sa-kpi__label">{{ c.label }}</span><strong class="sa-kpi__value">{{ c.value }}</strong>{% if c.severity == 'warning' or c.severity == 'danger' %}<span class="sa-severity">Atenção</span>{% endif %}{% if c.subtitle %}<details class="sa-method"><summary>Base do indicador</summary><p>{{ c.subtitle }}</p></details>{% endif %}</article>
+
+      {% empty %}<article class="sa-kpi sa-kpi--empty"><span class="sa-kpi__label">Nenhum indicador disponível para este período.</span></article>{% endfor %}
+
+    </div>
+
+    {% if complementares %}
+
+    <details class="sa-more" id="sa-complementares">
+
+      <summary><span>Indicadores complementares <span class="sa-more__sub">({{ complementares|length }})</span></span></summary>
+
+      <div class="sa-more__grid">{% for c in complementares %}<div class="sa-more__item"><span class="sa-kpi__label">{{ c.label }}</span><strong>{{ c.value }}</strong>{% if c.severity == 'warning' or c.severity == 'danger' %}<span class="sa-severity">Atenção</span>{% endif %}{% if c.subtitle %}<details class="sa-method"><summary>Base do indicador</summary><p>{{ c.subtitle }}</p></details>{% endif %}</div>{% endfor %}</div>
+
+    </details>
+
+    {% endif %}
+
+  </section>
+
+
+
+  <section id="sa-analises">
+
+
+
+
+
+    {% for section in sections %}
+
+    <section class="sa-topic" id="sa-topic-{{ forloop.counter }}" aria-labelledby="sa-topic-title-{{ forloop.counter }}">
+
+      <div class="sa-topic__head"><div class="sa-topic__name"><span class="sa-topic__marker" aria-hidden="true"></span><h3 id="sa-topic-title-{{ forloop.counter }}">{{ section.title }}</h3></div></div>
+
+      <div class="sa-panels">
+
+        {% for panel in section.panels %}
+
+        {% include "relatorios/_panel.html" with section_index=forloop.parentloop.counter panel_index=forloop.counter %}
+
+        {% endfor %}
+
+      </div>
+
+    </section>
+
+    {% endfor %}
+
+  </section>
+
+{% if nota %}<details class="sa-method"><summary>Critérios do relatório</summary><p>{{ nota }}</p></details>{% endif %}
+</main>
+
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js" defer></script>
+<script src="{% static 'relatorios/painel.js' %}" defer></script>
+{% endblock %}

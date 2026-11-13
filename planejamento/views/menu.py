@@ -1,7 +1,9 @@
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
+from usuarios.decorators import algum_modulo_required
+from usuarios.models import ModuloSistema
 
-@login_required
+
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
 def menu_planejamento(request):
     return render(request, "planejamento/menu.html")

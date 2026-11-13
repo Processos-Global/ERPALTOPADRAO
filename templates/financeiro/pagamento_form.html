@@ -1,0 +1,40 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Situação do pagamento{% endblock %}
+{% block financeiro_content %}
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <div class="fin-eyebrow">Conta aprovada</div>
+    <h1 class="fin-title">Situação do pagamento</h1>
+    <div class="fin-sub">{{ titulo.numero }} · {{ titulo.beneficiario_exibicao }}</div>
+  </div>
+  <div class="fin-actions"><a class="fin-btn" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Voltar</a></div>
+</header>
+
+<div class="fin-context">
+  <div class="fin-context__item"><span class="fin-context__label">Beneficiário</span><span class="fin-context__value">{{ titulo.beneficiario_exibicao }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Obra</span><span class="fin-context__value">{{ titulo.obra|default:"—" }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Vencimento</span><span class="fin-context__value">{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</span></div>
+  <div class="fin-context__item fin-context__item--accent"><span class="fin-context__label">Valor</span><span class="fin-context__value">{{ titulo.valor_liquido|moeda_br }}</span></div>
+</div>
+
+<form method="post" class="fin-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="fin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  <section class="fin-section">
+    <div class="fin-section__body">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;font-size:16px;font-weight:800">
+        {{ form.pago }}
+        <span>Pago</span>
+      </label>
+      <div class="fin-muted" style="margin-top:8px">Ao marcar como pago, a data do pagamento será registrada automaticamente como a data de hoje.</div>
+      {% for e in form.pago.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}
+    </div>
+  </section>
+  <div class="fin-form-footer">
+    <div></div>
+    <div class="fin-form-footer__actions">
+      <a class="fin-btn" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Cancelar</a>
+      <button class="fin-btn fin-btn--primary">Salvar situação</button>
+    </div>
+  </div>
+</form>
+{% endblock %}

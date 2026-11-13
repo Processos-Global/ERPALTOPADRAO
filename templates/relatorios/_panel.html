@@ -1,0 +1,23 @@
+<article class="sa-panel" data-panel-json="sa-data-{{ section_index }}-{{ panel_index }}">
+  <header class="sa-panel__head">
+    <div><h4 class="sa-panel__title">{{ panel.title }}</h4>
+      {% if panel.caption %}<details class="sa-method"><summary>Metodologia</summary><p>{{ panel.caption }}</p></details>{% endif %}
+    </div>
+    {% if panel.rows %}<div class="sa-toggle" role="group" aria-label="Visualização de {{ panel.title }}" hidden><button type="button" data-sa-switch="chart" aria-pressed="true">Gráfico</button><button type="button" data-sa-switch="table" aria-pressed="false">Tabela</button></div>{% endif %}
+  </header>
+  <div class="sa-panel__body">
+    {% if panel.rows %}
+    <p class="sa-chart-status" role="status"></p>
+    <div data-sa-view="chart" hidden>
+      <div class="sa-chart-tools" aria-label="Opções do gráfico"><button type="button" class="sa-chart-download" data-chart-download>Salvar PNG</button></div>
+      <div class="sa-chart" role="img" aria-label="{{ panel.title }}. Valores disponíveis na tabela."></div>
+    </div>
+    <div class="sa-tablewrap" data-sa-view="table"><table class="sa-table">
+      <caption>{{ panel.title }}</caption>
+      <thead><tr><th scope="col" aria-sort="none"><button type="button" data-sort="label">Categoria / Período ↕</button></th>{% if panel.series %}{% for series in panel.series %}<th scope="col">{{ series.name }}</th>{% endfor %}{% else %}<th scope="col" aria-sort="none"><button type="button" data-sort="value">Valor ↕</button></th>{% endif %}</tr></thead>
+      <tbody>{% for row in panel.rows %}<tr data-row-index="{{ forloop.counter0 }}"><th scope="row">{{ row.label }}</th>{% if panel.series %}{% for value in row.series_values %}<td>{{ value }}</td>{% endfor %}{% else %}<td>{{ row.value }}</td>{% endif %}</tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="sa-empty">Nenhum registro encontrado para os filtros aplicados.</div>{% endif %}
+  </div>
+  {% with section_id=section_index|stringformat:"s" panel_id=panel_index|stringformat:"s" %}{% with json_id="sa-data-"|add:section_id|add:"-"|add:panel_id %}{{ panel|json_script:json_id }}{% endwith %}{% endwith %}
+</article>

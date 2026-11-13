@@ -1,0 +1,16 @@
+{% extends "layouts/base.html" %}
+{% block title %}Transferência de estoque | {{ obra.codigo }}{% endblock %}{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block content %}<div class="op-page"><section class="op-head"><div class="op-head-copy"><span class="op-eyebrow">Almoxarifado · {{ obra.codigo }}</span><h1>Transferir entre obras</h1><p>A transferência reduz o saldo da obra de origem e disponibiliza imediatamente a mesma quantidade na obra de destino.</p></div><div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Voltar</a></div></section>
+<form method="post" class="op-form">{% csrf_token %}
+  <div class="op-grid"><div class="op-field c12"><label>Material</label><select name="item" required><option value="">Selecione...</option>{% for linha in estoque %}<option value="{{ linha.chave }}" {% if chave_selecionada == linha.chave %}selected{% endif %}>{{ linha.material_nome }} · saldo {{ linha.saldo|floatformat:4 }} {{ linha.unidade }}</option>{% endfor %}</select></div></div>
+  {% if item %}<div class="op-stock-preview"><strong>{{ item.material_nome }}</strong><br><span>Saldo disponível na origem: {{ item.saldo|floatformat:4 }} {{ item.unidade }}</span></div>{% endif %}
+  <div class="op-grid">
+    <div class="op-field c6"><label>Obra de destino</label><select name="obra_destino" required><option value="">Selecione...</option>{% for destino in destinos %}<option value="{{ destino.pk }}">{{ destino.codigo }} · {{ destino.nome }}</option>{% endfor %}</select></div>
+    <div class="op-field c6"><label>Quantidade</label><input type="text" name="quantidade" inputmode="decimal" required placeholder="0,0000"></div>
+    <div class="op-field c8"><label>Finalidade</label><input type="text" name="finalidade" maxlength="255" placeholder="Motivo da transferência"></div>
+    <div class="op-field c4"><label>Documento / referência</label><input type="text" name="documento_referencia" maxlength="100" placeholder="Opcional"></div>
+    <div class="op-field c12"><label>Observação</label><textarea name="observacao" placeholder="Informações adicionais sobre a movimentação"></textarea></div>
+    <div class="c12 op-actions"><button class="op-btn" type="submit">Confirmar transferência</button><a class="op-btn secondary" href="{% url 'obras:almoxarifado_obra' obra.pk %}">Cancelar</a></div>
+  </div>
+</form></div>{% endblock %}

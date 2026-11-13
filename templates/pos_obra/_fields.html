@@ -1,0 +1,2 @@
+{% if form.errors %}<div class="po-error-summary" role="alert" tabindex="-1"><strong>Revise os dados deste formulário</strong>{{ form.non_field_errors }}<ul>{% for f in form.visible_fields %}{% if f.errors %}<li><a href="#{{ f.id_for_label }}">{{ f.label }}: {{ f.errors|striptags }}</a></li>{% endif %}{% endfor %}</ul></div>{% endif %}
+{% for f in form.hidden_fields %}{{ f }}{{ f.errors }}{% endfor %}<div class="po-form-grid">{% for f in form.visible_fields %}{% include 'pos_obra/_field.html' %}{% endfor %}</div>

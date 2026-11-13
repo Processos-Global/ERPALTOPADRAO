@@ -1,0 +1,83 @@
+<style id="po-management-styles">
+/* SAARI ERP — Gestão Pós-Obra. Isolado das telas de detalhe e etapas. */
+.po-design-v2 .po-management{--mg-border:#e6e1d7;--mg-soft:#f8f7f3;--mg-ink:#322c27;--mg-muted:#827b70;--mg-accent:#987c4b;min-width:0}
+.po-design-v2 .po-management-intro{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin:0 0 18px;padding:5px 1px 3px}
+.po-design-v2 .po-management-kicker{display:block;color:var(--mg-accent);font-weight:750;font-size:10px;letter-spacing:.115em;margin-bottom:6px}
+.po-design-v2 .po-management-intro h2{font-size:27px!important;font-weight:750!important;letter-spacing:-.04em;margin:0;color:var(--mg-ink)!important;line-height:1.25}
+.po-design-v2 .po-management-intro p{font-size:12px;color:var(--mg-muted);margin:5px 0 0}
+.po-design-v2 .po-management-actions{display:flex;gap:8px;flex-wrap:wrap}
+.po-design-v2 .po-management .po-button{font-size:11px;font-weight:650;min-height:37px;padding:9px 13px;border-radius:7px;white-space:nowrap}
+.po-design-v2 .po-management .po-card{border-color:var(--mg-border);padding:0;overflow:hidden;border-radius:11px;box-shadow:0 5px 20px #30271c08;margin-bottom:16px}
+.po-design-v2 .po-management .po-card__head{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:19px 21px;margin:0;border-bottom:1px solid var(--mg-border);background:#fff}
+.po-design-v2 .po-management .po-card__head h2{font-size:17px;font-weight:730;margin:0 0 4px;letter-spacing:-.025em}
+.po-design-v2 .po-management .po-card__head p{font-size:11px;line-height:1.45;color:var(--mg-muted);margin:0}
+.po-design-v2 .po-management .po-grid{gap:13px;margin-bottom:18px}
+.po-design-v2 .po-management .po-stat{display:flex;flex-direction:column;justify-content:space-between;min-height:128px;padding:20px 20px 17px;border-radius:10px;border:1px solid var(--mg-border);box-shadow:0 5px 16px #30271c06;text-decoration:none;transition:border-color .15s,transform .15s}
+.po-design-v2 .po-management a.po-stat:hover{border-color:#b6a584;transform:translateY(-2px)}
+.po-design-v2 .po-management .po-stat-label{font-size:11px;color:#777063;font-weight:620;letter-spacing:.005em}
+.po-design-v2 .po-management .po-stat-value{font-size:34px;font-weight:760;letter-spacing:-.05em;color:var(--mg-ink);line-height:1.15;margin:0}
+.po-design-v2 .po-management .po-stat-value small{font-size:13px;font-weight:550;letter-spacing:0;color:var(--mg-muted)}
+.po-design-v2 .po-management .po-grid>.po-stat:nth-child(2){border-top:3px solid #c19e58}
+.po-design-v2 .po-management .po-grid>.po-stat:nth-child(3){border-top:3px solid #628d70}
+.po-design-v2 .po-management .po-grid>.po-stat:nth-child(4){border-top:3px solid #a58d65}
+.po-design-v2 .po-management .po-toolbar{display:grid;grid-template-columns:minmax(200px,2fr) repeat(3,minmax(135px,1fr)) auto auto;align-items:end;gap:12px;padding:17px 20px;background:var(--mg-soft);border:0;border-bottom:1px solid var(--mg-border);border-radius:0;margin:0}
+.po-design-v2 .po-management .po-toolbar>label{min-width:0;margin:0;font-size:10px;font-weight:700;color:#675f53;letter-spacing:.015em}
+.po-design-v2 .po-management .po-toolbar :is(input,select){margin-top:6px;min-height:38px!important;background:#fff!important}
+.po-design-v2 .po-management .po-table-wrap{border:0;border-radius:0;overflow-x:auto}
+.po-design-v2 .po-management .po-table{font-size:11px;width:100%;border-collapse:collapse}
+html body .po-design-v2 .po-management .po-table th{background:#faf9f6!important;color:#756c5f!important;font-size:9px;font-weight:750;letter-spacing:.07em;white-space:nowrap;padding:15px 19px;border-bottom:1px solid var(--mg-border)!important}
+html body .po-design-v2 .po-management .po-table td{font-size:11px;line-height:1.65;padding:16px 19px;vertical-align:middle;border-bottom:1px solid #eeeae2!important}
+.po-design-v2 .po-management .po-table td a{font-weight:750;color:#56432f;text-decoration:none}
+.po-design-v2 .po-management .po-table td small{display:block;font-size:10px;color:var(--mg-muted)}
+.po-design-v2 .po-management .po-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 21px;border-bottom:1px solid #eeeae2}
+.po-design-v2 .po-management .po-row:last-child{border-bottom:0}
+.po-design-v2 .po-management .po-row a{color:#4b3b30;text-decoration:none;font-size:12px}
+.po-design-v2 .po-management .po-row small{margin-top:4px}
+.po-design-v2 .po-management .po-empty{padding:25px!important;color:var(--mg-muted)}
+.po-design-v2 .po-management--agenda .po-toolbar{grid-template-columns:repeat(2,minmax(120px,1fr)) repeat(2,minmax(140px,1fr)) minmax(180px,1.4fr) auto}
+.po-design-v2 .po-management .po-calendar-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0;padding:17px 20px;border-bottom:1px solid var(--mg-border)}
+.po-design-v2 .po-management .po-calendar-nav strong{font-weight:750;font-size:13px;color:#40372f}
+.po-design-v2 .po-management .po-view-switch{margin:0;padding:14px 20px 16px;gap:0}
+.po-design-v2 .po-management .po-view-switch:not([hidden]){display:flex}
+.po-design-v2 .po-management .po-view-switch .po-button{border-radius:0}
+.po-design-v2 .po-management .po-view-switch .po-button:first-child{border-radius:7px 0 0 7px}
+.po-design-v2 .po-management .po-view-switch .po-button:last-child{border-radius:0 7px 7px 0}
+.po-design-v2 .po-management .po-view-switch .po-button[aria-pressed=true]{background:#49332d;color:white;border-color:#49332d}
+.po-design-v2 .po-management .po-calendar-scroll{padding:0 20px 12px}
+.po-design-v2 .po-management .po-calendar{min-width:700px;border:1px solid var(--mg-border);border-radius:9px;overflow:hidden}
+.po-design-v2 .po-management .po-calendar-weekdays span{font-weight:750;text-align:center;font-size:10px;color:#6d6355;background:#f6f4ef;padding:12px}
+.po-design-v2 .po-management .po-calendar-day{padding:10px;min-height:126px;background:white;border-color:#eeebe5}
+.po-design-v2 .po-management .po-calendar-day.outside{background:#faf9f6}
+.po-design-v2 .po-management .po-calendar-day time{font-weight:730;color:#4c4238;font-size:11px}
+.po-design-v2 .po-management .po-calendar-event{border-radius:5px;border-left:3px solid var(--mg-accent);padding:7px 8px;background:#f6f1e7;margin-top:8px}
+.po-design-v2 .po-management .po-calendar-event strong{display:block;overflow-wrap:anywhere;font-size:10px}
+.po-design-v2 .po-management #agenda-calendar>.po-help{padding:0 20px 14px;margin:0}
+.po-design-v2 .po-management #agenda-list{padding:8px 20px 22px}
+.po-design-v2 .po-management #agenda-list h3{font-size:15px;font-weight:700;margin:10px 0 8px}
+.po-design-v2 .po-management .po-agenda-list article{padding:15px 12px;border-bottom:1px solid var(--mg-border)}
+.po-design-v2 .po-management .po-agenda-list article:hover{background:#faf9f5}
+.po-design-v2 .po-management .po-agenda-list article a{color:#4b3b30;font-weight:700}
+.po-design-v2 .po-management--kanban .po-toolbar{grid-template-columns:minmax(210px,2fr) minmax(150px,1fr) auto auto}
+.po-design-v2 .po-management .po-board-hint{display:flex;justify-content:space-between;gap:12px;padding:13px 20px;background:#fff;font-size:10px;color:var(--mg-muted);border-bottom:1px solid var(--mg-border)}
+.po-design-v2 .po-management .po-kanban{grid-auto-columns:minmax(265px,285px);gap:12px;padding:18px 18px 22px;scrollbar-color:#c6bca8 transparent}
+.po-design-v2 .po-management .po-column{display:flex;flex-direction:column;min-height:350px;padding:0;background:#f8f7f3;border:1px solid var(--mg-border);border-radius:10px;overflow:hidden}
+.po-design-v2 .po-management .po-column-head{align-items:center;padding:16px 15px;margin:0;background:#f2efe9;border-bottom:1px solid #e5e0d5}
+.po-design-v2 .po-management .po-column-head strong{font-size:12px;font-weight:750;color:#3d352e}
+.po-design-v2 .po-management .po-column-head small{font-size:9px;margin-top:3px}
+.po-design-v2 .po-management .po-column-count{display:grid;place-items:center;min-width:26px;height:26px;padding:0 6px;border-radius:7px;background:#fff;border:1px solid #e2dacd;font-size:11px;font-weight:750;color:#584b38}
+.po-design-v2 .po-management .po-column-body{padding:12px;gap:10px;flex:1}
+.po-design-v2 .po-management .po-kanban-card{border-color:#e5e1d8;border-radius:8px;padding:14px;box-shadow:0 3px 9px #32271908;transition:border-color .15s,transform .15s}
+.po-design-v2 .po-management .po-kanban-card:hover{border-color:#baa780;transform:translateY(-1px)}
+.po-design-v2 .po-management .po-kanban-card__top strong{font-size:10px;letter-spacing:.015em;color:#715738}
+.po-design-v2 .po-management .po-kanban-card h3{font-size:13px;font-weight:750;line-height:1.4;margin:12px 0;color:#342d26}
+.po-design-v2 .po-management .po-kanban-card__info{border-top:1px solid #f0eee9;padding-top:6px}
+.po-design-v2 .po-management .po-kanban-card__info>div{margin:8px 0;gap:2px}
+.po-design-v2 .po-management .po-kanban-card__info strong{font-size:11px;font-weight:620}
+.po-design-v2 .po-management .po-kanban-card__foot{margin-top:14px;align-items:center;font-size:9px;line-height:1.5}
+.po-design-v2 .po-management .po-column-more{display:block;margin:0 12px 12px;text-align:center;padding:10px;color:#6e5538;font-size:10px;font-weight:700;text-decoration:none;border-radius:6px;border:1px solid #e6dfd3;background:#fff}
+.po-design-v2 .po-management .po-column-empty{font-size:10px;color:var(--mg-muted);text-align:center;padding:25px 8px}
+@media(max-width:1250px){.po-design-v2 .po-management .po-toolbar,.po-design-v2 .po-management--agenda .po-toolbar{grid-template-columns:repeat(3,minmax(145px,1fr))}.po-design-v2 .po-management--kanban .po-toolbar{grid-template-columns:minmax(180px,2fr) minmax(120px,1fr) auto auto}}
+@media(max-width:800px){.po-design-v2 .po-management-intro h2{font-size:23px!important}.po-design-v2 .po-management .po-toolbar,.po-design-v2 .po-management--agenda .po-toolbar,.po-design-v2 .po-management--kanban .po-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.po-design-v2 .po-management .po-card__head{flex-wrap:wrap}.po-design-v2 .po-management .po-calendar-nav{flex-wrap:wrap}.po-design-v2 .po-management .po-calendar-nav strong{order:-1;flex-basis:100%;text-align:center}}
+@media(max-width:520px){.po-design-v2 .po-management .po-toolbar,.po-design-v2 .po-management--agenda .po-toolbar,.po-design-v2 .po-management--kanban .po-toolbar{grid-template-columns:1fr}.po-design-v2 .po-management .po-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.po-design-v2 .po-management .po-stat{min-height:110px;padding:14px}.po-design-v2 .po-management .po-stat-value{font-size:27px}.po-design-v2 .po-management .po-board-hint{flex-direction:column}.po-design-v2 .po-management .po-kanban{grid-auto-columns:270px}.po-design-v2 .po-management .po-management-intro{align-items:flex-start}.po-design-v2 .po-management .po-row{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.po-design-v2 .po-management :is(.po-stat,.po-kanban-card){transition:none}}
+</style>

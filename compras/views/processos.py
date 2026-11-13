@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -21,15 +22,19 @@ from compras.forms import (
     CotacaoFornecedorForm,
     CotacaoItemForm,
     DecisaoComercialLoteForm,
+    CompraAvulsaForm,
     ItemCompraAberturaFormSet,
+    ItemCompraAberturaGrandeFornecedorFormSet,
     NecessidadeCompraForm,
     NegociacaoForm,
     ProcessoCompraForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )
 from compras.models import (
     CotacaoFornecedor,
     CotacaoFornecedorItem,
+    AprovacaoCompra,
     PedidoCompra,
     ProcessoCompra,
     SolicitacaoCotacaoFornecedor,
@@ -39,9 +44,16 @@ from compras.services.permissoes import (
     possui_acao_compras,
     possui_permissao_compras,
 )
-from compras.services.processos import criar_processo
-from compras.services.comercial import item_tecnicamente_aprovado, processo_exige_compatibilizacao
+from compras.services.processos import criar_processo, criar_processo_avulso
+from compras.services.comercial import (
+    calcular_desconto_adjudicacao,
+    item_tecnicamente_aprovado,
+    processo_exige_compatibilizacao,
+)
 from compras.services.pedidos import transicoes_status_permitidas
+from compras.services.valores import calcular_total_proposta
+from compras.services.pdf_solicitacao import gerar_pdf_pedido_compra
+from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
 
 
 # ============================================================
@@ -64,6 +76,14 @@ def _qs_processos():
             ),
             qtd_fornecedores=Count(
                 "cotacoes__fornecedor",
+                distinct=True,
+            ),
+            qtd_itens_grande_fornecedor=Count(
+                "grande_fornecedor__itens",
+                distinct=True,
+            ),
+            qtd_fornecedores_grande_fornecedor=Count(
+                "grande_fornecedor__participantes",
                 distinct=True,
             ),
         )
@@ -156,6 +176,8 @@ def _montar_dados_comerciais(
             cotacao.itens.all()
         )
 
+        negociacoes_com_frete = []
+
         for item in itens:
 
             todos_itens.append(
@@ -173,8 +195,41 @@ def _montar_dados_comerciais(
                 item.valor_total_cotado
             )
 
-        cotacao.total_proposta = total
-        cotacao.total_proposta_com_frete = total + (cotacao.frete or zero)
+            try:
+                negociacao_item = item.negociacao
+            except Exception:
+                negociacao_item = None
+
+            if (
+                negociacao_item is not None
+                and negociacao_item.frete_negociado is not None
+            ):
+                negociacoes_com_frete.append(negociacao_item)
+
+        frete_aprovacao = cotacao.frete or zero
+        if negociacoes_com_frete:
+            negociacao_frete = max(
+                negociacoes_com_frete,
+                key=lambda n: (n.atualizado_em, n.pk),
+            )
+            frete_aprovacao = negociacao_frete.frete_negociado
+
+        desconto_proposta = cotacao.desconto_proposta or zero
+        cotacao.frete_aprovacao = frete_aprovacao
+        cotacao.subtotal_proposta = total
+        cotacao.desconto_proposta_aplicado = min(desconto_proposta, total)
+        cotacao.total_proposta = calcular_total_proposta(
+            subtotal=total,
+            desconto=desconto_proposta,
+            frete=cotacao.frete or zero,
+        )
+        cotacao.total_proposta_aprovacao = calcular_total_proposta(
+            subtotal=total,
+            desconto=desconto_proposta,
+            frete=frete_aprovacao or zero,
+        )
+        # Compatibilidade com usos legados do atributo dinâmico.
+        cotacao.total_proposta_com_frete = cotacao.total_proposta
         cotacao.qtd_itens_proposta = len(itens)
 
     # --------------------------------------------------------
@@ -208,6 +263,8 @@ def _montar_dados_comerciais(
 
             valor_final = None
             total_final = None
+            desconto_final = zero
+            cotado_valido = False
             elegivel_aprovacao = False
             if item is not None:
                 valor_final = (
@@ -215,8 +272,28 @@ def _montar_dados_comerciais(
                     if negociacao is not None
                     else item.valor_unitario_cotado
                 )
-                total_final = valor_final * item.quantidade
-                elegivel_aprovacao = bool(cotacao.enviada_aprovacao_em) and item_tecnicamente_aprovado(item)
+                cotado_valido = bool(
+                    valor_final is not None
+                    and valor_final > zero
+                    and item.quantidade > zero
+                )
+
+                if cotado_valido:
+                    desconto_final = calcular_desconto_adjudicacao(
+                        item,
+                        item.quantidade,
+                        valor_final,
+                    )
+                    total_final = max(
+                        (valor_final * item.quantidade) - desconto_final,
+                        zero,
+                    )
+
+                elegivel_aprovacao = bool(
+                    cotado_valido
+                    and cotacao.enviada_aprovacao_em
+                    and item_tecnicamente_aprovado(item)
+                )
 
             ofertas.append(
                 {
@@ -226,6 +303,8 @@ def _montar_dados_comerciais(
                     "negociacao": negociacao,
                     "valor_final": valor_final,
                     "total_final": total_final,
+                    "desconto_final": desconto_final,
+                    "cotado_valido": cotado_valido,
                     "elegivel_aprovacao": elegivel_aprovacao,
                 }
             )
@@ -233,12 +312,18 @@ def _montar_dados_comerciais(
         valores_validos = [
             oferta["item"].valor_unitario_cotado
             for oferta in ofertas
-            if oferta["item"] is not None
+            if (
+                oferta["item"] is not None
+                and oferta["item"].valor_unitario_cotado is not None
+                and oferta["item"].valor_unitario_cotado > zero
+            )
         ]
         menor_preco = min(valores_validos) if valores_validos else None
         for oferta in ofertas:
             oferta["menor_preco"] = bool(
                 oferta["item"] is not None
+                and oferta["item"].valor_unitario_cotado is not None
+                and oferta["item"].valor_unitario_cotado > zero
                 and menor_preco is not None
                 and oferta["item"].valor_unitario_cotado == menor_preco
             )
@@ -246,7 +331,11 @@ def _montar_dados_comerciais(
         valores_finais_elegiveis = [
             oferta["valor_final"]
             for oferta in ofertas
-            if oferta["elegivel_aprovacao"] and oferta["valor_final"] is not None
+            if (
+                oferta["elegivel_aprovacao"]
+                and oferta["valor_final"] is not None
+                and oferta["valor_final"] > zero
+            )
         ]
         menor_valor_final = min(valores_finais_elegiveis) if valores_finais_elegiveis else None
         for oferta in ofertas:
@@ -590,35 +679,32 @@ def dashboard(request):
     )
 
     hoje = timezone.localdate()
+    processos = list(qs)
 
-    # Estados terminais não devem ser considerados processos ativos.
-    ativos = qs.exclude(
-        status__in=[
-            ProcessoCompra.Status.CONTRATADO,
-            ProcessoCompra.Status.REPROVADO,
-            ProcessoCompra.Status.CANCELADO,
-        ]
-    )
-
-    atrasados = ativos.filter(
-        item_cronograma__prazo_limite_contratacao__lt=hoje,
-        data_contratacao_concluida__isnull=True,
-    )
-
-    aguardando = qs.filter(
-        status=ProcessoCompra.Status.AGUARDANDO_APROVACAO
-    )
-
-    ajustes = qs.filter(
-        status=ProcessoCompra.Status.AJUSTE_SOLICITADO
-    )
-
-    contratados = qs.filter(
-        status=ProcessoCompra.Status.CONTRATADO,
-        data_contratacao_concluida__date__gte=(
-            hoje - timedelta(days=30)
-        ),
-    )
+    # A mesma consulta alimenta KPIs e colunas. Antes, cada filtro abaixo
+    # disparava uma nova consulta complexa com os COUNTs anotados.
+    status_terminais = {
+        ProcessoCompra.Status.CONTRATADO,
+        ProcessoCompra.Status.REPROVADO,
+        ProcessoCompra.Status.CANCELADO,
+    }
+    ativos = [p for p in processos if p.status not in status_terminais]
+    atrasados = [
+        p for p in ativos
+        if p.item_cronograma_id
+        and p.item_cronograma.prazo_limite_contratacao
+        and p.item_cronograma.prazo_limite_contratacao < hoje
+        and p.data_contratacao_concluida is None
+    ]
+    aguardando = [p for p in processos if p.status == ProcessoCompra.Status.AGUARDANDO_APROVACAO]
+    ajustes = [p for p in processos if p.status == ProcessoCompra.Status.AJUSTE_SOLICITADO]
+    limite_contratados = hoje - timedelta(days=30)
+    contratados = [
+        p for p in processos
+        if p.status == ProcessoCompra.Status.CONTRATADO
+        and p.data_contratacao_concluida
+        and p.data_contratacao_concluida.date() >= limite_contratados
+    ]
 
     # O Kanban é organizado pelos STATUS reais do processo.
     # Isso é importante porque alguns estados relevantes, como
@@ -706,16 +792,20 @@ def dashboard(request):
         ),
     ]
 
+    processos_por_status = defaultdict(list)
+    for processo_item in processos:
+        processos_por_status[processo_item.status].append(processo_item)
+
     colunas = [
         {
             "chave": chave,
             "titulo": titulo,
             "descricao": descricao,
-            "processos": list(
-                qs.filter(
-                    status__in=statuses
-                )
-            ),
+            "processos": [
+                processo_item
+                for status in statuses
+                for processo_item in processos_por_status.get(status, [])
+            ],
         }
         for (
             chave,
@@ -729,11 +819,11 @@ def dashboard(request):
         request,
         "compras/dashboard.html",
         {
-            "ativos": ativos.count(),
-            "atrasados": atrasados.count(),
-            "aguardando": aguardando.count(),
-            "ajustes": ajustes.count(),
-            "contratados": contratados.count(),
+            "ativos": len(ativos),
+            "atrasados": len(atrasados),
+            "aguardando": len(aguardando),
+            "ajustes": len(ajustes),
+            "contratados": len(contratados),
             "colunas": colunas,
             "obras": (
                 Obra.objects
@@ -820,6 +910,9 @@ def detalhe_processo(
         pk=pk,
     )
 
+    if processo.fluxo_grande_fornecedor:
+        return redirect("compras:grande_fornecedor_matriz", pk=processo.pk)
+
     pode_editar = (
         possui_permissao_compras(
             request.user,
@@ -895,12 +988,34 @@ def detalhe_processo(
         .necessidades
         .select_related(
             "atividade_origem",
+            "material__unidade",
         )
         .order_by(
             "descricao",
             "id",
         )
     )
+
+    pode_editar_itens = (
+        processo.etapa_atual == ProcessoCompra.Etapa.COTACAO
+        and permissoes_compras["pode_solicitar"]
+    )
+    form_necessidade = None
+    if pode_editar_itens:
+        form_necessidade = NecessidadeCompraForm(processo=processo)
+        material_choices = list(form_necessidade.fields["material"].choices)
+        form_necessidade.fields["material"].choices = material_choices
+
+        for necessidade in necessidades:
+            necessidade.form_edicao = NecessidadeCompraForm(
+                processo=processo,
+                initial={
+                    "material": necessidade.material_id,
+                    "quantidade": necessidade.quantidade_incluida,
+                    "observacao": necessidade.observacao,
+                },
+            )
+            necessidade.form_edicao.fields["material"].choices = material_choices
 
     itens_prefetch = Prefetch(
         "itens",
@@ -909,6 +1024,7 @@ def detalhe_processo(
             .select_related(
                 "necessidade",
                 "negociacao",
+                "cotacao__fornecedor",
             )
             .prefetch_related(
                 "compatibilizacoes"
@@ -923,11 +1039,14 @@ def detalhe_processo(
         .order_by("fornecedor__nome")
     )
 
+    form_envio_fornecedor = SolicitacaoCotacaoEnvioForm(processo=processo)
+
     cotacoes = list(
         processo
         .cotacoes
         .select_related(
-            "fornecedor"
+            "fornecedor",
+            "criado_por",
         )
         .prefetch_related(
             itens_prefetch
@@ -1015,6 +1134,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Cotação",
+                    "pk": cotacao.pk,
+                    "rota_download": "compras:baixar_documento_cotacao",
                     "fornecedor": cotacao.fornecedor,
                     "documento": cotacao.documento,
                     "nome": cotacao.documento.name.rsplit("/", 1)[-1],
@@ -1028,6 +1149,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Formalização",
+                    "pk": contratacao.pk,
+                    "rota_download": "compras:baixar_documento_contratacao",
                     "fornecedor": contratacao.fornecedor,
                     "documento": contratacao.documento,
                     "nome": contratacao.documento.name.rsplit("/", 1)[-1],
@@ -1041,6 +1164,8 @@ def detalhe_processo(
             documentos_processo.append(
                 {
                     "etapa": "Pedido",
+                    "pk": anexo.pk,
+                    "rota_download": "compras:baixar_anexo_pedido",
                     "fornecedor": pedido.fornecedor,
                     "documento": anexo.arquivo,
                     "nome": anexo.nome_arquivo,
@@ -1060,6 +1185,7 @@ def detalhe_processo(
             "form": PropostaCompletaForm(
                 processo=processo,
                 cotacao=cotacao,
+                necessidades=necessidades,
             ),
         }
         for cotacao in cotacoes
@@ -1081,6 +1207,7 @@ def detalhe_processo(
     if pode_editar and fase_comercial_aberta:
         form_proposta_nova = PropostaCompletaForm(
             processo=processo,
+            necessidades=necessidades,
         )
         pode_cadastrar_nova_proposta = form_proposta_nova.fields["fornecedor"].queryset.exists()
     if pode_editar and fase_analise_aberta:
@@ -1098,19 +1225,29 @@ def detalhe_processo(
                     "form": AnaliseTecnicaLoteForm(
                         processo=processo,
                         cotacao=cotacao,
+                        itens=list(cotacao.itens.all()),
                     ),
                 }
                 for cotacao in cotacoes_para_compatibilizar
             ]
         form_decisao_lote = DecisaoComercialLoteForm(processo=processo)
 
+    aprovacao_aprovada = (
+        processo.aprovacoes.filter(decisao=AprovacaoCompra.Decisao.APROVADO)
+        .select_related("usuario", "alcada")
+        .order_by("-criado_em", "-id")
+        .first()
+    )
+
     contexto = {
         "processo": processo,
+        "aprovacao_aprovada": aprovacao_aprovada,
         "vinculos": vinculos,
         "necessidades": necessidades,
         "cotacoes": cotacoes,
         "solicitacoes_cotacao": solicitacoes_cotacao,
         "meios_envio_cotacao": SolicitacaoCotacaoFornecedor.MeioEnvio.choices,
+        "form_envio_fornecedor": form_envio_fornecedor,
         "adjudicacoes": adjudicacoes,
         "possui_saldo_pendente": (
             possui_saldo_pendente
@@ -1168,13 +1305,7 @@ def detalhe_processo(
         "form_analise_lote": form_analise_lote,
         "form_decisao_lote": form_decisao_lote,
 
-        "form_necessidade": (
-            NecessidadeCompraForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
+        "form_necessidade": form_necessidade,
 
         "form_cotacao": (
             CotacaoFornecedorForm(
@@ -1240,6 +1371,31 @@ def detalhe_processo(
     )
 
 
+
+@compras_acao_required(AcaoCompra.SOLICITAR)
+def nova_compra_avulsa(request):
+    form = CompraAvulsaForm(request.POST or None)
+    formset = ItemCompraAberturaFormSet(request.POST or None, prefix="itens")
+    if request.method == "POST" and form.is_valid() and formset.is_valid():
+        itens = [f.cleaned_data for f in formset if f.cleaned_data and not f.cleaned_data.get("DELETE")]
+        try:
+            processo = criar_processo_avulso(
+                obra=form.cleaned_data["obra"],
+                apropriacao=form.cleaned_data["apropriacao"],
+                titulo=form.cleaned_data["titulo"],
+                comprador=form.cleaned_data.get("comprador"),
+                descricao=form.cleaned_data.get("descricao", ""),
+                observacao=form.cleaned_data.get("observacao", ""),
+                itens=itens,
+                usuario=request.user,
+                iniciar_cotacao=request.POST.get("acao") != "rascunho",
+            )
+            messages.success(request, f"Compra avulsa {processo.numero} criada com {len(itens)} item(ns).")
+            return redirect("compras:detalhe_processo", pk=processo.pk)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset})
+
 # ============================================================
 # NOVO PROCESSO
 # ============================================================
@@ -1290,7 +1446,37 @@ def novo_processo(request):
         },
     )
 
-    formset = ItemCompraAberturaFormSet(
+    processos_existentes = []
+    processos_ativos_existentes = []
+
+    if item_inicial is not None:
+        processos_existentes = list(
+            ProcessoCompra.objects
+            .filter(item_cronograma=item_inicial)
+            .select_related("comprador")
+            .order_by("-criado_em", "-id")
+        )
+        processos_ativos_existentes = [
+            processo
+            for processo in processos_existentes
+            if processo.status not in {
+                ProcessoCompra.Status.CANCELADO,
+                ProcessoCompra.Status.REPROVADO,
+                ProcessoCompra.Status.CONTRATADO,
+            }
+        ]
+
+    # A abertura deve respeitar a mesma classificação nativa já usada pelo
+    # Cronograma de Suprimentos, sem tentar reinterpretar o texto da categoria.
+    eh_grande_fornecedor = bool(
+        item_inicial and item_inicial.usa_fluxo_grande_fornecedor
+    )
+    FormSetAbertura = (
+        ItemCompraAberturaGrandeFornecedorFormSet
+        if eh_grande_fornecedor
+        else ItemCompraAberturaFormSet
+    )
+    formset = FormSetAbertura(
         request.POST or None,
         prefix="itens",
     )
@@ -1339,15 +1525,9 @@ def novo_processo(request):
                     ]
                 ),
 
-                fornecedores_sugeridos=(
+                apropriacao=(
                     form.cleaned_data[
-                        "fornecedores_sugeridos"
-                    ]
-                ),
-
-                atividades=(
-                    form.cleaned_data[
-                        "atividades"
+                        "apropriacao"
                     ]
                 ),
 
@@ -1380,6 +1560,8 @@ def novo_processo(request):
                 ),
             )
 
+            if processo.fluxo_grande_fornecedor:
+                return redirect("compras:grande_fornecedor_matriz", pk=processo.pk)
             return redirect(
                 "compras:detalhe_processo",
                 pk=processo.pk,
@@ -1401,8 +1583,60 @@ def novo_processo(request):
             "item_inicial": (
                 item_inicial
             ),
+            "eh_grande_fornecedor": eh_grande_fornecedor,
+            "permite_sem_atividade": getattr(form, "permite_sem_atividade", False),
+            "processos_existentes": processos_existentes,
+            "processos_ativos_existentes": processos_ativos_existentes,
         },
     )
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def pdf_pedido_compra(request, pedido_id):
+    pedido = get_object_or_404(
+        PedidoCompra.objects
+        .select_related("obra", "fornecedor", "processo", "responsavel")
+        .prefetch_related("itens"),
+        pk=pedido_id,
+    )
+    try:
+        conteudo = gerar_pdf_pedido_compra(pedido)
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("compras:lista_pedidos")
+
+    resposta = HttpResponse(conteudo, content_type="application/pdf")
+    resposta["Content-Disposition"] = f'inline; filename="pedido-{pedido.numero}.pdf"'
+    return resposta
+
+
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def pdf_solicitacao_cotacao(request, pk):
+    processo = get_object_or_404(
+        ProcessoCompra.objects.select_related("obra", "item_cronograma", "criado_por", "comprador"),
+        pk=pk,
+    )
+    try:
+        fornecedor = None
+        fornecedor_id = (request.GET.get("fornecedor") or "").strip()
+        if fornecedor_id:
+            if not fornecedor_id.isdigit():
+                raise ValidationError("Fornecedor inválido.")
+            from cadastros.models import Fornecedor
+            fornecedor = Fornecedor.objects.filter(
+                pk=int(fornecedor_id),
+                solicitacoes_cotacao__processo=processo,
+            ).first()
+            if fornecedor is None:
+                raise ValidationError("Fornecedor não vinculado à cotação deste processo.")
+        conteudo = gerar_pdf_solicitacao_cotacao(processo, fornecedor=fornecedor)
+    except ValidationError as exc:
+        messages.error(request, str(exc))
+        return redirect("compras:detalhe_processo", pk=processo.pk)
+
+    resposta = HttpResponse(conteudo, content_type="application/pdf")
+    resposta["Content-Disposition"] = f'inline; filename="cotacao-materiais-{processo.numero}.pdf"'
+    return resposta
 
 
 # ============================================================
@@ -1424,6 +1658,7 @@ def lista_pedidos(request):
             "responsavel",
         )
         .prefetch_related("itens", "anexos", "recebimentos__usuario", "recebimentos__itens__item_pedido")
+        .filter(processo__fluxo_grande_fornecedor=False)
         .order_by(
             "-criado_em"
         )

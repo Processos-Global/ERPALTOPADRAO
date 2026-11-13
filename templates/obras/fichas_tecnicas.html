@@ -1,0 +1,46 @@
+{% extends "layouts/base.html" %}
+{% block title %}Obras | Ficha Técnica{% endblock %}
+{% block page_name %}Obras{% endblock %}
+
+{% block extra_css %}
+{% include "obras/_styles.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="ft-list">
+  <div class="ft-list-head">
+    <div class="ft-head-copy">
+      <span class="ft-eyebrow">Obras</span>
+      <h1>Ficha Técnica</h1>
+      <p>Selecione uma obra para consultar ou continuar o preenchimento da ficha técnica.</p>
+    </div>
+  </div>
+
+  <div class="ft-table-wrap">
+    <table class="ft-table">
+      <thead>
+        <tr>
+          <th>Obra</th>
+          <th>Código</th>
+          <th>Status</th>
+          <th>Versão</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for linha in linhas %}
+        <tr>
+          <td class="ft-name"><strong>{{ linha.obra.nome }}</strong></td>
+          <td>{{ linha.obra.codigo }}</td>
+          <td><span class="ft-badge">{% if linha.ficha %}{{ linha.ficha.get_status_display }}{% else %}Não iniciada{% endif %}</span></td>
+          <td>{% if linha.ficha %}{{ linha.ficha.versao }}{% else %}—{% endif %}</td>
+          <td><a class="ft-btn" href="{% url 'obras:ficha_tecnica' linha.obra.pk %}">{% if linha.ficha %}Abrir{% else %}Criar{% endif %}</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="padding:22px;text-align:center;color:#77655c">Nenhuma obra ativa encontrada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

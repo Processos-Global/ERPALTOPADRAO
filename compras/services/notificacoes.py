@@ -71,7 +71,7 @@ def notificar_proposta_para_negociacao(cotacao):
             f"{cotacao.processo.numero} foi liberada para negociação comercial."
         ),
         evento="PROPOSTA_ENVIADA_NEGOCIACAO",
-        url=_url_processo(cotacao.processo, "comparacao"),
+        url=_url_processo(cotacao.processo, "negociacao"),
         chave_unica=chave_negociacao(cotacao),
         dados={
             "processo_id": cotacao.processo_id,
@@ -113,7 +113,7 @@ def notificar_proposta_devolvida_negociacao(cotacao):
             f"{cotacao.processo.numero} para ajuste comercial."
         ),
         evento="PROPOSTA_DEVOLVIDA_NEGOCIACAO",
-        url=_url_processo(cotacao.processo, "comparacao"),
+        url=_url_processo(cotacao.processo, "negociacao"),
         chave_unica=chave_negociacao(cotacao),
         dados={
             "processo_id": cotacao.processo_id,
@@ -133,7 +133,7 @@ def notificar_ajuste_solicitado(processo):
         titulo="Ajuste solicitado pelo gestor",
         mensagem=f"O processo {processo.numero} retornou para negociação e precisa de ajustes.",
         evento="AJUSTE_SOLICITADO_GESTOR",
-        url=_url_processo(processo, "comparacao"),
+        url=_url_processo(processo, "negociacao"),
         chave_unica=f"compras:ajuste-gestor:processo:{processo.pk}",
         dados={"processo_id": processo.pk},
         tipo=TipoNotificacao.ACAO,
@@ -181,7 +181,7 @@ def notificar_retorno_etapa(processo):
         acao = AcaoCompra.NEGOCIAR
         titulo = "Processo retornado para negociação"
         mensagem = f"O processo {processo.numero} retornou para a etapa de negociação."
-        aba = "comparacao"
+        aba = "negociacao"
     elif processo.etapa_atual == processo.Etapa.COMPATIBILIZACAO:
         acao = AcaoCompra.COMPATIBILIZAR
         titulo = "Processo retornado para compatibilização"

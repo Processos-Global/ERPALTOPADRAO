@@ -33,12 +33,39 @@ class ProcessoCompra(models.Model):
 
     numero = models.CharField(max_length=20, unique=True, db_index=True)
     obra = models.ForeignKey("obras.Obra", on_delete=models.PROTECT, related_name="processos_compra")
-    item_cronograma = models.ForeignKey(
-        "planejamento.ItemCronogramaSuprimento",
+    apropriacao = models.ForeignKey(
+        "financeiro.PlanoFinanceiro",
+        null=True,
+        blank=True,
         on_delete=models.PROTECT,
         related_name="processos_compra",
+        help_text="Apropriação financeira definida na abertura da compra.",
+    )
+    item_cronograma = models.ForeignKey(
+        "planejamento.ItemCronogramaSuprimento",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processos_compra",
+        help_text="Suprimento de origem. Fica vazio nas compras avulsas.",
     )
     titulo = models.CharField(max_length=255)
+    fluxo_grande_fornecedor = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Congela a classificação do suprimento no momento da abertura do processo.",
+    )
+    categoria_grande_fornecedor = models.ForeignKey(
+        "cadastros.CategoriaGrandeFornecedor",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="processos_compra",
+        help_text=(
+            "Categoria GF herdada do Cronograma de Suprimentos. Define quais itens da Ficha Técnica "
+            "pertencem a este processo."
+        ),
+    )
     descricao = models.TextField(blank=True)
     comprador = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -46,12 +73,6 @@ class ProcessoCompra(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="processos_compra_responsavel",
-    )
-    fornecedores_sugeridos = models.ManyToManyField(
-        "cadastros.Fornecedor",
-        blank=True,
-        related_name="processos_compra_sugeridos",
-        help_text="Fornecedores indicados no pedido inicial para orientar o Suprimentos.",
     )
     etapa_atual = models.CharField(max_length=30, choices=Etapa.choices, default=Etapa.COTACAO, db_index=True)
     status = models.CharField(max_length=40, choices=Status.choices, default=Status.RASCUNHO, db_index=True)

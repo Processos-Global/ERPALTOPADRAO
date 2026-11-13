@@ -53,6 +53,47 @@ def _codigo_obra_por_texto(valor) -> tuple[int, int, int] | None:
     return None
 
 
+# Cronogramas de suprimentos que existem sem Cronograma Físico.
+# A exceção fica centralizada aqui para não relaxar a validação das demais obras.
+CODIGOS_SEM_CRONOGRAMA_FISICO = {"02-04-02"}
+
+
+def _obter_ou_criar_obra_sem_cronograma_fisico(Obra, codigo_formatado: str):
+    """Retorna o cadastro mínimo da obra especial.
+
+    O Cronograma de Suprimentos precisa de uma FK para ``obras.Obra``. Para as
+    obras explicitamente liberadas sem Cronograma Físico, criamos somente esse
+    cadastro mestre; nenhuma atividade/cronograma físico é criado.
+    """
+    # Primeiro respeita qualquer cadastro já existente pelo código ou pelo nome.
+    obra = Obra.objects.filter(codigo__iexact=codigo_formatado).first()
+    if obra is None:
+        obra = Obra.objects.filter(nome__iexact=codigo_formatado).first()
+    if obra is not None:
+        return obra
+
+    defaults = {
+        "nome": codigo_formatado,
+        "nome_curto": codigo_formatado,
+        "ativa": True,
+    }
+
+    # O modelo atual possui defaults para tipo/status, mas estes valores
+    # explícitos deixam o cadastro previsível e continuam compatíveis caso o
+    # cadastro da obra seja exibido no módulo Obras.
+    campos = {campo.name for campo in Obra._meta.fields}
+    if "tipo_obra" in campos:
+        defaults["tipo_obra"] = "OUTRO"
+    if "status" in campos:
+        defaults["status"] = "PLANEJAMENTO"
+
+    obra, _ = Obra.objects.get_or_create(
+        codigo=codigo_formatado,
+        defaults=defaults,
+    )
+    return obra
+
+
 def localizar_obra_por_aba(nome_aba: str):
     codigo = extrair_codigo_aba(nome_aba)
     if not codigo:
@@ -60,6 +101,7 @@ def localizar_obra_por_aba(nome_aba: str):
             f"Não foi possível extrair o código da aba '{nome_aba}'."
         )
 
+    codigo_formatado = formatar_codigo_aba(codigo)
     Obra = apps.get_model("obras", "Obra")
     campos = {campo.name for campo in Obra._meta.fields}
     campos_texto = [
@@ -77,8 +119,15 @@ def localizar_obra_por_aba(nome_aba: str):
             candidatas.append(obra)
 
     if not candidatas:
+        if codigo_formatado in CODIGOS_SEM_CRONOGRAMA_FISICO:
+            obra = _obter_ou_criar_obra_sem_cronograma_fisico(
+                Obra,
+                codigo_formatado,
+            )
+            return obra, codigo_formatado
+
         raise VinculoAbaObraError(
-            f"A aba '{nome_aba}' ({formatar_codigo_aba(codigo)}) não encontrou "
+            f"A aba '{nome_aba}' ({codigo_formatado}) não encontrou "
             "uma obra correspondente no cadastro."
         )
 
@@ -86,10 +135,10 @@ def localizar_obra_por_aba(nome_aba: str):
         nomes = ", ".join(str(obra) for obra in candidatas[:5])
         raise VinculoAbaObraError(
             f"A aba '{nome_aba}' encontrou mais de uma obra para o código "
-            f"{formatar_codigo_aba(codigo)}: {nomes}."
+            f"{codigo_formatado}: {nomes}."
         )
 
-    return candidatas[0], formatar_codigo_aba(codigo)
+    return candidatas[0], codigo_formatado
 
 
 def converter_data(valor):

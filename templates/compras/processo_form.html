@@ -8,20 +8,20 @@
    Apenas o topbar global é ocultado para preservar o cabeçalho da referência.
    ========================================================== */
 :root{
-  --purchase-teal:#00898A;
-  --purchase-teal-dark:#007477;
-  --purchase-teal-deep:#057A82;
-  --purchase-bg:#F4F7F6;
+  --purchase-teal:#77655c;
+  --purchase-teal-dark:#453330;
+  --purchase-teal-deep:#453330;
+  --purchase-bg:#f5f1e9;
   --purchase-card:#FFFFFF;
-  --purchase-border:#E2E8F0;
-  --purchase-border-2:#D6E0E7;
-  --purchase-text:#10243E;
-  --purchase-muted:#64748B;
-  --purchase-soft:#F8FAFC;
-  --purchase-green:#22C55E;
-  --purchase-green-bg:#DCFCE7;
+  --purchase-border:#ded7c8;
+  --purchase-border-2:#d9d0c2;
+  --purchase-text:#453330;
+  --purchase-muted:#85776f;
+  --purchase-soft:#f8f4ed;
+  --purchase-green:#b9aa72;
+  --purchase-green-bg:#f5f1e9;
   --purchase-danger:#EF4444;
-  --purchase-shadow:0 2px 8px rgba(15,23,42,.06);
+  --purchase-shadow:0 2px 8px rgba(45,32,28,.06);
 }
 
 /* manter a sidebar original do sistema; ocultar somente o topbar global nesta rota */
@@ -40,63 +40,63 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 .purchase-main{min-width:0;padding:0 22px 24px}
 .purchase-topbar{height:67px;display:flex;align-items:center;justify-content:space-between;gap:20px}
 .purchase-breadcrumb{display:flex;align-items:center;gap:9px;font-size:10px;font-weight:600;color:var(--purchase-teal)}
-.purchase-breadcrumb svg{width:12px;height:12px;color:#94A3B8}
-.purchase-breadcrumb strong{color:#1E293B;font-weight:700}
+.purchase-breadcrumb svg{width:12px;height:12px;color:#a39890}
+.purchase-breadcrumb strong{color:#2d201c;font-weight:700}
 .purchase-profile{display:flex;align-items:center;gap:12px}
-.purchase-bell{position:relative;width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:#152238;cursor:pointer}
+.purchase-bell{position:relative;width:32px;height:32px;display:grid;place-items:center;border:0;background:transparent;color:#2d201c;cursor:pointer}
 .purchase-bell svg{width:20px;height:20px}
 .purchase-bell__badge{position:absolute;right:0;top:0;min-width:16px;height:16px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--purchase-teal);color:#fff;font-size:9px;font-weight:800;border:2px solid var(--purchase-bg)}
-.purchase-profile__avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#E2E8F0;color:#475569;font-weight:800;overflow:hidden}
+.purchase-profile__avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#ded7c8;color:#66534c;font-weight:800;overflow:hidden}
 .purchase-profile__copy{display:grid;gap:1px;min-width:105px}
-.purchase-profile__copy strong{font-size:11px;line-height:1.2;color:#152238}
-.purchase-profile__copy span{font-size:9px;color:#64748B}
-.purchase-profile__chev{width:14px;height:14px;color:#334155}
+.purchase-profile__copy strong{font-size:11px;line-height:1.2;color:#2d201c}
+.purchase-profile__copy span{font-size:9px;color:#85776f}
+.purchase-profile__chev{width:14px;height:14px;color:#4b3a35}
 
 .purchase-heading{margin:4px 0 16px}
-.purchase-heading h1{margin:0;font-size:26px;line-height:1.05;letter-spacing:-.025em;color:#12243A;font-weight:750}
-.purchase-heading p{margin:6px 0 0;color:#64748B;font-size:11px}
+.purchase-heading h1{margin:0;font-size:26px;line-height:1.05;letter-spacing:-.025em;color:#2d201c;font-weight:750}
+.purchase-heading p{margin:6px 0 0;color:#85776f;font-size:11px}
 
 /* CARDS */
-.purchase-card{background:#fff;border:1px solid var(--purchase-border);border-radius:9px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.purchase-card{background:#fff;border:1px solid var(--purchase-border);border-radius:9px;box-shadow:0 1px 3px rgba(45,32,28,.04)}
 
 /* HERO */
 .purchase-hero{display:grid;grid-template-columns:1.55fr 1fr .95fr .9fr;align-items:stretch;min-height:112px;margin-bottom:14px;padding:19px 18px}
-.purchase-hero__block{min-width:0;display:flex;align-items:center;gap:13px;padding:0 22px;border-left:1px solid #E8EDF2}
+.purchase-hero__block{min-width:0;display:flex;align-items:center;gap:13px;padding:0 22px;border-left:1px solid #f5f1e9}
 .purchase-hero__block:first-child{padding-left:0;border-left:0}
-.purchase-hero__icon{width:47px;height:47px;display:grid;place-items:center;border-radius:50%;background:#E5F6F5;color:var(--purchase-teal);flex:0 0 47px}
+.purchase-hero__icon{width:47px;height:47px;display:grid;place-items:center;border-radius:50%;background:#eee8d6;color:var(--purchase-teal);flex:0 0 47px}
 .purchase-hero__icon svg{width:25px;height:25px;stroke-width:1.8}
-.purchase-kicker{display:block;margin-bottom:6px;color:#64748B;font-size:9px;font-weight:600}
-.purchase-project-title{display:block;margin-bottom:9px;font-size:16px;color:#172A43;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.purchase-project-meta{display:flex;align-items:center;gap:17px;color:#64748B;font-size:9px;white-space:nowrap}
+.purchase-kicker{display:block;margin-bottom:6px;color:#85776f;font-size:9px;font-weight:600}
+.purchase-project-title{display:block;margin-bottom:9px;font-size:16px;color:#2d201c;font-weight:800;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.purchase-project-meta{display:flex;align-items:center;gap:17px;color:#85776f;font-size:9px;white-space:nowrap}
 .purchase-project-meta span{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .purchase-project-meta svg{width:13px;height:13px;flex:0 0 13px}
 .purchase-hero__simple{display:flex;align-items:center;gap:11px}
 .purchase-hero__simple svg{width:21px;height:21px;color:var(--purchase-teal);stroke-width:1.8;flex:0 0 21px}
-.purchase-hero__simple strong{display:block;font-size:11px;color:#24374E;font-weight:700}
+.purchase-hero__simple strong{display:block;font-size:11px;color:#2d201c;font-weight:700}
 .purchase-hero__simple .purchase-kicker{margin-bottom:5px}
-.purchase-status{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:5px;background:var(--purchase-green-bg);color:#166534;font-size:10px;font-weight:800;letter-spacing:.02em}
-.purchase-status__dot{width:12px;height:12px;border-radius:50%;background:var(--purchase-green);box-shadow:0 0 0 2px rgba(34,197,94,.11)}
-.purchase-status-meta{margin-top:8px;color:#64748B;font-size:8px}
+.purchase-status{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:5px;background:var(--purchase-green-bg);color:#453330;font-size:10px;font-weight:800;letter-spacing:.02em}
+.purchase-status__dot{width:12px;height:12px;border-radius:50%;background:var(--purchase-green);box-shadow:0 0 0 2px rgba(185,170,114,.11)}
+.purchase-status-meta{margin-top:8px;color:#85776f;font-size:8px}
 
 /* ITENS */
 .purchase-items-card{padding:15px 16px 14px;margin-bottom:14px}
-.purchase-section-title{margin:0 0 13px;color:#152238;font-size:14px;font-weight:800}
+.purchase-section-title{margin:0 0 13px;color:#2d201c;font-size:14px;font-weight:800}
 .purchase-items{display:grid;gap:9px}
 .purchase-item{display:grid;grid-template-columns:21px 24px minmax(210px,1.55fr) 125px 110px minmax(170px,1.1fr) minmax(230px,1.35fr) 34px;gap:12px;align-items:end}
-.purchase-item__drag{height:38px;display:grid;place-items:center;color:#334155;cursor:grab}
-.purchase-item__number{height:38px;display:grid;place-items:center;color:#334155;font-size:11px}
+.purchase-item__drag{height:38px;display:grid;place-items:center;color:#4b3a35;cursor:grab}
+.purchase-item__number{height:38px;display:grid;place-items:center;color:#4b3a35;font-size:11px}
 .purchase-field{min-width:0}
-.purchase-field label{display:block;margin:0 0 6px;color:#475569;font-size:9px;font-weight:600}
+.purchase-field label{display:block;margin:0 0 6px;color:#66534c;font-size:9px;font-weight:600}
 .purchase-field .req{color:#EF4444}
-.purchase-field input:not([type=checkbox]):not([type=radio]),.purchase-field select,.purchase-field textarea{width:100%;height:38px;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#1E293B;font-size:10px;outline:none;transition:border .15s,box-shadow .15s}
+.purchase-field input:not([type=checkbox]):not([type=radio]),.purchase-field select,.purchase-field textarea{width:100%;height:38px;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#2d201c;font-size:10px;outline:none;transition:border .15s,box-shadow .15s}
 .purchase-field textarea{height:38px;min-height:38px;padding:10px 11px;resize:none;overflow:hidden}
-.purchase-field input:focus,.purchase-field select:focus,.purchase-field textarea:focus{border-color:#5CB7B8;box-shadow:0 0 0 3px rgba(0,137,138,.08)}
-.purchase-field input::placeholder,.purchase-field textarea::placeholder{color:#94A3B8}
+.purchase-field input:focus,.purchase-field select:focus,.purchase-field textarea:focus{border-color:#b9aa72;box-shadow:0 0 0 3px rgba(119,101,92,.08)}
+.purchase-field input::placeholder,.purchase-field textarea::placeholder{color:#a39890}
 .purchase-delete{width:30px;height:30px;margin-bottom:4px;display:grid;place-items:center;border:1px solid #F87171;border-radius:6px;background:#fff;color:#EF4444;cursor:pointer}
 .purchase-delete svg{width:15px;height:15px}
 .purchase-delete:hover{background:#FEF2F2}
 .purchase-row-hidden{display:none!important}
-.purchase-add{height:36px;display:inline-flex;align-items:center;gap:8px;margin-top:11px;padding:0 14px;border:1px solid #35A9AC;border-radius:6px;background:#fff;color:#087F83;font-size:10px;font-weight:700;cursor:pointer}
+.purchase-add{height:36px;display:inline-flex;align-items:center;gap:8px;margin-top:11px;padding:0 14px;border:1px solid #77655c;border-radius:6px;background:#fff;color:#77655c;font-size:10px;font-weight:700;cursor:pointer}
 .purchase-add svg{width:15px;height:15px}
 
 /* BODY GRID */
@@ -107,16 +107,16 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 /* ATIVIDADES */
 .purchase-activities__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
 .purchase-activities__head .purchase-section-title{margin:0}
-.purchase-selected-count{display:flex;align-items:center;gap:10px;color:#64748B;font-size:9px}
-.purchase-mini-btn{height:30px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:1px solid var(--purchase-border-2);border-radius:5px;background:#fff;color:#334155;font-size:9px;font-weight:600;cursor:pointer}
+.purchase-selected-count{display:flex;align-items:center;gap:10px;color:#85776f;font-size:9px}
+.purchase-mini-btn{height:30px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;border:1px solid var(--purchase-border-2);border-radius:5px;background:#fff;color:#4b3a35;font-size:9px;font-weight:600;cursor:pointer}
 .purchase-mini-btn svg{width:13px;height:13px}
 .purchase-mini-btn--teal{background:var(--purchase-teal);border-color:var(--purchase-teal);color:#fff}
 .purchase-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}
 .purchase-search{position:relative;width:320px;max-width:100%}
-.purchase-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#64748B;pointer-events:none}
-.purchase-search input{width:100%;height:32px;padding:0 28px 0 31px;border:1px solid var(--purchase-border-2);border-radius:5px;background:#fff;color:#334155;font-size:9px;outline:none}
-.purchase-search input:focus{border-color:#5CB7B8;box-shadow:0 0 0 3px rgba(0,137,138,.06)}
-.purchase-search__clear{position:absolute;right:4px;top:4px;width:24px;height:24px;border:0;background:transparent;color:#94A3B8;cursor:pointer;display:none}
+.purchase-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#85776f;pointer-events:none}
+.purchase-search input{width:100%;height:32px;padding:0 28px 0 31px;border:1px solid var(--purchase-border-2);border-radius:5px;background:#fff;color:#4b3a35;font-size:9px;outline:none}
+.purchase-search input:focus{border-color:#b9aa72;box-shadow:0 0 0 3px rgba(119,101,92,.06)}
+.purchase-search__clear{position:absolute;right:4px;top:4px;width:24px;height:24px;border:0;background:transparent;color:#a39890;cursor:pointer;display:none}
 .purchase-batch{display:flex;align-items:center;gap:7px;margin-bottom:10px}
 
 .purchase-native-activities,.purchase-native-suppliers{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
@@ -125,63 +125,67 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 .purchase-table-wrap{border:1px solid var(--purchase-border);border-radius:7px;overflow:hidden;background:#fff}
 .purchase-table-scroll{max-height:420px;overflow:auto;overscroll-behavior:contain}
 .purchase-table{width:100%;min-width:820px;border-collapse:collapse;table-layout:fixed;font-size:10px}
-.purchase-table th{padding:11px 12px;background:#F8FAFC;border-bottom:1px solid var(--purchase-border);color:#475569;text-align:left;font-size:9px;font-weight:700;white-space:nowrap}
-.purchase-table td{padding:11px 12px;border-bottom:1px solid #EDF2F7;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;line-height:1.35}
+.purchase-table th{padding:11px 12px;background:#f8f4ed;border-bottom:1px solid var(--purchase-border);color:#66534c;text-align:left;font-size:9px;font-weight:700;white-space:nowrap}
+.purchase-table td{padding:11px 12px;border-bottom:1px solid #ece6dc;color:#4b3a35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;line-height:1.35}
 .purchase-table tr:last-child td{border-bottom:0}
-@media (hover:hover) and (pointer:fine){.purchase-table tr:hover td{background:#FBFDFD}}
+@media (hover:hover) and (pointer:fine){.purchase-table tr:hover td{background:#fcf9f3}}
 .purchase-table th:first-child,.purchase-table td:first-child{width:44px;text-align:center}
 .purchase-table th:nth-child(2),.purchase-table td:nth-child(2){width:44%}
 .purchase-table th:nth-child(3),.purchase-table td:nth-child(3){width:20%}
 .purchase-table th:nth-child(4),.purchase-table td:nth-child(4){width:18%}
 .purchase-table th:nth-child(5),.purchase-table td:nth-child(5){width:18%}
 .purchase-check{width:15px;height:15px;accent-color:var(--purchase-teal);cursor:pointer}
-.purchase-table-footer{height:46px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;color:#94A3B8;font-size:8px}
-.purchase-pagination{display:flex;align-items:center;gap:4px;color:#334155}
-.purchase-page-btn{width:29px;height:29px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;color:#334155;font-size:9px;cursor:pointer}
+.purchase-table-footer{height:46px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;color:#a39890;font-size:8px}
+.purchase-pagination{display:flex;align-items:center;gap:4px;color:#4b3a35}
+.purchase-page-btn{width:29px;height:29px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;color:#4b3a35;font-size:9px;cursor:pointer}
 .purchase-page-btn.is-active{background:var(--purchase-teal);color:#fff}
 .purchase-page-btn svg{width:12px;height:12px}
-.purchase-empty{padding:28px;text-align:center;color:#94A3B8;font-size:10px}
+.purchase-empty{padding:28px;text-align:center;color:#a39890;font-size:10px}
 
 .purchase-date-cell{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 /* SIDE PANEL */
-.purchase-side-section+.purchase-side-section{margin-top:17px;padding-top:17px;border-top:1px solid #E8EDF2}
+.purchase-side-section+.purchase-side-section{margin-top:17px;padding-top:17px;border-top:1px solid #f5f1e9}
 .purchase-side .purchase-section-title{margin-bottom:13px}
 .purchase-dropdown{position:relative}
-.purchase-dropdown__toggle{width:100%;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#94A3B8;font-size:9px;cursor:pointer}
-.purchase-dropdown__toggle.is-open{border-color:#5CB7B8;box-shadow:0 0 0 3px rgba(0,137,138,.07)}
-.purchase-dropdown__toggle svg{width:14px;height:14px;color:#64748B}
-.purchase-dropdown__panel{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:100;display:none;padding:8px;border:1px solid var(--purchase-border-2);border-radius:7px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.13)}
+.purchase-dropdown__toggle{width:100%;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#a39890;font-size:9px;cursor:pointer}
+.purchase-dropdown__toggle.is-open{border-color:#b9aa72;box-shadow:0 0 0 3px rgba(119,101,92,.07)}
+.purchase-dropdown__toggle svg{width:14px;height:14px;color:#85776f}
+.purchase-dropdown__panel{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:100;display:none;padding:8px;border:1px solid var(--purchase-border-2);border-radius:7px;background:#fff;box-shadow:0 12px 30px rgba(45,32,28,.13)}
 .purchase-dropdown.is-open .purchase-dropdown__panel{display:block}
 .purchase-dropdown__list{max-height:220px;overflow:auto;margin-top:6px;display:grid;gap:4px}
-.purchase-dropdown__option{width:100%;min-height:33px;display:flex;align-items:center;gap:9px;padding:7px 8px;border:0;border-radius:5px;background:#fff;color:#334155;text-align:left;font-size:9px;cursor:pointer}
-.purchase-dropdown__option:hover{background:#F1F5F9}
-.purchase-dropdown__box{width:14px;height:14px;display:grid;place-items:center;border:1px solid #CBD5E1;border-radius:3px;color:#fff;font-size:9px;flex:0 0 14px}
+.purchase-dropdown__option{width:100%;min-height:33px;display:flex;align-items:center;gap:9px;padding:7px 8px;border:0;border-radius:5px;background:#fff;color:#4b3a35;text-align:left;font-size:9px;cursor:pointer}
+.purchase-dropdown__option:hover{background:#f1ece4}
+.purchase-dropdown__box{width:14px;height:14px;display:grid;place-items:center;border:1px solid #d9d0c2;border-radius:3px;color:#fff;font-size:9px;flex:0 0 14px}
 .purchase-dropdown__option.is-selected .purchase-dropdown__box{background:var(--purchase-teal);border-color:var(--purchase-teal)}
-.purchase-dropdown__meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;color:#64748B;font-size:8px}
+.purchase-dropdown__meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;color:#85776f;font-size:8px}
 .purchase-supplier-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.purchase-supplier-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:25px;padding:0 8px;border-radius:5px;background:#F1F5F9;color:#334155;font-size:8px;font-weight:600}
+.purchase-supplier-chip{display:inline-flex;align-items:center;gap:6px;max-width:100%;height:25px;padding:0 8px;border-radius:5px;background:#f1ece4;color:#4b3a35;font-size:8px;font-weight:600}
 .purchase-supplier-chip span{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.purchase-supplier-chip button{width:15px;height:15px;padding:0;border:0;background:transparent;color:#64748B;cursor:pointer;font-size:13px;line-height:1}
+.purchase-supplier-chip button{width:15px;height:15px;padding:0;border:0;background:transparent;color:#85776f;cursor:pointer;font-size:13px;line-height:1}
 
 .purchase-side-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .purchase-side-grid .purchase-field--full{grid-column:1/-1}
 .purchase-side .purchase-field input:not([type=checkbox]):not([type=radio]),.purchase-side .purchase-field select{height:36px;font-size:9px}
 .purchase-side .purchase-field textarea{height:68px;min-height:68px;resize:none;font-size:9px;line-height:1.45;overflow:auto}
-.purchase-counter{display:flex;justify-content:flex-end;margin-top:4px;color:#64748B;font-size:8px}
-.purchase-readonly{height:36px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#334155;font-size:9px}
+.purchase-counter{display:flex;justify-content:flex-end;margin-top:4px;color:#85776f;font-size:8px}
+.purchase-readonly{height:36px;display:flex;align-items:center;padding:0 11px;border:1px solid var(--purchase-border-2);border-radius:6px;background:#fff;color:#4b3a35;font-size:9px}
 .purchase-error{margin-top:4px;color:#B91C1C;font-size:8px;font-weight:600}
 
 /* FOOTER ACTION BAR */
 .purchase-actionbar{min-height:68px;display:flex;align-items:center;gap:10px;padding:12px 16px;margin-bottom:0}
 .purchase-actionbar__spacer{flex:1}
-.purchase-action{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:0 18px;border:1px solid #32A6AA;border-radius:6px;background:#fff;color:#116E74;text-decoration:none;font-size:10px;font-weight:700;cursor:pointer}
+.purchase-action{height:40px;display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:0 18px;border:1px solid #77655c;border-radius:6px;background:#fff;color:#453330;text-decoration:none;font-size:10px;font-weight:700;cursor:pointer}
 .purchase-action svg{width:16px;height:16px;stroke-width:1.9}
 .purchase-action--primary{min-width:210px;background:var(--purchase-teal);border-color:var(--purchase-teal);color:#fff}
 .purchase-action:hover{filter:brightness(.985)}
 .purchase-action--primary:hover{background:var(--purchase-teal-dark)}
 
 .purchase-form-error{margin:0 0 12px;padding:10px 12px;border:1px solid #FECACA;border-radius:7px;background:#FEF2F2;color:#991B1B;font-size:10px}
+.purchase-existing{margin:0 0 14px;padding:12px 14px;border:1px solid #eee8d6;border-radius:9px;background:#fffdfa;color:#453330}
+.purchase-existing__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.purchase-existing__head strong{font-size:11px;color:#453330}.purchase-existing__head span{font-size:9px;color:#77655c}
+.purchase-existing__list{display:flex;gap:6px;flex-wrap:wrap}.purchase-existing__item{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #eee8d6;border-radius:999px;background:#fff;color:#453330;font-size:9px;font-weight:700}
 
 @media(max-width:1200px){
   .purchase-item{grid-template-columns:21px 24px minmax(190px,1.4fr) 110px 100px minmax(150px,1fr) minmax(190px,1.2fr) 34px;gap:8px}
@@ -195,27 +199,33 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 }
 @media(max-width:680px){
   .purchase-main{padding:0 9px 16px}.purchase-topbar{height:58px}.purchase-profile__copy{display:none}.purchase-heading h1{font-size:23px}
-  .purchase-hero{grid-template-columns:1fr}.purchase-hero__block,.purchase-hero__block:nth-child(3){border-left:0;border-top:1px solid #E8EDF2}.purchase-hero__block:first-child{border-top:0}
+  .purchase-hero{grid-template-columns:1fr}.purchase-hero__block,.purchase-hero__block:nth-child(3){border-left:0;border-top:1px solid #f5f1e9}.purchase-hero__block:first-child{border-top:0}
   .purchase-item{display:grid;grid-template-columns:20px 24px 1fr 34px;align-items:end}.purchase-item>.purchase-field{grid-column:3/4!important;grid-row:auto!important}.purchase-delete{grid-column:4;grid-row:1;margin-bottom:4px}
   .purchase-side-grid{grid-template-columns:1fr}.purchase-side-grid .purchase-field--full{grid-column:auto}.purchase-actionbar{flex-direction:column;align-items:stretch}.purchase-actionbar__spacer{display:none}.purchase-action{width:100%}.purchase-action--primary{min-width:0}
 }
 
   .purchase-item{grid-template-columns:28px 34px minmax(360px,1fr) 150px minmax(220px,.55fr) 36px!important}
   .purchase-field--material select{width:100%}
-  .purchase-field-help{display:block;margin-top:5px;color:#64748b;font-size:11px;line-height:1.35}
+  .purchase-field-help{display:block;margin-top:5px;color:#85776f;font-size:11px;line-height:1.35}
   @media(max-width:1100px){.purchase-item{grid-template-columns:28px 34px 1fr 140px 36px!important}.purchase-field--material{grid-column:3/5}.purchase-item .purchase-field:nth-of-type(3){grid-column:3/5}}
 
   .purchase-material-combobox{position:relative}
   .purchase-material-search{margin-bottom:0;padding-right:34px!important}
   .purchase-material-hidden-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-  .purchase-material-results{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:180;display:none;max-height:260px;overflow:auto;border:1px solid var(--purchase-border-2);border-radius:7px;background:#fff;box-shadow:0 12px 30px rgba(15,23,42,.13)}
+  .purchase-material-results{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:180;display:none;max-height:260px;overflow:auto;border:1px solid var(--purchase-border-2);border-radius:7px;background:#fff;box-shadow:0 12px 30px rgba(45,32,28,.13)}
   .purchase-material-results.is-open{display:block}
-  .purchase-material-option{width:100%;display:block;padding:9px 11px;border:0;border-bottom:1px solid #EEF2F6;background:#fff;color:#334155;text-align:left;cursor:pointer}
+  .purchase-material-option{width:100%;display:block;padding:9px 11px;border:0;border-bottom:1px solid #f5f1e9;background:#fff;color:#4b3a35;text-align:left;cursor:pointer}
   .purchase-material-option:last-child{border-bottom:0}
-  .purchase-material-option:hover{background:#F1F8F8}
-  .purchase-material-option__title{display:block;font-size:10px;font-weight:700;color:#1E293B;line-height:1.35}
-  .purchase-material-option__meta{display:block;margin-top:3px;font-size:8px;color:#64748B;line-height:1.35}
-  .purchase-material-empty{padding:12px;text-align:center;color:#94A3B8;font-size:9px}
+  .purchase-material-option:hover{background:#f5f1e9}
+  .purchase-material-option__title{display:block;font-size:10px;font-weight:700;color:#2d201c;line-height:1.35}
+  .purchase-material-option__meta{display:block;margin-top:3px;font-size:8px;color:#85776f;line-height:1.35}
+  .purchase-material-empty{padding:12px;text-align:center;color:#a39890;font-size:9px}
+
+/* 2026 refresh: destaque do titulo do formulario */
+.purchase-heading{position:relative;overflow:hidden;margin-bottom:20px;padding:22px 24px;border:1px solid #ded7c8;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 64%,#f3ecdc 100%);box-shadow:0 12px 34px rgba(69,51,48,.065)}
+.purchase-heading::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#77655c,#2d201c)}.purchase-heading h1{margin:0 0 6px;font-size:31px;line-height:1.1;letter-spacing:-.04em;color:#4b3a35}.purchase-heading p{margin:0;color:#77655c;font-size:12px;line-height:1.55}
+@media(max-width:680px){.purchase-heading{padding:18px 17px 18px 20px;border-radius:14px}.purchase-heading h1{font-size:26px}}
+
 </style>
 {% endblock %}
 
@@ -225,7 +235,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
     <main class="purchase-main">
 
-      <header class="purchase-heading"><h1>Nova compra</h1><p>Preencha os dados para iniciar o processo de compra</p></header>
+      <header class="purchase-heading"><h1>{% if eh_grande_fornecedor %}Novo processo de Grande Fornecedor{% else %}Nova compra{% endif %}</h1><p>{% if eh_grande_fornecedor %}Defina a apropriação financeira e o comprador responsável antes de abrir a matriz{% else %}Preencha os dados para iniciar o processo de compra{% endif %}</p></header>
 
       <section class="purchase-card purchase-hero">
         <div class="purchase-hero__block">
@@ -239,10 +249,23 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
       <form method="post" id="purchase-form" novalidate>
         {% csrf_token %}{{ form.item_cronograma }}{{ form.titulo }}{{ formset.management_form }}
+        {% if processos_ativos_existentes %}
+        <div class="purchase-existing">
+          <div class="purchase-existing__head">
+            <strong>Este suprimento já possui {{ processos_ativos_existentes|length }} processo{{ processos_ativos_existentes|length|pluralize }} em andamento.</strong>
+            <span>Você pode abrir outra compra normalmente; os processos ficam independentes.</span>
+          </div>
+          <div class="purchase-existing__list">
+            {% for processo_existente in processos_ativos_existentes %}
+            <span class="purchase-existing__item">{{ processo_existente.numero }} · {{ processo_existente.get_status_display }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
         {% if form.non_field_errors %}{% for error in form.non_field_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
         {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
 
-        <section class="purchase-card purchase-items-card">
+        <section class="purchase-card purchase-items-card{% if eh_grande_fornecedor %} purchase-row-hidden{% endif %}">
           <h2 class="purchase-section-title">Itens da compra</h2>
           <div class="purchase-items" id="items-container">
             {% for item_form in formset %}
@@ -262,22 +285,26 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 
         <div class="purchase-body-grid">
           <section class="purchase-card purchase-activities">
-            <div class="purchase-activities__head"><h2 class="purchase-section-title">Atividades</h2><div class="purchase-selected-count"><span><strong id="selected-count">0</strong> atividade(s) selecionada(s)</span><button type="button" class="purchase-mini-btn" id="clear-activities">Limpar seleção</button></div></div>
-            <div class="purchase-native-activities">{{ form.atividades }}</div>{% for error in form.atividades.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
-            <div class="purchase-tools"><div class="purchase-search" style="width:280px"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="activity-search" placeholder="Pesquisar atividade..." autocomplete="off"><button type="button" class="purchase-search__clear" id="activity-search-clear">×</button></div></div>
-            <div class="purchase-selected-chips" id="selected-activities"></div>
-            <div class="purchase-table-wrap"><div class="purchase-table-scroll"><table class="purchase-table"><thead><tr><th></th><th>Atividade</th><th>Disciplina</th><th>Data base</th><th>Data planejada</th></tr></thead><tbody id="activity-table-body"></tbody></table><div class="purchase-empty" id="activity-empty" hidden>Nenhuma atividade encontrada.</div></div><div class="purchase-table-footer"><span id="activity-footer-text">Mostrando atividades disponíveis</span></div></div>
-
+            <div class="purchase-activities__head">
+              <div>
+                <h2 class="purchase-section-title">Apropriação financeira</h2>
+                <div class="cp-muted">Define desde a abertura onde esta compra será apropriada no Financeiro.</div>
+              </div>
+            </div>
+            <div class="purchase-field" style="margin-top:14px">
+              <label for="{{ form.apropriacao.id_for_label }}">Apropriação <span class="req">*</span></label>
+              {{ form.apropriacao }}
+              {% if form.apropriacao.help_text %}<small class="purchase-field-help">{{ form.apropriacao.help_text }}</small>{% endif %}
+              {% for error in form.apropriacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}
+            </div>
           </section>
 
           <aside class="purchase-card purchase-side">
-            <section class="purchase-side-section"><h2 class="purchase-section-title">Fornecedores</h2><div class="purchase-field"><label>Selecionar fornecedores <span class="req">*</span></label><div class="purchase-native-suppliers">{{ form.fornecedores_sugeridos }}</div>{% for error in form.fornecedores_sugeridos.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}<div class="purchase-dropdown" id="supplier-dropdown"><button type="button" class="purchase-dropdown__toggle" id="supplier-toggle" aria-expanded="false"><span id="supplier-toggle-text">Buscar e selecionar fornecedores...</span><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6"/></svg></button><div class="purchase-dropdown__panel" id="supplier-panel"><div class="purchase-search" style="width:100%"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="supplier-search" placeholder="Buscar fornecedor..." autocomplete="off"><button type="button" class="purchase-search__clear" id="supplier-search-clear">×</button></div><div class="purchase-dropdown__meta"><span><strong id="supplier-selected-count">0</strong> selecionado(s)</span><button type="button" class="purchase-mini-btn" id="clear-suppliers">Limpar</button></div><div class="purchase-dropdown__list" id="supplier-list"></div><div class="purchase-empty" id="supplier-empty" hidden>Nenhum fornecedor encontrado.</div></div></div><div class="purchase-supplier-chips" id="selected-suppliers"></div></div></section>
-
             <section class="purchase-side-section"><h2 class="purchase-section-title">Dados do comprador</h2><div class="purchase-side-grid"><div class="purchase-field"><label for="{{ form.comprador.id_for_label }}">Comprador responsável{% if form.comprador.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.comprador }}{% for error in form.comprador.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field"><label>Data necessária <span class="req">*</span></label><div class="purchase-readonly">{% if item_inicial.prazo_limite_contratacao %}{{ item_inicial.prazo_limite_contratacao|date:"d/m/Y" }}{% else %}—{% endif %}</div></div><div class="purchase-field purchase-field--full"><label for="{{ form.descricao.id_for_label }}">Descrição{% if form.descricao.field.required %} <span class="req">*</span>{% endif %}</label>{{ form.descricao }}<div class="purchase-counter"><span id="description-count">0</span>/200</div>{% for error in form.descricao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div><div class="purchase-field purchase-field--full"><label for="{{ form.observacao.id_for_label }}">Observação geral (máx. 200 caracteres)</label>{{ form.observacao }}<div class="purchase-counter"><span id="observation-count">0</span>/200</div>{% for error in form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div></div></section>
           </aside>
         </div>
 
-        <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div><button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button><button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>Enviar para Suprimentos</button></div>
+        <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div>{% if not eh_grande_fornecedor %}<button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button>{% endif %}<button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>{% if eh_grande_fornecedor %}Criar processo e abrir matriz{% else %}Enviar para Suprimentos{% endif %}</button></div>
       </form>
 
       <template id="empty-form-template"><div class="purchase-item" data-form-row>{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div><div class="purchase-item__number" data-row-number></div><div class="purchase-field purchase-field--material"><label>{{ formset.empty_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ formset.empty_form.material }}</div><div class="purchase-material-results" data-material-results></div></div><small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div><div class="purchase-field"><label>{{ formset.empty_form.quantidade.label }} <span class="req">*</span></label>{{ formset.empty_form.quantidade }}</div><div class="purchase-field"><label>Observações (opcional)</label>{{ formset.empty_form.observacao }}</div><div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div></div></template>
@@ -299,259 +326,6 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   if(desc){desc.setAttribute('maxlength','200');desc.setAttribute('placeholder','Ex.: Compra para execução da etapa');desc.addEventListener('input',updateCounters)}
   if(obs){obs.setAttribute('maxlength','200');obs.setAttribute('placeholder','Compra destinada à execução da etapa selecionada.');obs.addEventListener('input',updateCounters)}
   updateCounters();
-
-  /* ATIVIDADES
-     Mantém o select original como fonte de verdade, mas NÃO duplica centenas
-     ou milhares de atividades no DOM. Isso evita reflow pesado quando a
-     largura da página muda ao abrir/retrair a sidebar. */
-  const activitiesSelect=document.getElementById('{{ form.atividades.id_for_label }}');
-  const activityBody=qs('#activity-table-body'),
-        activitySearch=qs('#activity-search'),
-        activityClear=qs('#activity-search-clear'),
-        activityEmpty=qs('#activity-empty'),
-        selectedCount=qs('#selected-count'),
-        footerText=qs('#activity-footer-text');
-
-  const ACTIVITY_RENDER_LIMIT=60;
-  let activitySearchFrame=null;
-
-  function activityOptions(){
-    return activitiesSelect
-      ? Array.from(activitiesSelect.options).filter(o=>o.value&&!o.disabled)
-      : [];
-  }
-
-  function parseActivity(text,index){
-    const clean=String(text||'').replace(/\s+/g,' ').trim();
-    const p=clean.split('|').map(x=>x.trim()).filter(Boolean);
-    return {
-      title:p[0]||clean||'Atividade',
-      discipline:p[1]||'—',
-      baseDate:p[2]||p[3]||'—',
-      plannedDate:p[3]||p[4]||'—'
-    };
-  }
-
-  function filteredActivities(){
-    const term=(activitySearch?.value||'').trim().toLocaleLowerCase('pt-BR');
-    const all=activityOptions();
-
-    if(!term){
-      return all.map((o,i)=>({o,i,data:parseActivity(o.text,i)}));
-    }
-
-    const result=[];
-    for(let i=0;i<all.length;i++){
-      const o=all[i];
-      if(o.text.toLocaleLowerCase('pt-BR').includes(term)){
-        result.push({o,i,data:parseActivity(o.text,i)});
-      }
-    }
-    return result;
-  }
-
-  function renderActivities(){
-    if(!activitiesSelect||!activityBody)return;
-
-    const all=activityOptions();
-    const filtered=filteredActivities();
-    const visible=filtered.slice(0,ACTIVITY_RENDER_LIMIT);
-    let selectedTotal=0;
-
-    for(const o of all){
-      if(o.selected)selectedTotal++;
-    }
-
-    if(selectedCount)selectedCount.textContent=selectedTotal;
-    if(activityClear)activityClear.style.display=(activitySearch?.value||'').trim()?'block':'none';
-    if(activityEmpty)activityEmpty.hidden=filtered.length>0;
-
-    if(footerText){
-      footerText.textContent=filtered.length>ACTIVITY_RENDER_LIMIT
-        ? `Mostrando ${ACTIVITY_RENDER_LIMIT} de ${filtered.length} atividades — use a pesquisa para localizar as demais`
-        : `Mostrando ${filtered.length} de ${all.length} atividades`;
-    }
-
-    activityBody.innerHTML=visible.map(({o,data})=>`
-      <tr>
-        <td><input class="purchase-check" type="checkbox" data-activity-check="${esc(o.value)}" ${o.selected?'checked':''}></td>
-        <td title="${esc(data.title)}">${esc(data.title)}</td>
-        <td>${esc(data.discipline)}</td>
-        <td class="purchase-date-cell">${esc(data.baseDate)}</td>
-        <td class="purchase-date-cell">${esc(data.plannedDate)}</td>
-      </tr>
-    `).join('');
-  }
-
-  activityBody?.addEventListener('change',e=>{
-    const input=e.target.closest('[data-activity-check]');
-    if(!input||!activitiesSelect)return;
-
-    const option=Array.from(activitiesSelect.options).find(
-      o=>String(o.value)===String(input.dataset.activityCheck)
-    );
-
-    if(option){
-      option.selected=input.checked;
-      activitiesSelect.dispatchEvent(new Event('change',{bubbles:true}));
-      let count=0;
-      for(const o of activityOptions()) if(o.selected) count++;
-      if(selectedCount)selectedCount.textContent=count;
-    }
-  });
-
-  activitySearch?.addEventListener('input',()=>{
-    if(activitySearchFrame)cancelAnimationFrame(activitySearchFrame);
-    activitySearchFrame=requestAnimationFrame(renderActivities);
-  });
-
-  activityClear?.addEventListener('click',()=>{
-    activitySearch.value='';
-    activitySearch.focus();
-    renderActivities();
-  });
-
-  qs('#clear-activities')?.addEventListener('click',()=>{
-    activityOptions().forEach(o=>o.selected=false);
-    activitiesSelect?.dispatchEvent(new Event('change',{bubbles:true}));
-    renderActivities();
-  });
-
-  /* FORNECEDORES — lista renderizada somente quando o dropdown está aberto */
-  const supplier=document.getElementById('{{ form.fornecedores_sugeridos.id_for_label }}'),
-        supplierDropdown=qs('#supplier-dropdown'),
-        supplierToggle=qs('#supplier-toggle'),
-        supplierPanel=qs('#supplier-panel'),
-        supplierToggleText=qs('#supplier-toggle-text'),
-        supplierSearch=qs('#supplier-search'),
-        supplierClear=qs('#supplier-search-clear'),
-        supplierList=qs('#supplier-list'),
-        supplierEmpty=qs('#supplier-empty'),
-        supplierCount=qs('#supplier-selected-count'),
-        supplierChips=qs('#selected-suppliers');
-
-  function supplierOptions(){
-    return supplier
-      ? Array.from(supplier.options).filter(o=>o.value&&!o.disabled)
-      : [];
-  }
-
-  function renderSupplierSummary(){
-    if(!supplier)return;
-    const opts=supplierOptions();
-    const sel=opts.filter(o=>o.selected);
-
-    if(supplierCount)supplierCount.textContent=sel.length;
-    if(supplierToggleText){
-      supplierToggleText.textContent=sel.length
-        ? `${sel.length} fornecedor(es) selecionado(s)`
-        : 'Buscar e selecionar fornecedores...';
-    }
-
-    if(supplierChips){
-      supplierChips.innerHTML=sel.map(o=>`
-        <span class="purchase-supplier-chip">
-          <span>${esc(o.text.trim())}</span>
-          <button type="button" data-remove-supplier="${esc(o.value)}" aria-label="Remover">×</button>
-        </span>
-      `).join('');
-    }
-  }
-
-  function renderSupplierList(){
-    if(!supplier||!supplierList)return;
-
-    const term=(supplierSearch?.value||'').trim().toLocaleLowerCase('pt-BR');
-    const opts=supplierOptions();
-    const vis=opts.filter(o=>!term||o.text.toLocaleLowerCase('pt-BR').includes(term));
-
-    if(supplierClear)supplierClear.style.display=term?'block':'none';
-    if(supplierEmpty)supplierEmpty.hidden=vis.length>0;
-
-    supplierList.innerHTML=vis.map(o=>`
-      <button type="button" class="purchase-dropdown__option ${o.selected?'is-selected':''}" data-supplier="${esc(o.value)}">
-        <span class="purchase-dropdown__box">${o.selected?'✓':''}</span>
-        <span>${esc(o.text.trim())}</span>
-      </button>
-    `).join('');
-  }
-
-  function openSup(){
-    supplierDropdown?.classList.add('is-open');
-    supplierToggle?.classList.add('is-open');
-    supplierToggle?.setAttribute('aria-expanded','true');
-    renderSupplierList();
-    setTimeout(()=>supplierSearch?.focus(),0);
-  }
-
-  function closeSup(){
-    supplierDropdown?.classList.remove('is-open');
-    supplierToggle?.classList.remove('is-open');
-    supplierToggle?.setAttribute('aria-expanded','false');
-    if(supplierList)supplierList.innerHTML='';
-  }
-
-  supplierToggle?.addEventListener('click',e=>{
-    e.stopPropagation();
-    supplierDropdown?.classList.contains('is-open')?closeSup():openSup();
-  });
-
-  supplierPanel?.addEventListener('click',e=>e.stopPropagation());
-
-  supplierList?.addEventListener('click',e=>{
-    const button=e.target.closest('[data-supplier]');
-    if(!button)return;
-
-    const option=supplierOptions().find(
-      o=>String(o.value)===String(button.dataset.supplier)
-    );
-
-    if(option){
-      option.selected=!option.selected;
-      supplier.dispatchEvent(new Event('change',{bubbles:true}));
-      renderSupplierSummary();
-      renderSupplierList();
-    }
-  });
-
-  supplierChips?.addEventListener('click',e=>{
-    const button=e.target.closest('[data-remove-supplier]');
-    if(!button)return;
-
-    const option=supplierOptions().find(
-      o=>String(o.value)===String(button.dataset.removeSupplier)
-    );
-
-    if(option){
-      option.selected=false;
-      supplier.dispatchEvent(new Event('change',{bubbles:true}));
-      renderSupplierSummary();
-      if(supplierDropdown?.classList.contains('is-open'))renderSupplierList();
-    }
-  });
-
-  supplierSearch?.addEventListener('input',renderSupplierList);
-
-  supplierClear?.addEventListener('click',()=>{
-    supplierSearch.value='';
-    supplierSearch.focus();
-    renderSupplierList();
-  });
-
-  qs('#clear-suppliers')?.addEventListener('click',()=>{
-    supplierOptions().forEach(o=>o.selected=false);
-    supplier?.dispatchEvent(new Event('change',{bubbles:true}));
-    renderSupplierSummary();
-    renderSupplierList();
-  });
-
-  document.addEventListener('click',e=>{
-    if(supplierDropdown&&!supplierDropdown.contains(e.target))closeSup();
-  });
-
-  document.addEventListener('keydown',e=>{
-    if(e.key==='Escape')closeSup();
-  });
 
   /* ITENS / FORMSET */
   const items=qs('#items-container'),addItem=qs('#add-item'),totalForms=qs('input[name$="-TOTAL_FORMS"]'),template=qs('#empty-form-template');
@@ -653,7 +427,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
   function bindRow(row){bindMaterialSearch(row);qs('[data-remove]',row)?.addEventListener('click',()=>{const d=qs('input[type="checkbox"][name$="-DELETE"]',row),active=qsa('[data-form-row]',items).filter(r=>!rowDeleted(r));if(active.length<=1){qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');return}if(d){d.checked=true;row.classList.add('purchase-row-hidden')}else row.remove();updateRows()})}
   qsa('[data-form-row]',items).forEach(bindRow);addItem?.addEventListener('click',()=>{if(!template||!totalForms)return;const i=Number(totalForms.value||0),markup=template.innerHTML.replace(/__prefix__/g,String(i)),holder=document.createElement('div');holder.innerHTML=markup.trim();const row=holder.firstElementChild;items.appendChild(row);totalForms.value=String(i+1);bindRow(row);updateRows();qs('input,select,textarea',row)?.focus()});
 
-  updateRows();renderActivities();renderSupplierSummary();
+  updateRows();
 })();
 </script>
 {% endblock %}

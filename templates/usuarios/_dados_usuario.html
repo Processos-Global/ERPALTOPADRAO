@@ -1,0 +1,23 @@
+{% if form.non_field_errors %}<div class="usr-error-box" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+{% for grupo in form.grupos_campos %}
+<section class="usr-data-section" data-user-section="{{ grupo.codigo }}">
+  <h2>{{ grupo.titulo }}</h2>
+  {% if grupo.codigo == 'cliente' %}<p class="usr-help">Um novo cadastro de cliente será criado junto com a conta. Se já existir um cadastro sem acesso, selecione-o abaixo. Seus vínculos ativos serão mantidos, inclusive obras não liberadas. Após salvar a associação, edite a conta para revisar ou revogar esses vínculos.</p>{% endif %}
+  {% if grupo.codigo == 'obras' %}<label for="usr-obra-search">Pesquisar obras disponíveis</label><input id="usr-obra-search" class="usr-input" type="search" placeholder="Nome da obra" autocomplete="off"><p class="usr-help" id="usr-obra-count" aria-live="polite"></p>{% endif %}
+  <div class="usr-form-grid usr-form-grid--2">
+  {% for field in grupo.campos %}
+    <div class="usr-field {% if field.name == 'empreendimentos_cliente' %}usr-field--full{% endif %}" data-user-field="{{ field.name }}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %}<span class="usr-required"> *</span>{% endif %}</label>
+      {{ field }}
+      {% if field.help_text %}<small class="usr-help">{{ field.help_text }}</small>{% endif %}
+      {% for error in field.errors %}<small class="usr-error" role="alert">{{ error }}</small>{% endfor %}
+    </div>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{{ form.clientes_legados|json_script:'usr-clientes-legados' }}
+<style>
+.usr-page [hidden]{display:none!important}.usr-data-section{padding:22px 0;border-bottom:1px solid var(--usr-line)}.usr-data-section:first-of-type{padding-top:0}.usr-data-section h2{font-size:17px;margin:0 0 14px}.usr-data-section input[type=checkbox]{width:18px;height:18px;accent-color:var(--usr-primary)}
+#id_empreendimentos_cliente{max-height:320px;overflow:auto;border:1px solid var(--usr-line);border-radius:8px;padding:10px}#id_empreendimentos_cliente>div{padding:8px;border-bottom:1px solid var(--usr-line-soft)}#id_empreendimentos_cliente label{display:flex;gap:10px;align-items:center;margin:0}.usr-page :focus-visible{outline:2px solid var(--saari-gold);outline-offset:3px}.usr-data-section input[aria-invalid=true]{border-color:var(--saari-danger)}
+</style>

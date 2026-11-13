@@ -1,0 +1,4 @@
+# Codex 0.163.0: opções confirmadas pelo app-server em modo estrito.
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 3

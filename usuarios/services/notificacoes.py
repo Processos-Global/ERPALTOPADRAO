@@ -1,5 +1,8 @@
+import logging
+from threading import Thread
+
 from django.contrib.auth.models import User
-from django.db import transaction
+from django.db import close_old_connections, transaction
 from django.utils import timezone
 
 from usuarios.models import (
@@ -15,6 +18,49 @@ from usuarios.models import (
 from usuarios.services.notificacoes_email import enviar_email_notificacao
 
 
+logger = logging.getLogger(__name__)
+
+
+def _enviar_emails_notificacoes(ids):
+    """
+    Envia e-mails fora do ciclo HTTP. A notificação já está persistida no banco
+    quando esta função é disparada pelo on_commit.
+
+    Usamos uma única thread por lote/evento, em vez de uma thread por usuário,
+    para evitar multiplicar conexões SMTP/DB em processos com muitos destinatários.
+    """
+    close_old_connections()
+    try:
+        notificacoes = (
+            Notificacao.objects
+            .filter(pk__in=ids)
+            .select_related("usuario")
+            .order_by("pk")
+        )
+        for notificacao in notificacoes:
+            try:
+                enviar_email_notificacao(notificacao)
+            except Exception:
+                logger.exception(
+                    "Falha no envio assíncrono do e-mail da notificação %s.",
+                    notificacao.pk,
+                )
+    finally:
+        close_old_connections()
+
+
+def _disparar_emails_apos_commit(ids):
+    ids = tuple(dict.fromkeys(ids))
+    if not ids:
+        return
+    Thread(
+        target=_enviar_emails_notificacoes,
+        args=(ids,),
+        name="erp-notificacoes-email",
+        daemon=True,
+    ).start()
+
+
 CAMPO_POR_ACAO_COMPRA = {
     AcaoCompra.VISUALIZAR: "visualizar",
     AcaoCompra.SOLICITAR: "solicitar_compra",
@@ -27,6 +73,47 @@ CAMPO_POR_ACAO_COMPRA = {
     AcaoCompra.CANCELAR_PEDIDOS: "cancelar_pedidos",
     AcaoCompra.ADMINISTRAR: "administrar",
 }
+
+
+CAMPO_EMAIL_POR_ACAO_COMPRA = {
+    AcaoCompra.VISUALIZAR: "email_visualizar",
+    AcaoCompra.SOLICITAR: "email_solicitar_compra",
+    AcaoCompra.COTAR: "email_executar_cotacao",
+    AcaoCompra.COMPATIBILIZAR: "email_compatibilizar",
+    AcaoCompra.NEGOCIAR: "email_negociar",
+    AcaoCompra.APROVAR: "email_aprovar_compra",
+    AcaoCompra.GERENCIAR_PEDIDOS: "email_gerenciar_pedidos",
+    AcaoCompra.RECEBER_PEDIDOS: "email_receber_pedidos",
+    AcaoCompra.CANCELAR_PEDIDOS: "email_cancelar_pedidos",
+    AcaoCompra.ADMINISTRAR: "email_administrar",
+}
+
+
+def _usuario_recebe_email_compras(usuario, acao):
+    """
+    Decide somente o canal e-mail. Não interfere na permissão do usuário e
+    não impede a criação da notificação dentro do ERP.
+    """
+    try:
+        acao = AcaoCompra(acao)
+    except ValueError:
+        return False
+
+    try:
+        preferencia = usuario.permissao_compras_erp
+    except PermissaoCompras.DoesNotExist:
+        # Compatibilidade com usuários antigos/legados: enquanto não houver
+        # configuração granular, preserva o comportamento anterior.
+        return True
+
+    if not preferencia.receber_emails:
+        return False
+
+    campo = CAMPO_EMAIL_POR_ACAO_COMPRA.get(acao)
+    if not campo:
+        return True
+
+    return bool(getattr(preferencia, campo, True))
 
 
 ACOES_LEGADAS_APROVACAO = {
@@ -178,6 +265,7 @@ def notificar_usuarios_com_acao_compras(
     tipo=TipoNotificacao.ACAO,
 ):
     criadas = []
+    emails_pendentes = []
 
     for usuario in usuarios_com_acao_compras(acao):
         # Evita disparar e-mail repetido quando o mesmo evento é chamado
@@ -216,22 +304,15 @@ def notificar_usuarios_com_acao_compras(
             )
         )
 
-        if deve_enviar_email:
-            notificacao_id = notificacao.pk
+        if deve_enviar_email and _usuario_recebe_email_compras(usuario, acao):
+            emails_pendentes.append(notificacao.pk)
 
-            def enviar_apos_commit(pk=notificacao_id):
-                try:
-                    notificacao_email = (
-                        Notificacao.objects
-                        .select_related("usuario")
-                        .get(pk=pk)
-                    )
-                except Notificacao.DoesNotExist:
-                    return
-
-                enviar_email_notificacao(notificacao_email)
-
-            transaction.on_commit(enviar_apos_commit)
+    # O commit continua protegendo a consistência: só iniciamos o envio depois
+    # que todas as notificações do evento foram gravadas com sucesso. O SMTP,
+    # porém, não bloqueia mais o POST/redirect do usuário.
+    if emails_pendentes:
+        ids = tuple(emails_pendentes)
+        transaction.on_commit(lambda ids=ids: _disparar_emails_apos_commit(ids))
 
     return criadas
 

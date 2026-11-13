@@ -1,4 +1,4 @@
-from .processo import ItemCompraAberturaFormSet, ProcessoCompraForm
+from .processo import CompraAvulsaForm, ItemCompraAberturaFormSet, ItemCompraAberturaGrandeFornecedorFormSet, ProcessoCompraForm
 from .fluxo import (
     AdjudicacaoForm,
     AnaliseTecnicaLoteForm,
@@ -11,4 +11,7 @@ from .fluxo import (
     NecessidadeCompraForm,
     NegociacaoForm,
     PropostaCompletaForm,
+    SolicitacaoCotacaoEnvioForm,
 )
+
+from .contrato import ContratoCompraForm, DecisaoContratoForm, ContratoAssinadoForm

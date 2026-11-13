@@ -1,0 +1,269 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}{% if modo == 'novo' %}Solicitação avulsa{% else %}Editar conta{% endif %}{% endblock %}
+{% block financeiro_content %}
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <div class="fin-eyebrow">{% if modo == 'novo' %}Pagamento avulso{% else %}Manutenção da obrigação{% endif %}</div>
+    <h1 class="fin-title">{% if modo == 'novo' %}Solicitação avulsa{% else %}Editar {{ titulo.numero }}{% endif %}</h1>
+    <div class="fin-sub">Formulário direto para registrar o pagamento, apropriação, vencimento e beneficiário.</div>
+  </div>
+  <div class="fin-actions"><a class="fin-btn" href="{% if titulo %}{% url 'financeiro:titulo_detalhe' titulo.pk %}{% else %}{% url 'financeiro:titulos' %}{% endif %}">Voltar</a></div>
+</header>
+
+{% if titulo and titulo.integrada %}
+<div class="fin-context">
+  <div class="fin-context__item"><span class="fin-context__label">Origem</span><span class="fin-context__value">{{ titulo.get_origem_display }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Referência</span><span class="fin-context__value">{{ titulo.origem_detalhe|default:"—" }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Parcela</span><span class="fin-context__value">{{ titulo.rotulo_parcela }}</span></div>
+  <div class="fin-context__item"><span class="fin-context__label">Condição</span><span class="fin-context__value">{{ titulo.condicao_pagamento|default:"—" }}</span></div>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="fin-form" id="titulo-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="fin-form-errors">{{ form.non_field_errors }}</div>{% endif %}
+  {{ form.tipo_pagamento.as_hidden }}{% if titulo and titulo.integrada %}{{ form.materiais.as_hidden }}{% endif %}
+
+  <section class="fin-section">
+    <div class="fin-section__body">
+      <div class="fin-form-grid fin-form-grid--3">
+        <div class="fin-field"><label>Obra</label>{{ form.obra }}{% for e in form.obra.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Fornecedor / beneficiário</label>{{ form.fornecedor }}{% for e in form.fornecedor.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Apropriação</label>{{ form.plano_financeiro }}{% for e in form.plano_financeiro.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+
+      {% if modo == 'novo' or not titulo.integrada %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field">
+          <label>Classificação</label>
+          <select class="fin-control" id="tipo-pagamento-ui">
+            <option value="OUTRO" {% if form.tipo_pagamento.value == 'OUTRO' or not form.tipo_pagamento.value %}selected{% endif %}>Outro pagamento</option>
+            <option value="MATERIAL" {% if form.tipo_pagamento.value == 'MATERIAL' %}selected{% endif %}>Materiais</option>
+            <option value="SERVICO" {% if form.tipo_pagamento.value == 'SERVICO' %}selected{% endif %}>Serviços</option>
+            <option value="REEMBOLSO" {% if form.tipo_pagamento.value == 'REEMBOLSO' %}selected{% endif %}>Reembolso</option>
+          </select>
+        </div>
+        <div class="fin-field"><label>Valor bruto</label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Primeiro vencimento</label>{{ form.vencimento }}{% for e in form.vencimento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+
+      <div id="bloco-materiais" style="display:none;margin-top:14px">
+        <div class="fin-field fin-field--full">
+          <label>Materiais</label>
+          <div class="fin-combobox fin-combobox--multi" id="materiais-combobox">
+            <input class="fin-control fin-combobox__input" type="text" autocomplete="off" placeholder="Pesquisar ou selecionar materiais">
+            <button class="fin-combobox__toggle" type="button" aria-label="Abrir materiais">▾</button>
+            <div class="fin-combobox__menu" hidden></div>
+            <div class="fin-combobox__chips"></div>
+            <div class="fin-combobox__native" hidden>{{ form.materiais }}</div>
+          </div>
+          <small class="fin-help">Digite para pesquisar ou clique para abrir a lista. Você pode selecionar vários materiais.</small>
+          {% for e in form.materiais.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}
+        </div>
+      </div>
+
+      <div id="bloco-outro" style="margin-top:14px">
+        <div class="fin-form-grid">
+          <div class="fin-field" id="campo-descricao-pagamento"><label>Descrição do pagamento</label>{{ form.descricao }}<small class="fin-help">O texto será salvo em CAIXA ALTA.</small>{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          <div class="fin-field fin-field--full"><label id="label-especificacao-pagamento">O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        </div>
+      </div>
+
+      {% if modo == 'novo' %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field"><label>Quantidade de parcelas</label>{{ form.quantidade_parcelas }}{% for e in form.quantidade_parcelas.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Intervalo entre parcelas (dias)</label>{{ form.intervalo_dias }}{% for e in form.intervalo_dias.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Data de emissão</label>{{ form.data_emissao }}{% for e in form.data_emissao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+      {% else %}{{ form.quantidade_parcelas }}{{ form.intervalo_dias }}{% endif %}
+      {% else %}
+      <div class="fin-form-grid fin-form-grid--3" style="margin-top:14px">
+        <div class="fin-field"><label>Descrição</label>{{ form.descricao }}{% for e in form.descricao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Valor bruto</label>{{ form.valor_original }}{% for e in form.valor_original.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field"><label>Vencimento</label>{{ form.vencimento }}{% for e in form.vencimento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+        <div class="fin-field fin-field--full"><label>O que está sendo pago</label>{{ form.especificacao_pagamento }}{% for e in form.especificacao_pagamento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+      </div>
+      {{ form.quantidade_parcelas }}{{ form.intervalo_dias }}
+      {% endif %}
+
+      {% if modo == 'novo' or not titulo.integrada %}
+      <div class="fin-section" style="margin-top:16px">
+        <div class="fin-section__head">
+          <div>
+            <h2>Dados do beneficiário</h2>
+            <p>Ao selecionar um fornecedor, os dados cadastrados são preenchidos automaticamente. Você pode alterá-los somente para esta solicitação.</p>
+          </div>
+        </div>
+        <div class="fin-section__body">
+          <div class="fin-form-grid fin-form-grid--3">
+            <div class="fin-field"><label>CPF / CNPJ</label>{{ form.beneficiario_documento }}{% for e in form.beneficiario_documento.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Banco</label>{{ form.beneficiario_banco }}{% for e in form.beneficiario_banco.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Agência</label>{{ form.beneficiario_agencia }}{% for e in form.beneficiario_agencia.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Conta corrente</label>{{ form.beneficiario_conta_corrente }}{% for e in form.beneficiario_conta_corrente.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>Operação</label>{{ form.beneficiario_operacao }}{% for e in form.beneficiario_operacao.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field"><label>PIX</label>{{ form.beneficiario_pix }}{% for e in form.beneficiario_pix.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+            <div class="fin-field fin-field--full"><label>Titular</label>{{ form.beneficiario_titular }}{% for e in form.beneficiario_titular.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;font-weight:800">Documento e ajustes opcionais</summary>
+        <div class="fin-form-grid fin-form-grid--3" style="margin-top:12px">
+          <div class="fin-field"><label>Documento / NF</label>{{ form.documento_numero }}</div><div class="fin-field"><label>Meio de pagamento previsto (opcional)</label>{{ form.meio_pagamento }}</div>
+          <div class="fin-field fin-field--full">
+            <label>Anexos</label>
+            {{ form.anexos }}
+            <small class="fin-help">Selecione um ou vários documentos (NF, boleto, comprovante, imagem ou PDF). Se o mesmo arquivo já estiver salvo nesta conta, ele não será duplicado.</small>
+            {% for e in form.anexos.errors %}<small class="fin-error">{{ e }}</small>{% endfor %}
+
+            {% if titulo and titulo.arquivo_documento or titulo and titulo.anexos.exists %}
+            <div style="margin-top:12px;padding:12px;border:1px solid var(--fin-border,#ddd);border-radius:12px">
+              <strong style="display:block;margin-bottom:8px">Arquivos desta conta</strong>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                {% if titulo.arquivo_documento %}
+                <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_documento_titulo' titulo.pk %}" target="_blank" rel="noopener">Documento anterior</a>
+                  <button class="fin-btn fin-btn--sm" type="submit" form="excluir-documento-anterior" onclick="return confirm('Excluir este documento?')">Excluir</button>
+                </div>
+                {% endif %}
+                {% for anexo in titulo.anexos.all %}
+                <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_anexo_titulo' titulo.pk anexo.pk %}" target="_blank" rel="noopener">{{ anexo.nome_original|default:"Anexo" }}</a>
+                  <button class="fin-btn fin-btn--sm" type="submit" form="excluir-anexo-{{ anexo.pk }}" onclick="return confirm('Excluir o arquivo {{ anexo.nome_original|escapejs }}?')">Excluir</button>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if titulo and anexos_pedido or titulo and notas_fiscais_pedido %}
+            <div style="margin-top:12px;padding:12px;border:1px solid var(--fin-border,#ddd);border-radius:12px">
+              <strong style="display:block;margin-bottom:4px">Arquivos herdados do pedido {{ titulo.pedido.numero }}</strong>
+              <small class="fin-help" style="display:block;margin-bottom:8px">Estes arquivos vêm do módulo de Compras e ficam disponíveis automaticamente no Financeiro. Para evitar inconsistências, a exclusão deve ser feita na origem.</small>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                {% for anexo in anexos_pedido %}
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_anexo_pedido_titulo' titulo.pk anexo.pk %}" target="_blank" rel="noopener">Pedido · {{ anexo.nome_arquivo }}</a>
+                {% endfor %}
+                {% for recebimento in notas_fiscais_pedido %}
+                  <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:baixar_nota_fiscal_pedido_titulo' titulo.pk recebimento.pk %}" target="_blank" rel="noopener">NF · {{ recebimento.nome_arquivo_nota_fiscal }}</a>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <div class="fin-field"><label>Desconto</label>{{ form.desconto }}</div>
+          <div class="fin-field"><label>Juros</label>{{ form.juros }}</div>
+          <div class="fin-field"><label>Multa</label>{{ form.multa }}</div>
+          <div class="fin-field"><label>Outros acréscimos</label>{{ form.outros_acrescimos }}</div>
+          <div class="fin-field fin-field--full"><label>Observação</label>{{ form.observacao }}</div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  {{ form.beneficiario_nome }}
+  <div class="fin-form-footer"><div></div><div class="fin-form-footer__actions"><a class="fin-btn" href="{% url 'financeiro:titulos' %}">Cancelar</a><button class="fin-btn fin-btn--primary">{% if modo == 'novo' %}Criar e enviar para aprovação{% else %}Salvar alterações{% endif %}</button></div></div>
+</form>
+
+{% if titulo %}
+  {% if titulo.arquivo_documento %}<form id="excluir-documento-anterior" method="post" action="{% url 'financeiro:titulo_excluir_documento_legacy' titulo.pk %}" style="display:none">{% csrf_token %}</form>{% endif %}
+  {% for anexo in titulo.anexos.all %}<form id="excluir-anexo-{{ anexo.pk }}" method="post" action="{% url 'financeiro:titulo_excluir_anexo' titulo.pk anexo.pk %}" style="display:none">{% csrf_token %}</form>{% endfor %}
+{% endif %}
+
+{% if modo == 'novo' or not titulo.integrada %}
+{{ fornecedores_bancarios|json_script:"fornecedores-bancarios" }}
+<script>
+(function(){
+  const realTipo = document.getElementById('id_tipo_pagamento');
+  const uiTipo = document.getElementById('tipo-pagamento-ui');
+  const materiais = document.getElementById('bloco-materiais');
+  const outro = document.getElementById('bloco-outro');
+  const descricao = document.getElementById('id_descricao');
+  const especificacao = document.getElementById('id_especificacao_pagamento');
+  const selectMateriais = document.getElementById('id_materiais');
+  const campoDescricao = document.getElementById('campo-descricao-pagamento');
+  const labelEspecificacao = document.getElementById('label-especificacao-pagamento');
+  const materiaisBox = document.getElementById('materiais-combobox');
+  const fornecedorSelect = document.getElementById('id_fornecedor');
+  const fornecedoresDadosNode = document.getElementById('fornecedores-bancarios');
+  const fornecedoresDados = fornecedoresDadosNode ? JSON.parse(fornecedoresDadosNode.textContent || '{}') : {};
+  const camposBancarios = {
+    documento: document.getElementById('id_beneficiario_documento'),
+    banco: document.getElementById('id_beneficiario_banco'),
+    agencia: document.getElementById('id_beneficiario_agencia'),
+    conta_corrente: document.getElementById('id_beneficiario_conta_corrente'),
+    operacao: document.getElementById('id_beneficiario_operacao'),
+    pix: document.getElementById('id_beneficiario_pix'),
+    titular: document.getElementById('id_beneficiario_titular')
+  };
+  function preencherDadosFornecedor(){
+    if (!fornecedorSelect) return;
+    const dados = fornecedoresDados[String(fornecedorSelect.value)] || {};
+    Object.entries(camposBancarios).forEach(([chave, campo]) => {
+      if (campo) campo.value = dados[chave] || '';
+    });
+  }
+  if (fornecedorSelect) fornecedorSelect.addEventListener('change', preencherDadosFornecedor);
+  function sync(){
+    const tipo = uiTipo.value;
+    realTipo.value = tipo;
+    materiais.style.display = tipo === 'MATERIAL' ? '' : 'none';
+    outro.style.display = tipo === 'MATERIAL' ? 'none' : '';
+    if (campoDescricao) campoDescricao.style.display = tipo === 'REEMBOLSO' ? 'none' : '';
+    if (labelEspecificacao) labelEspecificacao.textContent = tipo === 'REEMBOLSO' ? 'O que está sendo reembolsado' : 'O que está sendo pago';
+    if (descricao) {
+      descricao.required = tipo === 'OUTRO';
+      if (tipo === 'REEMBOLSO') descricao.value = 'REEMBOLSO';
+    }
+    if (especificacao) especificacao.required = tipo !== 'MATERIAL';
+  }
+  uiTipo.addEventListener('change', sync); sync();
+  if (descricao) descricao.addEventListener('input', function(){
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    try { this.setSelectionRange(pos, pos); } catch(e) {}
+  });
+  if (materiaisBox && selectMateriais) {
+    const input = materiaisBox.querySelector('.fin-combobox__input');
+    const toggle = materiaisBox.querySelector('.fin-combobox__toggle');
+    const menu = materiaisBox.querySelector('.fin-combobox__menu');
+    const chips = materiaisBox.querySelector('.fin-combobox__chips');
+
+    function selectedValues(){ return new Set([...selectMateriais.selectedOptions].map(o => o.value)); }
+    function render(){
+      const selected = selectedValues();
+      const term = (input.value || '').toLowerCase().trim();
+      menu.innerHTML = '';
+      [...selectMateriais.options].forEach(o => {
+        if (!o.value || selected.has(o.value)) return;
+        if (term && !o.text.toLowerCase().includes(term)) return;
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'fin-combobox__option'; btn.textContent = o.text;
+        btn.addEventListener('click', () => { o.selected = true; input.value = ''; refresh(); input.focus(); });
+        menu.appendChild(btn);
+      });
+      if (!menu.children.length) {
+        const empty = document.createElement('div'); empty.className='fin-combobox__empty'; empty.textContent='Nenhum material encontrado'; menu.appendChild(empty);
+      }
+      chips.innerHTML = '';
+      [...selectMateriais.selectedOptions].forEach(o => {
+        const chip = document.createElement('span'); chip.className='fin-combobox__chip';
+        const text = document.createElement('span'); text.textContent=o.text; chip.appendChild(text);
+        const remove = document.createElement('button'); remove.type='button'; remove.innerHTML='×'; remove.setAttribute('aria-label','Remover '+o.text);
+        remove.addEventListener('click', () => { o.selected=false; refresh(); });
+        chip.appendChild(remove); chips.appendChild(chip);
+      });
+    }
+    function open(){ materiaisBox.classList.add('is-open'); menu.hidden=false; render(); }
+    function close(){ materiaisBox.classList.remove('is-open'); menu.hidden=true; }
+    function refresh(){ render(); selectMateriais.dispatchEvent(new Event('change', {bubbles:true})); }
+    input.addEventListener('focus', open); input.addEventListener('click', open); input.addEventListener('input', open);
+    toggle.addEventListener('click', e => { e.preventDefault(); menu.hidden ? open() : close(); });
+    document.addEventListener('click', e => { if (!materiaisBox.contains(e.target)) close(); });
+    render();
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

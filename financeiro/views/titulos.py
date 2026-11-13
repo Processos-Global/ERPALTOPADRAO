@@ -1,0 +1,408 @@
+from datetime import timedelta
+from decimal import Decimal
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
+from django.db.models import Q, Sum
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from cadastros.models import Fornecedor
+from financeiro.forms import TituloPagarForm
+from financeiro.models import AnexoTituloPagar
+from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
+from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
+from financeiro.services.notificacoes import notificar_aprovadores
+from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
+from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulos_manuais
+from obras.models import Obra
+
+
+
+def _salvar_anexos(titulos, arquivos, usuario):
+    arquivos = arquivos or []
+    if not arquivos:
+        return 0
+
+    # Preserva o conteúdo para permitir que os mesmos comprovantes acompanhem
+    # todas as parcelas criadas no mesmo lançamento manual.
+    copias = []
+    for arquivo in arquivos:
+        arquivo.seek(0)
+        conteudo = arquivo.read()
+        copias.append((arquivo.name, conteudo, len(conteudo)))
+
+    criados = 0
+    for titulo in titulos:
+        existentes = {}
+        if titulo.arquivo_documento and titulo.arquivo_documento.name:
+            nome_legacy = titulo.arquivo_documento.name.rsplit("/", 1)[-1].strip().lower()
+            try:
+                tamanho_legacy = titulo.arquivo_documento.size
+            except (FileNotFoundError, OSError):
+                tamanho_legacy = None
+            existentes.setdefault(nome_legacy, set()).add(tamanho_legacy)
+
+        for anexo_existente in titulo.anexos.all():
+            nome = (anexo_existente.nome_original or anexo_existente.arquivo.name.rsplit("/", 1)[-1]).strip().lower()
+            try:
+                tamanho = anexo_existente.arquivo.size
+            except (FileNotFoundError, OSError):
+                tamanho = None
+            existentes.setdefault(nome, set()).add(tamanho)
+
+        for nome, conteudo, tamanho in copias:
+            chave_nome = (nome or "").strip().lower()
+            if tamanho in existentes.get(chave_nome, set()):
+                continue
+
+            anexo = AnexoTituloPagar(
+                titulo=titulo,
+                nome_original=nome,
+                enviado_por=usuario,
+            )
+            anexo.arquivo.save(nome, ContentFile(conteudo), save=False)
+            anexo.save()
+            existentes.setdefault(chave_nome, set()).add(tamanho)
+            criados += 1
+
+    return criados
+
+
+def _documentos_pedido(titulo):
+    if not titulo.pedido_id:
+        return [], []
+    anexos = list(titulo.pedido.anexos.all())
+    notas_fiscais = [
+        recebimento
+        for recebimento in titulo.pedido.recebimentos.all()
+        if recebimento.arquivo_nota_fiscal and recebimento.arquivo_nota_fiscal.name
+    ]
+    return anexos, notas_fiscais
+
+def _fornecedores_bancarios():
+    return {
+        str(fornecedor["id"]): {
+            "documento": fornecedor["documento"] or "",
+            "banco": fornecedor["banco"] or "",
+            "agencia": fornecedor["agencia"] or "",
+            "conta_corrente": fornecedor["conta_corrente"] or "",
+            "operacao": fornecedor["operacao_bancaria"] or "",
+            "pix": fornecedor["pix"] or "",
+            "titular": fornecedor["titular_conta"] or "",
+        }
+        for fornecedor in Fornecedor.objects.filter(ativo=True).values(
+            "id", "documento", "banco", "agencia", "conta_corrente",
+            "operacao_bancaria", "pix", "titular_conta"
+        )
+    }
+
+
+@financeiro_acao_required("VISUALIZAR")
+def titulos_lista(request):
+    hoje = timezone.localdate()
+    qs = TituloPagar.objects.select_related("fornecedor", "obra", "plano_financeiro", "pedido", "pagamento").all()
+    busca = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    origem = (request.GET.get("origem") or "").strip()
+    obra = (request.GET.get("obra") or "").strip()
+    fornecedor = (request.GET.get("fornecedor") or "").strip()
+    apropriacao = (request.GET.get("apropriacao") or "").strip()
+    classe = (request.GET.get("classe") or "").strip()
+    periodo = (request.GET.get("periodo") or "90").strip()
+    atalho = (request.GET.get("atalho") or "").strip()
+
+    if busca:
+        qs = qs.filter(
+            Q(numero__icontains=busca)
+            | Q(documento_numero__icontains=busca)
+            | Q(descricao__icontains=busca)
+            | Q(beneficiario_nome__icontains=busca)
+            | Q(fornecedor__nome__icontains=busca)
+            | Q(fornecedor__nome_fantasia__icontains=busca)
+            | Q(origem_detalhe__icontains=busca)
+        )
+    if status:
+        qs = qs.filter(status=status)
+    if origem:
+        qs = qs.filter(origem=origem)
+    if obra:
+        qs = qs.filter(obra_id=obra)
+    if fornecedor:
+        qs = qs.filter(fornecedor_id=fornecedor)
+    if apropriacao:
+        qs = qs.filter(plano_financeiro_id=apropriacao)
+    if classe:
+        qs = qs.filter(plano_financeiro__pai_id=classe)
+
+    if atalho == "vencidos":
+        qs = qs.filter(vencimento__lt=hoje).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    elif atalho == "aprovacao":
+        qs = qs.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO)
+    elif atalho == "sem_data":
+        qs = qs.filter(vencimento__isnull=True).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    elif atalho in {"7", "30", "90"}:
+        dias = int(atalho)
+        qs = qs.filter(vencimento__range=(hoje, hoje + timedelta(days=dias))).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    elif periodo.isdigit() and int(periodo) > 0:
+        qs = qs.filter(Q(vencimento__lte=hoje + timedelta(days=int(periodo))) | Q(vencimento__isnull=True))
+
+    page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
+
+    base_abertos = TituloPagar.objects.select_related("pagamento").exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    vencidos = list(base_abertos.filter(vencimento__lt=hoje))
+    sete = list(base_abertos.filter(vencimento__range=(hoje, hoje + timedelta(days=7))))
+    aprovacao = list(base_abertos.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO))
+    sem_data = list(base_abertos.filter(vencimento__isnull=True))
+
+    return render(request, "financeiro/titulos_lista.html", {
+        "page_obj": page_obj,
+        "status_choices": TituloPagar.Status.choices,
+        "origem_choices": TituloPagar.Origem.choices[:4],
+        "obras": Obra.objects.all().order_by("id"),
+        "fornecedores": Fornecedor.objects.filter(ativo=True).order_by("nome"),
+        "classes_financeiras": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome"),
+        "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False).select_related("pai").order_by("pai__codigo", "codigo", "nome"),
+        "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "apropriacao": apropriacao, "classe": classe, "periodo": periodo, "atalho": atalho},
+        "kpi_vencidos": sum((x.saldo_aberto for x in vencidos), Decimal("0")),
+        "kpi_7": sum((x.saldo_aberto for x in sete), Decimal("0")),
+        "kpi_aprovacao": sum((x.saldo_aberto for x in aprovacao), Decimal("0")),
+        "kpi_sem_data": sum((x.saldo_aberto for x in sem_data), Decimal("0")),
+        "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
+        "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
+    })
+
+
+@financeiro_acao_required("LANCAR_TITULOS")
+def titulo_novo(request):
+    if request.method == "POST":
+        form = TituloPagarForm(request.POST, request.FILES)
+        if form.is_valid():
+            dados = dict(form.cleaned_data)
+            anexos = dados.pop("anexos", [])
+            quantidade = dados.pop("quantidade_parcelas", 1) or 1
+            intervalo = dados.pop("intervalo_dias", 30) or 30
+            titulos = criar_titulos_manuais(
+                usuario=request.user,
+                quantidade_parcelas=quantidade,
+                intervalo_dias=intervalo,
+                **dados,
+            )
+            _salvar_anexos(titulos, anexos, request.user)
+            for titulo in titulos:
+                notificar_aprovadores(titulo)
+            if len(titulos) == 1:
+                messages.success(request, f"Conta {titulos[0].numero} criada e enviada para aprovação.")
+                return redirect("financeiro:titulo_detalhe", pk=titulos[0].pk)
+            messages.success(request, f"{len(titulos)} parcelas criadas e enviadas para aprovação.")
+            return redirect("financeiro:titulos")
+    else:
+        form = TituloPagarForm()
+    return render(request, "financeiro/titulo_form.html", {
+        "form": form,
+        "modo": "novo",
+        "fornecedores_bancarios": _fornecedores_bancarios(),
+    })
+
+
+@financeiro_acao_required("VISUALIZAR")
+def titulo_detalhe(request, pk):
+    titulo = get_object_or_404(
+        TituloPagar.objects.select_related(
+            "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
+        ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais", "anexos", "pedido__anexos", "pedido__recebimentos"),
+        pk=pk,
+    )
+    recebimentos = []
+    valor_documentado = Decimal("0")
+    if titulo.pedido_id:
+        recebimentos = list(titulo.pedido.recebimentos.prefetch_related("itens").all())
+        valor_documentado = sum((r.valor_total_nota or Decimal("0") for r in recebimentos), Decimal("0"))
+
+    anexos_pedido, notas_fiscais_pedido = _documentos_pedido(titulo)
+
+    return render(request, "financeiro/titulo_detalhe.html", {
+        "titulo": titulo,
+        "recebimentos": recebimentos,
+        "anexos_pedido": anexos_pedido,
+        "notas_fiscais_pedido": notas_fiscais_pedido,
+        "valor_documentado_pedido": valor_documentado,
+        "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
+        "pode_aprovar": possui_acao_financeiro(request.user, "APROVAR"),
+        "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
+    })
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+def titulo_editar(request, pk):
+    titulo = get_object_or_404(
+        TituloPagar.objects.select_related("fornecedor", "pedido").prefetch_related("anexos", "pedido__anexos", "pedido__recebimentos"),
+        pk=pk,
+    )
+    if titulo.esta_pago:
+        messages.error(request, "Conta paga não pode ser editada. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+
+    if request.method == "POST":
+        form = TituloPagarForm(request.POST, request.FILES, instance=titulo, titulo_integrado=titulo)
+        if form.is_valid():
+            dados = dict(form.cleaned_data)
+            anexos = dados.pop("anexos", [])
+            atualizar_titulo(titulo, usuario=request.user, dados=dados)
+            _salvar_anexos([titulo], anexos, request.user)
+            messages.success(request, "Conta a Pagar atualizada.")
+            return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
+    else:
+        form = TituloPagarForm(instance=titulo, titulo_integrado=titulo)
+    anexos_pedido, notas_fiscais_pedido = _documentos_pedido(titulo)
+    return render(request, "financeiro/titulo_form.html", {
+        "form": form,
+        "modo": "editar",
+        "titulo": titulo,
+        "anexos_pedido": anexos_pedido,
+        "notas_fiscais_pedido": notas_fiscais_pedido,
+        "fornecedores_bancarios": _fornecedores_bancarios(),
+    })
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_excluir_anexo(request, pk, anexo_pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    if titulo.esta_pago:
+        messages.error(request, "Conta paga não pode ter anexos excluídos. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+
+    anexo = get_object_or_404(AnexoTituloPagar, pk=anexo_pk, titulo=titulo)
+    nome = anexo.nome_original or anexo.arquivo.name.rsplit("/", 1)[-1]
+    arquivo = anexo.arquivo
+    anexo.delete()
+    try:
+        arquivo.delete(save=False)
+    except (FileNotFoundError, OSError):
+        pass
+    messages.success(request, f"Anexo {nome} excluído.")
+    return redirect("financeiro:titulo_editar", pk=pk)
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_excluir_documento_legacy(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    if titulo.esta_pago:
+        messages.error(request, "Conta paga não pode ter documentos excluídos. Estorne o pagamento primeiro.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+    if not titulo.arquivo_documento:
+        messages.info(request, "Esta conta não possui documento anterior para excluir.")
+        return redirect("financeiro:titulo_editar", pk=pk)
+
+    arquivo = titulo.arquivo_documento
+    titulo.arquivo_documento = None
+    titulo.save(update_fields=["arquivo_documento", "atualizado_em"])
+    try:
+        arquivo.delete(save=False)
+    except (FileNotFoundError, OSError):
+        pass
+    messages.success(request, "Documento anterior excluído.")
+    return redirect("financeiro:titulo_editar", pk=pk)
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_enviar_aprovacao(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    try:
+        enviar_para_aprovacao(titulo, usuario=request.user)
+        notificar_aprovadores(titulo)
+        messages.success(request, "Conta enviada para aprovação.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("financeiro:titulo_detalhe", pk=pk)
+
+
+@financeiro_acao_required("APROVAR")
+@require_POST
+def titulo_decidir(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    decisao = request.POST.get("decisao")
+    observacao = (request.POST.get("observacao") or "").strip()
+    if decisao not in {AprovacaoTituloFinanceiro.Decisao.APROVADO, AprovacaoTituloFinanceiro.Decisao.REJEITADO}:
+        messages.error(request, "Decisão inválida.")
+        return redirect("financeiro:titulo_detalhe", pk=pk)
+    try:
+        decidir_titulo(titulo, usuario=request.user, decisao=decisao, observacao=observacao)
+        messages.success(request, "Decisão registrada.")
+    except ValidationError as exc:
+        messages.error(request, "; ".join(exc.messages))
+    return redirect("financeiro:titulo_detalhe", pk=pk)
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_configurar(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    # Depois de um pagamento efetivado, dados financeiros da conta ficam
+    # imutáveis até que o pagamento seja estornado. Usamos esta_pago em vez de
+    # testar somente o status para também proteger eventuais dados legados em
+    # que exista pagamento efetivado antes da sincronização do status.
+    if titulo.esta_pago:
+        messages.error(
+            request,
+            "Conta paga não pode ter apropriação ou vencimento alterados. "
+            "Estorne o pagamento primeiro."
+        )
+        return redirect("financeiro:titulos")
+
+    apropriacao_id = (request.POST.get("apropriacao") or "").strip()
+    vencimento_txt = (request.POST.get("vencimento") or "").strip()
+    dados = {}
+
+    if apropriacao_id:
+        apropriacao = get_object_or_404(PlanoFinanceiro, pk=apropriacao_id, ativo=True, pai__isnull=False)
+        dados["plano_financeiro"] = apropriacao
+
+    if titulo.origem != TituloPagar.Origem.GRANDE_FORNECEDOR:
+        from django.utils.dateparse import parse_date
+        vencimento = parse_date(vencimento_txt) if vencimento_txt else None
+        if vencimento:
+            dados["vencimento"] = vencimento
+
+    if not dados:
+        messages.warning(request, "Nenhuma alteração informada.")
+        return redirect("financeiro:titulos")
+
+    atualizar_titulo(titulo, usuario=request.user, dados=dados, motivo="Vencimento/apropriação ajustados na lista de Contas a Pagar.")
+
+    # Na operação diária, salvar o vencimento já conclui a preparação da conta.
+    # Se todos os requisitos estiverem preenchidos, ela segue automaticamente
+    # para aprovação sem exigir um segundo botão/segunda etapa.
+    if titulo.status not in {
+        TituloPagar.Status.AGUARDANDO_APROVACAO,
+        TituloPagar.Status.APROVADO,
+        TituloPagar.Status.PAGO,
+        TituloPagar.Status.CANCELADO,
+    }:
+        try:
+            enviar_para_aprovacao(titulo, usuario=request.user)
+            notificar_aprovadores(titulo)
+            messages.success(request, f"Conta {titulo.numero} atualizada e enviada para aprovação.")
+        except ValidationError as exc:
+            messages.warning(request, f"Conta {titulo.numero} salva, mas ainda não foi enviada: {'; '.join(exc.messages)}")
+    else:
+        messages.success(request, f"Conta {titulo.numero} atualizada.")
+    return redirect("financeiro:titulos")
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def titulo_cancelar(request, pk):
+    titulo = get_object_or_404(TituloPagar, pk=pk)
+    try:
+        cancelar_titulo(titulo, usuario=request.user, motivo=(request.POST.get("motivo") or "").strip())
+        messages.success(request, "Conta cancelada.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    return redirect("financeiro:titulo_detalhe", pk=pk)
