@@ -1,0 +1,203 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | {% if conc %}Editar {{ conc.codigo }}{% else %}Nova solicitação{% endif %}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}
+<style>.cc-form{max-width:1180px;margin:0 auto}.cc-form .op-field .err{display:block;margin-top:4px;color:var(--op-danger);font-size:11.5px;font-weight:700}.cc-itens .op-table{min-width:720px}</style>
+{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+<div class="cc-form">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem · Solicitação</span>
+      <h1>{% if conc %}Editar {{ conc.codigo }}{% else %}Nova concretagem{% endif %}</h1>
+      <p>Preencha os dados técnicos, a data e as peças que serão concretadas. A solicitação fica em rascunho até ser liberada para a concreteira.</p>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% if conc %}{% url 'obras:concretagem_detalhe' conc.pk %}{% elif obra_sel %}{% url 'obras:concretagem_obra' obra_sel.pk %}{% else %}{% url 'obras:concretagem_painel' %}{% endif %}">Cancelar</a>
+    </div>
+  </section>
+
+  {% if conc and conc.terminal %}
+  <div class="cc-alerta perigo"><div><strong>Atenção: esta concretagem já está {{ conc.get_status_display|lower }}.</strong>A alteração ficará registrada no histórico como edição após o encerramento.</div></div>
+  {% endif %}
+  {% if form.non_field_errors %}<div class="cc-erros">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+
+  <form method="post" id="form-conc" novalidate>
+    {% csrf_token %}
+    <section class="op-panel">
+      <div class="op-panel-body">
+        <div class="cc-section-title">Obra e responsáveis</div>
+        <div class="op-grid">
+          <div class="op-field c4"><label for="id_obra">Obra *</label>{{ form.obra }}{% for e in form.obra.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c4"><label for="id_concreteira">Concreteira *</label>{{ form.concreteira }}{% for e in form.concreteira.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c4"><label for="id_engenheiro">Engenheiro responsável *</label>{{ form.engenheiro }}{% for e in form.engenheiro.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c12"><label for="id_razao_social_empreendimento">Razão social do empreendimento</label>{{ form.razao_social_empreendimento }}</div>
+        </div>
+
+        <div class="cc-section-title">Agendamento</div>
+        <div class="op-grid">
+          <div class="op-field c3"><label for="id_data_programada">Data</label>{{ form.data_programada }}{% for e in form.data_programada.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c3"><label for="id_horario_programado">Horário</label>{{ form.horario_programado }}{% for e in form.horario_programado.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c6"><label class="cc-check" style="margin-top:22px">{{ form.com_bomba }} Bomba estacionária <span class="op-muted">(o bombista é informado depois, no detalhe)</span></label></div>
+        </div>
+
+        <div class="cc-section-title">Concreto</div>
+        <div class="op-grid">
+          <div class="op-field c3"><label for="id_fck_projeto">Fck de projeto (MPa)</label>{{ form.fck_projeto }}{% for e in form.fck_projeto.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c3"><label for="id_slump">Slump flow</label>{{ form.slump }}</div>
+          <div class="op-field c3"><label for="id_slump_tolerancia">Tolerância (±)</label>{{ form.slump_tolerancia }}</div>
+          <div class="op-field c3"><label for="id_volume_solicitado">Volume solicitado (m³)</label>{{ form.volume_solicitado }}{% for e in form.volume_solicitado.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c4"><label for="id_agregado">Agregado / brita</label>{{ form.agregado }}</div>
+          <div class="op-field c8" style="align-self:end"><span class="op-muted">Slump flow e tolerância vão preenchidos para todos os caminhões na ficha de moldagem.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="op-panel cc-itens">
+      <div class="op-panel-head">
+        <div><h2>Peças a concretar</h2><span class="op-muted">Escolha os locais de uso da obra. Falta algum? Adicione na hora.</span></div>
+        <div class="cc-acoes">
+          <button class="op-btn secondary sm" type="button" data-novo-local {% if not obra_sel %}disabled{% endif %}>+ Adicionar local</button>
+          <button class="op-btn sm" type="button" data-add-item>+ Item</button>
+        </div>
+      </div>
+      <div class="op-table-wrap">
+        <table class="op-table">
+          <thead><tr><th style="width:38%">Local de uso *</th><th>Descrição / complemento</th><th style="width:140px" class="op-num">Volume (m³)</th><th style="width:50px"></th></tr></thead>
+          <tbody data-itens>
+            {% for item in itens %}
+            <tr>
+              <td><select name="item_local" data-local-select required data-valor="{{ item.local.pk|default:'' }}"><option value="">— Escolha o local —</option>{% for l in locais %}<option value="{{ l.pk }}" {% if item.local and item.local.pk == l.pk %}selected{% endif %}>{{ l.descricao_completa }}</option>{% endfor %}</select></td>
+              <td><input name="item_descricao" value="{{ item.descricao }}" maxlength="300" placeholder="Ex.: pilares P1 a P8"></td>
+              <td><input name="item_volume" value="{{ item.volume_previsto|stringformat:'s' }}" inputmode="decimal" class="op-num" data-volume></td>
+              <td><button class="rm" type="button" data-rm title="Remover">×</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="cc-total"><span>Soma dos itens: <strong data-soma>0</strong> m³</span><span data-diverge class="diverge" hidden>difere do volume solicitado</span><button class="op-btn secondary sm" type="button" data-usar-soma>Usar a soma como volume solicitado</button></div>
+    </section>
+
+    <section class="op-panel">
+      <div class="op-panel-body">
+        <div class="cc-section-title">Entrega</div>
+        <div class="op-grid">
+          {% if enderecos %}
+          <div class="op-field c12"><label for="endereco-salvo">Endereço salvo</label>
+            <select id="endereco-salvo"><option value="">— Escolher um endereço salvo —</option>{% for e in enderecos %}<option data-end="{{ e.endereco }}" data-maps="{{ e.link_maps }}" data-obra="{{ e.obra_id|default:'' }}">{{ e.nome }}</option>{% endfor %}</select></div>
+          {% endif %}
+          <div class="op-field c8"><label for="id_endereco_entrega">Endereço de entrega</label>{{ form.endereco_entrega }}{% for e in form.endereco_entrega.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c4"><label for="id_link_maps_entrega">Link Google Maps</label>{{ form.link_maps_entrega }}{% for e in form.link_maps_entrega.errors %}<span class="err">{{ e }}</span>{% endfor %}</div>
+          <div class="op-field c6"><label class="cc-check">{{ form.salvar_endereco }} Salvar este endereço para próximas solicitações</label></div>
+          <div class="op-field c6"><label for="id_nome_endereco">Nome do endereço salvo</label>{{ form.nome_endereco }}</div>
+          <div class="op-field c12"><label for="id_observacoes">Observações para a concreteira</label>{{ form.observacoes }}</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="cc-acoes" style="justify-content:flex-end;margin-bottom:24px">
+      <a class="op-btn secondary" href="{% if conc %}{% url 'obras:concretagem_detalhe' conc.pk %}{% else %}{% url 'obras:concretagem_painel' %}{% endif %}">Cancelar</a>
+      <button class="op-btn" type="submit">{% if conc %}Salvar alterações{% else %}Criar em rascunho{% endif %}</button>
+    </div>
+  </form>
+</div>
+
+<template id="tpl-item"><tr>
+  <td><select name="item_local" data-local-select required><option value="">— Escolha o local —</option></select></td>
+  <td><input name="item_descricao" maxlength="300" placeholder="Ex.: pilares P1 a P8"></td>
+  <td><input name="item_volume" inputmode="decimal" class="op-num" data-volume></td>
+  <td><button class="rm" type="button" data-rm title="Remover">×</button></td>
+</tr></template>
+
+<div class="op-modal" id="modal-novo-local" aria-hidden="true">
+  <div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true">
+    <div class="op-modal-head"><h2>Novo local de uso</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <div class="op-modal-body" data-form-local>
+      <div class="cc-erros" data-erro-local hidden></div>
+      <div class="op-grid">
+        <div class="op-field c8"><label>Nome do local *</label><input data-l="nome" maxlength="160" placeholder="Ex.: Piscina, Laje 3º pavimento"></div>
+        <div class="op-field c4"><label>Tipo</label><select data-l="tipo">{% for v,l in tipos_local %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+        <div class="op-field c4"><label>Bloco</label><input data-l="bloco" maxlength="60"></div>
+        <div class="op-field c4"><label>Pavimento</label><input data-l="pavimento" maxlength="80"></div>
+        <div class="op-field c4"><label>Volume estimado (m³)</label><input data-l="volume_estimado" type="number" step="0.01" min="0"></div>
+      </div>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="button" data-salvar-local>Salvar e usar</button></div>
+    </div>
+  </div>
+</div>
+</div>
+{% include "obras/concretagem/_modal_js.html" %}
+<script>
+(function(){
+  var form=document.getElementById('form-conc');
+  var tbody=form.querySelector('[data-itens]');
+  var tpl=document.getElementById('tpl-item');
+  var selObra=document.getElementById('id_obra');
+  var urlApi="{% url 'obras:concretagem_api_locais' 0 %}";
+  var urlCriar="{% url 'obras:concretagem_local_criar' 0 %}";
+  var csrf=form.querySelector('[name=csrfmiddlewaretoken]').value;
+  var locais=[{% for l in locais %}{id:{{ l.pk }},descricao:"{{ l.descricao_completa|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
+  var obraId=selObra?selObra.value:"{{ obra_sel.pk|default:'' }}";
+  var linhaAlvo=null;
+
+  function rota(base,id){return base.replace('/0/','/'+id+'/');}
+  function num(v){v=(v||'').toString().replace(/\s/g,'');if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');var n=parseFloat(v);return isNaN(n)?0:n;}
+  function fmt(n){return n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  function preencher(sel){
+    var atual=sel.value||sel.dataset.valor||'';
+    sel.innerHTML='<option value="">— Escolha o local —</option>';
+    locais.forEach(function(l){var o=document.createElement('option');o.value=l.id;o.textContent=l.descricao;if(String(l.id)===String(atual))o.selected=true;sel.appendChild(o);});
+  }
+  function novaLinha(){var tr=tpl.content.firstElementChild.cloneNode(true);preencher(tr.querySelector('select'));tbody.appendChild(tr);return tr;}
+  function somar(){
+    var s=0;tbody.querySelectorAll('[data-volume]').forEach(function(i){s+=num(i.value);});
+    form.querySelector('[data-soma]').textContent=fmt(s);
+    var vs=num(document.getElementById('id_volume_solicitado').value);
+    form.querySelector('[data-diverge]').hidden=!(vs>0&&s>0&&Math.abs(vs-s)>0.009);
+    return s;
+  }
+  function carregarLocais(){
+    if(!obraId){locais=[];tbody.querySelectorAll('[data-local-select]').forEach(preencher);return;}
+    fetch(rota(urlApi,obraId),{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
+      locais=d.locais.map(function(l){return {id:l.id,descricao:l.descricao};});
+      tbody.querySelectorAll('[data-local-select]').forEach(function(s){s.dataset.valor='';preencher(s);});
+    });
+  }
+  if(!tbody.children.length)novaLinha();
+  somar();
+
+  form.addEventListener('click',function(e){
+    if(e.target.closest('[data-add-item]')){novaLinha();return;}
+    var rm=e.target.closest('[data-rm]');if(rm){rm.closest('tr').remove();if(!tbody.children.length)novaLinha();somar();return;}
+    if(e.target.closest('[data-usar-soma]')){var s=somar();if(s>0){document.getElementById('id_volume_solicitado').value=s.toFixed(2);somar();}return;}
+    if(e.target.closest('[data-novo-local]')){if(!obraId)return;linhaAlvo=null;ccAbrirModal('modal-novo-local');}
+  });
+  form.addEventListener('input',function(e){if(e.target.matches('[data-volume],#id_volume_solicitado'))somar();});
+  if(selObra&&!selObra.disabled){selObra.addEventListener('change',function(){obraId=selObra.value;form.querySelector('[data-novo-local]').disabled=!obraId;carregarLocais();});}
+
+  var modal=document.getElementById('modal-novo-local');
+  modal.querySelector('[data-salvar-local]').addEventListener('click',function(){
+    var fd=new FormData();fd.append('csrfmiddlewaretoken',csrf);
+    modal.querySelectorAll('[data-l]').forEach(function(i){fd.append(i.dataset.l,i.value);});
+    fd.append('ordem',locais.length);
+    var erro=modal.querySelector('[data-erro-local]');erro.hidden=true;
+    fetch(rota(urlCriar,obraId),{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){erro.textContent=d.erro||'Não foi possível salvar.';erro.hidden=false;return;}
+      locais.push({id:d.local.id,descricao:d.local.descricao});
+      tbody.querySelectorAll('[data-local-select]').forEach(preencher);
+      var vazio=Array.prototype.find.call(tbody.querySelectorAll('[data-local-select]'),function(s){return !s.value;})||novaLinha().querySelector('select');
+      vazio.value=d.local.id;
+      modal.querySelectorAll('[data-l]').forEach(function(i){if(i.tagName!=='SELECT')i.value='';});
+      ccFecharModal();
+    }).catch(function(){erro.textContent='Falha de conexão.';erro.hidden=false;});
+  });
+
+  var end=document.getElementById('endereco-salvo');
+  if(end)end.addEventListener('change',function(){var o=end.selectedOptions[0];if(!o||!o.dataset.end)return;document.getElementById('id_endereco_entrega').value=o.dataset.end;document.getElementById('id_link_maps_entrega').value=o.dataset.maps||'';});
+})();
+</script>
+{% endblock %}

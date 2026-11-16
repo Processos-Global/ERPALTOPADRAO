@@ -1,0 +1,118 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | {% if formato %}Formato {{ formato.nome }}{% else %}Novo formato{% endif %}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}
+<style>
+.op-page.fe-pagina{max-width:none}
+.fe-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 8px}
+.fe-head .op-muted{font-size:12px}
+.fe-modo{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 12px;border:2px solid var(--op-line);border-radius:10px;background:#fff;font:inherit;font-size:13px;font-weight:800;color:var(--op-ink);cursor:pointer}
+.fe-modo[aria-pressed="true"]{border-color:var(--op-ink);box-shadow:0 0 0 3px rgba(185,170,114,.35)}
+.fe-dica .fe-so-toque{display:none}
+@media(hover:none),(pointer:coarse){.fe-dica .fe-so-pc{display:none}.fe-dica .fe-so-toque{display:inline}}
+.fe-area.marcando{outline:3px solid rgba(185,170,114,.55);outline-offset:-3px}
+html[data-theme="dark"] .fe-modo{background:var(--saari-dark-raised);color:var(--saari-dark-text);border-color:var(--saari-dark-border)}
+.fe-zoom{display:inline-flex;gap:4px;margin-left:auto}
+.fe-zoom button{width:42px;height:42px;border:1px solid var(--op-line);border-radius:10px;background:#fff;font-size:20px;font-weight:800;color:var(--op-ink);cursor:pointer}
+.fe-area{overflow:auto;max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px);padding:6px;border:1px solid var(--op-line);border-radius:14px;background:#fcfaf6;-webkit-overflow-scrolling:touch}
+.fe-area .cc-grade{margin:0 auto;max-width:none;gap:2px;padding:2px}
+.fe-area .cc-cel{border-radius:3px}
+@media(max-width:760px){.fe-zoom{margin-left:0}.fe-area{max-height:calc(100dvh - 260px)}}
+html[data-theme="dark"] .fe-zoom button{background:var(--saari-dark-raised);color:var(--saari-dark-text);border-color:var(--saari-dark-border)}
+html[data-theme="dark"] .fe-area{background:var(--saari-dark-canvas);border-color:var(--saari-dark-border)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="op-page cc-page fe-pagina">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem · Formatos</span>
+      <h1>{% if formato %}Editar formato{% else %}Novo formato{% endif %}</h1>
+      <p>Defina o tamanho e marque as células que ficam <strong>fora</strong> da planta (clique ou arraste).{% if local %} Ao salvar, o formato já é aplicado em <strong>{{ local.descricao_completa }}</strong>.{% endif %}</p>
+    </div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% if voltar %}{{ voltar }}{% else %}{% url 'obras:concretagem_formatos' %}{% endif %}">Cancelar</a></div>
+  </section>
+
+  <div class="cc-erros" data-erro hidden></div>
+
+  <section class="op-panel">
+    <div class="op-panel-body">
+      <div class="op-grid">
+        <div class="op-field c6"><label>Nome *</label><input data-campo="nome" maxlength="120" placeholder="Ex.: Obra X - Casa térrea tipo A"></div>
+        <div class="op-field c6"><label>Obra de origem</label><select data-campo="obra"><option value="">—</option>{% for o in obras %}<option value="{{ o.pk }}">{{ o|nome_obra }}</option>{% endfor %}</select></div>
+        <div class="op-field c3"><label>Linhas</label><input data-campo="linhas" type="number" min="1" max="{{ max_dimensao }}" {% if travar_tamanho %}disabled title="Formato em uso: o tamanho não pode mudar"{% endif %}></div>
+        <div class="op-field c3"><label>Colunas</label><input data-campo="colunas" type="number" min="1" max="{{ max_dimensao }}" {% if travar_tamanho %}disabled title="Formato em uso: o tamanho não pode mudar"{% endif %}></div>
+        <div class="op-field c6" style="align-self:end"><div class="cc-acoes"><button class="op-btn secondary sm" type="button" data-inverter>Inverter</button><button class="op-btn secondary sm" type="button" data-limpar>Limpar contorno</button></div></div>
+      </div>
+      <div class="fe-head">
+        <div class="fe-modos cc-legenda" role="group" aria-label="O que marcar">
+          <button type="button" class="fe-modo" data-modo-toque="fora" aria-pressed="false"><i class="fora"></i> Não pode ser pintado</button>
+          <button type="button" class="fe-modo" data-modo-toque="dentro" aria-pressed="false"><i></i> Pode ser pintado</button>
+        </div>
+        <span class="op-muted fe-dica" data-fe-dica><span class="fe-so-pc">No computador: botão esquerdo bloqueia, botão direito libera (arraste para várias células).</span><span class="fe-so-toque">No celular: escolha uma opção ao lado e toque ou arraste nas células. Sem opção escolhida, o dedo rola a tela.</span></span>
+        <div class="fe-zoom"><button type="button" data-zoom="-1" aria-label="Diminuir">−</button><button type="button" data-zoom="1" aria-label="Aumentar">+</button></div></div>
+      <div class="fe-area" data-editor-area><div data-editor></div></div>
+      <div class="cc-acoes" style="justify-content:flex-end;margin-top:14px"><button class="op-btn" type="button" data-salvar>{% if local %}Salvar e usar{% else %}Salvar formato{% endif %}</button></div>
+    </div>
+  </section>
+  {% csrf_token %}
+</div>
+{{ inicial|json_script:"formato-inicial" }}
+{% include "obras/concretagem/_modal_js.html" %}
+{% include "obras/concretagem/_grade_js.html" %}
+<script>
+(function(){
+  var ini=JSON.parse(document.getElementById('formato-inicial').textContent);
+  var campo=function(n){return document.querySelector('[data-campo="'+n+'"]');};
+  campo('nome').value=ini.nome;campo('obra').value=ini.obra||'';campo('linhas').value=ini.linhas;campo('colunas').value=ini.colunas;
+  var el=document.querySelector('[data-editor]'),area=document.querySelector('[data-editor-area]'),fora=ccGrade.conjunto(ini.fora),g;
+  /* Mesmo dimensionamento do mapa: ocupa a largura (34–72 px por célula; 30 no celular) × zoom lembrado no aparelho. */
+  var chaveZoom='cc-formato-zoom',zoom=1;try{zoom=parseFloat(localStorage.getItem(chaveZoom))||1;}catch(e){}
+  function tamanho(C){var w=area.clientWidth-14;var base=Math.floor((w-C-2)/C);
+    base=Math.max(window.innerWidth<760?30:34,Math.min(72,base));return Math.round(Math.max(14,Math.min(120,base*zoom)));}
+  function desenhar(){
+    var L=Math.max(1,Math.min({{ max_dimensao }},+campo('linhas').value||1)),C=Math.max(1,Math.min({{ max_dimensao }},+campo('colunas').value||1));
+    Object.keys(fora).forEach(function(k){var p=k.split(',');if(+p[0]>L||+p[1]>C)delete fora[k];});
+    g=ccGrade.montar(el,L,C,{fora:Object.keys(fora).map(function(k){return k.split(',').map(Number);}),celula:tamanho(C)});
+  }
+  desenhar();
+  campo('linhas').addEventListener('change',desenhar);campo('colunas').addEventListener('change',desenhar);
+  document.querySelectorAll('[data-zoom]').forEach(function(b){b.addEventListener('click',function(){
+    zoom=Math.max(.4,Math.min(3,zoom*(b.dataset.zoom==='1'?1.25:.8)));try{localStorage.setItem(chaveZoom,zoom);}catch(e){}desenhar();});});
+  window.addEventListener('resize',function(){clearTimeout(window.__ccFormatoR);window.__ccFormatoR=setTimeout(desenhar,150);});
+  /* Mouse: esquerdo bloqueia, direito libera. Toque/caneta: usa o modo escolhido nos botões
+     (sem modo, o toque rola a tela). */
+  var modoToque=null,acao=null;
+  function aplicar(cel){if(!cel||!acao)return;var k=cel.dataset.l+','+cel.dataset.c;
+    if(acao==='fora'){fora[k]=1;cel.classList.add('fora');}else{delete fora[k];cel.classList.remove('fora');}}
+  function celulaEm(e){var x=document.elementFromPoint(e.clientX,e.clientY);return x&&x.classList.contains('cc-cel')&&el.contains(x)?x:null;}
+  function setModoToque(m){modoToque=m;
+    document.querySelectorAll('[data-modo-toque]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.modoToque===m?'true':'false');});
+    el.style.touchAction=m?'none':'auto';area.classList.toggle('marcando',!!m);}
+  document.querySelectorAll('[data-modo-toque]').forEach(function(b){b.addEventListener('click',function(){
+    setModoToque(modoToque===b.dataset.modoToque?null:b.dataset.modoToque);});});
+  setModoToque(null);
+  el.addEventListener('contextmenu',function(e){e.preventDefault();});
+  el.addEventListener('pointerdown',function(e){
+    var cel=celulaEm(e);if(!cel)return;
+    if(e.pointerType==='mouse'){acao=e.button===0?'fora':e.button===2?'dentro':null;}
+    else{acao=modoToque;}
+    if(!acao)return;
+    e.preventDefault();try{el.setPointerCapture(e.pointerId);}catch(x){}aplicar(cel);});
+  el.addEventListener('pointermove',function(e){if(acao)aplicar(celulaEm(e));});
+  ['pointerup','pointercancel'].forEach(function(t){window.addEventListener(t,function(){acao=null;});});
+  document.querySelector('[data-limpar]').addEventListener('click',function(){fora={};desenhar();});
+  document.querySelector('[data-inverter]').addEventListener('click',function(){var n={};Object.keys(g.celulas).forEach(function(k){if(!fora[k])n[k]=1;});fora=n;desenhar();});
+  var erro=document.querySelector('[data-erro]');
+  document.querySelector('[data-salvar]').addEventListener('click',function(){
+    var b=this;b.disabled=true;erro.hidden=true;
+    fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value,'X-Requested-With':'XMLHttpRequest'},
+      body:JSON.stringify({nome:campo('nome').value,obra:campo('obra').value,linhas:+campo('linhas').value,colunas:+campo('colunas').value,
+        fora:Object.keys(fora).map(function(k){return k.split(',').map(Number);})})})
+      .then(function(r){return r.json();}).then(function(d){if(d.ok){location.href=d.redirecionar;}else{erro.textContent=d.erro;erro.hidden=false;b.disabled=false;}})
+      .catch(function(){erro.textContent='Falha de conexão.';erro.hidden=false;b.disabled=false;});
+  });
+})();
+</script>
+{% endblock %}

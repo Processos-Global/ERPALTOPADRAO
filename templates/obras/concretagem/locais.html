@@ -1,0 +1,85 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Locais de uso | {{ obra|nome_obra }}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem · {{ obra|nome_obra }}</span>
+      <h1>Locais de uso</h1>
+      <p>Estruturas desta obra que recebem concreto: lajes, pilares, vigas, piscina, muros, calçadas… Use nas solicitações e no registro de utilização.</p>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_obra' obra.pk %}">Voltar</a>
+      {% if pode_preencher %}<button class="op-btn" type="button" data-cc-open="modal-local" data-local-novo>+ Adicionar local</button>{% endif %}
+    </div>
+  </section>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Locais cadastrados</h2><span class="op-muted">{{ locais|length }} no total</span></div></div>
+    <div class="op-table-wrap">
+      <table class="op-table">
+        <thead><tr><th>Ordem</th><th>Local</th><th>Tipo</th><th>Bloco</th><th>Pavimento</th><th class="op-num">Volume estimado</th><th>Situação</th>{% if pode_preencher %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for l in locais %}
+          <tr class="{% if not l.ativo %}cc-inativo{% endif %}">
+            <td>{{ l.ordem }}</td>
+            <td><strong>{{ l.nome }}</strong></td>
+            <td>{{ l.get_tipo_display }}</td>
+            <td>{{ l.bloco|default:"—" }}</td>
+            <td>{{ l.pavimento|default:"—" }}</td>
+            <td class="op-num">{% if l.volume_estimado is not None %}{{ l.volume_estimado|numero_br:2 }} m³{% else %}—{% endif %}</td>
+            <td>{% if l.ativo %}<span class="cc-tag ok">Ativo</span>{% else %}<span class="cc-tag alerta">Inativo</span>{% endif %}</td>
+            {% if pode_preencher %}
+            <td style="white-space:nowrap">
+              <button class="op-btn secondary sm" type="button" data-cc-open="modal-local"
+                data-local-editar="{% url 'obras:concretagem_local_editar' obra.pk l.pk %}"
+                data-nome="{{ l.nome }}" data-tipo="{{ l.tipo }}" data-bloco="{{ l.bloco }}" data-pavimento="{{ l.pavimento }}"
+                data-volume="{{ l.volume_estimado|default_if_none:'' }}" data-ordem="{{ l.ordem }}">Editar</button>
+              <form method="post" action="{% url 'obras:concretagem_local_alternar' obra.pk l.pk %}" style="display:inline">{% csrf_token %}
+                <button class="op-btn {% if l.ativo %}danger{% else %}secondary{% endif %} sm" type="submit">{% if l.ativo %}Desativar{% else %}Reativar{% endif %}</button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}<tr><td colspan="8" class="op-empty">Nenhum local cadastrado. Clique em “+ Adicionar local”.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if pode_preencher %}
+  <div class="op-modal" id="modal-local" aria-hidden="true">
+    <div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true">
+      <div class="op-modal-head"><h2 data-titulo>Novo local de uso</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_local_criar' obra.pk %}" data-acao-nova="{% url 'obras:concretagem_local_criar' obra.pk %}">
+        {% csrf_token %}
+        <div class="op-grid">
+          <div class="op-field c8"><label>Nome do local *</label><input name="nome" required maxlength="160" placeholder="Ex.: Laje 2º pavimento, Piscina"></div>
+          <div class="op-field c4"><label>Tipo</label><select name="tipo">{% for v,l in tipos %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+          <div class="op-field c4"><label>Bloco</label><input name="bloco" maxlength="60"></div>
+          <div class="op-field c4"><label>Pavimento</label><input name="pavimento" maxlength="80"></div>
+          <div class="op-field c4"><label>Volume estimado (m³)</label><input name="volume_estimado" type="number" step="0.01" min="0"></div>
+          <div class="op-field c4"><label>Ordem</label><input name="ordem" type="number" min="0" value="0"></div>
+        </div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Salvar local</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% include "obras/concretagem/_modal_js.html" %}
+<script>
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-local-editar],[data-local-novo]');if(!b)return;
+  var m=document.getElementById('modal-local');var f=m.querySelector('form');f.reset();
+  if(b.hasAttribute('data-local-editar')){
+    f.action=b.dataset.localEditar;m.querySelector('[data-titulo]').textContent='Editar local';
+    f.nome.value=b.dataset.nome;f.tipo.value=b.dataset.tipo;f.bloco.value=b.dataset.bloco;f.pavimento.value=b.dataset.pavimento;f.volume_estimado.value=b.dataset.volume;f.ordem.value=b.dataset.ordem;
+  }else{f.action=f.dataset.acaoNova;m.querySelector('[data-titulo]').textContent='Novo local de uso';}
+});
+</script>
+{% endblock %}

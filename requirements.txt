@@ -25,7 +25,9 @@ pyasn1_modules==0.4.2
 pycparser==3.0
 PyMySQL==1.2.0
 pyparsing==3.3.2
+pypdf==5.1.0
 python-dateutil==2.9.0.post0
+reportlab==4.2.5
 requests==2.34.2
 setuptools==83.0.0
 six==1.17.0

@@ -1,0 +1,49 @@
+<div class="op-modal" id="cc-confirmar" aria-hidden="true">
+  <div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(460px,100%)">
+    <div class="op-modal-head"><h2>Confirmar</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <div class="op-modal-body"><p data-cc-confirm-text style="margin:0"></p>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="button" data-cc-confirm-ok>Confirmar</button></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  /* A animação de entrada da página (.page-reveal) deixa um transform no
+     conteúdo, o que faz position:fixed valer em relação a ele e não à tela.
+     Por isso os pop-ups são levados para fora do conteúdo, direto no body:
+     ficam sempre centralizados na tela e por cima de tudo. */
+  var host=document.createElement('div');
+  host.className='cc-page cc-modais';
+  document.body.appendChild(host);
+  document.querySelectorAll('.op-modal').forEach(function(m){host.appendChild(m);});
+
+  function fechar(){document.querySelectorAll('.cc-modais .op-modal.is-open').forEach(function(m){m.classList.remove('is-open');m.setAttribute('aria-hidden','true');});document.body.classList.remove('op-modal-open');}
+  function abrir(id){var m=document.getElementById(id);if(!m)return;if(m.parentNode!==host)host.appendChild(m);fechar();m.classList.add('is-open');m.setAttribute('aria-hidden','false');document.body.classList.add('op-modal-open');var d=m.querySelector('.op-modal-dialog');if(d)d.scrollTop=0;var f=m.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=file]),select,textarea');if(f)setTimeout(function(){f.focus({preventScroll:true});},60);}
+  window.ccAbrirModal=abrir;window.ccFecharModal=fechar;
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('[data-cc-open]');if(a){e.preventDefault();abrir(a.getAttribute('data-cc-open'));return;}
+    if(e.target.closest('[data-cc-close]')||e.target.classList.contains('op-modal-backdrop')){e.preventDefault();fechar();}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')fechar();});
+  /* Formulários com confirmação: o app.js do ERP marca o botão como "carregando"
+     em todo submit, mesmo quando a confirmação cancela. Por isso o botão recebe
+     data-no-loading e o estado de carregamento só é aplicado ao confirmar. */
+  document.querySelectorAll('form[data-cc-confirm]').forEach(function(f){
+    var botoes=f.querySelectorAll('button[type="submit"],input[type="submit"]');
+    botoes.forEach(function(b){b.setAttribute('data-no-loading','');});
+    f.addEventListener('submit',function(e){
+      if(f.dataset.ok)return;
+      e.preventDefault();
+      var m=document.getElementById('cc-confirmar');
+      m.querySelector('[data-cc-confirm-text]').textContent=f.getAttribute('data-cc-confirm');
+      m.querySelector('[data-cc-confirm-ok]').onclick=function(){
+        f.dataset.ok=1;fechar();
+        botoes.forEach(function(b){b.classList.add('is-submitting');if(b.matches('button'))b.setAttribute('aria-busy','true');});
+        f.submit();
+      };
+      abrir('cc-confirmar');
+    });
+  });
+})();
+</script>

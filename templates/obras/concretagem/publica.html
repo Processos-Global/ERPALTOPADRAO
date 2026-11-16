@@ -1,0 +1,120 @@
+{% load obras_format %}<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Solicitação de concretagem {{ conc.codigo }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#2d201c;--text:#453330;--muted:#77655c;--line:#ded7c8;--soft:#f5f1e9;--gold:#b9aa72;--bg:#f7f5f1;--panel:#fff;--danger:#a94343;--ok:#356848}
+@media (prefers-color-scheme:dark){:root{--ink:#e8dfd6;--text:#e8dfd6;--muted:#aa9e95;--line:rgba(235,222,205,.14);--soft:#302823;--gold:#b89b5c;--bg:#1d1916;--panel:#28221e;--danger:#f0b8b8;--ok:#b6dcc2}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:720px;margin:0 auto;padding:28px 16px 48px}
+.head{position:relative;overflow:hidden;padding:24px 24px 22px 28px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
+.head::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--gold),#2d201c)}
+.eyebrow{display:block;color:var(--gold);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+h1{margin:4px 0 4px;color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-weight:400;font-size:clamp(1.8rem,6vw,2.5rem);line-height:1.08;letter-spacing:-.03em}
+.muted{color:var(--muted);font-size:13px}
+.card{margin-top:14px;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+.card h2{margin:0 0 12px;color:var(--ink);font-size:15px}
+dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px 16px;margin:0}
+dt{color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+dd{margin:2px 0 0;color:var(--ink);font-weight:700}
+ul.itens{margin:0;padding:0;list-style:none}ul.itens li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}ul.itens li:last-child{border:0}
+.opcoes{display:grid;gap:10px}
+details{border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+summary{padding:14px 16px;cursor:pointer;font-weight:800;color:var(--ink);list-style:none}
+summary::-webkit-details-marker{display:none}
+details[open] summary{border-bottom:1px solid var(--line)}
+details form{padding:14px 16px}
+label{display:block;margin:0 0 5px;font-size:12.5px;font-weight:750}
+input,textarea{width:100%;min-height:42px;margin-bottom:12px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;font-size:14px}
+textarea{min-height:80px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:10px 16px;border:1px solid #2d201c;border-radius:10px;background:#2d201c;color:#fff;font:inherit;font-weight:800;cursor:pointer}
+.btn.aceitar{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.recusar{background:transparent;border-color:var(--danger);color:var(--danger)}
+.aviso{margin-top:14px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--soft)}
+.aviso.ok{border-color:rgba(53,104,72,.4)}.aviso.erro{border-color:rgba(169,67,67,.45);color:var(--danger)}
+.aviso strong{display:block;color:var(--ink);margin-bottom:2px}
+footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:480px){.row{grid-template-columns:1fr}.head{padding:20px 18px 18px 22px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="head">
+    <span class="eyebrow">Solicitação de concretagem</span>
+    <h1>{{ conc.obra.nome }}</h1>
+    <div class="muted">{{ conc.codigo }}{% if empresa %} · {{ empresa.razao_social|default:empresa.nome_fantasia }}{% endif %}</div>
+  </section>
+
+  {% if erro %}<div class="aviso erro"><strong>Não foi possível registrar</strong>{{ erro }}</div>{% endif %}
+  {% if resultado == "aceito" %}<div class="aviso ok"><strong>Obrigado! Agendamento confirmado.</strong>A obra foi avisada.</div>
+  {% elif resultado == "recusado" %}<div class="aviso"><strong>Recusa registrada.</strong>A obra foi avisada.</div>
+  {% elif resultado == "reagendamento" %}<div class="aviso"><strong>Pedido de nova data registrado.</strong>A obra vai avaliar e enviar uma nova solicitação.</div>
+  {% elif not aguardando %}
+    <div class="aviso"><strong>
+      {% if conc.confirmacao_cliente == "ACEITO" %}Esta solicitação já foi confirmada.
+      {% elif conc.confirmacao_cliente == "REJEITADO" %}Esta solicitação foi recusada.
+      {% elif conc.confirmacao_cliente == "REAGENDAMENTO" %}Já foi pedida outra data para esta solicitação.
+      {% elif conc.status == "CANCELADA" %}Esta solicitação foi cancelada.
+      {% else %}Esta solicitação não está aguardando resposta.{% endif %}
+    </strong>Em caso de dúvida, fale com a obra.</div>
+  {% endif %}
+
+  <section class="card">
+    <h2>Dados do pedido</h2>
+    <dl>
+      <div><dt>Data</dt><dd>{{ conc.data_programada|date:"d/m/Y"|default:"A definir" }}</dd></div>
+      <div><dt>Horário</dt><dd>{{ conc.horario_programado|time:"H:i"|default:"A definir" }}</dd></div>
+      <div><dt>Fck</dt><dd>{% if conc.fck_projeto %}{{ conc.fck_projeto|numero_br:1 }} MPa{% else %}—{% endif %}</dd></div>
+      <div><dt>Volume</dt><dd>{% if conc.volume_solicitado %}{{ conc.volume_solicitado|numero_br:2 }} m³{% else %}—{% endif %}</dd></div>
+      {% if conc.slump %}<div><dt>Slump flow</dt><dd>{{ conc.slump_texto }}</dd></div>{% endif %}
+      {% if conc.agregado %}<div><dt>Agregado</dt><dd>{{ conc.agregado }}</dd></div>{% endif %}
+      <div><dt>Bomba</dt><dd>{% if conc.com_bomba %}Estacionária{% else %}Não{% endif %}</dd></div>
+    </dl>
+    {% if conc.endereco_entrega %}<p style="margin:14px 0 0"><span class="muted">Entrega:</span> {{ conc.endereco_entrega }}{% if conc.link_maps_entrega %} · <a href="{{ conc.link_maps_entrega }}" target="_blank" rel="noopener">abrir no mapa</a>{% endif %}</p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Serviço</h2>
+    <ul class="itens">{% for i in itens %}<li><span>{{ i.titulo }}</span><strong>{{ i.volume_previsto|numero_br:2 }} m³</strong></li>{% endfor %}</ul>
+    {% if conc.observacoes %}<p class="muted" style="margin:12px 0 0;white-space:pre-line">{{ conc.observacoes }}</p>{% endif %}
+  </section>
+
+  {% if aguardando and not resultado %}
+  <section class="card">
+    <h2>Sua resposta</h2>
+    <div class="opcoes">
+      <details open>
+        <summary>✅ Aceitar agendamento</summary>
+        <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="aceitar">
+          <label for="obs-aceite">Observação (opcional)</label><input id="obs-aceite" name="observacao" maxlength="1000">
+          <button class="btn aceitar" type="submit">Confirmar agendamento</button></form>
+      </details>
+      <details>
+        <summary>📅 Pedir outra data</summary>
+        <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="reagendar">
+          <div class="row"><div><label for="r-data">Data sugerida *</label><input id="r-data" type="date" name="data" required></div>
+          <div><label for="r-hora">Horário sugerido</label><input id="r-hora" type="time" name="horario"></div></div>
+          <label for="r-nome">Seu nome</label><input id="r-nome" name="solicitante" maxlength="150">
+          <label for="r-obs">Observação</label><textarea id="r-obs" name="observacao" maxlength="1000"></textarea>
+          <button class="btn" type="submit">Enviar pedido de nova data</button></form>
+      </details>
+      <details>
+        <summary>✖️ Recusar</summary>
+        <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="recusar">
+          <label for="obs-recusa">Motivo</label><textarea id="obs-recusa" name="observacao" maxlength="1000"></textarea>
+          <button class="btn recusar" type="submit">Recusar solicitação</button></form>
+      </details>
+    </div>
+  </section>
+  {% endif %}
+  <footer>{% if empresa %}{{ empresa.razao_social|default:empresa.nome_fantasia }}{% if empresa.cnpj %} · CNPJ {{ empresa.cnpj }}{% endif %}{% else %}SAARI ERP{% endif %}</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,242 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Mapa de concretagem{% if obra %} | {{ obra|nome_obra }}{% endif %}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}
+<style>
+.op-page.mp-pagina{max-width:none}
+.mp-topo{display:grid;grid-template-columns:minmax(200px,1fr) minmax(200px,1.4fr) auto;gap:10px;align-items:end;margin-bottom:12px}
+.mp-lista{margin-bottom:12px}
+.mp-formato-busca{width:100%;max-width:360px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--op-line);border-radius:10px;font:inherit;background:#fff;color:var(--op-text)}
+.mp-formatos{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.mp-formato{appearance:none;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border:2px solid var(--op-line);border-radius:12px;background:#fff;font:inherit;text-align:left;color:var(--op-text);text-decoration:none;cursor:pointer}
+.mp-formato:hover{border-color:var(--op-gold);color:var(--op-text)}
+.mp-formato.atual{border-color:var(--op-ink);box-shadow:0 0 0 3px rgba(185,170,114,.35)}
+.mp-formato strong{font-size:13px;color:var(--op-ink)}
+.mp-formato small{font-size:11px;color:var(--op-muted)}
+.mp-formato-prev{display:flex;align-items:center;justify-content:center;width:100%;height:110px;overflow:hidden;border-radius:8px;background:#fcfaf6}
+.mp-formato-novo{border-style:dashed}
+.mp-formato-item{display:flex;flex-direction:column;gap:4px}
+.mp-formato-item>.mp-formato{flex:1}
+.mp-formato-editar{align-self:flex-start;font-size:12px;font-weight:700;color:var(--op-muted);text-decoration:none;padding:2px 4px}
+.mp-formato-editar:hover{color:var(--op-ink)}
+.mp-formato-item[hidden]{display:none}
+.mp-mais{font-size:34px;font-weight:300;color:var(--op-gold)}
+.mp-formato[hidden]{display:none}
+.mp-tabela .cc-swatch{width:20px;height:20px;vertical-align:middle}
+.mp-pintavel .mp-tabela tbody tr[data-item]{cursor:pointer}
+.mp-tabela tr.ativa td{background:rgba(185,170,114,.16)}
+.mp-tabela tr.ativa td:first-child{box-shadow:inset 4px 0 0 var(--op-gold)}
+.mp-card{padding:10px}
+.mp-sobras-titulo td{background:var(--op-soft);font-size:12px;font-weight:800;color:var(--op-muted);text-transform:uppercase;letter-spacing:.04em}
+.mp-sobras-acao{padding:10px 14px 4px}
+html[data-theme="dark"] .mp-sobras-titulo td{background:var(--saari-dark-raised);color:var(--saari-dark-muted,#bdb2a8)}
+.mp-card-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.mp-borracha.ativa{border-color:var(--op-ink);box-shadow:0 0 0 3px rgba(185,170,114,.35)}
+.mp-zoom{display:inline-flex;gap:4px;margin-left:auto}
+.mp-zoom button{width:42px;height:42px;border:1px solid var(--op-line);border-radius:10px;background:#fff;font-size:20px;font-weight:800;color:var(--op-ink);cursor:pointer}
+.mp-status{font-size:12px;color:var(--op-muted);min-width:70px}
+.mp-pincel{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:var(--op-soft);font-size:13px;font-weight:800;color:var(--op-ink);max-width:100%}
+.mp-area{overflow:auto;max-height:calc(100vh - 200px);max-height:calc(100dvh - 200px);padding:6px;border:1px solid var(--op-line);border-radius:14px;background:#fcfaf6;-webkit-overflow-scrolling:touch}
+.mp-area .cc-grade{margin:0 auto;max-width:none;gap:2px;padding:2px}
+.mp-area .cc-cel{border-radius:3px}
+.mp-area.pintando{outline:3px solid rgba(185,170,114,.55);outline-offset:-3px}
+.mp-dica{margin:8px 2px 0;color:var(--op-muted);font-size:12px}
+@media(max-width:760px){
+  .mp-topo{grid-template-columns:1fr}
+  .mp-topo .op-btn{width:100%}
+  .cc-page .op-head{padding:16px 16px 16px 20px}
+  .cc-page .op-head h1{font-size:1.7rem}
+  .cc-page .op-head p{display:none}
+  .mp-area{max-height:calc(100dvh - 260px)}
+  .mp-zoom{margin-left:0}
+}
+html[data-theme="dark"] .mp-zoom button{background:var(--saari-dark-raised);color:var(--saari-dark-text);border-color:var(--saari-dark-border)}
+html[data-theme="dark"] .mp-pincel{color:var(--saari-dark-text)}
+html[data-theme="dark"] .mp-tabela tr.ativa td{background:rgba(185,170,114,.16)}
+html[data-theme="dark"] .mp-pincel{background:var(--saari-dark-raised)}
+html[data-theme="dark"] :is(.mp-formato,.mp-formato-busca){background:var(--saari-dark-raised);border-color:var(--saari-dark-border);color:var(--saari-dark-text)}
+html[data-theme="dark"] .mp-formato strong{color:var(--saari-dark-text)}
+html[data-theme="dark"] .mp-formato-prev{background:var(--saari-dark-canvas)}
+html[data-theme="dark"] .mp-area{background:var(--saari-dark-canvas);border-color:var(--saari-dark-border)}
+</style>
+{% endblock %}
+{% block content %}
+<div class="op-page cc-page mp-pagina{% if pode_preencher %} mp-pintavel{% endif %}">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem</span>
+      <h1>Mapa de concretagem</h1>
+      <p>Escolha o local, toque numa cor da legenda e pinte as células onde aquele concreto foi aplicado.</p>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% if obra %}{% url 'obras:concretagem_obra' obra.pk %}{% else %}{% url 'obras:concretagem_painel' %}{% endif %}">Voltar</a>
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_formatos' %}">Formatos</a>
+    </div>
+  </section>
+
+  <div class="mp-topo">
+    <div class="op-field"><label>Obra</label>
+      <select onchange="if(this.value)location.href=this.value">{% if not obra %}<option value="" selected>— Escolha a obra —</option>{% endif %}{% for o in obras %}<option value="{% url 'obras:concretagem_mapa' o.pk %}" {% if obra and o.pk == obra.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label>Local de uso</label>
+      {% if not obra %}<select disabled><option>Escolha a obra primeiro</option></select>
+      {% elif locais %}
+      <select onchange="if(this.value)location.href='?local='+this.value">{% if not local %}<option value="" selected>— Escolha o local —</option>{% endif %}{% for l in locais %}<option value="{{ l.pk }}" {% if local and local.pk == l.pk %}selected{% endif %}>{{ l.descricao_completa }}{% if l.pintadas %} · {{ l.pintadas }} cél. pintadas{% elif l.usos %} · {{ l.usos }} uso{{ l.usos|pluralize }} a pintar{% endif %}</option>{% endfor %}</select>
+      {% else %}<select disabled><option>Nenhum local cadastrado</option></select>{% endif %}</div>
+    <div class="cc-acoes">
+      {% if obra %}<a class="op-btn secondary" href="{% url 'obras:concretagem_locais' obra.pk %}">Locais</a>{% endif %}
+      {% if mapa and pode_preencher %}<button class="op-btn secondary" type="button" data-cc-open="modal-grade">Trocar formato</button>{% endif %}
+    </div>
+  </div>
+
+  {% if not obra %}
+  <div class="cc-alerta"><div><strong>Escolha a obra</strong>Selecione a obra acima e depois o local de uso para ver o mapa.</div></div>
+  {% elif not locais %}
+  <div class="cc-alerta"><div><strong>Esta obra não tem locais de uso</strong>Cadastre os locais (lajes, pilares, piscina…) para montar o mapa.</div>
+    <a class="op-btn sm" href="{% url 'obras:concretagem_locais' obra.pk %}">Cadastrar locais</a></div>
+  {% elif not local %}
+  <div class="cc-alerta"><div><strong>Escolha o local de uso</strong>Selecione acima o local (laje, pilar, piscina…) para abrir o mapa.</div></div>
+  {% elif not mapa %}
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Formato da grade de “{{ local.descricao_completa }}”</h2>
+      <span class="op-muted">{% if pode_preencher %}Escolha um formato pronto — o tamanho e o contorno vêm dele — ou crie um novo e use na hora.{% else %}A grade deste local ainda não foi montada.{% endif %}</span></div></div>
+    {% if pode_preencher %}<div class="op-panel-body">{% include "obras/concretagem/_escolher_formato.html" with trocar=False %}</div>{% endif %}
+  </section>
+  {% else %}
+
+  <details class="op-panel cc-details mp-lista" open>
+    <summary class="op-panel-head"><div><h2>Caminhões deste local</h2>
+      <span class="op-muted">{% if pode_preencher %}Toque numa linha para pintar com a cor dela; toque de novo para soltar.{% else %}Concreto lançado em {{ local.descricao_completa }}.{% endif %}</span></div></summary>
+    <div class="op-table-wrap"><table class="op-table mp-tabela">
+      <thead><tr><th>Cor</th><th>Data</th><th>Concretagem</th><th>Caminhão</th><th class="op-num">m³</th><th>NF</th><th class="op-num">CPs</th><th>Início da mistura</th><th>Chegada</th><th>Início da descarga</th><th>Término</th><th>Tempo total</th><th>No mapa</th></tr></thead>
+      <tbody data-paleta>
+      {% for i in dados_mapa.itens %}{% if i.tipo == "Uso" %}{% include "obras/concretagem/_mapa_linha_item.html" %}{% endif %}{% endfor %}
+      {% if not dados_mapa.qtd_usos %}<tr><td colspan="13" class="op-empty">Nenhum uso lançado neste local ainda. Lance o uso na aba Campo da concretagem.</td></tr>{% endif %}
+      </tbody>
+      {% if dados_mapa.qtd_sobras %}
+      <tbody class="mp-sobras" data-sobras hidden>
+        <tr class="mp-sobras-titulo"><td colspan="13">Sobras de concreto da obra · passe o mouse na linha para ver o destino</td></tr>
+        {% for i in dados_mapa.itens %}{% if i.tipo != "Uso" %}{% include "obras/concretagem/_mapa_linha_item.html" %}{% endif %}{% endfor %}
+      </tbody>
+      {% endif %}
+    </table></div>
+    {% if dados_mapa.qtd_sobras %}<div class="mp-sobras-acao"><button type="button" class="op-btn secondary sm" data-ver-sobras aria-expanded="false">Ver sobras ({{ dados_mapa.qtd_sobras }})</button></div>{% endif %}
+  </details>
+
+  <section class="op-panel mp-card">
+    <div class="mp-card-head">
+      {% if pode_preencher %}<span class="mp-pincel" data-pincel-rotulo>Escolha um caminhão na lista</span>
+      {% if dados_mapa.itens %}<button type="button" class="op-btn secondary sm mp-borracha" data-borracha>Borracha</button>{% endif %}
+      {% else %}<span class="op-muted">Visualização</span>{% endif %}
+      <span class="mp-status" data-mapa-status></span>
+      <span class="cc-legenda"><span><i class="fora"></i> Não pode ser pintado</span><span><i></i> Pode ser pintado</span></span>
+      <div class="mp-zoom"><button type="button" data-zoom="-1" aria-label="Diminuir">−</button><button type="button" data-zoom="1" aria-label="Aumentar">+</button></div>
+    </div>
+    <div class="mp-area" data-mapa-area><div data-mapa-grade></div></div>
+  </section>
+  <p class="mp-dica">{% if pode_preencher %}Com um caminhão escolhido, toque ou arraste sobre as células. Sem nenhum escolhido, o dedo rola a tela. {% endif %}</p>
+
+  {% if pode_preencher %}
+  <div class="op-modal" id="modal-grade" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(860px,100%)">
+      <div class="op-modal-head"><h2>Trocar formato · {{ local.descricao_completa }}</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <div class="op-modal-body">{% include "obras/concretagem/_escolher_formato.html" with trocar=True %}
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button></div></div>
+    </div></div>
+  {% endif %}
+  {% endif %}
+</div>
+{% if dados_mapa %}{{ dados_mapa|json_script:"dados-mapa" }}{% endif %}
+{% include "obras/concretagem/_modal_js.html" %}
+{% include "obras/concretagem/_grade_js.html" %}
+<script>
+/* Sobras ficam escondidas na lista até pedir para ver. */
+(function(){
+  var b=document.querySelector('[data-ver-sobras]'),corpo=document.querySelector('[data-sobras]');
+  if(!b||!corpo)return;var rotulo=b.textContent.replace('Ver','');
+  window.ccMostrarSobras=function(ver){corpo.hidden=!ver;b.textContent=(ver?'Esconder':'Ver')+rotulo;b.setAttribute('aria-expanded',ver?'true':'false');};
+  b.addEventListener('click',function(){window.ccMostrarSobras(corpo.hidden);});
+})();
+/* O valor vai num campo oculto: a confirmação de troca reenvia com form.submit(), que não leva o botão clicado. */
+document.querySelectorAll('[data-formato]').forEach(function(b){b.addEventListener('click',function(){
+  b.form.querySelector('[data-formato-escolhido]').value=b.dataset.formato;});});
+document.querySelectorAll('[data-formato-busca]').forEach(function(busca){
+  var form=busca.closest('form'),vazio=form.querySelector('[data-formato-vazio]');
+  function sem(t){return (t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
+  busca.addEventListener('input',function(){var q=sem(busca.value.trim()),n=0;
+    form.querySelectorAll('[data-formato-nome]').forEach(function(b){var ok=!q||sem(b.dataset.formatoNome).indexOf(q)>=0;b.hidden=!ok;if(ok)n++;});
+    vazio.hidden=!q||n>0;});
+  busca.addEventListener('keydown',function(e){if(e.key==='Enter')e.preventDefault();});
+});
+</script>
+{% if mapa %}
+<script>
+(function(){
+  var d=JSON.parse(document.getElementById('dados-mapa').textContent);
+  var area=document.querySelector('[data-mapa-area]'),el=document.querySelector('[data-mapa-grade]');
+  var cores={},nomes={};d.itens.forEach(function(i){cores[i.chave]=i.cor;nomes[i.chave]=i.titulo+(i.caminhao?' · '+i.caminhao:'');});
+  var estado=d.celulas,pincel=null,borracha=false,modo='mover',lote={},g;
+  var status=document.querySelector('[data-mapa-status]'),rotulo=document.querySelector('[data-pincel-rotulo]');
+  var csrf=(document.querySelector('[name=csrfmiddlewaretoken]')||{}).value;
+
+  /* Tamanho da célula: cabe na largura (mín. 26 px no celular, máx. 56 px); zoom lembrado no aparelho. */
+  var chaveZoom='cc-mapa-zoom-v2',zoom=1;try{zoom=parseFloat(localStorage.getItem(chaveZoom))||1;}catch(e){}
+  /* Ocupa toda a largura: célula = largura disponível ÷ colunas, entre 34 px (30 no celular) e 72 px.
+     Grade maior que a tela rola dentro da área em vez de encolher. */
+  function tamanho(){var w=area.clientWidth-14;var base=Math.floor((w-d.colunas-2)/d.colunas);
+    base=Math.max(window.innerWidth<760?30:34,Math.min(72,base));return Math.round(Math.max(18,Math.min(120,base*zoom)));}
+  function pintarCel(k,item){var c=g.celulas[k];if(!c)return;c.style.background=item&&cores[item]?cores[item]:'';c.title=item?nomes[item]||'':'';}
+  var ligado=false;
+  function desenhar(){g=ccGrade.montar(el,d.linhas,d.colunas,{fora:d.fora,celula:tamanho()});Object.keys(estado).forEach(function(k){pintarCel(k,estado[k]);});ligarPintura();}
+  function contar(){var n={};Object.keys(estado).forEach(function(k){n[estado[k]]=(n[estado[k]]||0)+1;});
+    document.querySelectorAll('[data-contagem]').forEach(function(s){var q=n[s.dataset.contagem]||0;s.textContent=q?q+' cél.':'a pintar';});}
+  document.querySelectorAll('[data-zoom]').forEach(function(b){b.addEventListener('click',function(){
+    zoom=Math.max(.5,Math.min(3,zoom*(b.dataset.zoom==='1'?1.25:.8)));try{localStorage.setItem(chaveZoom,zoom);}catch(e){}desenhar();});});
+  function ligarPintura(){
+    if(!d.pode_pintar||ligado)return;ligado=true;
+    ccGrade.arrastar(el,function(cel){
+      if(modo!=='pintar'||cel.classList.contains('fora'))return;
+      if(!pincel&&!borracha){status.textContent='Escolha uma cor.';return;}
+      var k=cel.dataset.l+','+cel.dataset.c,novo=borracha?'':pincel;
+      if((estado[k]||'')===novo)return;
+      lote[k]={antes:estado[k]||'',l:+cel.dataset.l,c:+cel.dataset.c};
+      if(novo)estado[k]=novo;else delete estado[k];pintarCel(k,novo);
+    },salvar);
+  }
+  function salvar(){
+    var ks=Object.keys(lote);if(!ks.length)return;var envio=lote;lote={};
+    var item=borracha?'':pincel;status.textContent='Salvando…';
+    fetch(d.url_pintar,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'},
+      body:JSON.stringify({item:item,celulas:ks.map(function(k){return [envio[k].l,envio[k].c];})})})
+      .then(function(r){return r.json();}).then(function(r){if(!r.ok)throw new Error(r.erro||'Erro');status.textContent='✓ Salvo';contar();})
+      .catch(function(e){ks.forEach(function(k){var a=envio[k].antes;if(a)estado[k]=a;else delete estado[k];pintarCel(k,a);});status.textContent='Não salvou: '+e.message;contar();});
+  }
+  function setModo(m){modo=m;
+    el.style.touchAction=m==='pintar'?'none':'auto';area.classList.toggle('pintando',m==='pintar');}
+  function soltar(){
+    document.querySelectorAll('[data-item],[data-borracha]').forEach(function(x){x.classList.remove('ativa');});
+    pincel=null;borracha=false;rotulo.textContent='Escolha um caminhão na lista';setModo('mover');
+  }
+  function escolher(chave,botao){
+    if(botao.classList.contains('ativa')){soltar();return;}
+    document.querySelectorAll('[data-item],[data-borracha]').forEach(function(x){x.classList.remove('ativa');});botao.classList.add('ativa');
+    borracha=!chave;pincel=chave||null;
+    rotulo.innerHTML=chave?'<span class="cc-swatch" style="background:'+cores[chave]+'"></span> '+nomes[chave]:'Borracha';
+    setModo('pintar');
+  }
+  desenhar();contar();setModo('mover');
+  window.addEventListener('resize',function(){clearTimeout(window.__ccMapaR);window.__ccMapaR=setTimeout(desenhar,150);});
+  if(!d.pode_pintar)return;
+  document.querySelectorAll('[data-item]').forEach(function(b){
+    b.addEventListener('click',function(){escolher(b.dataset.item,b);});
+    b.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();escolher(b.dataset.item,b);}});});
+  var bor=document.querySelector('[data-borracha]');if(bor)bor.addEventListener('click',function(){escolher('',bor);});
+  /* Veio de “Pintar no mapa” na concretagem: já seleciona a cor. */
+  var pre=new URLSearchParams(location.search).get('item');
+  var alvo=pre&&document.querySelector('[data-item="'+pre+'"]');
+  if(alvo&&alvo.closest('[data-sobras]')&&window.ccMostrarSobras)window.ccMostrarSobras(true);
+  if(alvo){escolher(pre,alvo);alvo.scrollIntoView({block:'nearest',inline:'center'});}
+})();
+</script>
+{% endif %}
+{% endblock %}

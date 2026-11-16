@@ -1,0 +1,13 @@
+<div class="op-grid">
+  <div class="op-field c4"><label>Placa / identificação</label><input name="placa" maxlength="20" value="{{ c.placa|default:'' }}"></div>
+  <div class="op-field c4"><label>Nº da nota fiscal</label><input name="numero_nota_fiscal" maxlength="30" value="{{ c.numero_nota_fiscal|default:'' }}"></div>
+  <div class="op-field c4"><label>Nº do lacre</label><input name="numero_lacre" maxlength="50" value="{{ c.numero_lacre|default:'' }}"></div>
+  <div class="op-field c4"><label>Volume entregue (m³) *</label><input name="volume_entregue" type="number" step="0.01" min="0.01" required value="{{ c.volume_entregue|default_if_none:''|stringformat:'s' }}"></div>
+  <div class="op-field c4"><label>Fck informado na NF (MPa)</label><input name="fck_nota" type="number" step="0.5" min="0" value="{{ c.fck_nota|default_if_none:''|stringformat:'s' }}"></div>
+  <div class="op-field c4"><label>CPs moldados</label><input name="cps_moldados" type="number" min="0" value="{{ c.cps_moldados|default:0 }}"></div>
+  <div class="op-field c4"><label>Chegada à obra</label><input name="horario_chegada" type="time" value="{{ c.horario_chegada|time:'H:i' }}"></div>
+  <div class="op-field c4"><label>Início da descarga</label><input name="inicio_descarga" type="time" value="{{ c.inicio_descarga|time:'H:i' }}"></div>
+  <div class="op-field c4"><label>Término da descarga</label><input name="termino_descarga" type="time" value="{{ c.termino_descarga|time:'H:i' }}"></div>
+  <div class="op-field c12"><label>Foto da nota fiscal</label><input name="foto_nf" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+  <div class="op-field c12"><label>Observações</label><textarea name="observacoes" rows="2">{{ c.observacoes|default:'' }}</textarea></div>
+</div>

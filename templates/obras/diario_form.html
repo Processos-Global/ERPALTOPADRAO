@@ -14,6 +14,10 @@
     <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{% if diario %}{{ diario.data|date:'Y-m-d' }}{% else %}{{ hoje }}{% endif %}"></div>
     <div class="op-field c3"><label>Clima</label><select name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
     <div class="op-field c4"><label>Efetivo no dia</label><input type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo }}{% endif %}" placeholder="Quantidade de pessoas"></div>
+    <div class="c12 op-stock-preview" data-conc-dia data-url="{% url 'obras:concretagem_api_dia' %}" hidden>
+      <strong>Concretagens desta obra no dia</strong> <span class="op-muted">(somente leitura)</span>
+      <div data-conc-dia-lista style="margin-top:8px"></div>
+    </div>
     <div class="op-field c12"><label>Serviços executados *</label><textarea name="servicos_executados" required placeholder="Descreva as atividades e frentes executadas no dia">{% if diario %}{{ diario.servicos_executados }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Equipe / terceiros presentes</label><textarea name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Ocorrências / impedimentos</label><textarea name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
@@ -23,4 +27,27 @@
     <div class="c12 op-actions"><button class="op-btn" type="submit">Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
   </div></form>
 </div>
+<script>
+(function(){
+  /* Quadro "Concretagens do dia": atualiza ao trocar obra ou data. */
+  var box=document.querySelector('[data-conc-dia]');if(!box)return;
+  var form=box.closest('form'),lista=box.querySelector('[data-conc-dia-lista]');
+  function esc(t){var d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
+  function carregar(){
+    var obra=form.obra.value,data=form.data.value;if(!obra||!data){box.hidden=true;return;}
+    fetch(box.dataset.url+'?obra='+encodeURIComponent(obra)+'&data='+encodeURIComponent(data),{headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){return r.ok?r.json():{concretagens:[]};})
+      .then(function(d){
+        if(!d.concretagens.length){box.hidden=true;return;}
+        lista.innerHTML=d.concretagens.map(function(c){
+          return '<div style="padding:6px 0;border-top:1px solid #eee8d6"><a href="'+c.url+'" target="_blank" rel="noopener"><strong>'+esc(c.codigo)+'</strong></a> · '+esc(c.horario)+' · '+esc(c.status)
+            +'<div class="op-muted">'+esc(c.servico||'—')+' · '+esc(c.concreteira||'')+' · solicitado '+esc(c.solicitado)+' m³'
+            +(c.caminhoes?' · '+c.caminhoes+' caminhão(ões), '+esc(c.entregue)+' m³ entregues':'')+'</div></div>';
+        }).join('');
+        box.hidden=false;
+      }).catch(function(){box.hidden=true;});
+  }
+  form.obra.addEventListener('change',carregar);form.data.addEventListener('change',carregar);carregar();
+})();
+</script>
 {% endblock %}

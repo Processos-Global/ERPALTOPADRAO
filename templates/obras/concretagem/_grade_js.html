@@ -1,0 +1,39 @@
+<script>
+/* Grades do mapa de concretagem: miniatura de formato, editor de contorno e mapa de pintura.
+   Células numeradas em 1..linhas / 1..colunas; "fora" = lista de [linha, coluna] fora do contorno. */
+window.ccGrade=(function(){
+  function chave(l,c){return l+','+c;}
+  function conjunto(lista){var s={};(lista||[]).forEach(function(p){s[chave(p[0],p[1])]=1;});return s;}
+  function tamanhoCelula(el,colunas,max){var w=el.clientWidth||600;return Math.max(8,Math.min(max||30,Math.floor((w-2)/colunas)));}
+
+  /* Monta a grade e devolve {celulas, set(l,c,classe/estilo)}. */
+  function montar(el,linhas,colunas,opts){
+    opts=opts||{};el.innerHTML='';el.classList.add('cc-grade');
+    var t=opts.celula||tamanhoCelula(el,colunas,opts.max);
+    el.style.gridTemplateColumns='repeat('+colunas+','+t+'px)';el.style.gridAutoRows=t+'px';
+    var fora=conjunto(opts.fora),celulas={};
+    for(var l=1;l<=linhas;l++)for(var c=1;c<=colunas;c++){
+      var d=document.createElement('div');d.className='cc-cel'+(fora[chave(l,c)]?' fora':'');d.dataset.l=l;d.dataset.c=c;
+      el.appendChild(d);celulas[chave(l,c)]=d;
+    }
+    return {celulas:celulas,fora:fora,tamanho:t};
+  }
+
+  function miniatura(el){
+    var d=JSON.parse(el.dataset.grade);montar(el,d.linhas,d.colunas,{fora:d.fora,max:9});
+  }
+
+  /* Arrastar sobre a grade (mouse, caneta ou dedo). cb(celula, inicio). fim() ao soltar. */
+  function arrastar(el,cb,fim){
+    var ativo=false;
+    function alvo(e){var p=e.touches?e.touches[0]:e;var x=document.elementFromPoint(p.clientX,p.clientY);return x&&x.classList.contains('cc-cel')&&el.contains(x)?x:null;}
+    el.addEventListener('pointerdown',function(e){var a=alvo(e);if(!a)return;e.preventDefault();ativo=true;cb(a,true);});
+    el.addEventListener('pointermove',function(e){if(!ativo)return;var a=alvo(e);if(a)cb(a,false);});
+    window.addEventListener('pointerup',function(){if(ativo){ativo=false;if(fim)fim();}});
+    el.style.touchAction='none';
+  }
+
+  return {chave:chave,conjunto:conjunto,montar:montar,miniatura:miniatura,arrastar:arrastar};
+})();
+document.querySelectorAll('[data-grade]').forEach(function(el){ccGrade.miniatura(el);});
+</script>

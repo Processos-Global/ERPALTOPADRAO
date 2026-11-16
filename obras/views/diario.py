@@ -26,13 +26,41 @@ def diario_lista(request):
     if data_fim:
         diarios = diarios.filter(data__lte=data_fim)
 
+    diarios = list(diarios.prefetch_related("fotos").order_by("-data", "obra__nome", "-id")[:300])
+    _anexar_concretagens(diarios)
+
     return render(request, "obras/diario_lista.html", {
-        "diarios": diarios.prefetch_related("fotos").order_by("-data", "obra__nome", "-id")[:300],
+        "diarios": diarios,
         "obras": Obra.objects.filter(ativa=True).order_by("nome"),
         "obra_filtro": int(obra_id) if obra_id and str(obra_id).isdigit() else None,
         "data_inicio": data_inicio or "",
         "data_fim": data_fim or "",
     })
+
+
+def _anexar_concretagens(diarios):
+    """Concretagens (não canceladas) da mesma obra e data de cada diário, só para exibição."""
+    from django.db.models import Count, Q, Sum
+
+    from obras.models import Concretagem
+
+    if not diarios:
+        return
+    chaves = {(d.obra_id, d.data) for d in diarios}
+    concs = (
+        Concretagem.objects.filter(obra_id__in={o for o, _ in chaves}, data_programada__in={dt for _, dt in chaves})
+        .exclude(status=Concretagem.Status.CANCELADA)
+        .annotate(
+            qtd_caminhoes=Count("caminhoes", filter=Q(caminhoes__ativo=True), distinct=True),
+            vol_entregue=Sum("caminhoes__volume_entregue", filter=Q(caminhoes__ativo=True)),
+        )
+        .prefetch_related("itens_planejados__local").order_by("horario_programado")
+    )
+    por_chave = {}
+    for c in concs:
+        por_chave.setdefault((c.obra_id, c.data_programada), []).append(c)
+    for d in diarios:
+        d.concretagens_dia = por_chave.get((d.obra_id, d.data), [])
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)

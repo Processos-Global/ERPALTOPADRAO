@@ -1,0 +1,60 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | Agenda{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem</span>
+      <h1>Agenda</h1>
+      <p>Concretagens programadas, rompimentos previstos dos CPs (7, 14 e 28 dias) e CPs que ainda precisam ir ao laboratório.</p>
+    </div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:concretagem_painel' %}">Voltar</a></div>
+  </section>
+
+  <form method="get" class="op-toolbar" style="grid-template-columns:auto minmax(200px,320px) 1fr auto auto auto">
+    <a class="op-btn secondary" href="?mes={{ mes_anterior }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}" aria-label="Mês anterior">‹</a>
+    <div class="op-field"><select name="obra" onchange="this.form.submit()"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <h2 style="margin:0;align-self:center;color:var(--op-ink);font-family:var(--font-serif);font-weight:400">{{ titulo_mes }}</h2>
+    <a class="op-btn secondary" href="?mes={{ mes_atual }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}">Hoje</a>
+    <a class="op-btn secondary" href="?mes={{ mes_proximo }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}" aria-label="Próximo mês">›</a>
+    <input type="hidden" name="mes" value="{{ request.GET.mes|default:mes_atual }}">
+  </form>
+
+  <div class="cc-acoes" style="margin-bottom:10px">
+    <span class="cc-ev" style="display:inline-block">Concretagem</span>
+    <span class="cc-ev rompimento" style="display:inline-block">Rompimento previsto</span>
+    <span class="cc-ev rompimento ok" style="display:inline-block">Laudo já lançado</span>
+  </div>
+
+  <div class="cc-cal">
+    {% for d in dias_semana %}<div class="cc-cal-h">{{ d }}</div>{% endfor %}
+    {% for semana in semanas %}{% for dia in semana %}
+    <div class="cc-cal-d{% if not dia.do_mes %} fora-mes{% endif %}{% if dia.hoje %} hoje{% endif %}">
+      <span class="cc-cal-n">{{ dia.data|date:"d" }} <span class="op-muted" style="font-weight:600">{{ dia.data|date:"D" }}</span></span>
+      {% for ev in dia.eventos %}
+        {% if ev.tipo == "concretagem" %}
+        <a class="cc-ev" href="{% url 'obras:concretagem_detalhe' ev.conc.pk %}" title="{{ ev.conc.codigo }} · {{ ev.conc.obra.nome }} · {{ ev.conc.get_status_display }}">
+          {{ ev.conc.horario_programado|time:"H:i" }} {{ ev.conc.obra|nome_obra }} · {{ ev.conc.volume_solicitado|numero_br:1 }} m³</a>
+        {% else %}
+        <a class="cc-ev rompimento{% if ev.lancado %} ok{% endif %}" href="{% url 'obras:concretagem_detalhe' ev.conc.pk %}#aba-laudos" title="Rompimento de {{ ev.idade }} dias · {{ ev.conc.codigo }}">
+          {{ ev.idade }}d · {{ ev.conc.codigo }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}{% endfor %}
+  </div>
+
+  <section class="op-panel" style="margin-top:18px">
+    <div class="op-panel-head"><div><h2>CPs aguardando envio ao laboratório</h2><span class="op-muted">Concretagens executadas sem o envio dos corpos de prova registrado</span></div></div>
+    <ul class="cc-list">
+      {% for c in cps_a_enviar %}
+      <li class="cc-falta-li"><div><a href="{% url 'obras:concretagem_detalhe' c.pk %}#aba-laudos">{{ c.codigo }}</a> · {{ c.obra|nome_obra }}<small>Finalizada em {{ c.executada_em|date:"d/m/Y H:i" }}</small></div>
+        <a class="op-btn sm" href="{% url 'obras:concretagem_detalhe' c.pk %}#aba-laudos">Registrar envio</a></li>
+      {% empty %}<li class="op-muted">Nenhum CP pendente de envio.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

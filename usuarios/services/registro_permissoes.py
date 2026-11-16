@@ -200,6 +200,7 @@ ACOES_MODULO = {
         ("gerenciar_ficha_tecnica", "Gerenciar fichas técnicas"),
         ("criar_fvs", "Criar FVS"), ("editar_fvs", "Preencher FVS"),
         ("aprovar_fvs", "Aprovar FVS"),
+        ("concretagem", "Concretagem"),
     ),
     ModuloSistema.PLANEJAMENTO: (
         ("visualizar", "Consultar cronogramas"), ("editar_cronograma", "Alterar cronogramas"),

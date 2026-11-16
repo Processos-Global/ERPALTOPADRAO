@@ -1,0 +1,123 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | Indicadores{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem</span>
+      <h1>Indicadores</h1>
+      <p>Período pela data programada · {{ inicio|date:"d/m/Y" }} a {{ fim|date:"d/m/Y" }}. Concretagens canceladas ficam fora dos volumes.</p>
+    </div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:concretagem_painel' %}">Voltar</a></div>
+  </section>
+
+  <form method="get" class="op-toolbar" style="grid-template-columns:repeat(4,minmax(150px,1fr)) auto">
+    <input type="hidden" name="aba" value="{{ aba }}">
+    <div class="op-field"><label>De</label><input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
+    <div class="op-field"><label>Até</label><input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
+    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label>Concreteira</label><select name="concreteira"><option value="">Todas</option>{% for f in concreteiras %}<option value="{{ f.pk }}" {% if concreteira_filtro == f.pk %}selected{% endif %}>{{ f.nome_fantasia|default:f.nome }}</option>{% endfor %}</select></div>
+    <button class="op-btn" type="submit">Filtrar</button>
+  </form>
+
+  <nav class="cc-tabs">
+    {% with q="&inicio="|add:inicio.isoformat|add:"&fim="|add:fim.isoformat %}
+    <a class="cc-tab-link {% if aba == 'geral' %}ativa{% endif %}" href="?aba=geral{{ q }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}{% if concreteira_filtro %}&concreteira={{ concreteira_filtro }}{% endif %}">Volume, sobra e qualidade</a>
+    {% if eh_gerente %}<a class="cc-tab-link {% if aba == 'uso' %}ativa{% endif %}" href="?aba=uso{{ q }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}{% if concreteira_filtro %}&concreteira={{ concreteira_filtro }}{% endif %}">Uso do sistema</a>{% endif %}
+    {% endwith %}
+  </nav>
+
+  {% if aba == "uso" and uso %}
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Tempo por etapa</h2><span class="op-muted">Horas entre os marcos registrados no sistema, comparadas à meta</span></div></div>
+    <div class="op-table-wrap"><table class="op-table">
+      <thead><tr><th>Etapa</th><th>O que mede</th><th>Depende de</th><th class="op-num">Casos</th><th class="op-num">Média (h)</th><th class="op-num">Mediana (h)</th><th class="op-num">Meta (h)</th><th class="op-num">Na meta</th></tr></thead>
+      <tbody>{% for e in uso.etapas %}
+        <tr{% if e.na_meta is not None and e.na_meta < 70 %} class="cc-falta"{% endif %}><td><strong>{{ e.nome }}</strong></td><td>{{ e.descricao }}</td><td>{{ e.responsavel }}</td>
+          <td class="op-num">{{ e.n }}</td><td class="op-num">{{ e.media|default_if_none:"—" }}</td><td class="op-num">{{ e.mediana|default_if_none:"—" }}</td>
+          <td class="op-num">{{ e.meta|default_if_none:"—" }}</td><td class="op-num">{% if e.na_meta is not None %}{{ e.na_meta }}%{% else %}—{% endif %}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+  </section>
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Por usuário</h2><span class="op-muted">Concretagens criadas, ações registradas no histórico e tempo médio até liberar (meta 24 h)</span></div></div>
+    <div class="op-table-wrap"><table class="op-table" style="min-width:560px">
+      <thead><tr><th>Usuário</th><th class="op-num">Criadas</th><th class="op-num">Ações</th><th class="op-num">Média criação → liberação (h)</th></tr></thead>
+      <tbody>{% for u in uso.usuarios %}<tr><td><strong>{{ u.nome }}</strong></td><td class="op-num">{{ u.criadas }}</td><td class="op-num">{{ u.acoes }}</td><td class="op-num">{{ u.media_liberacao|default_if_none:"—" }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="op-empty">Sem dados no período.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% else %}
+  {% with r=dados.resumo %}
+  <div class="op-kpi-grid cc-kpis">
+    <div class="op-kpi-card"><small>Concretagens</small><strong>{{ r.total }}</strong><span>{{ r.concluidas }} concluídas · {{ r.canceladas }} canceladas</span></div>
+    <div class="op-kpi-card"><small>Solicitado</small><strong>{{ r.volume_solicitado|numero_br:1 }}</strong><span>m³</span></div>
+    <div class="op-kpi-card"><small>Entregue</small><strong>{{ r.volume_entregue|numero_br:1 }}</strong><span>m³ em {{ r.executadas }} executada(s)</span></div>
+    <div class="op-kpi-card"><small>Desvio de entrega</small><strong>{% if r.desvio_pct is not None %}{% if r.desvio_pct > 0 %}+{% endif %}{{ r.desvio_pct|numero_br:1 }}%{% else %}—{% endif %}</strong><span>entregue × solicitado</span></div>
+    <div class="op-kpi-card"><small>Sobra</small><strong>{% if r.sobra_pct is not None %}{{ r.sobra_pct|numero_br:1 }}%{% else %}—{% endif %}</strong><span>{{ r.sobra|numero_br:2 }} m³ · perda {% if r.perda_pct is not None %}{{ r.perda_pct|numero_br:1 }}%{% else %}—{% endif %}</span></div>
+    <div class="op-kpi-card{% if r.laudos_reprovados %} cc-falta{% endif %}"><small>Laudos abaixo do mínimo</small><strong>{{ r.laudos_reprovados }}</strong><span>de {{ r.laudos }} · 28d médio {% if r.media_fck_28 is not None %}{{ r.media_fck_28|numero_br:1 }}% do fck{% else %}—{% endif %}</span></div>
+  </div>
+  {% endwith %}
+
+  <div class="cc-grid">
+    <section class="op-panel"><div class="op-panel-head"><div><h2>Volume por mês</h2><span class="op-muted">m³ solicitados × entregues</span></div></div><div class="op-panel-body"><div class="cc-grafico" data-grafico="mensal"></div></div></section>
+    <section class="op-panel"><div class="op-panel-head"><div><h2>Destino das sobras</h2><span class="op-muted">m³</span></div></div><div class="op-panel-body">{% if dados.destinos_sobra %}<div class="cc-grafico" data-grafico="sobras"></div>{% else %}<p class="op-muted">Sem sobras no período.</p>{% endif %}</div></section>
+  </div>
+  <div class="cc-grid">
+    <section class="op-panel"><div class="op-panel-head"><div><h2>Laudos por idade</h2><span class="op-muted">Aprovados × abaixo do mínimo</span></div></div><div class="op-panel-body"><div class="cc-grafico" data-grafico="laudos"></div></div></section>
+    <section class="op-panel"><div class="op-panel-head"><div><h2>Volume aplicado por tipo de local</h2><span class="op-muted">m³</span></div></div><div class="op-panel-body">{% if dados.por_tipo %}<div class="cc-grafico" data-grafico="tipos"></div>{% else %}<p class="op-muted">Sem usos no período.</p>{% endif %}</div></section>
+  </div>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Por concreteira</h2></div></div>
+    <div class="op-table-wrap"><table class="op-table">
+      <thead><tr><th>Concreteira</th><th class="op-num">Concretagens</th><th class="op-num">Solicitado (m³)</th><th class="op-num">Entregue (m³)</th><th class="op-num">Desvio</th><th class="op-num">Com laudo abaixo</th></tr></thead>
+      <tbody>{% for c in dados.por_concreteira %}
+        <tr><td><strong>{{ c.nome }}</strong></td><td class="op-num">{{ c.qtd }}</td><td class="op-num">{{ c.solicitado|numero_br:2 }}</td><td class="op-num">{{ c.entregue|numero_br:2 }}</td>
+          <td class="op-num">{% if c.desvio_pct is not None %}{% if c.desvio_pct > 0 %}+{% endif %}{{ c.desvio_pct|numero_br:1 }}%{% else %}—{% endif %}</td><td class="op-num">{{ c.reprovadas }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="op-empty">Sem concretagens no período.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+
+  {% if dados.reprovadas %}
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Concretagens com laudo abaixo do mínimo</h2></div></div>
+    <ul class="cc-list">{% for item in dados.reprovadas %}
+      <li class="cc-falta-li"><div><a href="{% url 'obras:concretagem_detalhe' item.conc.pk %}#aba-laudos">{{ item.conc.codigo }}</a> · {{ item.conc.obra|nome_obra }}
+        <small>{% for l in item.laudos %}{{ l.idade_dias }}d: {{ l.resistencia_mpa|numero_br:1 }} MPa ({{ l.percentual_fck|numero_br:1 }}% do fck){% if not forloop.last %} · {% endif %}{% endfor %}</small></div>
+        <span class="cc-status {{ item.conc.status }}">{{ item.conc.get_status_display }}</span></li>
+    {% endfor %}</ul>
+  </section>
+  {% endif %}
+  {{ graficos|json_script:"dados-ind" }}
+  {% endif %}
+</div>
+{% if aba != "uso" %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
+<script>
+(function(){
+  if(!window.echarts)return;
+  var d=JSON.parse(document.getElementById('dados-ind').textContent);
+  var escuro=document.documentElement.getAttribute('data-theme')==='dark';
+  var txt=escuro?'#e8dfd6':'#453330',linha=escuro?'rgba(235,222,205,.14)':'#eee8d6';
+  var cores=['#2d201c','#b9aa72','#356848','#a94343','#2d5a8c','#8e5db8'];
+  var base={color:cores,textStyle:{color:txt,fontFamily:'inherit'},grid:{left:48,right:16,top:36,bottom:40},
+    tooltip:{trigger:'axis',valueFormatter:function(v){return (+v).toLocaleString('pt-BR',{maximumFractionDigits:2});}},legend:{top:0,textStyle:{color:txt}}};
+  function eixoY(){return {type:'value',axisLabel:{color:txt},splitLine:{lineStyle:{color:linha}}};}
+  function eixoX(dados){return {type:'category',data:dados,axisLabel:{color:txt,interval:0,hideOverlap:true},axisLine:{lineStyle:{color:linha}}};}
+  function grafico(nome,opcao){var el=document.querySelector('[data-grafico="'+nome+'"]');if(!el)return;var g=echarts.init(el);g.setOption(Object.assign({},base,opcao));window.addEventListener('resize',function(){g.resize();});}
+  var m=d.serie_mensal;
+  grafico('mensal',{xAxis:eixoX(m.rotulos),yAxis:eixoY(),series:[{name:'Solicitado',type:'bar',data:m.solicitado},{name:'Entregue',type:'bar',data:m.entregue,itemStyle:{color:'#b9aa72'}}]});
+  grafico('sobras',{tooltip:{trigger:'item'},legend:{show:false},series:[{type:'pie',radius:['40%','70%'],label:{color:txt,formatter:'{b}\n{c} m³'},data:d.destinos_sobra.map(function(x){return {name:x.destino,value:x.volume};})}]});
+  grafico('laudos',{xAxis:eixoX(d.laudos_idade.map(function(x){return x.idade;})),yAxis:Object.assign(eixoY(),{minInterval:1}),
+    series:[{name:'Aprovados',type:'bar',stack:'t',data:d.laudos_idade.map(function(x){return x.aprovados;}),itemStyle:{color:'#356848'}},
+            {name:'Abaixo do mínimo',type:'bar',stack:'t',data:d.laudos_idade.map(function(x){return x.reprovados;}),itemStyle:{color:'#a94343'}}]});
+  grafico('tipos',{grid:{left:130,right:20,top:10,bottom:20},legend:{show:false},xAxis:eixoY(),yAxis:Object.assign(eixoX(d.por_tipo.map(function(x){return x.tipo;})),{inverse:true}),
+    series:[{type:'bar',data:d.por_tipo.map(function(x){return x.volume;}),itemStyle:{color:'#2d201c'}}]});
+})();
+</script>
+{% endif %}
+{% endblock %}

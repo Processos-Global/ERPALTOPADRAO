@@ -21,3 +21,24 @@ from .fvs import FVS, FVSItem, FVSHistorico, FotoFVSItem
 
 from .vistoria import VistoriaItem, VistoriaHistorico
 from .vistoria_cautelar import VistoriaCautelar, OcorrenciaCautelar, FotoCautelar
+from .concretagem import (
+    CelulaMapa,
+    DestinatarioEmailFormato,
+    FormatoDesenho,
+    MapaLocal,
+    SolicitacaoFormato,
+    AnexoConcretagem,
+    CaminhaoConcretagem,
+    FichaMoldagem,
+    LaudoConcretagem,
+    SerieMoldagem,
+    SobraConcreto,
+    UtilizacaoConcreto,
+    Concretagem,
+    ContatoEmailConcreteira,
+    EnderecoEntregaSalvo,
+    EnvioMensagemConcretagem,
+    HistoricoConcretagem,
+    ItemConcretagemPlanejado,
+    LocalUsoObra,
+)

@@ -1,0 +1,142 @@
+{% load obras_format %}
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Ficha de moldagem de CP's (SENAI)</h2><span class="op-muted">O PDF sai no modelo oficial, com 5 caminhões por folha</span></div>
+    <div class="cc-acoes">
+      {% if conc.drive_pasta_id %}<a class="op-btn secondary sm" href="{% url 'obras:concretagem_pasta_drive' conc.pk 'FICHA_MOLDAGEM' %}" target="_blank" rel="noopener">📁 Pasta no Drive</a>{% endif %}
+      <a class="op-btn secondary sm" href="{% url 'obras:concretagem_ficha_pdf' conc.pk %}" target="_blank" rel="noopener">Ver PDF</a>
+      {% if pode_preencher and caminhoes %}<form method="post" action="{% url 'obras:concretagem_ficha_drive' conc.pk %}">{% csrf_token %}<button class="op-btn sm" type="submit">Gerar e enviar ao Drive</button></form>{% endif %}
+    </div>
+  </div>
+  {% if fichas_pdf %}
+  <ul class="cc-list">{% for a in fichas_pdf %}<li><div>{% if a.no_drive %}<a href="{% url 'obras:concretagem_pasta_drive' conc.pk 'FICHA_MOLDAGEM' %}" target="_blank" rel="noopener" title="Abrir a pasta da ficha no Drive">📁 {{ a.nome_original }}</a>{% else %}<a href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">{{ a.nome_original }}</a>{% endif %}<small>{{ a.criado_em|date:"d/m/Y H:i" }} · {% include "obras/concretagem/_status_drive.html" %}</small></div>
+    {% if a.no_drive %}<div class="cc-acoes"><a class="op-btn secondary sm" href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">Abrir arquivo</a></div>{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+</section>
+
+<details class="op-panel cc-details" {% if moldagem_editavel and not form_ficha.instance.pk %}open{% endif %}>
+  <summary class="op-panel-head"><div><h2>Cabeçalho da ficha</h2><span class="op-muted">Uma vez por concretagem: central, abatimento, tempo, moldador…</span></div></summary>
+  <form class="op-panel-body" method="post" action="{% url 'obras:concretagem_ficha_cabecalho' conc.pk %}">{% csrf_token %}
+    {% with f=form_ficha %}
+    <fieldset {% if not moldagem_editavel %}disabled{% endif %} style="border:0;margin:0;padding:0">
+    <div class="op-grid">
+      <div class="op-field c4"><label>Empresa</label>{{ f.empresa }}</div>
+      <div class="op-field c4"><label>Ref.</label>{{ f.referencia }}</div>
+      <div class="op-field c4"><label>Central de concreto</label>{{ f.central_concreto }}</div>
+      <div class="op-field c3"><label>Abatimento (mm)</label>{{ f.abatimento }}</div>
+      <div class="op-field c3"><label>Tolerância (± mm)</label>{{ f.abatimento_tolerancia }}</div>
+      <div class="op-field c3"><label>Slump flow (mm)</label>{{ f.slump_flow }}</div>
+      <div class="op-field c3"><label>Tolerância (± mm)</label>{{ f.slump_flow_tolerancia }}</div>
+      <div class="op-field c3"><label>Data</label>{{ f.data }}</div>
+      <div class="op-field c3"><label>Tempo</label>{{ f.tempo }}</div>
+      <div class="op-field c3"><label>Moldagem em</label>{{ f.local_moldagem }}</div>
+      <div class="op-field c3"><label>Autorizada a partir do</label>{{ f.autorizacao }}</div>
+      <div class="op-field c4"><label>Moldador</label>{{ f.moldador }}</div>
+      <div class="op-field c4"><label>Responsável pela conferência</label>{{ f.responsavel_conferencia }}</div>
+      <div class="op-field c4"><label>Idade de ruptura (dias)</label>{{ f.idade_ruptura }}</div>
+      <div class="op-field c3"><label>Hora de entrada</label>{{ f.hora_entrada }}</div>
+      <div class="op-field c3"><label>Hora de saída</label>{{ f.hora_saida }}</div>
+      <div class="op-field c6"><label>Observações</label>{{ f.observacoes }}</div>
+    </div>
+    {% if moldagem_editavel %}<div class="cc-acoes" style="justify-content:flex-end;margin-top:12px"><button class="op-btn" type="submit">Salvar cabeçalho</button></div>{% endif %}
+    </fieldset>
+    {% endwith %}
+  </form>
+</details>
+
+{% for c in caminhoes %}{% with s=c.serie_moldagem %}
+<details class="op-panel cc-details{% if c.falta_ficha %} cc-falta{% endif %}" {% if moldagem_editavel and c.pendencias_ficha %}open{% endif %}>
+  <summary class="op-panel-head"><div><h2>Série {{ c.ordem }} · {{ c.rotulo }}</h2>
+    <span class="op-muted">NF {{ c.numero_nota_fiscal|default:"—" }} · {{ c.cps_moldados }} CP(s) · chegada {{ c.horario_chegada|time:"H:i"|default:"—" }} · descarga {{ c.inicio_descarga|time:"H:i"|default:"—" }}–{{ c.termino_descarga|time:"H:i"|default:"—" }}</span></div>
+    {% if c.pendencias_ficha %}<span class="cc-tag alerta">Falta: {{ c.pendencias_ficha|join:", " }}</span>{% else %}<span class="cc-tag ok">Completa</span>{% endif %}
+  </summary>
+  <form class="op-panel-body" method="post" enctype="multipart/form-data" action="{% url 'obras:concretagem_serie_salvar' conc.pk c.pk %}">{% csrf_token %}
+    <fieldset {% if not moldagem_editavel %}disabled{% endif %} style="border:0;margin:0;padding:0">
+    <p class="op-muted" style="margin-top:0">Quantidade de CPs, NF e horários de chegada/descarga vêm do cadastro do caminhão (aba Campo).</p>
+    <div class="op-grid">
+      <div class="op-field c3"><label>Início da mistura *</label><input type="time" name="inicio_mistura" value="{{ s.inicio_mistura|time:'H:i' }}"></div>
+      <div class="op-field c3"><label>Hora da moldagem</label><input type="time" name="hora_moldagem" value="{{ s.hora_moldagem|time:'H:i' }}"></div>
+      <div class="op-field c3"><label>Abatimento medido (mm)</label><input name="abatimento_medido" maxlength="20" value="{{ s.abatimento_medido }}"></div>
+      <div class="op-field c3"><label>Concreto aplicado (m³) *</label><input type="number" step="0.01" min="0" name="concreto_aplicado_m3" value="{% if s %}{{ s.concreto_aplicado|stringformat:'s' }}{% else %}{{ c.volume_entregue|stringformat:'s' }}{% endif %}" title="Vem do volume entregue pelo caminhão; altere se o aplicado foi diferente"></div>
+      <div class="op-field c3"><label>Slump flow (mm)</label><input name="slump_flow" maxlength="20" value="{% if s %}{{ s.slump_flow_valor }}{% else %}{{ conc.slump }}{% endif %}" title="Vem da solicitação; altere se medir diferente"></div>
+      <div class="op-field c3"><label>Tolerância (± mm)</label><input name="slump_flow_tolerancia" maxlength="20" value="{% if s %}{{ s.slump_flow_tolerancia_valor }}{% else %}{{ conc.slump_tolerancia }}{% endif %}"></div>
+      <div class="op-field c6"><label>Local de aplicação *</label><select name="local_aplicacao"><option value="">—</option>{% for v,l in form_serie.fields.local_aplicacao.choices %}{% if v %}<option value="{{ v }}" {% if s.local_aplicacao == v %}selected{% endif %}>{{ l }}</option>{% endif %}{% endfor %}</select></div>
+      <div class="op-field c4"><label>Junta</label><input name="junta" maxlength="50" value="{{ s.junta }}"></div>
+      <div class="op-field c4"><label>Pavimento</label><input name="pavimento" maxlength="50" value="{{ s.pavimento }}"></div>
+      <div class="op-field c4"><label>Torre</label><input name="torre" maxlength="50" value="{{ s.torre }}"></div>
+      <div class="op-field c12"><label>Identificação da amostra (se não houver foto da etiqueta)</label><textarea name="identificacao_amostra" rows="2">{{ s.identificacao_amostra }}</textarea></div>
+    </div>
+    {% if moldagem_editavel %}<div class="cc-acoes" style="justify-content:flex-end;margin-top:12px"><button class="op-btn" type="submit">Salvar série {{ c.ordem }}</button></div>{% endif %}
+    </fieldset>
+  </form>
+  <div class="op-panel-body cc-etiquetas" data-etiquetas data-url="{% url 'obras:concretagem_etiqueta_enviar' conc.pk c.pk %}" data-editavel="{% if moldagem_editavel %}1{% endif %}">
+    <div class="cc-etiquetas-head"><strong>Fotos das etiquetas dos CPs</strong><span class="op-muted">Ficam no sistema (não vão ao Drive) e entram na página 2 da ficha, no retângulo deste caminhão. Pode enviar várias.</span></div>
+    <div class="cc-galeria" data-galeria>
+      {% for a in c.etiquetas %}
+      <figure class="cc-foto" data-id="{{ a.pk }}">
+        <a href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener"><img src="{% url 'obras:concretagem_anexo_miniatura' conc.pk a.pk %}" alt="Etiqueta {{ forloop.counter }}" loading="lazy"></a>
+        <figcaption>{% include "obras/concretagem/_status_drive.html" %}
+          {% if moldagem_editavel %}<button class="rm" type="button" data-remover="{% url 'obras:concretagem_anexo_remover' conc.pk a.pk %}" title="Remover">×</button>{% endif %}</figcaption>
+      </figure>
+      {% endfor %}
+      {% if moldagem_editavel %}
+      <label class="cc-foto cc-foto-add"><input type="file" accept="image/jpeg,image/png,image/webp" multiple data-input-etiqueta hidden><span>＋</span><small>Adicionar fotos</small></label>
+      {% elif not c.etiquetas %}<p class="op-muted" style="margin:0">Nenhuma foto de etiqueta.</p>{% endif %}
+    </div>
+  </div>
+</details>
+{% endwith %}{% empty %}
+<section class="op-panel"><div class="op-panel-body op-muted">Registre os caminhões na aba Campo para preencher as séries.</div></section>
+{% endfor %}
+<script>
+(function(){
+  /* Etiquetas dos CPs: a prévia aparece na hora (arquivo local) e cada foto
+     sobe em seguida, uma de cada vez, sem recarregar a página. */
+  var csrfEl=document.querySelector('[name=csrfmiddlewaretoken]');
+  var csrf=csrfEl?csrfEl.value:'';
+  function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;}
+  function confirmar(texto,ok){var m=document.getElementById('cc-confirmar');if(!m||!window.ccAbrirModal){ok();return;}
+    m.querySelector('[data-cc-confirm-text]').textContent=texto;m.querySelector('[data-cc-confirm-ok]').onclick=function(){ccFecharModal();ok();};ccAbrirModal('cc-confirmar');}
+  function botaoRemover(fig,url){
+    var b=el('button','rm','×');b.type='button';b.title='Remover';
+    b.addEventListener('click',function(){confirmar('Remover esta foto de etiqueta?',function(){
+      fig.classList.add('enviando');
+      fetch(url,{method:'POST',headers:{'X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();})
+        .then(function(d){if(d.ok)fig.remove();else{fig.classList.remove('enviando');}})
+        .catch(function(){fig.classList.remove('enviando');});
+    });});
+    return b;
+  }
+  document.querySelectorAll('[data-etiquetas]').forEach(function(box){
+    var galeria=box.querySelector('[data-galeria]'),input=box.querySelector('[data-input-etiqueta]'),fila=[],ocupado=false;
+    galeria.querySelectorAll('[data-remover]').forEach(function(b){var fig=b.closest('.cc-foto');b.replaceWith(botaoRemover(fig,b.dataset.remover));});
+    if(!input)return;
+    function proxima(){
+      if(ocupado||!fila.length)return;ocupado=true;
+      var item=fila.shift(),fd=new FormData();fd.append('foto',item.arquivo);
+      fetch(box.dataset.url,{method:'POST',body:fd,headers:{'X-CSRFToken':csrf,'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){return r.json().catch(function(){return {ok:false,erro:'Resposta inválida do servidor.'};});})
+        .then(function(d){
+          var fig=item.fig,cap=fig.querySelector('figcaption');fig.classList.remove('enviando');cap.innerHTML='';
+          if(d.ok){var e=d.etiqueta;fig.dataset.id=e.id;fig.querySelector('a').href=e.abrir;
+            /* Etiqueta fica no sistema ("Na ficha"): não entra no acompanhamento de envio ao Drive. */
+            var tag=el('span','cc-tag'+(e.no_drive?' ok':''),e.situacao);
+            cap.appendChild(tag);cap.appendChild(botaoRemover(fig,e.remover));}
+          else{fig.classList.add('erro');cap.appendChild(el('span','cc-tag alerta','Erro'));fig.title=d.erro||'Falha no envio';
+            var x=el('button','rm','×');x.type='button';x.addEventListener('click',function(){fig.remove();});cap.appendChild(x);}
+        })
+        .catch(function(){item.fig.classList.remove('enviando');item.fig.classList.add('erro');item.fig.title='Falha de conexão';})
+        .then(function(){URL.revokeObjectURL(item.url);ocupado=false;proxima();});
+    }
+    input.addEventListener('change',function(){
+      Array.prototype.forEach.call(input.files,function(arq){
+        var url=URL.createObjectURL(arq),fig=el('figure','cc-foto enviando');
+        var a=el('a');a.target='_blank';a.rel='noopener';var img=el('img');img.src=url;img.alt=arq.name;a.appendChild(img);fig.appendChild(a);
+        fig.appendChild(el('figcaption',null,'<span class="cc-tag">Enviando…</span>'));
+        galeria.insertBefore(fig,input.closest('.cc-foto-add'));
+        fila.push({arquivo:arq,fig:fig,url:url});
+      });
+      input.value='';proxima();
+    });
+  });
+})();
+</script>

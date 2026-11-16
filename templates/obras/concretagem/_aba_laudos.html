@@ -1,0 +1,60 @@
+{% load obras_format %}
+{% if conc.status == "EXECUTADA" %}
+<div class="cc-alerta"><div><strong>CPs ainda não enviados ao laboratório</strong>Quando saírem para o rompimento, use “Avançar etapa” e informe quem os levou.</div>
+  {% if pode_preencher %}<button class="op-btn sm" type="button" data-cc-open="modal-cps">Avançar etapa →</button>{% endif %}</div>
+{% elif conc.cps_enviados_em %}
+<div class="cc-alerta ok"><div><strong>CPs enviados ao laboratório</strong>{{ conc.cps_enviados_em|date:"d/m/Y H:i" }} por {{ conc.cps_enviados_por_nome }}.</div></div>
+{% endif %}
+
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Laudos de resistência</h2><span class="op-muted">Fck de projeto: {{ conc.fck_projeto|numero_br:1 }} MPa</span></div></div>
+  <div class="op-table-wrap"><table class="op-table" style="min-width:720px">
+    <thead><tr><th>Idade</th><th class="op-num">Mínimo</th><th class="op-num">Obtido</th><th class="op-num">% do fck</th><th>Situação</th><th>Laudo</th><th>Enviado por</th></tr></thead>
+    <tbody>
+    {% for linha in laudos_idade %}{% with l=linha.laudo %}
+      <tr{% if linha.falta %} class="cc-falta"{% endif %}>
+        <td><strong>{{ linha.label }}</strong></td>
+        <td class="op-num">{{ linha.limite|numero_br:1 }}%{% if l %} · {{ l.limite_minimo_mpa|numero_br:1 }} MPa{% endif %}</td>
+        <td class="op-num">{% if l %}<strong>{{ l.resistencia_mpa|numero_br:1 }} MPa</strong>{% else %}—{% endif %}</td>
+        <td class="op-num">{% if l %}{{ l.percentual_fck|numero_br:1 }}%{% else %}—{% endif %}</td>
+        <td>{% if l %}{% if l.aprovado %}<span class="cc-tag ok">Aprovado</span>{% else %}<span class="cc-tag alerta">Abaixo do mínimo</span>{% endif %}{% else %}<span class="op-muted">Aguardando</span>{% endif %}</td>
+        <td>{% if l %}{% for a in l.arquivos %}<a href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">abrir</a> {% include "obras/concretagem/_status_drive.html" %}{% empty %}—{% endfor %}{% else %}—{% endif %}</td>
+        <td>{% if l %}{{ l.enviado_por_nome|default:"—" }}{% if l.observacao %}<div class="op-muted">{{ l.observacao }}</div>{% endif %}{% else %}—{% endif %}</td>
+      </tr>
+    {% endwith %}{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+{% if pode_lancar_laudo %}
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Lançar laudo</h2><span class="op-muted">Relançar a mesma idade substitui o valor anterior</span></div></div>
+  <form class="op-panel-body" method="post" enctype="multipart/form-data" action="{% url 'obras:concretagem_laudo_salvar' conc.pk %}">{% csrf_token %}
+    <div class="op-grid">
+      <div class="op-field c3"><label>Idade *</label><select name="idade_dias">{% for linha in laudos_idade %}<option value="{{ linha.idade }}">{{ linha.label }}{% if linha.laudo %} (já lançado){% endif %}</option>{% endfor %}</select></div>
+      <div class="op-field c3"><label>Resistência (MPa) *</label><input name="resistencia_mpa" type="number" step="0.1" min="0.1" required></div>
+      <div class="op-field c6"><label>Quem enviou os CPs</label><input name="enviado_por_nome" maxlength="200" value="{{ conc.cps_enviados_por_nome }}"></div>
+      <div class="op-field c6"><label>Laudo (PDF ou foto) — obrigatório no primeiro lançamento</label><input name="arquivo" type="file" accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+      <div class="op-field c6"><label>Observação</label><input name="observacao" maxlength="300"></div>
+    </div>
+    <div class="cc-acoes" style="justify-content:flex-end;margin-top:12px"><button class="op-btn" type="submit">Salvar laudo</button></div>
+  </form>
+</section>
+{% endif %}
+
+{% if conc.status == "AGUARDANDO_LAUDOS" %}
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Concluir controle tecnológico</h2><span class="op-muted">Exige o laudo de 28 dias e pelo menos um de 7 ou 14 dias</span></div></div>
+  <div class="op-panel-body">
+    {% if pendencias_conclusao %}<div class="cc-alerta" style="margin-bottom:12px"><div><strong>Falta:</strong> {{ pendencias_conclusao|join:", " }}.</div></div>{% endif %}
+    {% if eh_gerente %}
+    <form method="post" action="{% url 'obras:concretagem_concluir' conc.pk %}" data-cc-confirm="Concluir esta concretagem?">{% csrf_token %}
+      {% if laudo_reprovado %}<div class="op-field"><label>Justificativa (há laudo abaixo do mínimo) *</label><textarea name="justificativa" rows="2" required></textarea></div>{% endif %}
+      <div class="cc-acoes" style="justify-content:flex-end;margin-top:10px"><button class="op-btn" type="submit" {% if pendencias_conclusao %}disabled{% endif %}>Concluir concretagem</button></div>
+    </form>
+    {% else %}<p class="op-muted" style="margin:0">A conclusão exige a permissão Concretagem.</p>{% endif %}
+  </div>
+</section>
+{% elif conc.status == "CONCLUIDA" %}
+<div class="cc-alerta ok"><div><strong>Concluída</strong>em {{ conc.concluida_em|date:"d/m/Y H:i" }}{% if conc.concluida_por %} por {{ conc.concluida_por.get_full_name|default:conc.concluida_por.username }}{% endif %}.</div></div>
+{% endif %}

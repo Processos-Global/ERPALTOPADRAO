@@ -1,0 +1,60 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | {{ obra|nome_obra }}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem · Obra</span>
+      <h1>{{ obra|nome_obra }}</h1>
+      <p>{{ resumo.total }} concretagem{{ resumo.total|pluralize:"s" }} · {{ resumo.abertas }} em aberto · {{ resumo.volume|default:0|numero_br:2 }} m³ solicitados · {{ locais_count }} local{{ locais_count|pluralize:"is" }} de uso</p>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_painel' %}">Voltar</a>
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_locais' obra.pk %}">Locais de uso</a>
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_mapa' obra.pk %}">Mapa de concretagem</a>
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_agenda' %}?obra={{ obra.pk }}">Agenda</a>
+      {% if pode_preencher %}<a class="op-btn" href="{% url 'obras:concretagem_nova' %}?obra={{ obra.pk }}">+ Nova concretagem</a>{% endif %}
+    </div>
+  </section>
+
+  {% if not locais_count %}
+  <div class="cc-alerta">
+    <div><strong>Cadastre os locais de uso desta obra</strong>Lajes, pilares, piscina, muros… Eles aparecem na hora de montar a solicitação e de registrar onde o concreto foi aplicado.</div>
+    <a class="op-btn sm" href="{% url 'obras:concretagem_locais' obra.pk %}">Cadastrar locais</a>
+  </div>
+  {% endif %}
+
+  <form method="get" class="op-toolbar">
+    <div class="op-field"><label>Busca</label><input type="search" name="q" value="{{ q }}" placeholder="Código, peça, local ou concreteira"></div>
+    <div class="op-field"><label>Status</label><select name="status"><option value="">Todos</option>{% for v,l in status_choices %}<option value="{{ v }}" {% if status_filtro == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+    <button class="op-btn" type="submit">Filtrar</button>
+  </form>
+
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Concretagens</h2><span class="op-muted">Da data mais recente para a mais antiga</span></div></div>
+    <div class="op-table-wrap">
+      <table class="op-table">
+        <thead><tr><th>Código</th><th>Data</th><th>Serviço</th><th>Concreteira</th><th class="op-num">Volume</th><th class="op-num">Fck</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for c in concretagens %}
+          <tr>
+            <td><strong>{{ c.codigo }}</strong></td>
+            <td>{{ c.data_programada|date:"d/m/Y"|default:"—" }}<div class="op-muted">{{ c.horario_programado|time:"H:i" }}</div></td>
+            <td>{{ c.descricao_servico|default:"—"|truncatechars:70 }}</td>
+            <td>{{ c.concreteira_nome|default:"—" }}</td>
+            <td class="op-num">{{ c.volume_solicitado|numero_br:2 }} m³</td>
+            <td class="op-num">{{ c.fck_projeto|default:"—" }}</td>
+            <td><span class="cc-status {{ c.status }}">{{ c.get_status_display }}</span>
+              {% if c.pediu_reagendamento %}<div style="margin-top:4px"><span class="cc-tag alerta">Pediu nova data</span></div>{% endif %}</td>
+            <td><a class="op-btn secondary sm" href="{% url 'obras:concretagem_detalhe' c.pk %}">Abrir</a></td>
+          </tr>
+          {% empty %}<tr><td colspan="8" class="op-empty">Nenhuma concretagem encontrada.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

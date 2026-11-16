@@ -1,0 +1,172 @@
+{% load obras_format %}
+<div class="op-kpi-grid cc-kpis cc-kpis-campo">
+  <div class="op-kpi-card"><small>Solicitado</small><strong>{{ resumo.volume_solicitado|numero_br:2 }}</strong><span>m³</span></div>
+  <div class="op-kpi-card"><small>Entregue</small><strong>{{ resumo.volume_entregue|numero_br:2 }}</strong><span>{{ resumo.qtd_caminhoes }} caminhão(ões)</span></div>
+  <div class="op-kpi-card"><small>Utilizado</small><strong>{{ resumo.volume_utilizado|numero_br:2 }}</strong><span>m³ aplicados</span></div>
+  <div class="op-kpi-card"><small>Sobra</small><strong>{{ resumo.volume_sobra|numero_br:2 }}</strong><span>m³</span></div>
+  <div class="op-kpi-card{% if falta_destino %} cc-falta{% endif %}"><small>Sem destino</small><strong>{{ resumo.saldo|numero_br:2 }}</strong><span>{% if resumo.saldo > 0.02 %}lance uso ou sobra{% else %}tudo destinado{% endif %}</span></div>
+  <div class="op-kpi-card"><small>Entregue × solicitado</small><strong>{% if resumo.diferenca_solicitado > 0 %}+{% endif %}{{ resumo.diferenca_solicitado|numero_br:2 }}</strong><span>m³</span></div>
+</div>
+
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Caminhões</h2><span class="op-muted">Um registro por betoneira que chegou</span></div>
+    {% if execucao_aberta %}<button class="op-btn sm" type="button" data-cc-open="modal-caminhao-novo">+ Caminhão</button>{% endif %}</div>
+  <div class="op-table-wrap"><table class="op-table">
+    <thead><tr><th>#</th><th>Placa</th><th>NF</th><th>Lacre</th><th class="op-num">Volume</th><th>Chegada</th><th>Descarga</th><th class="op-num">CPs</th><th class="op-num">Saldo</th><th></th></tr></thead>
+    <tbody>
+    {% for c in caminhoes %}
+      <tr{% if c.falta_saldo or c.falta_nf %} class="cc-falta"{% endif %}>
+        <td><strong>{{ c.ordem }}</strong></td>
+        <td>{{ c.placa|default:"—" }}</td>
+        <td style="white-space:nowrap">{{ c.numero_nota_fiscal|default:"—" }}{% for a in c.notas %} <a class="cc-tag {% if a.no_drive %}ok{% endif %}" href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">foto NF</a>{% endfor %}
+          {% if c.falta_nf %} <span class="cc-tag alerta">Falta NF</span>
+            {% if pode_anexar_nf %} <button class="op-btn gold sm" type="button" data-cc-open="modal-nf-{{ c.pk }}">＋ NF</button>{% endif %}{% endif %}</td>
+        <td>{{ c.numero_lacre|default:"—" }}</td>
+        <td class="op-num">{{ c.volume_entregue|numero_br:2 }} m³</td>
+        <td>{{ c.horario_chegada|time:"H:i"|default:"—" }}</td>
+        <td>{{ c.inicio_descarga|time:"H:i"|default:"—" }}–{{ c.termino_descarga|time:"H:i"|default:"—" }}</td>
+        <td class="op-num">{{ c.cps_moldados }}</td>
+        <td class="op-num">{% if c.saldo > 0.02 %}<span class="cc-tag alerta">{{ c.saldo|numero_br:2 }}</span>{% else %}<span class="cc-tag ok">0</span>{% endif %}</td>
+        <td style="white-space:nowrap">{% if execucao_aberta %}
+          <button class="op-btn secondary sm" type="button" data-cc-open="modal-caminhao-{{ c.pk }}">Editar</button>
+          <form method="post" action="{% url 'obras:concretagem_caminhao_remover' conc.pk c.pk %}" style="display:inline" data-cc-confirm="Remover o {{ c.rotulo }}?">{% csrf_token %}<button class="op-btn danger sm" type="submit">×</button></form>
+        {% endif %}</td>
+      </tr>
+    {% empty %}<tr><td colspan="10" class="op-empty">{% if execucao_aberta %}Nenhum caminhão. Clique em “+ Caminhão” quando o primeiro chegar.{% else %}Nenhum caminhão registrado.{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Onde foi aplicado</h2></div>
+    <div class="cc-acoes">{% if usos or sobras %}<a class="op-btn secondary sm" href="{% url 'obras:concretagem_mapa' conc.obra_id %}">Ver no mapa</a>{% endif %}
+    {% if execucao_aberta and caminhoes %}<button class="op-btn secondary sm" type="button" data-cc-open="modal-sobra">+ Sobra</button>
+    <button class="op-btn sm" type="button" data-cc-open="modal-uso">+ Uso</button>{% endif %}</div></div>
+  <ul class="cc-list">
+    {% for u in usos %}
+    <li><div><strong><span class="cc-swatch" style="background:{{ u.cor }};vertical-align:-3px"></span> {{ u.titulo }}</strong><small>{{ u.volume_utilizado|numero_br:2 }} m³{% if u.caminhao %} · {{ u.caminhao.rotulo }}{% endif %}</small></div>
+      <div class="cc-acoes">{% if u.local_id %}<a class="op-btn secondary sm" href="{% url 'obras:concretagem_mapa' conc.obra_id %}?local={{ u.local_id }}&item=u{{ u.pk }}">🖌 Pintar no mapa</a>{% endif %}
+      {% if execucao_aberta %}<form method="post" action="{% url 'obras:concretagem_uso_remover' conc.pk u.pk %}" data-cc-confirm="Remover este uso?">{% csrf_token %}<button class="op-btn danger sm" type="submit">×</button></form>{% endif %}</div></li>
+    {% endfor %}
+    {% for s in sobras %}
+    <li><div><strong><span class="cc-swatch" style="background:{{ s.cor }};vertical-align:-3px"></span> {{ s.destino_texto }} <span class="cc-tag alerta">Sobra</span></strong><small>{{ s.volume_sobra|numero_br:2 }} m³{% if s.caminhao %} · {{ s.caminhao.rotulo }}{% endif %} · {{ s.get_situacao_display }}</small></div>
+      <div class="cc-acoes">{% if s.situacao == "REAPROVEITADA" and s.destino != "OUTRA_OBRA" %}<a class="op-btn secondary sm" href="{% url 'obras:concretagem_mapa' conc.obra_id %}?{% if s.local_destino_id %}local={{ s.local_destino_id }}&{% endif %}item=s{{ s.pk }}">🖌 Pintar no mapa</a>{% endif %}
+      {% if execucao_aberta %}<form method="post" action="{% url 'obras:concretagem_sobra_remover' conc.pk s.pk %}" data-cc-confirm="Remover esta sobra?">{% csrf_token %}<button class="op-btn danger sm" type="submit">×</button></form>{% endif %}</div></li>
+    {% endfor %}
+    {% if not usos and not sobras %}<li class="op-muted">Nenhum uso lançado.</li>{% endif %}
+  </ul>
+</section>
+
+{% if execucao_aberta and pendencias_finalizar %}
+<div class="cc-alerta"><div><strong>Para avançar a etapa ainda falta:</strong>{% for p in pendencias_finalizar %}<div>• {{ p }}</div>{% endfor %}</div></div>
+{% endif %}
+
+{% if execucao_aberta %}
+{# ---- Modais de campo ---- #}
+<div class="op-modal" id="modal-caminhao-novo" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true">
+    <div class="op-modal-head"><h2>Novo caminhão</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <form class="op-modal-body" method="post" enctype="multipart/form-data" action="{% url 'obras:concretagem_caminhao_criar' conc.pk %}">{% csrf_token %}
+      {% include "obras/concretagem/_campos_caminhao.html" with c=None %}
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Salvar caminhão</button></div>
+    </form>
+  </div></div>
+{% for c in caminhoes %}
+<div class="op-modal" id="modal-caminhao-{{ c.pk }}" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true">
+    <div class="op-modal-head"><h2>{{ c.rotulo }}</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <form class="op-modal-body" method="post" enctype="multipart/form-data" action="{% url 'obras:concretagem_caminhao_editar' conc.pk c.pk %}">{% csrf_token %}
+      {% include "obras/concretagem/_campos_caminhao.html" with c=c %}
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Salvar</button></div>
+    </form>
+  </div></div>
+{% endfor %}
+
+<div class="op-modal" id="modal-uso" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(600px,100%)">
+    <div class="op-modal-head"><h2>Registrar uso</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_uso_criar' conc.pk %}">{% csrf_token %}
+      <div class="op-grid">
+        <div class="op-field c6"><label>Local de uso *</label><select name="local" required data-uso-local><option value="">— Escolha o local —</option>{% for v,l in form_uso.fields.local.choices %}{% if v %}<option value="{{ v }}">{{ l }}</option>{% endif %}{% endfor %}</select>
+          <button class="cc-link" type="button" data-novo-local-uso>+ Local não está na lista</button></div>
+        <div class="op-field c6"><label>Caminhão</label><select name="caminhao"><option value="">— Não identificado —</option>{% for c in caminhoes %}<option value="{{ c.pk }}">{{ c.rotulo }} (saldo {{ c.saldo|numero_br:2 }})</option>{% endfor %}</select></div>
+        <div class="op-field c8"><label>Descrição / complemento</label><input name="descricao" maxlength="300" placeholder="Ex.: pilares P1–P4"></div>
+        <div class="op-field c4"><label>Volume (m³) *</label><input name="volume_utilizado" type="number" step="0.01" min="0.01" required value="{% if resumo.saldo > 0 %}{{ resumo.saldo|stringformat:'s' }}{% endif %}"></div>
+      </div>
+      <div class="cc-novo-local" data-box-novo-local hidden>
+        <div class="cc-erros" data-erro-local hidden></div>
+        <div class="op-grid">
+          <div class="op-field c6"><label>Nome do novo local *</label><input data-l="nome" maxlength="160" placeholder="Ex.: Piscina, Laje 3º pavimento"></div>
+          <div class="op-field c3"><label>Tipo</label><select data-l="tipo">{% for v,l in tipos_local %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+          <div class="op-field c3"><label>Pavimento</label><input data-l="pavimento" maxlength="80"></div>
+        </div>
+        <div class="cc-acoes" style="justify-content:flex-end;margin-top:8px"><button class="op-btn secondary sm" type="button" data-cancelar-local>Cancelar</button><button class="op-btn sm" type="button" data-salvar-local data-url="{% url 'obras:concretagem_local_criar' conc.obra_id %}">Cadastrar e usar</button></div>
+      </div>
+      <p class="op-muted" style="margin:8px 0 0">Sem destino agora: {{ resumo.saldo|numero_br:2 }} m³.</p>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Salvar uso</button></div>
+    </form>
+  </div></div>
+
+<div class="op-modal" id="modal-sobra" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(600px,100%)">
+    <div class="op-modal-head"><h2>Registrar sobra</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_sobra_criar' conc.pk %}" data-sobra-form>{% csrf_token %}
+      <div class="op-grid">
+        <div class="op-field c4"><label>Volume (m³) *</label><input name="volume_sobra" type="number" step="0.01" min="0.01" required></div>
+        <div class="op-field c8"><label>Caminhão</label><select name="caminhao"><option value="">— Não identificado —</option>{% for c in caminhoes %}<option value="{{ c.pk }}">{{ c.rotulo }} (saldo {{ c.saldo|numero_br:2 }})</option>{% endfor %}</select></div>
+        <div class="op-field c12"><label>Destino *</label><select name="destino" data-destino>{% for v,l in form_sobra.fields.destino.choices %}<option value="{{ v }}" {% if v == "AGUARDANDO" %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="op-field c12" data-quando="OUTRA_OBRA" hidden><label>Obra que recebeu *</label><select name="obra_destino"><option value="">—</option>{% for v,l in form_sobra.fields.obra_destino.choices %}{% if v %}<option value="{{ v }}">{{ l }}</option>{% endif %}{% endfor %}</select></div>
+        <div class="op-field c12" data-quando="OUTRA_ESTRUTURA" hidden><label>Local desta obra</label><select name="local_destino"><option value="">— Descrever abaixo —</option>{% for v,l in form_sobra.fields.local_destino.choices %}{% if v %}<option value="{{ v }}">{{ l }}</option>{% endif %}{% endfor %}</select></div>
+        <div class="op-field c12"><label data-label-descricao>Descrição do destino</label><input name="descricao_destino" maxlength="300"></div>
+      </div>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Salvar sobra</button></div>
+    </form>
+  </div></div>
+<script>
+(function(){
+  var f=document.querySelector('[data-sobra-form]');if(!f)return;var sel=f.querySelector('[data-destino]');
+  function up(){f.querySelectorAll('[data-quando]').forEach(function(b){b.hidden=b.dataset.quando!==sel.value;});
+    f.querySelector('[data-label-descricao]').textContent=sel.value==='OUTRO'?'Descreva o destino *':'Descrição do destino';}
+  sel.addEventListener('change',up);up();
+})();
+(function(){
+  /* Cadastro rápido de local dentro do modal de uso (mesmo endpoint da tela de locais). */
+  var box=document.querySelector('[data-box-novo-local]');if(!box)return;
+  var form=box.closest('form'),select=form.querySelector('[data-uso-local]'),erro=box.querySelector('[data-erro-local]');
+  form.querySelector('[data-novo-local-uso]').addEventListener('click',function(){box.hidden=false;box.querySelector('[data-l="nome"]').focus();});
+  box.querySelector('[data-cancelar-local]').addEventListener('click',function(){box.hidden=true;erro.hidden=true;});
+  box.querySelector('[data-salvar-local]').addEventListener('click',function(){
+    var fd=new FormData();fd.append('csrfmiddlewaretoken',form.querySelector('[name=csrfmiddlewaretoken]').value);fd.append('ordem','0');
+    box.querySelectorAll('[data-l]').forEach(function(i){fd.append(i.dataset.l,i.value);});
+    erro.hidden=true;
+    fetch(this.dataset.url,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){erro.textContent=d.erro||'Não foi possível salvar.';erro.hidden=false;return;}
+      var o=document.createElement('option');o.value=d.local.id;o.textContent=d.local.descricao;select.appendChild(o);select.value=d.local.id;
+      box.querySelectorAll('input[data-l]').forEach(function(i){i.value='';});box.hidden=true;
+    }).catch(function(){erro.textContent='Falha de conexão.';erro.hidden=false;});
+  });
+})();
+</script>
+{% endif %}
+
+{% if pode_anexar_nf %}{% for c in caminhoes %}{% if c.falta_nf %}
+<div class="op-modal" id="modal-nf-{{ c.pk }}" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(520px,100%)">
+    <div class="op-modal-head"><h2>Nota fiscal · {{ c.rotulo }}</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <form class="op-modal-body" method="post" enctype="multipart/form-data" action="{% url 'obras:concretagem_caminhao_nf' conc.pk c.pk %}" data-form-nf>{% csrf_token %}
+      <input type="hidden" name="aba" value="campo" data-aba-nf>
+      <div class="op-grid">
+        <div class="op-field c12"><label>Nº da nota fiscal</label><input name="numero_nota_fiscal" maxlength="30" value="{{ c.numero_nota_fiscal }}"></div>
+        <div class="op-field c12"><label>Foto ou PDF da nota *</label><input type="file" name="foto_nf" required accept="image/jpeg,image/png,image/webp,application/pdf"></div>
+      </div>
+      <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Cancelar</button><button class="op-btn" type="submit">Anexar nota fiscal</button></div>
+    </form>
+  </div></div>
+{% endif %}{% endfor %}{% endif %}
+<script>
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-cc-open^="modal-nf-"]');if(!b)return;
+  var m=document.getElementById(b.getAttribute('data-cc-open'));if(!m)return;
+  var aba=m.querySelector('[data-aba-nf]');if(aba)aba.value=b.dataset.abaOrigem||'campo';
+});
+</script>

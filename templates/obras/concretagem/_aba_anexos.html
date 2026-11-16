@@ -1,0 +1,81 @@
+{% load obras_format %}
+<div class="cc-alerta" data-drive-alerta{% if not anexos_pendentes %} hidden{% endif %}><div><strong><span data-drive-total>{{ anexos_pendentes }}</span> arquivo(s) aguardando o Drive</strong>O envio acontece em segundo plano; pode continuar usando o sistema. Os arquivos estão marcados em vermelho abaixo.</div>
+  <div class="cc-acoes">
+    <button class="op-btn secondary sm" type="button" data-cc-open="modal-pendentes-drive">Ver quais</button>
+    {% if pode_preencher and drive_habilitado %}<form method="post" action="{% url 'obras:concretagem_anexos_reenviar' conc.pk %}">{% csrf_token %}<button class="op-btn sm" type="submit">Tentar enviar agora</button></form>{% endif %}
+  </div></div>
+
+<div class="op-modal" id="modal-pendentes-drive" aria-hidden="true"><div class="op-modal-backdrop"></div>
+  <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(820px,100%)">
+    <div class="op-modal-head"><div><h2>Arquivos aguardando o Drive</h2><span class="op-muted">{% if drive_habilitado %}Atualiza sozinho enquanto o envio acontece.{% else %}O envio ao Drive está desligado nas configurações.{% endif %}</span></div><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+    <div class="op-modal-body" style="padding:0">
+      <div class="op-table-wrap"><table class="op-table" style="min-width:640px">
+        <thead><tr><th>Arquivo</th><th>Tipo</th><th>De onde</th><th>Recebido</th><th class="op-num">Tentativas</th><th>Situação</th></tr></thead>
+        <tbody data-drive-lista>
+          {% for a in anexos_pendentes_lista %}
+          <tr><td><a class="op-btn secondary sm cc-arquivo" href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener" title="{{ a.nome_original }}"><span aria-hidden="true">↗</span> <small>{{ a.nome_original|truncatechars:30 }}</small></a></td>
+            <td>{{ a.get_etapa_display }}</td><td>{{ a.rotulo_origem|default:"—" }}</td><td>{{ a.criado_em|date:"d/m H:i" }}</td>
+            <td class="op-num">{{ a.tentativas }}</td>
+            <td>{% include "obras/concretagem/_status_drive.html" %}{% if a.ultimo_erro %}<div class="op-muted" style="max-width:260px;white-space:normal">{{ a.ultimo_erro|truncatechars:120 }}</div>{% endif %}</td></tr>
+          {% empty %}<tr><td colspan="6" class="op-empty">Nenhum arquivo aguardando.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div></div>
+
+{# ---------- Notas fiscais dos caminhões ---------- #}
+<section class="op-panel">
+  <div class="op-panel-head"><div><h2>Notas fiscais dos caminhões</h2><span class="op-muted">A foto da NF é enviada no cadastro do caminhão (aba Campo) · Drive: “02 Notas fiscais”</span></div>
+    {% if conc.drive_pasta_url %}<a class="op-btn secondary sm" href="{{ conc.drive_pasta_url }}" target="_blank" rel="noopener">Abrir pasta no Drive</a>{% endif %}</div>
+  <div class="op-table-wrap"><table class="op-table" style="min-width:620px">
+    <thead><tr><th>Caminhão</th><th>Nº da NF</th><th class="op-num">Volume</th><th>Arquivo</th><th>Drive</th><th></th></tr></thead>
+    <tbody>
+      {% for c in caminhoes %}
+        {% for a in c.notas %}
+        <tr{% if not a.no_drive %} class="cc-falta"{% endif %}>
+          <td><strong>{{ c.rotulo }}</strong></td>
+          <td>{{ c.numero_nota_fiscal|default:"—" }}</td>
+          <td class="op-num">{{ c.volume_entregue|numero_br:2 }} m³</td>
+          <td><a class="op-btn secondary sm cc-arquivo" href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener" title="{{ a.nome_original }}"><span aria-hidden="true">↗</span> Abrir <small>{{ a.nome_original|truncatechars:28 }}</small></a></td>
+          <td>{% include "obras/concretagem/_status_drive.html" %}</td>
+          <td>{% if pode_preencher %}<form method="post" action="{% url 'obras:concretagem_anexo_remover' conc.pk a.pk %}" data-cc-confirm="Remover a foto desta NF do sistema? Se já estiver no Drive, ela continua lá.">{% csrf_token %}<button class="op-btn danger sm" type="submit">×</button></form>{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr{% if c.falta_nf %} class="cc-falta"{% endif %}>
+          <td><strong>{{ c.rotulo }}</strong></td>
+          <td>{{ c.numero_nota_fiscal|default:"—" }}</td>
+          <td class="op-num">{{ c.volume_entregue|numero_br:2 }} m³</td>
+          <td>{% if c.falta_nf %}<span class="cc-tag alerta">Falta NF</span>{% else %}<span class="op-muted">Sem foto da NF</span>{% endif %}</td><td>—</td>
+          <td>{% if pode_anexar_nf %}<button class="op-btn gold sm" type="button" data-cc-open="modal-nf-{{ c.pk }}" data-aba-origem="anexos">＋ NF</button>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      {% empty %}<tr><td colspan="6" class="op-empty">Nenhum caminhão registrado.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+{# ---------- Moldagem e laudos ---------- #}
+<div class="cc-grid">
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Ficha de moldagem e etiquetas</h2><span class="op-muted">Drive: “03 Moldagem CPs”</span></div>
+      <button class="op-btn secondary sm" type="button" data-ir-aba="moldagem">Ir para Moldagem</button></div>
+    <ul class="cc-list">
+      {% for a in fichas_pdf %}
+      <li{% if not a.no_drive %} class="cc-falta-li"{% endif %}><div><a href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">{{ a.nome_original }}</a><small>{{ a.criado_em|date:"d/m/Y H:i" }}</small></div>
+        {% include "obras/concretagem/_status_drive.html" %}</li>
+      {% empty %}<li class="op-muted">Ficha ainda não gerada (é gerada ao avançar para Executada).</li>{% endfor %}
+      <li><div><strong>Fotos das etiquetas dos CPs</strong><small>Ficam dentro da ficha (página 2), não vão ao Drive · {% for c in caminhoes %}{% if c.etiquetas %}{{ c.rotulo }}: {{ c.etiquetas|length }} · {% endif %}{% endfor %}{% if not total_etiquetas %}nenhuma foto ainda{% endif %}</small></div>
+        <span class="cc-tag {% if total_etiquetas %}ok{% endif %}">{{ total_etiquetas }}</span></li>
+    </ul>
+  </section>
+  <section class="op-panel">
+    <div class="op-panel-head"><div><h2>Laudos</h2><span class="op-muted">Drive: “04 Laudos”</span></div>
+      <button class="op-btn secondary sm" type="button" data-ir-aba="laudos">Ir para Laudos</button></div>
+    <ul class="cc-list">
+      {% for a in laudos_arquivos %}
+      <li{% if not a.no_drive %} class="cc-falta-li"{% endif %}><div><a href="{% url 'obras:concretagem_anexo_abrir' conc.pk a.pk %}" target="_blank" rel="noopener">{% if a.laudo %}{{ a.laudo.idade_dias }} dias — {% endif %}{{ a.nome_original|truncatechars:34 }}</a><small>{{ a.criado_em|date:"d/m/Y H:i" }}</small></div>
+        {% include "obras/concretagem/_status_drive.html" %}</li>
+      {% empty %}<li class="op-muted">Nenhum laudo anexado.</li>{% endfor %}
+    </ul>
+  </section>
+</div>

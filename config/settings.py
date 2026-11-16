@@ -311,6 +311,16 @@ GOOGLE_DRIVE_CRONOGRAMA_SUPRIMENTOS_FOLDER_ID = env(
     default="",
 )
 
+# Concretagem (módulo Obras): pasta raiz Obra > CONC-AAAA-NNNN > subpastas.
+# A pasta precisa estar compartilhada com o e-mail da conta de serviço.
+CONCRETAGEM_DRIVE_ENABLED = env.bool("CONCRETAGEM_DRIVE_ENABLED", default=True)
+# Envios ao Drive fora da requisição (thread), para não travar a tela.
+CONCRETAGEM_DRIVE_SEGUNDO_PLANO = env.bool("CONCRETAGEM_DRIVE_SEGUNDO_PLANO", default=True)
+CONCRETAGEM_DRIVE_ROOT_FOLDER_ID = env(
+    "CONCRETAGEM_DRIVE_ROOT_FOLDER_ID",
+    default="1NiaZaheByBRDy9JN9_m2jDoycfLCKcQ7",
+)
+
 
 # ============================================================
 # IMPORTAÃ‡ÃƒO DO CRONOGRAMA

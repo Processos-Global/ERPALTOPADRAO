@@ -1,0 +1,355 @@
+{% extends "layouts/base.html" %}
+{% load obras_format %}
+{% block title %}Concretagem | {{ conc.codigo }}{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}{% include "obras/concretagem/_estilos.html" %}{% endblock %}
+{% block content %}
+<div class="op-page cc-page">
+  <section class="op-head">
+    <div class="op-head-copy">
+      <span class="op-eyebrow">Concretagem · {{ conc.obra|nome_obra }}</span>
+      <h1>{{ conc.codigo }}</h1>
+      <p><span class="cc-status {{ conc.status }}">{{ conc.get_status_display }}</span>
+        &nbsp;{{ conc.data_programada|date:"d/m/Y"|default:"Sem data" }}{% if conc.horario_programado %} às {{ conc.horario_programado|time:"H:i" }}{% endif %}
+        · {{ conc.concreteira_nome|default:"Concreteira não definida" }}</p>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_obra' conc.obra_id %}">← Obra</a>
+      <a class="op-btn secondary" href="{% url 'obras:concretagem_mapa' conc.obra_id %}">Mapa</a>
+      {% if conc.drive_pasta_url %}
+        <a class="op-btn secondary" href="{{ conc.drive_pasta_url }}" target="_blank" rel="noopener">Pasta no Drive</a>
+      {% elif drive_habilitado and pode_preencher and conc.status != "RASCUNHO" %}
+        <form method="post" action="{% url 'obras:concretagem_drive' conc.pk %}">{% csrf_token %}<button class="op-btn secondary" type="submit">Criar pasta no Drive</button></form>
+      {% endif %}
+      {% if pode_editar and conc.status == "RASCUNHO" %}<a class="op-btn secondary" href="{% url 'obras:concretagem_editar' conc.pk %}">Editar</a>{% endif %}
+      {% if pode_preencher and pode_reagendar %}<button class="op-btn secondary" type="button" data-cc-open="modal-reagendar">Reagendar</button>{% endif %}
+      {% if pode_editar and pode_cancelar %}<button class="op-btn danger" type="button" data-cc-open="modal-cancelar">Cancelar</button>{% endif %}
+    </div>
+  </section>
+
+  {% if conc.status != "CANCELADA" %}
+  <div class="cc-steps">
+    {% for e in etapas %}<div class="cc-step {% if e.feita %}feita{% endif %} {% if e.atual %}atual{% endif %}"><span class="dot">{% if e.feita %}✓{% else %}{{ forloop.counter }}{% endif %}</span>{{ e.label }}</div>{% endfor %}
+  </div>
+  {% endif %}
+
+  {# ---------- Alertas por situação ---------- #}
+  {% if conc.status == "RASCUNHO" %}
+    {% if pendencias_envio %}
+    <div class="cc-alerta"><div><strong>Faltam dados para liberar a solicitação</strong>Preencha: {{ pendencias_envio|join:", " }}.</div>
+      {% if pode_editar %}<a class="op-btn sm" href="{% url 'obras:concretagem_editar' conc.pk %}">Completar</a>{% endif %}</div>
+    {% else %}
+    <div class="cc-alerta ok"><div><strong>Pronta para enviar</strong>Ao liberar, o e-mail já sai para a concreteira e a mensagem para WhatsApp fica disponível.</div>
+      {% if pode_preencher %}<button class="op-btn" type="button" data-cc-open="modal-liberar">Liberar e enviar</button>{% endif %}</div>
+    {% endif %}
+  {% elif conc.status == "SOLICITADA" %}
+    {% if conc.pediu_reagendamento %}
+    <div class="cc-alerta perigo"><div><strong>A concreteira pediu outra data</strong>
+      Sugestão: {{ conc.reagendamento_data_sugerida|date:"d/m/Y" }}{% if conc.reagendamento_horario_sugerido %} às {{ conc.reagendamento_horario_sugerido|time:"H:i" }}{% endif %}{% if conc.reagendamento_solicitante %} · por {{ conc.reagendamento_solicitante }}{% endif %}{% if conc.confirmacao_observacao %}<br>“{{ conc.confirmacao_observacao }}”{% endif %}</div>
+      {% if pode_preencher %}
+      <form method="post" action="{% url 'obras:concretagem_reagendar' conc.pk %}">{% csrf_token %}
+        <input type="hidden" name="data" value="{{ conc.reagendamento_data_sugerida|date:'Y-m-d' }}">
+        <input type="hidden" name="horario" value="{{ conc.reagendamento_horario_sugerido|time:'H:i' }}">
+        <input type="hidden" name="motivo" value="Data sugerida pela concreteira.">
+        <button class="op-btn" type="submit">Aceitar data sugerida e reenviar</button>
+      </form>{% endif %}
+    </div>
+    {% else %}
+    <div class="cc-alerta"><div><strong>Aguardando a concreteira</strong>Ela responde pelo link da mensagem. Se ela confirmar por fora (telefone, WhatsApp), aceite manualmente.</div>
+      <div class="cc-acoes">
+        {% if eh_gerente %}<button class="op-btn" type="button" data-cc-open="modal-aceite">Aceitar manualmente</button>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  {% elif conc.status == "CONFIRMADA" %}
+    {# Some quando o primeiro caminhão é registrado: a execução já começou. #}
+    {% if not caminhoes %}
+    <div class="cc-alerta ok"><div><strong>Concretagem confirmada</strong>
+      {% if conc.aceite_manual_por %}Aceite manual por {{ conc.aceite_manual_por.get_full_name|default:conc.aceite_manual_por.username }}{% else %}Aceita pela concreteira{% endif %} em {{ conc.confirmado_em|date:"d/m/Y H:i" }}.{% if conc.confirmacao_observacao %} “{{ conc.confirmacao_observacao }}”{% endif %}
+      No dia, registre os caminhões, o uso e a moldagem na aba Campo.</div>
+      {% if pode_preencher %}<button class="op-btn sm" type="button" data-ir-aba="campo">Ir para Campo</button>{% endif %}</div>
+    {% endif %}
+  {% elif conc.status == "EXECUTADA" %}
+    <div class="cc-alerta"><div><strong>Executada em {{ conc.executada_em|date:"d/m/Y H:i" }}</strong>Quando os CPs forem para o laboratório, use “Avançar etapa” e informe quem os levou.</div></div>
+  {% elif conc.status == "AGUARDANDO_LAUDOS" %}
+    <div class="cc-alerta{% if laudo_reprovado %} perigo{% endif %}"><div><strong>{% if laudo_reprovado %}Há laudo abaixo do mínimo{% else %}Aguardando laudos do laboratório{% endif %}</strong>CPs enviados em {{ conc.cps_enviados_em|date:"d/m/Y" }} por {{ conc.cps_enviados_por_nome }}.{% if pendencias_conclusao %} Falta: {{ pendencias_conclusao|join:", " }}.{% endif %}</div>
+      <button class="op-btn sm" type="button" data-ir-aba="laudos">Ir para Laudos</button></div>
+  {% elif conc.status == "CONCLUIDA" %}
+    <div class="cc-alerta ok"><div><strong>Concretagem concluída</strong>em {{ conc.concluida_em|date:"d/m/Y H:i" }}.</div></div>
+  {% elif conc.status == "CANCELADA" %}
+    <div class="cc-alerta perigo"><div><strong>Cancelada em {{ conc.cancelado_em|date:"d/m/Y H:i" }}</strong>{{ conc.motivo_cancelamento }}</div></div>
+  {% endif %}
+
+  <div class="cc-tabs" role="tablist">
+    <button class="cc-tab ativa" type="button" data-tab="solicitacao">Solicitação{% if aviso_solicitacao %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    {% if conc.status == "SOLICITADA" %}<button class="cc-tab" type="button" data-tab="envio">Envio à concreteira{% if aviso_envio %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>{% endif %}
+    {% if mostrar_execucao %}
+    <button class="cc-tab" type="button" data-tab="campo">Campo{% if aviso_campo %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" data-tab="moldagem">Moldagem{% if aviso_moldagem %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" data-tab="laudos">Laudos{% if aviso_laudos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" data-tab="anexos">Fotos e documentos{% if aviso_anexos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    {% endif %}
+    <button class="cc-tab" type="button" data-tab="historico">Histórico</button>
+    {% if pode_preencher and mostrar_execucao %}
+    <div class="cc-etapa-acoes">
+      {% if conc.status == "EXECUTADA" or conc.status == "AGUARDANDO_LAUDOS" %}
+      <form method="post" action="{% url 'obras:concretagem_voltar_etapa' conc.pk %}" data-cc-confirm="{% if conc.status == 'EXECUTADA' %}Voltar para Confirmada? O campo (caminhões, usos e sobras) fica aberto para edição de novo.{% else %}Voltar para Executada? O registro do envio dos CPs é desfeito.{% endif %}">{% csrf_token %}
+        <button class="op-btn secondary sm" type="submit">← Voltar etapa</button></form>
+      {% endif %}
+      {% if conc.status == "CONFIRMADA" %}
+      <form method="post" action="{% url 'obras:concretagem_finalizar' conc.pk %}" data-cc-confirm="Avançar para Executada? Caminhões, usos e sobras ficam bloqueados (dá para voltar a etapa depois).">{% csrf_token %}
+        <button class="op-btn sm" type="submit" {% if pendencias_finalizar %}disabled title="Ainda falta: {{ pendencias_finalizar|join:' ' }}"{% endif %}>Avançar etapa →</button></form>
+      {% elif conc.status == "EXECUTADA" %}
+      <button class="op-btn sm" type="button" data-cc-open="modal-cps" title="Registrar o envio dos CPs ao laboratório">Avançar etapa →</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ---------- Solicitação ---------- #}
+  <div class="cc-tab-panel ativa" data-panel="solicitacao">
+    <section class="op-panel"><div class="op-panel-body">
+      <dl class="cc-dados">
+        <div><dt>Obra</dt><dd>{{ conc.obra.nome }}</dd></div>
+        <div{% if falta.concreteira %} class="cc-falta"{% endif %}><dt>Concreteira</dt><dd>{{ conc.concreteira.nome|default:"—" }}</dd></div>
+        <div{% if falta.engenheiro %} class="cc-falta"{% endif %}><dt>Engenheiro</dt><dd>{% if conc.engenheiro %}{{ conc.engenheiro.get_full_name|default:conc.engenheiro.username }}{% else %}—{% endif %}</dd></div>
+        <div{% if falta.data or falta.horario %} class="cc-falta"{% endif %}><dt>Data / horário</dt><dd>{{ conc.data_programada|date:"d/m/Y"|default:"—" }} {{ conc.horario_programado|time:"H:i" }}</dd></div>
+        <div{% if falta.fck %} class="cc-falta"{% endif %}><dt>Fck de projeto</dt><dd>{% if conc.fck_projeto %}{{ conc.fck_projeto|numero_br:1 }} MPa{% else %}—{% endif %}</dd></div>
+        <div><dt>Slump flow</dt><dd>{{ conc.slump_texto|default:"—" }}</dd></div>
+        <div><dt>Agregado</dt><dd>{{ conc.agregado|default:"—" }}</dd></div>
+        <div{% if falta.volume %} class="cc-falta"{% endif %}><dt>Volume solicitado</dt><dd>{% if conc.volume_solicitado %}{{ conc.volume_solicitado|numero_br:2 }} m³{% else %}—{% endif %}</dd></div>
+        <div><dt>Bomba estacionária</dt><dd>{% if conc.com_bomba %}Sim{% else %}Não{% endif %}</dd></div>
+        {% if conc.com_bomba %}<div{% if bombista_falta %} class="cc-falta"{% endif %}><dt>Bombista</dt><dd>{{ conc.nome_bombista|default:"A informar" }}
+          {% if pode_preencher and pode_bombista %} <button class="op-btn secondary sm" type="button" data-cc-open="modal-bombista">{% if conc.nome_bombista %}Alterar{% else %}Informar{% endif %}</button>{% endif %}</dd></div>{% endif %}
+        <div><dt>Empreendimento</dt><dd>{{ conc.razao_social_empreendimento|default:"—" }}</dd></div>
+        <div style="grid-column:1/-1"><dt>Endereço de entrega</dt><dd>{{ conc.endereco_entrega|default:"—" }}{% if conc.link_maps_entrega %} · <a href="{{ conc.link_maps_entrega }}" target="_blank" rel="noopener">Maps</a>{% endif %}</dd></div>
+        {% if conc.observacoes %}<div style="grid-column:1/-1"><dt>Observações</dt><dd style="white-space:pre-line">{{ conc.observacoes }}</dd></div>{% endif %}
+      </dl>
+    </div></section>
+    <section class="op-panel{% if falta.itens %} cc-falta{% endif %}">
+      <div class="op-panel-head"><div><h2>Peças a concretar</h2></div></div>
+      <div class="op-table-wrap"><table class="op-table" style="min-width:560px">
+        <thead><tr><th>Local</th><th>Descrição</th><th class="op-num">Volume previsto</th></tr></thead>
+        <tbody>
+          {% for i in itens %}<tr><td><strong>{% if i.local %}{{ i.local.descricao_completa }}{% else %}—{% endif %}</strong></td><td>{{ i.descricao|default:"—" }}</td><td class="op-num">{{ i.volume_previsto|numero_br:2 }} m³</td></tr>
+          {% empty %}<tr><td colspan="3" class="op-empty">Nenhum item planejado.</td></tr>{% endfor %}
+        </tbody>
+        {% if itens %}<tfoot><tr><td colspan="2" class="op-num"><strong>Total</strong></td><td class="op-num"><strong>{{ volume_itens|numero_br:2 }} m³</strong></td></tr></tfoot>{% endif %}
+      </table></div>
+    </section>
+  </div>
+
+  {# ---------- Envio ---------- #}
+  {% if conc.status == "SOLICITADA" %}
+  <div class="cc-tab-panel" data-panel="envio">
+    <div class="cc-grid">
+      <section class="op-panel">
+        <div class="op-panel-head"><div><h2>Mensagem para a concreteira</h2><span class="op-muted">Já inclui o link para aceitar, recusar ou pedir outra data</span></div></div>
+        <div class="op-panel-body">
+          <textarea class="cc-msg" id="texto-msg" readonly>{{ texto_mensagem }}</textarea>
+          {% if pode_preencher %}
+          <div class="cc-acoes" style="margin-top:12px">
+            <form method="post" action="{% url 'obras:concretagem_registrar_envio' conc.pk %}" data-envio="whatsapp">{% csrf_token %}<input type="hidden" name="canal" value="WHATSAPP">
+              <button class="op-btn gold" type="submit">Abrir no WhatsApp</button></form>
+            <form method="post" action="{% url 'obras:concretagem_registrar_envio' conc.pk %}" data-envio="copiar">{% csrf_token %}<input type="hidden" name="canal" value="COPIADO">
+              <button class="op-btn secondary" type="submit">Copiar mensagem</button></form>
+            <button class="op-btn" type="button" data-cc-open="modal-email">Reenviar por e-mail</button>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      <section class="op-panel">
+        <div class="op-panel-head"><div><h2>Envios registrados</h2></div></div>
+        <ul class="cc-list">
+          {% for e in envios %}<li><div><strong>{{ e.get_canal_display }}</strong><small>{{ e.enviado_em|date:"d/m/Y H:i" }} · {% if e.enviado_por %}{{ e.enviado_por.get_full_name|default:e.enviado_por.username }}{% else %}—{% endif %}{% if e.destinatario %}<br>{{ e.destinatario }}{% endif %}</small></div></li>
+          {% empty %}<li class="op-muted">Nenhum envio registrado.</li>{% endfor %}
+        </ul>
+        {% if conc.status == "SOLICITADA" %}
+        <div class="op-panel-body" style="border-top:1px solid var(--op-line-soft)">
+          <div class="op-field"><label>Link público da concreteira</label><input readonly value="{{ link_publico }}" onclick="this.select()"></div>
+        </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if mostrar_execucao %}
+  <div class="cc-tab-panel" data-panel="campo">{% include "obras/concretagem/_aba_campo.html" %}</div>
+  <div class="cc-tab-panel" data-panel="moldagem">{% include "obras/concretagem/_aba_moldagem.html" %}</div>
+  <div class="cc-tab-panel" data-panel="laudos">{% include "obras/concretagem/_aba_laudos.html" %}</div>
+  <div class="cc-tab-panel" data-panel="anexos">{% include "obras/concretagem/_aba_anexos.html" %}</div>
+  {% endif %}
+
+  {# ---------- Histórico ---------- #}
+  <div class="cc-tab-panel" data-panel="historico">
+    <section class="op-panel"><div class="op-panel-body">
+      <ul class="cc-timeline">
+        {% for h in historico %}
+        <li><strong>{{ h.get_acao_display }}</strong> <small>· {{ h.criado_em|date:"d/m/Y H:i" }} · {% if h.usuario %}{{ h.usuario.get_full_name|default:h.usuario.username }}{% else %}Concreteira / sistema{% endif %}</small>
+          {% if h.observacao %}<p>{{ h.observacao }}</p>{% endif %}</li>
+        {% empty %}<li><p class="op-muted">Sem registros.</p></li>{% endfor %}
+      </ul>
+    </div></section>
+  </div>
+
+  {# ---------- Modais ---------- #}
+  {% if pode_preencher and pode_reagendar %}
+  <div class="op-modal" id="modal-reagendar" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(560px,100%)">
+      <div class="op-modal-head"><h2>Reagendar</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_reagendar' conc.pk %}">{% csrf_token %}
+        <p class="op-muted" style="margin-top:0">A concretagem volta para rascunho e precisa ser liberada e enviada de novo à concreteira. O link antigo deixa de funcionar. Deixe em branco para manter a data atual.</p>
+        <div class="op-grid">
+          <div class="op-field c6"><label>Nova data</label><input type="date" name="data" value="{{ conc.data_programada|date:'Y-m-d' }}"></div>
+          <div class="op-field c6"><label>Novo horário</label><input type="time" name="horario" value="{{ conc.horario_programado|time:'H:i' }}"></div>
+          <div class="op-field c12"><label>Motivo</label><input name="motivo" maxlength="300" placeholder="Opcional"></div>
+        </div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Reagendar</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if pode_editar and pode_cancelar %}
+  <div class="op-modal" id="modal-cancelar" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(520px,100%)">
+      <div class="op-modal-head"><h2>Cancelar concretagem</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_cancelar' conc.pk %}">{% csrf_token %}
+        <div class="op-field"><label>Motivo *</label><textarea name="motivo" required rows="3"></textarea></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn danger" type="submit">Cancelar concretagem</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if pode_preencher and conc.status == "EXECUTADA" %}
+  <div class="op-modal" id="modal-cps" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(520px,100%)">
+      <div class="op-modal-head"><h2>Avançar para Aguardando laudos</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_cps_enviados' conc.pk %}">{% csrf_token %}
+        <p class="op-muted" style="margin-top:0">Registra que os corpos de prova foram levados ao laboratório. Depois é só lançar os laudos.</p>
+        <div class="op-field"><label>Quem levou/enviou os CPs *</label><input name="enviado_por_nome" maxlength="200" required></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Avançar etapa</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if eh_gerente and conc.aguardando_resposta %}
+  <div class="op-modal" id="modal-aceite" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(520px,100%)">
+      <div class="op-modal-head"><h2>Aceitar manualmente</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_aceitar_manual' conc.pk %}">{% csrf_token %}
+        <p class="op-muted" style="margin-top:0">Use quando a concreteira confirmou por fora (telefone, WhatsApp) e não pelo link.</p>
+        <div class="op-field"><label>Observação</label><input name="observacao" maxlength="500" placeholder="Ex.: confirmado por telefone com Fulano"></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Confirmar concretagem</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if conc.status == "RASCUNHO" and pode_preencher and not pendencias_envio %}
+  <div class="op-modal" id="modal-liberar" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(580px,100%)">
+      <div class="op-modal-head"><h2>Liberar e enviar</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_solicitar' conc.pk %}">{% csrf_token %}
+        <p class="op-muted" style="margin-top:0">A solicitação é enviada por e-mail para os endereços marcados. Depois, a mensagem para WhatsApp também fica disponível. Desmarque todos para liberar sem e-mail.</p>
+        {% for d in destinatarios %}
+        <label class="cc-email-op"><input type="checkbox" name="emails" value="{{ d.email }}" checked> {{ d.email }} <small>{{ d.nome }}</small></label>
+        {% empty %}<p class="op-muted">A concreteira não tem e-mail no cadastro. Informe abaixo.</p>{% endfor %}
+        <div class="op-field" style="margin-top:12px"><label>Outros e-mails (separe por vírgula)</label><input name="emails_extras" placeholder="programacao@concreteira.com.br"></div>
+        <label class="cc-check"><input type="checkbox" name="salvar_extras" value="1"> Salvar esses e-mails para esta concreteira</label>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Liberar e enviar</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if pode_preencher and pode_bombista %}
+  <div class="op-modal" id="modal-bombista" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(480px,100%)">
+      <div class="op-modal-head"><h2>Bombista</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_bombista' conc.pk %}">{% csrf_token %}
+        <div class="op-field"><label>Nome do bombista</label><input name="nome_bombista" maxlength="200" value="{{ conc.nome_bombista }}"></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Salvar</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+
+  {% if conc.status == "SOLICITADA" and pode_preencher %}
+  <div class="op-modal" id="modal-email" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(580px,100%)">
+      <div class="op-modal-head"><h2>Reenviar por e-mail</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <form class="op-modal-body" method="post" action="{% url 'obras:concretagem_enviar_email' conc.pk %}">{% csrf_token %}
+        {% for d in destinatarios %}
+        <label class="cc-email-op"><input type="checkbox" name="emails" value="{{ d.email }}" checked> {{ d.email }} <small>{{ d.nome }}</small></label>
+        {% empty %}<p class="op-muted" style="margin-top:0">A concreteira não tem e-mail no cadastro. Informe abaixo.</p>{% endfor %}
+        <div class="op-field" style="margin-top:12px"><label>Outros e-mails (separe por vírgula)</label><input name="emails_extras" placeholder="comercial@concreteira.com.br"></div>
+        <label class="cc-check"><input type="checkbox" name="salvar_extras" value="1"> Salvar esses e-mails para esta concreteira</label>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="submit">Enviar</button></div>
+      </form>
+    </div></div>
+  {% endif %}
+</div>
+{% include "obras/concretagem/_modal_js.html" %}
+<script>
+(function(){
+  var abas=document.querySelectorAll('.cc-tab');
+  function ativar(nome){abas.forEach(function(a){a.classList.toggle('ativa',a.dataset.tab===nome);});document.querySelectorAll('.cc-tab-panel').forEach(function(p){p.classList.toggle('ativa',p.dataset.panel===nome);});try{sessionStorage.setItem('cc-aba-{{ conc.pk }}',nome);}catch(e){}}
+  abas.forEach(function(a){a.addEventListener('click',function(){ativar(a.dataset.tab);});});
+  function existe(n){return n&&document.querySelector('[data-panel="'+n+'"]');}
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-ir-aba]');if(b){ativar(b.dataset.irAba);window.scrollTo({top:document.querySelector('.cc-tabs').offsetTop-20,behavior:'smooth'});}});
+  var hash=(location.hash||'').replace('#aba-','');
+  var salva=null;try{salva=sessionStorage.getItem('cc-aba-{{ conc.pk }}');}catch(e){}
+  if(existe(hash)){ativar(hash);history.replaceState(null,'',location.pathname+location.search);}
+  else if(existe(salva))ativar(salva);
+  else{
+    {% if conc.status == "SOLICITADA" and not conc.confirmacao_cliente and not envios %}ativar('envio');
+    {% elif conc.status == "CONFIRMADA" and pode_preencher %}ativar('campo');
+    {% elif conc.status == "EXECUTADA" or conc.status == "AGUARDANDO_LAUDOS" %}ativar('laudos');{% endif %}
+  }
+
+  var texto=document.getElementById('texto-msg');
+  var wa=document.querySelector('form[data-envio="whatsapp"]');
+  if(wa)wa.addEventListener('submit',function(){window.open("{{ link_whatsapp|escapejs }}","_blank","noopener");});
+  var cp=document.querySelector('form[data-envio="copiar"]');
+  if(cp)cp.addEventListener('submit',function(e){
+    if(cp.dataset.ok)return;e.preventDefault();
+    var ok=function(){cp.dataset.ok=1;cp.submit();};
+    if(navigator.clipboard){navigator.clipboard.writeText(texto.value).then(ok,function(){texto.select();document.execCommand('copy');ok();});}
+    else{texto.select();document.execCommand('copy');ok();}
+  });
+})();
+</script>
+{% if mostrar_execucao %}
+<script>
+/* Acompanha os envios ao Drive feitos em segundo plano, sem recarregar a página. */
+window.ccDriveStatus=(function(){
+  var url="{% url 'obras:concretagem_anexos_status' conc.pk %}",timer=null,inicio=0,LIMITE=15*60*1000;
+  function esc(t){var d=document.createElement('div');d.textContent=t==null?'':t;return d.innerHTML;}
+  function aplicar(d){
+    var pend={};d.pendentes.forEach(function(p){pend[p.id]=p;});
+    document.querySelectorAll('[data-anexo-status]').forEach(function(tag){
+      var p=pend[tag.getAttribute('data-anexo-status')];
+      if(p){tag.textContent=p.situacao;tag.className='cc-tag'+(p.situacao==='Falhou'?' alerta':'');tag.title=p.erro||'';}
+      else{tag.textContent='No Drive';tag.className='cc-tag ok';tag.title='';
+        var linha=tag.closest('tr,li,figure');if(linha){linha.classList.remove('cc-falta','cc-falta-li');}}
+    });
+    document.querySelectorAll('[data-drive-total]').forEach(function(e){e.textContent=d.total;});
+    document.querySelectorAll('[data-drive-alerta]').forEach(function(e){e.hidden=!d.total;});
+    var corpo=document.querySelector('[data-drive-lista]');
+    if(corpo){corpo.innerHTML=d.total?d.pendentes.map(function(p){
+      return '<tr><td><a class="op-btn secondary sm cc-arquivo" href="'+p.abrir+'" target="_blank" rel="noopener" title="'+esc(p.nome)+'"><span aria-hidden="true">↗</span> <small>'+esc(p.nome)+'</small></a></td>'
+        +'<td>'+esc(p.tipo)+'</td><td>'+esc(p.origem||'—')+'</td><td>'+esc(p.enviado_em)+'</td><td class="op-num">'+p.tentativas+'</td>'
+        +'<td><span class="cc-tag'+(p.situacao==='Falhou'?' alerta':'')+'">'+esc(p.situacao)+'</span>'+(p.erro?'<div class="op-muted" style="max-width:260px;white-space:normal">'+esc(p.erro.slice(0,120))+'</div>':'')+'</td></tr>';
+    }).join(''):'<tr><td colspan="6" class="op-empty">Nenhum arquivo aguardando. Tudo no Drive.</td></tr>';}
+    return d.total;
+  }
+  function consultar(){
+    fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
+      var total=aplicar(d),soFalhas=d.pendentes.every(function(p){return p.situacao!=='Enviando…';});
+      if(!total||soFalhas||Date.now()-inicio>LIMITE){clearInterval(timer);timer=null;}
+    }).catch(function(){});
+  }
+  return {iniciar:function(){if(timer)return;inicio=Date.now();timer=setInterval(consultar,4000);setTimeout(consultar,1500);}};
+})();
+{% if anexos_pendentes and drive_habilitado %}ccDriveStatus.iniciar();{% endif %}
+</script>
+{% endif %}
+{% endblock %}

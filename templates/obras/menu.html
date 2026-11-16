@@ -42,7 +42,7 @@
     <div class="dashboard-heading__content">
       <span class="dashboard-heading__eyebrow">Módulo</span>
       <h1>Gestão <em>de Obras</em></h1>
-      <p>Centralize ficha técnica, estoque, diário de obra, vistorias e controle de qualidade por FVS em um único ambiente.</p>
+      <p>Centralize ficha técnica, estoque, diário de obra, vistorias, concretagem e controle de qualidade por FVS em um único ambiente.</p>
     </div>
   </section>
 
@@ -119,6 +119,22 @@
         <header class="module-card__header"><span class="module-card__number">05</span><span class="module-card__permission">Qualidade</span></header>
         <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-check"></use></svg></span>
           <div class="module-card__content"><h3>Vistorias</h3><p>Checklist de pré e pós Habite-se por obra, integrado ao Planejamento.</p></div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+      <a href="{% url 'obras:concretagem_painel' %}" class="module-card" data-transition-link>
+        <header class="module-card__header"><span class="module-card__number">06</span><span class="module-card__permission">Operacional</span></header>
+        <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-tools"></use></svg></span>
+          <div class="module-card__content"><h3>Concretagem</h3><p>Solicitação à concreteira, confirmação, execução em campo e laudos de resistência por obra.</p></div>
+        </div>
+        <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
+        <span class="module-card__accent"></span>
+      </a>
+      <a href="{% url 'obras:concretagem_mapa_inicio' %}" class="module-card" data-transition-link>
+        <header class="module-card__header"><span class="module-card__number">07</span><span class="module-card__permission">Operacional</span></header>
+        <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-grid"></use></svg></span>
+          <div class="module-card__content"><h3>Mapa de concretagem</h3><p>Pinte, pelo celular, onde cada concreto foi aplicado em cada local da obra.</p></div>
         </div>
         <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
         <span class="module-card__accent"></span>

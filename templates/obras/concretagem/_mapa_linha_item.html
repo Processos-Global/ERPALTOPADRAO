@@ -1,0 +1,16 @@
+{% load obras_format %}{# Linha da lista de caminhões/sobras do mapa. Contexto: i (item de itens_paleta), pode_preencher. #}
+<tr data-item="{{ i.chave }}" title="{{ i.tipo }} · {{ i.detalhe }}"{% if pode_preencher %} tabindex="0"{% endif %}>
+          <td><span class="cc-swatch" style="background:{{ i.cor }}"></span>{% if i.tipo != "Uso" %} <small class="op-muted">{{ i.tipo }}</small>{% endif %}</td>
+          <td>{{ i.data|date:"d/m/Y"|default:"—" }}</td>
+          <td><strong>{{ i.codigo }}</strong></td>
+          <td>{{ i.caminhao|default:"—" }}</td>
+          <td class="op-num"><strong>{{ i.volume|numero_br:2 }}</strong></td>
+          <td>{{ i.nf|default:"—" }}</td>
+          <td class="op-num">{{ i.cps|default:"—" }}</td>
+          <td>{{ i.inicio_mistura|default:"—" }}</td>
+          <td>{{ i.chegada|default:"—" }}</td>
+          <td>{{ i.inicio_descarga|default:"—" }}</td>
+          <td>{{ i.termino|default:"—" }}</td>
+          <td>{{ i.tempo_total|default:"—" }}</td>
+          <td style="white-space:nowrap" data-contagem="{{ i.chave }}"></td>
+</tr>
