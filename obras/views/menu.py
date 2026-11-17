@@ -6,4 +6,6 @@ from usuarios.models import ModuloSistema, NivelPermissao
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def menu(request):
-    return render(request, "obras/menu.html")
+    from obras.services.concretagem.permissoes import pode_concretagem
+
+    return render(request, "obras/menu.html", {"pode_concretagem": pode_concretagem(request.user)})

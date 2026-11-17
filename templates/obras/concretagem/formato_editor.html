@@ -16,7 +16,7 @@ html[data-theme="dark"] .fe-modo{background:var(--saari-dark-raised);color:var(-
 .fe-zoom{display:inline-flex;gap:4px;margin-left:auto}
 .fe-zoom button{width:42px;height:42px;border:1px solid var(--op-line);border-radius:10px;background:#fff;font-size:20px;font-weight:800;color:var(--op-ink);cursor:pointer}
 .fe-area{overflow:auto;max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px);padding:6px;border:1px solid var(--op-line);border-radius:14px;background:#fcfaf6;-webkit-overflow-scrolling:touch}
-.fe-area .cc-grade{margin:0 auto;max-width:none;gap:2px;padding:2px}
+.fe-area .cc-grade{margin:0 auto;max-width:none;gap:1px;padding:1px}
 .fe-area .cc-cel{border-radius:3px}
 @media(max-width:760px){.fe-zoom{margin-left:0}.fe-area{max-height:calc(100dvh - 260px)}}
 html[data-theme="dark"] .fe-zoom button{background:var(--saari-dark-raised);color:var(--saari-dark-text);border-color:var(--saari-dark-border)}
@@ -53,10 +53,43 @@ html[data-theme="dark"] .fe-area{background:var(--saari-dark-canvas);border-colo
         <span class="op-muted fe-dica" data-fe-dica><span class="fe-so-pc">No computador: botão esquerdo bloqueia, botão direito libera (arraste para várias células).</span><span class="fe-so-toque">No celular: escolha uma opção ao lado e toque ou arraste nas células. Sem opção escolhida, o dedo rola a tela.</span></span>
         <div class="fe-zoom"><button type="button" data-zoom="-1" aria-label="Diminuir">−</button><button type="button" data-zoom="1" aria-label="Aumentar">+</button></div></div>
       <div class="fe-area" data-editor-area><div data-editor></div></div>
-      <div class="cc-acoes" style="justify-content:flex-end;margin-top:14px"><button class="op-btn" type="button" data-salvar>{% if local %}Salvar e usar{% else %}Salvar formato{% endif %}</button></div>
+      <div class="cc-acoes" style="justify-content:flex-end;margin-top:14px">
+        {% if formato %}
+        <button class="op-btn secondary" type="button" data-cc-open="modal-como-novo">Salvar como novo{% if local %} e usar{% endif %}</button>
+        <button class="op-btn" type="button" data-cc-open="modal-sobrescrever">Salvar sobre o original{% if local %} e usar{% endif %}</button>
+        {% else %}
+        <button class="op-btn" type="button" data-salvar>{% if local %}Salvar e usar{% else %}Salvar formato{% endif %}</button>
+        {% endif %}
+      </div>
     </div>
   </section>
   {% csrf_token %}
+
+  {% if formato %}
+  <div class="op-modal" id="modal-como-novo" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(520px,100%)">
+      <div class="op-modal-head"><h2>Salvar como novo formato</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <div class="op-modal-body">
+        <p class="op-muted" style="margin-top:0">Cria um formato novo com o desenho atual. O original “{{ formato.nome }}” e os mapas que o usam continuam como estão.</p>
+        <div class="op-field"><label>Nome do novo formato *</label><input data-nome-novo maxlength="120"></div>
+        <div class="cc-erros" data-erro-modal hidden></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn" type="button" data-salvar data-como-novo="1">Criar formato</button></div>
+      </div>
+    </div></div>
+
+  <div class="op-modal" id="modal-sobrescrever" aria-hidden="true"><div class="op-modal-backdrop"></div>
+    <div class="op-modal-dialog" role="dialog" aria-modal="true" style="width:min(560px,100%)">
+      <div class="op-modal-head"><h2>Salvar sobre o original?</h2><button class="op-modal-close" type="button" data-cc-close aria-label="Fechar">×</button></div>
+      <div class="op-modal-body">
+        <div class="cc-alerta perigo" style="margin:0 0 12px"><div><strong>Isso altera os mapas que usam este formato</strong>
+          {% if mapas_qtd %}“{{ formato.nome }}” está aplicado em <strong>{{ mapas_qtd }} mapa{{ mapas_qtd|pluralize }}</strong>.{% else %}Hoje nenhum mapa usa “{{ formato.nome }}”.{% endif %}
+          Se alguma célula pintada ficar em “Não pode ser pintado”, a pintura dela será <strong>apagada</strong> e não volta, mesmo que depois a célula seja liberada de novo.</div></div>
+        <p class="op-muted" style="margin:0">Para não mexer nos mapas existentes, use “Salvar como novo”.</p>
+        <div class="cc-erros" data-erro-modal hidden></div>
+        <div class="op-modal-actions"><button class="op-btn secondary" type="button" data-cc-close>Voltar</button><button class="op-btn danger" type="button" data-salvar>Salvar sobre o original</button></div>
+      </div>
+    </div></div>
+  {% endif %}
 </div>
 {{ inicial|json_script:"formato-inicial" }}
 {% include "obras/concretagem/_modal_js.html" %}
@@ -104,15 +137,20 @@ html[data-theme="dark"] .fe-area{background:var(--saari-dark-canvas);border-colo
   ['pointerup','pointercancel'].forEach(function(t){window.addEventListener(t,function(){acao=null;});});
   document.querySelector('[data-limpar]').addEventListener('click',function(){fora={};desenhar();});
   document.querySelector('[data-inverter]').addEventListener('click',function(){var n={};Object.keys(g.celulas).forEach(function(k){if(!fora[k])n[k]=1;});fora=n;desenhar();});
-  var erro=document.querySelector('[data-erro]');
-  document.querySelector('[data-salvar]').addEventListener('click',function(){
-    var b=this;b.disabled=true;erro.hidden=true;
+  /* Ao editar: "como novo" cria uma cópia com o nome da janela; senão grava sobre o original.
+     O erro aparece na janela aberta (ou no topo, quando é um formato novo). */
+  var nomeNovo=document.querySelector('[data-nome-novo]');
+  if(nomeNovo)document.querySelector('[data-cc-open="modal-como-novo"]').addEventListener('click',function(){
+    nomeNovo.value=(campo('nome').value||ini.nome)+' (cópia)';setTimeout(function(){nomeNovo.select();},50);});
+  document.querySelectorAll('[data-salvar]').forEach(function(b){b.addEventListener('click',function(){
+    var comoNovo=!!b.dataset.comoNovo,modal=b.closest('.op-modal'),erro=(modal&&modal.querySelector('[data-erro-modal]'))||document.querySelector('[data-erro]');
+    b.disabled=true;erro.hidden=true;
     fetch(location.href,{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('[name=csrfmiddlewaretoken]').value,'X-Requested-With':'XMLHttpRequest'},
-      body:JSON.stringify({nome:campo('nome').value,obra:campo('obra').value,linhas:+campo('linhas').value,colunas:+campo('colunas').value,
+      body:JSON.stringify({nome:comoNovo?nomeNovo.value:campo('nome').value,como_novo:comoNovo,obra:campo('obra').value,linhas:+campo('linhas').value,colunas:+campo('colunas').value,
         fora:Object.keys(fora).map(function(k){return k.split(',').map(Number);})})})
       .then(function(r){return r.json();}).then(function(d){if(d.ok){location.href=d.redirecionar;}else{erro.textContent=d.erro;erro.hidden=false;b.disabled=false;}})
       .catch(function(){erro.textContent='Falha de conexão.';erro.hidden=false;b.disabled=false;});
-  });
+  });});
 })();
 </script>
 {% endblock %}

@@ -1,0 +1,28 @@
+<script>
+/* Busca de formatos por AJAX: cada [data-formato-busca] consulta data-url&q=… e troca os
+   cartões do [data-formato-resultados] do mesmo bloco. Espera 250 ms entre as teclas e
+   ignora respostas antigas que cheguem fora de ordem. Precisa do _grade_js (miniaturas). */
+(function(){
+  document.querySelectorAll('[data-formato-busca]').forEach(function(busca){
+    var bloco=busca.closest('form,[data-formato-bloco]')||document;
+    var alvo=bloco.querySelector('[data-formato-resultados]'),info=bloco.querySelector('[data-formato-info]');
+    if(!alvo)return;
+    var timer=null,seq=0;
+    function consultar(){
+      var minha=++seq,url=busca.dataset.url+(busca.dataset.url.indexOf('?')<0?'?':'&')+'q='+encodeURIComponent(busca.value.trim());
+      alvo.setAttribute('aria-busy','true');
+      fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(function(r){return r.json();}).then(function(d){
+        if(minha!==seq||!d.ok)return;
+        alvo.innerHTML=d.html||'';
+        if(!alvo.querySelector('[data-formato],.cc-formato,.op-muted')){alvo.innerHTML='<p class="op-muted" style="grid-column:1/-1;margin:0">Nenhum formato com esse nome.</p>';}
+        alvo.querySelectorAll('[data-grade]').forEach(function(el){window.ccGrade&&ccGrade.miniatura(el);});
+        if(window.ccPrepararConfirmacoes)ccPrepararConfirmacoes(alvo);
+        if(info)info.textContent=d.total>d.mostrando?('Mostrando '+d.mostrando+' de '+d.total+'. Refine a busca para ver os outros.'):(busca.value.trim()?d.total+' formato(s) encontrado(s).':'');
+      }).catch(function(){if(info&&minha===seq)info.textContent='Não foi possível buscar agora. Tente de novo.';})
+        .then(function(){if(minha===seq)alvo.removeAttribute('aria-busy');});
+    }
+    busca.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(consultar,250);});
+    busca.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();clearTimeout(timer);consultar();}});
+  });
+})();
+</script>

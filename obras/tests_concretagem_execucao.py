@@ -197,9 +197,10 @@ class DriveAnexoTests(BaseExecucao):
     def test_leitor_abre_temporario_e_sem_fotos_da_obra(self):
         cam = self._caminhao("8", foto_nf=_png("nf.png"))
         anexo = AnexoConcretagem.objects.get(caminhao=cam, etapa="NOTA_FISCAL")
-        self.client.force_login(self.leitor)
         self.assertEqual(self.client.get(self.url("anexo_abrir", anexo.pk)).status_code, 200)
         self.assertNotContains(self.client.get(reverse("obras:concretagem_detalhe", args=[self.conc.pk])), "Fotos da obra")
+        self.client.force_login(self.leitor)  # sem a permissão Concretagem
+        self.assertEqual(self.client.get(self.url("anexo_abrir", anexo.pk)).status_code, 403)
 
 
 class LaudosTests(BaseExecucao):
@@ -276,7 +277,7 @@ class LaudosTests(BaseExecucao):
     def test_detalhe_renderiza_todas_as_abas(self):
         self.client.post(self.url("cps_enviados"), {"enviado_por_nome": "Carlos"})
         self.client.post(self.url("laudo_salvar"), {"idade_dias": 7, "resistencia_mpa": "15", "arquivo": _png()})
-        for usuario in (self.eng, self.gerente, self.leitor):
+        for usuario in (self.eng, self.gerente):
             self.client.force_login(usuario)
             resp = self.client.get(reverse("obras:concretagem_detalhe", args=[self.conc.pk]))
             self.assertEqual(resp.status_code, 200)

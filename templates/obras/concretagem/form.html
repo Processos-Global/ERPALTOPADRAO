@@ -3,7 +3,15 @@
 {% block title %}Concretagem | {% if conc %}Editar {{ conc.codigo }}{% else %}Nova solicitação{% endif %}{% endblock %}
 {% block page_name %}Obras{% endblock %}
 {% block extra_css %}{% include "obras/concretagem/_estilos.html" %}
-<style>.cc-form{max-width:1180px;margin:0 auto}.cc-form .op-field .err{display:block;margin-top:4px;color:var(--op-danger);font-size:11.5px;font-weight:700}.cc-itens .op-table{min-width:720px}</style>
+<style>.cc-form{max-width:1180px;margin:0 auto}.cc-form .op-field .err{display:block;margin-top:4px;color:var(--op-danger);font-size:11.5px;font-weight:700}.cc-itens .op-table{min-width:720px}
+.cc-busca{position:relative}
+.cc-busca-lista{position:absolute;z-index:40;top:calc(100% + 4px);left:0;right:0;max-height:280px;overflow-y:auto;margin:0;padding:4px 0;list-style:none;background:#fff;border:1px solid var(--op-line);border-radius:10px;box-shadow:var(--op-shadow)}
+.cc-busca-lista li{padding:9px 12px;font-size:13px;cursor:pointer;color:var(--op-text)}
+.cc-busca-lista li.ativo,.cc-busca-lista li:hover{background:var(--op-soft);color:var(--op-ink)}
+.cc-busca-lista li.vazio{cursor:default;color:var(--op-muted)}
+html[data-theme="dark"] .cc-busca-lista{background:var(--saari-dark-raised);border-color:var(--saari-dark-border)}
+html[data-theme="dark"] .cc-busca-lista li{color:var(--saari-dark-text)}
+html[data-theme="dark"] .cc-busca-lista li.ativo,html[data-theme="dark"] .cc-busca-lista li:hover{background:var(--saari-dark-canvas)}</style>
 {% endblock %}
 {% block content %}
 <div class="op-page cc-page">
@@ -131,6 +139,48 @@
 </div>
 </div>
 {% include "obras/concretagem/_modal_js.html" %}
+<script>
+/* Concreteira: digite e escolha na lista (a <select> original segue escondida e é ela que vai no POST). */
+(function(){
+  var sel=document.getElementById('id_concreteira');if(!sel)return;
+  var opcoes=[].slice.call(sel.options).filter(function(o){return o.value;}).map(function(o){return {v:o.value,t:o.text};});
+  function sem(t){return (t||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();}
+  var caixa=document.createElement('div');caixa.className='cc-busca';
+  var input=document.createElement('input');input.type='text';input.autocomplete='off';input.placeholder='Digite o nome da concreteira…';
+  input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','false');
+  var lista=document.createElement('ul');lista.className='cc-busca-lista';lista.setAttribute('role','listbox');lista.hidden=true;
+  sel.parentNode.insertBefore(caixa,sel);caixa.appendChild(input);caixa.appendChild(lista);caixa.appendChild(sel);
+  sel.hidden=true;sel.tabIndex=-1;
+  var label=document.querySelector('label[for="id_concreteira"]');if(label){input.id='id_concreteira_busca';label.htmlFor=input.id;}
+  if(sel.required){input.required=true;sel.required=false;}
+  var atual=sel.options[sel.selectedIndex];if(atual&&atual.value)input.value=atual.text;
+  var itens=[],ativo=-1;
+  function fechar(){lista.hidden=true;input.setAttribute('aria-expanded','false');ativo=-1;}
+  function marcar(i){itens.forEach(function(li,k){li.classList.toggle('ativo',k===i);});ativo=i;if(itens[i])itens[i].scrollIntoView({block:'nearest'});}
+  function escolher(o){sel.value=o.v;input.value=o.t;input.setCustomValidity('');fechar();sel.dispatchEvent(new Event('change',{bubbles:true}));}
+  function abrir(){
+    var q=sem(input.value.trim());lista.innerHTML='';itens=[];
+    var achados=opcoes.filter(function(o){return !q||sem(o.t).indexOf(q)>=0;}).slice(0,50);
+    achados.forEach(function(o){var li=document.createElement('li');li.textContent=o.t;li.setAttribute('role','option');
+      li.addEventListener('mousedown',function(e){e.preventDefault();escolher(o);});lista.appendChild(li);itens.push(li);li._o=o;});
+    if(!achados.length){var v=document.createElement('li');v.className='vazio';v.textContent='Nenhum fornecedor encontrado.';lista.appendChild(v);}
+    lista.hidden=false;input.setAttribute('aria-expanded','true');marcar(achados.length?0:-1);
+  }
+  input.addEventListener('focus',abrir);
+  input.addEventListener('input',function(){sel.value='';abrir();});
+  input.addEventListener('keydown',function(e){
+    if(e.key==='ArrowDown'){e.preventDefault();if(lista.hidden)abrir();else marcar(Math.min(itens.length-1,ativo+1));}
+    else if(e.key==='ArrowUp'){e.preventDefault();marcar(Math.max(0,ativo-1));}
+    else if(e.key==='Enter'){if(!lista.hidden&&itens[ativo]){e.preventDefault();escolher(itens[ativo]._o);}}
+    else if(e.key==='Escape'){fechar();}
+  });
+  input.addEventListener('blur',function(){
+    /* Texto digitado que bate exatamente com um fornecedor também vale; senão, avisa. */
+    if(!sel.value){var exato=opcoes.filter(function(o){return sem(o.t)===sem(input.value.trim());})[0];if(exato)escolher(exato);}
+    input.setCustomValidity(input.value.trim()&&!sel.value?'Escolha uma concreteira da lista.':'');fechar();
+  });
+})();
+</script>
 <script>
 (function(){
   var form=document.getElementById('form-conc');

@@ -47,6 +47,52 @@ class FormatosTests(BaseExecucao):
         self.assertEqual(Notificacao.objects.count(), 0)
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_salvar_como_novo_nao_mexe_no_original_nem_nos_mapas(self):
+        cam = self._caminhao("8")
+        self.client.post(self.url("uso_criar"), {"caminhao": cam.pk, "local": self.laje.pk, "volume_utilizado": "8"})
+        uso = self.conc.utilizacoes.get()
+        f = FormatoDesenho.objects.create(nome="Casa", linhas=3, colunas=3)
+        mapa = svc.definir_mapa(self.laje, self.eng, formato=f)
+        svc.pintar(mapa, [[1, 1]], f"u{uso.pk}", self.eng)
+        editar = reverse("obras:concretagem_formato_editar", args=[f.pk])
+        html = self.client.get(editar).content.decode()
+        self.assertIn("Salvar como novo", html)
+        self.assertIn("1 mapa</strong>", html)  # aviso antes de gravar sobre o original
+        # mesmo nome não pode
+        r = _json(self.client, editar, {"nome": "Casa", "como_novo": True, "linhas": 3, "colunas": 3, "fora": [[1, 1]]})
+        self.assertEqual(r.status_code, 400)
+        r = _json(self.client, editar, {"nome": "Casa (cópia)", "como_novo": True, "linhas": 3, "colunas": 3, "fora": [[1, 1]]})
+        self.assertTrue(r.json()["ok"])
+        f.refresh_from_db()
+        self.assertEqual(f.celulas_fora, [])  # original intacto
+        self.assertEqual(FormatoDesenho.objects.get(nome="Casa (cópia)").celulas_fora, [[1, 1]])
+        self.assertEqual(list(mapa.celulas.values_list("linha", "coluna")), [(1, 1)])  # pintura preservada
+        # vindo do mapa, a cópia já é aplicada no local
+        url = editar + "?" + urlencode({"local": self.laje.pk})
+        _json(self.client, url, {"nome": "Casa v2", "como_novo": True, "linhas": 3, "colunas": 3, "fora": []})
+        mapa.refresh_from_db()
+        self.assertEqual(mapa.formato.nome, "Casa v2")
+
+    def test_busca_de_formatos_por_ajax(self):
+        for nome in ("Casa Alfa", "Casa Beta", "Sobrado"):
+            FormatoDesenho.objects.create(nome=nome, linhas=2, colunas=2)
+        url = reverse("obras:concretagem_formatos_buscar")
+        d = self.client.get(url, {"q": "casa"}).json()
+        self.assertEqual(d["total"], 2)
+        self.assertIn("Casa Alfa", d["html"])
+        self.assertNotIn("Sobrado", d["html"])
+        self.assertIn("Editar", d["html"])  # cartões da página Formatos
+        d = self.client.get(url, {"q": "sob", "modo": "mapa", "local": self.laje.pk}).json()
+        self.assertIn('data-formato="', d["html"])  # cartões do seletor do mapa
+        self.assertIn(f"local={self.laje.pk}", d["html"])  # editar volta ao mapa
+        self.assertEqual(self.client.get(url, {"modo": "mapa"}).status_code, 400)
+        for i in range(70):
+            FormatoDesenho.objects.create(nome=f"Lote {i:02d}", linhas=1, colunas=1)
+        d = self.client.get(url, {"q": "lote"}).json()
+        self.assertEqual((d["total"], d["mostrando"]), (70, 60))
+        self.client.force_login(self.leitor)
+        self.assertEqual(self.client.get(url, {"q": "casa"}).status_code, 403)
+
     def test_criar_pelo_mapa_ja_aplica_no_local(self):
         voltar = reverse("obras:concretagem_mapa", args=[self.obra.pk]) + f"?local={self.laje.pk}"
         url = reverse("obras:concretagem_formato_novo") + "?" + urlencode({"obra": self.obra.pk, "local": self.laje.pk, "voltar": voltar})
@@ -69,7 +115,7 @@ class FormatosTests(BaseExecucao):
     def test_leitor_nao_propoe(self):
         self.client.force_login(self.leitor)
         self.assertEqual(self.client.get(reverse("obras:concretagem_formato_novo")).status_code, 403)
-        self.assertEqual(self.client.get(reverse("obras:concretagem_formatos")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("obras:concretagem_formatos")).status_code, 403)
 
     def test_formato_em_uso_nao_muda_tamanho(self):
         f = FormatoDesenho.objects.create(nome="Fixo", linhas=3, colunas=3)
@@ -138,7 +184,7 @@ class MapaTests(BaseExecucao):
         self.assertEqual(r.status_code, 400)
         self.client.force_login(self.leitor)
         self.assertEqual(_json(self.client, self.pintar_url, {"item": f"u{self.uso.pk}", "celulas": [[1, 1]]}).status_code, 403)
-        self.assertEqual(self.client.get(self.mapa_url).status_code, 200)
+        self.assertEqual(self.client.get(self.mapa_url).status_code, 403)  # sem Concretagem nem vê
 
     def test_reduzir_grade_apaga_celulas_de_fora(self):
         mapa = svc.definir_mapa(self.laje, self.eng, 5, 5)

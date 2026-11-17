@@ -98,6 +98,7 @@ urlpatterns = [
     path("concretagem/obra/<int:obra_id>/mapa/<int:local_id>/definir/", conc.mapa.mapa_definir, name="concretagem_mapa_definir"),
     path("concretagem/obra/<int:obra_id>/mapa/<int:local_id>/pintar/", conc.mapa.mapa_pintar, name="concretagem_mapa_pintar"),
     path("concretagem/formatos/", conc.mapa.formatos, name="concretagem_formatos"),
+    path("concretagem/formatos/buscar/", conc.mapa.formatos_buscar, name="concretagem_formatos_buscar"),
     path("concretagem/formatos/novo/", conc.mapa.formato_editor, name="concretagem_formato_novo"),
     path("concretagem/formatos/<int:pk>/editar/", conc.mapa.formato_editor, name="concretagem_formato_editar"),
     path("concretagem/formatos/<int:pk>/remover/", conc.mapa.formato_desativar, name="concretagem_formato_remover"),

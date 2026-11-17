@@ -3,7 +3,7 @@
 {% block title %}Concretagem | Formatos de desenho{% endblock %}
 {% block page_name %}Obras{% endblock %}
 {% block extra_css %}{% include "obras/concretagem/_estilos.html" %}
-<style>.cc-formatos{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.cc-formato{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--op-line);border-radius:14px;background:#fff;box-shadow:var(--op-shadow)}.cc-formato h3{margin:0;color:var(--op-ink);font-size:15px}.cc-formato .cc-grade-wrap{display:flex;justify-content:center;min-height:120px;align-items:center;background:#fcfaf6;border-radius:10px}html[data-theme="dark"] .cc-formato{background:var(--saari-dark-panel);border-color:var(--saari-dark-border)}html[data-theme="dark"] .cc-formato .cc-grade-wrap{background:var(--saari-dark-raised)}html[data-theme="dark"] .cc-formato h3{color:var(--saari-dark-text)}</style>
+<style>.cc-formatos-topo{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:0 0 14px}.cc-formatos-busca{flex:1 1 260px;max-width:420px;padding:10px 12px;border:1px solid var(--op-line);border-radius:10px;font:inherit;background:#fff;color:var(--op-text)}.cc-formatos[aria-busy="true"]{opacity:.55}html[data-theme="dark"] .cc-formatos-busca{background:var(--saari-dark-raised);border-color:var(--saari-dark-border);color:var(--saari-dark-text)}.cc-formatos{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.cc-formato{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--op-line);border-radius:14px;background:#fff;box-shadow:var(--op-shadow)}.cc-formato h3{margin:0;color:var(--op-ink);font-size:15px}.cc-formato .cc-grade-wrap{display:flex;justify-content:center;min-height:120px;align-items:center;background:#fcfaf6;border-radius:10px}html[data-theme="dark"] .cc-formato{background:var(--saari-dark-panel);border-color:var(--saari-dark-border)}html[data-theme="dark"] .cc-formato .cc-grade-wrap{background:var(--saari-dark-raised)}html[data-theme="dark"] .cc-formato h3{color:var(--saari-dark-text)}</style>
 {% endblock %}
 {% block content %}
 <div class="op-page cc-page">
@@ -19,20 +19,18 @@
     </div>
   </section>
 
-  <div class="cc-formatos">
-    {% for f in formatos %}
-    <article class="cc-formato">
-      <h3>{{ f.nome }}</h3>
-      <span class="op-muted">{{ f.linhas }}×{{ f.colunas }}{% if f.obra_origem %} · origem: {{ f.obra_origem|nome_obra }}{% endif %}</span>
-      <div class="cc-grade-wrap"><div class="cc-mini" data-grade='{"linhas":{{ f.linhas }},"colunas":{{ f.colunas }},"fora":{{ f.celulas_fora|safe }}}'></div></div>
-      {% if pode_preencher %}<div class="cc-acoes">
-        <a class="op-btn secondary sm" href="{% url 'obras:concretagem_formato_editar' f.pk %}">Editar</a>
-        {% if eh_gerente %}<form method="post" action="{% url 'obras:concretagem_formato_remover' f.pk %}" data-cc-confirm="Remover o formato “{{ f.nome }}” da lista?">{% csrf_token %}<button class="op-btn danger sm" type="submit">Remover</button></form>{% endif %}
-      </div>{% endif %}
-    </article>
-    {% empty %}<p class="op-muted">Nenhum formato cadastrado ainda.</p>{% endfor %}
+  <div data-formato-bloco>
+    <div class="cc-formatos-topo">
+      <input type="search" class="cc-formatos-busca" placeholder="Buscar formato pelo nome…" autocomplete="off"
+        data-formato-busca data-url="{% url 'obras:concretagem_formatos_buscar' %}">
+      <span class="op-muted" data-formato-info>{% if formatos_total > formatos|length %}Mostrando {{ formatos|length }} de {{ formatos_total }}. Digite para encontrar os outros.{% endif %}</span>
+    </div>
+    <div class="cc-formatos" data-formato-resultados>
+      {% include "obras/concretagem/_formatos_itens_lista.html" %}
+    </div>
   </div>
 </div>
 {% include "obras/concretagem/_modal_js.html" %}
 {% include "obras/concretagem/_grade_js.html" %}
+{% include "obras/concretagem/_formatos_busca_js.html" %}
 {% endblock %}

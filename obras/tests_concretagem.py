@@ -70,9 +70,12 @@ class BaseConcretagem(TestCase):
 
 
 class PermissoesTests(BaseConcretagem):
-    def test_leitor_ve_painel_mas_nao_cria(self):
-        self.client.force_login(self.leitor)
-        self.assertEqual(self.client.get(reverse("obras:concretagem_painel")).status_code, 200)
+    def test_sem_permissao_concretagem_nao_ve_nem_cria(self):
+        self.client.force_login(self.leitor)  # só o módulo Obras
+        self.assertEqual(self.client.get(reverse("obras:concretagem_painel")).status_code, 403)
+        menu = self.client.get(reverse("obras:menu"))
+        self.assertNotContains(menu, reverse("obras:concretagem_painel"))
+        self.assertNotContains(menu, reverse("obras:concretagem_mapa_inicio"))
         self.assertEqual(self.client.get(reverse("obras:concretagem_nova")).status_code, 403)
         self.assertEqual(self._post_nova().status_code, 403)
         self.assertFalse(Concretagem.objects.exists())
@@ -130,7 +133,8 @@ class DetalheEstadosTests(BaseConcretagem):
         self.assertContains(resp, "Abrir no WhatsApp")
         resp = self._render(solicitada, self.eng)
         self.assertContains(resp, "Aceitar manualmente")  # permissão única: todos aceitam
-        self.assertNotContains(self._render(solicitada, self.leitor), "Aceitar manualmente")
+        self.client.force_login(self.leitor)
+        self.assertEqual(self.client.get(reverse("obras:concretagem_detalhe", args=[solicitada.pk])).status_code, 403)
 
         reag = fluxo.pedir_reagendamento(
             fluxo.solicitar(self._criar(), self.eng), datetime.date(2026, 12, 9), None, "Ana",
@@ -141,7 +145,7 @@ class DetalheEstadosTests(BaseConcretagem):
         self.assertContains(self._render(confirmada, self.eng), "Concretagem confirmada")
 
         cancelada = fluxo.cancelar(self._criar(), self.eng, "Chuva forte")
-        self.assertContains(self._render(cancelada, self.leitor), "Chuva forte")
+        self.assertContains(self._render(cancelada, self.eng), "Chuva forte")
 
 
 class SolicitacaoTests(BaseConcretagem):
@@ -417,6 +421,6 @@ class LocaisTests(BaseConcretagem):
     def test_api_lista_so_ativos_da_obra(self):
         self.piscina.ativo = False
         self.piscina.save()
-        self.client.force_login(self.leitor)
+        self.client.force_login(self.eng)
         dados = self.client.get(reverse("obras:concretagem_api_locais", args=[self.obra.pk])).json()
         self.assertEqual([l["nome"] for l in dados["locais"]], ["Laje 2º pavimento"])

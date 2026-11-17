@@ -1,27 +1,19 @@
 {% comment %}
 Escolha do formato da grade no mapa: usar um formato pronto, editar um existente ou criar um novo.
 Sem aprovação: criar/editar daqui salva, aplica neste local e volta ao mapa.
-Contexto: obra, local, formatos, mapa (opcional), params_formato, trocar (bool).
+A busca consulta o servidor (AJAX) e troca só os cartões.
+Contexto: obra, local, formatos, formatos_total, mapa (opcional), params_formato, trocar (bool).
 {% endcomment %}
 <form method="post" action="{% url 'obras:concretagem_mapa_definir' obra.pk local.pk %}" class="mp-formatos-form"
   {% if trocar %}data-cc-confirm="Trocar o formato? Células fora do novo contorno serão apagadas."{% endif %}>{% csrf_token %}<input type="hidden" name="formato" value="" data-formato-escolhido>
-  {% if formatos|length > 4 %}<input type="search" class="mp-formato-busca" placeholder="Buscar formato pelo nome…" data-formato-busca autocomplete="off">{% endif %}
-  <div class="mp-formatos">
-    <a class="mp-formato mp-formato-novo" href="{% url 'obras:concretagem_formato_novo' %}?{{ params_formato }}">
-      <span class="mp-formato-prev"><span class="mp-mais">＋</span></span>
-      <strong>Criar formato</strong>
-      <small>Desenha, salva e já usa aqui</small>
-    </a>
-    {% for f in formatos %}
-    <div class="mp-formato-item" data-formato-nome="{{ f.nome|lower }}">
-      <button type="submit" data-formato="{{ f.pk }}" class="mp-formato{% if mapa.formato_id == f.pk %} atual{% endif %}">
-        <span class="mp-formato-prev"><span class="cc-mini" data-grade='{"linhas":{{ f.linhas }},"colunas":{{ f.colunas }},"fora":{{ f.celulas_fora|safe }}}'></span></span>
-        <strong>{{ f.nome }}</strong>
-        <small>{{ f.linhas }}×{{ f.colunas }}{% if mapa.formato_id == f.pk %} · em uso{% else %} · toque para usar{% endif %}</small>
-      </button>
-      <a class="mp-formato-editar" href="{% url 'obras:concretagem_formato_editar' f.pk %}?{{ params_formato }}">✎ Editar</a>
-    </div>
-    {% endfor %}
+  <div class="mp-formatos-topo">
+    <input type="search" class="mp-formato-busca" placeholder="Buscar formato pelo nome…" autocomplete="off"
+      data-formato-busca data-url="{% url 'obras:concretagem_formatos_buscar' %}?modo=mapa&amp;local={{ local.pk }}">
+    <a class="mp-formato-novo-link op-btn secondary sm" href="{% url 'obras:concretagem_formato_novo' %}?{{ params_formato }}">＋ Criar formato</a>
   </div>
-  <p class="op-muted mp-formato-vazio" data-formato-vazio hidden>Nenhum formato com esse nome.</p>
+  <p class="op-muted mp-formato-info" data-formato-info>{% if formatos_total > formatos|length %}Mostrando {{ formatos|length }} de {{ formatos_total }}. Digite para encontrar os outros.{% endif %}</p>
+  <div class="mp-formatos" data-formato-resultados>
+    {% include "obras/concretagem/_formatos_itens_mapa.html" with atual_id=mapa.formato_id %}
+    {% if not formatos %}<p class="op-muted" style="grid-column:1/-1;margin:0">Nenhum formato cadastrado ainda. Use “Criar formato”.</p>{% endif %}
+  </div>
 </form>

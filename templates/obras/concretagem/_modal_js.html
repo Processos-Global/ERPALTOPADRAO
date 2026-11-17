@@ -29,7 +29,9 @@
   /* Formulários com confirmação: o app.js do ERP marca o botão como "carregando"
      em todo submit, mesmo quando a confirmação cancela. Por isso o botão recebe
      data-no-loading e o estado de carregamento só é aplicado ao confirmar. */
-  document.querySelectorAll('form[data-cc-confirm]').forEach(function(f){
+  /* Também usado para conteúdo que chega depois (ex.: busca por AJAX): ccPrepararConfirmacoes(container). */
+  function preparar(raiz){(raiz||document).querySelectorAll('form[data-cc-confirm]').forEach(function(f){
+    if(f.dataset.ccConfirmPronto)return;f.dataset.ccConfirmPronto='1';
     var botoes=f.querySelectorAll('button[type="submit"],input[type="submit"]');
     botoes.forEach(function(b){b.setAttribute('data-no-loading','');});
     f.addEventListener('submit',function(e){
@@ -44,6 +46,8 @@
       };
       abrir('cc-confirmar');
     });
-  });
+  });}
+  preparar(document);
+  window.ccPrepararConfirmacoes=preparar;
 })();
 </script>

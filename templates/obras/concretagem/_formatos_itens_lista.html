@@ -1,0 +1,12 @@
+{% load obras_format %}{% comment %}Cartões da página Formatos (usado na página e na busca por AJAX). Contexto: formatos, pode_preencher, eh_gerente.{% endcomment %}
+{% for f in formatos %}
+<article class="cc-formato">
+  <h3>{{ f.nome }}</h3>
+  <span class="op-muted">{{ f.linhas }}×{{ f.colunas }}{% if f.obra_origem %} · origem: {{ f.obra_origem|nome_obra }}{% endif %}</span>
+  <div class="cc-grade-wrap"><div class="cc-mini" data-grade='{"linhas":{{ f.linhas }},"colunas":{{ f.colunas }},"fora":{{ f.celulas_fora|safe }}}'></div></div>
+  {% if pode_preencher %}<div class="cc-acoes">
+    <a class="op-btn secondary sm" href="{% url 'obras:concretagem_formato_editar' f.pk %}">Editar</a>
+    {% if eh_gerente %}<form method="post" action="{% url 'obras:concretagem_formato_remover' f.pk %}" data-cc-confirm="Remover o formato “{{ f.nome }}” da lista?">{% csrf_token %}<button class="op-btn danger sm" type="submit">Remover</button></form>{% endif %}
+  </div>{% endif %}
+</article>
+{% empty %}<p class="op-muted">Nenhum formato encontrado.</p>{% endfor %}

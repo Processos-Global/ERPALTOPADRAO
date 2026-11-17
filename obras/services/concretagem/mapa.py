@@ -45,7 +45,7 @@ def _validar_formato(nome, linhas, colunas, excluir_formato=None):
 
 
 # ---------------------------------------------------------------------------
-# Formatos: criação direta (gerente) ou proposta (demais)
+# Formatos: criação e edição direta (sem aprovação)
 # ---------------------------------------------------------------------------
 
 @transaction.atomic

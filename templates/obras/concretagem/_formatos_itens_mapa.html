@@ -1,0 +1,11 @@
+{% comment %}Cartões de formato do seletor do mapa (usado na página e na busca por AJAX). Contexto: formatos, atual_id, params_formato.{% endcomment %}
+{% for f in formatos %}
+<div class="mp-formato-item">
+  <button type="submit" data-formato="{{ f.pk }}" class="mp-formato{% if atual_id == f.pk %} atual{% endif %}">
+    <span class="mp-formato-prev"><span class="cc-mini" data-grade='{"linhas":{{ f.linhas }},"colunas":{{ f.colunas }},"fora":{{ f.celulas_fora|safe }}}'></span></span>
+    <strong>{{ f.nome }}</strong>
+    <small>{{ f.linhas }}×{{ f.colunas }}{% if atual_id == f.pk %} · em uso{% else %} · toque para usar{% endif %}</small>
+  </button>
+  <a class="mp-formato-editar" href="{% url 'obras:concretagem_formato_editar' f.pk %}?{{ params_formato }}">✎ Editar</a>
+</div>
+{% endfor %}

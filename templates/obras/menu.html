@@ -123,6 +123,7 @@
         <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
         <span class="module-card__accent"></span>
       </a>
+      {% if pode_concretagem %}
       <a href="{% url 'obras:concretagem_painel' %}" class="module-card" data-transition-link>
         <header class="module-card__header"><span class="module-card__number">06</span><span class="module-card__permission">Operacional</span></header>
         <div class="module-card__body"><span class="module-card__icon"><svg class="icon"><use href="#icon-tools"></use></svg></span>
@@ -139,6 +140,7 @@
         <footer class="module-card__footer"><span>Acessar</span><svg class="icon"><use href="#icon-arrow"></use></svg></footer>
         <span class="module-card__accent"></span>
       </a>
+      {% endif %}
     </div>
   </section>
 </div>

@@ -27,7 +27,13 @@ def diario_lista(request):
         diarios = diarios.filter(data__lte=data_fim)
 
     diarios = list(diarios.prefetch_related("fotos").order_by("-data", "obra__nome", "-id")[:300])
-    _anexar_concretagens(diarios)
+    from obras.services.concretagem.permissoes import pode_concretagem
+
+    if pode_concretagem(request.user):
+        _anexar_concretagens(diarios)
+    else:  # sem a permissão Concretagem, o diário não mostra as concretagens do dia
+        for d in diarios:
+            d.concretagens_dia = []
 
     return render(request, "obras/diario_lista.html", {
         "diarios": diarios,
