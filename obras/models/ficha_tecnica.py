@@ -174,6 +174,11 @@ class ItemFichaTecnica(models.Model):
         related_name="itens_fichas_tecnicas",
     )
     especificacao = models.TextField(blank=True)
+    descricao_medidas = models.TextField(blank=True)
+    material = models.ForeignKey(
+        "cadastros.Material", null=True, blank=True, on_delete=models.PROTECT,
+        related_name="itens_fichas_tecnicas",
+    )
     observacao = models.TextField(blank=True)
     ordem = models.PositiveIntegerField(default=0)
     ativo = models.BooleanField(default=True)

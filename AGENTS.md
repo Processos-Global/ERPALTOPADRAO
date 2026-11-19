@@ -1,51 +1,27 @@
-# SAARI ERP — coordenação multiagente
+﻿# SAARI ERP Alto Padrão — instruções permanentes
 
-## Coordenador principal
+## Coordenação
+A sessão principal do Codex coordena arquitetura, integração e entrega. Antes de cada etapa, leia o pedido vigente, o estado do Git e os arquivos envolvidos. Não antecipe escopo ou regras além do pedido vigente. Delegue partes independentes aos seis especialistas em .codex/agents/ quando útil; trabalhos pequenos podem ficar com o coordenador. Limite: três subagentes simultâneos. Mantenha relação de tarefa, agente, arquivos atribuídos e estado. Um arquivo tem um editor por vez; leituras podem ser paralelas. Agentes não delegam novamente sem coordenação.
 
-A sessão principal do Codex é o coordenador. Leia o pedido, o estado do Git e os arquivos existentes antes de definir o escopo. Delegue tarefas independentes aos especialistas em `.codex/agents/` quando isso ajudar; tarefas simples podem permanecer na sessão principal. Não é necessário iniciar todos os especialistas para cada pedido.
+Ao delegar, informe objetivo, evidências verificadas, arquivos permitidos, dependências, restrições, critérios de aceitação e testes. Use o agente nominal se o cliente permitir; caso contrário, transmita as instruções explicitamente e não presuma carregamento automático. Peça caminhos, linhas, resultados, fatos, hipóteses e bloqueios. Aguarde dependências, revise o diff conjunto e entregue uma conclusão única. Não reverta trabalho alheio; interrompa a edição afetada diante de alteração inesperada.
 
-- `backend`: Django, Python, ORM, arquitetura, segurança e integração entre módulos.
-- `dados`: KPIs, cálculos financeiros, fórmulas, estatística e consistência dos dados.
-- `bi`: Apache ECharts, dashboards executivos e visualização de indicadores.
-- `frontend`: HTML, CSS, JavaScript, Bootstrap 5 e identidade visual SAARI.
-- `qa`: testes Django, regras de negócio, regressões e segurança.
+## Arquitetura verificada
+- manage.py carrega config.settings; config/urls.py inclui core, usuarios, obras, orcamento, planejamento, suprimentos, compras, contratos, financeiro, almoxarifado, projetos, vistorias, diario_obra, pos_obra, relatorios, integracoes e cadastros.
+- config/settings.py registra os apps, templates globais em templates/, middleware de isolamento do portal cliente em pos_obra, MySQL configurado por ambiente e mídias públicas/privadas. Nunca trate o banco padrão como descartável.
+- Models, views, forms e services estão particionados em pacotes em vários apps. Localize definições, chamadas, sinais, URLs, permissões e testes antes de alterar contratos.
+- A interface usa templates/layouts/base.html, templates/components/saari_theme.html, static/css/base.css e estilos específicos. templates/financeiro/base_financeiro.html herda a base global. Consulte herança, includes, JavaScript e cascata real.
+- Pontos de integração observados: compras/services/integracao_planejamento.py, planejamento/services/cronograma_suprimentos/painel.py, financeiro/services/integracoes.py. Investigue cada fluxo antes de assumir sua semântica.
+- requirements.txt declara Django 6.0.7, pandas, openpyxl, reportlab e pypdf. Há PDF em compras/services/ e pos_obra/relatorios.py, e planilhas em financeiro/views/relatorios.py. Confirme o ambiente ativo antes de executar Python.
 
-Antes de delegar, informe objetivo, contexto verificado, arquivos permitidos, restrições, dependências, critérios de aceitação e testes esperados. Solicite evidências com caminhos e linhas; diferencie fatos, hipóteses e impedimentos. Use o agente nominal quando o cliente oferecer seleção de agentes personalizados. Se não oferecer, leia seu TOML e transmita integralmente suas instruções ao subagente; informe essa limitação, sem alegar carregamento automático.
+## Invariantes
+1. Não invente apps, models, campos, relações, estados ou políticas. Comprove regras em definições e consumidores; peça esclarecimento se faltar decisão de negócio.
+2. Preserve comportamentos, permissões, URLs, contratos de templates e integrações. Para mudança transversal, mapeie produtores, consumidores, relatórios, importações e notificações.
+3. Preserve identidade SAARI: componentes, cores, tipografia, espaçamento, navegação, acessibilidade, responsividade e temas claro/escuro.
+4. Proteja autenticação, autorização por ação/objeto, isolamento de cliente/obra, CSRF, uploads, downloads e mídia privada. Não exponha segredos; não altere .env ou credenciais.
+5. Não faça cargas, seeds, manutenção, migrações aplicadas, testes em produção ou deploy automático. Migração nova exige mudança de esquema demonstrada, plano para dados existentes, revisão de reversibilidade e validação isolada.
+6. Para valores e indicadores, confirme origem, fórmula, unidade, período, filtros, precisão, arredondamento, nulos, duplicidade e estornos. Identifique fixtures sintéticas. Financeiro valida fórmulas antes de apresentação; QA verifica cenários.
+7. Teste proporcionalmente. Antes de rodar Django, confirme configuração e destino do banco de teste isolado. Para apenas instruções/configuração, valide sintaxe e estrutura sem iniciar a aplicação ou acessar banco. Registre comandos, resultados e limites.
+8. Restrinja edições ao escopo atribuído. Skills em .agents/skills/ não concedem autorização extra.
 
-### Controle de conflitos
-
-Mantenha na conversa uma relação de tarefa, agente, arquivos sob sua responsabilidade e estado. Cada arquivo tem apenas um editor por vez. Análises de leitura podem ocorrer em paralelo; edições sobrepostas devem ser serializadas. Não reverta trabalho do usuário ou de outro agente. Ao encontrar alterações inesperadas, suspenda a edição afetada e comunique o coordenador. Agentes não devem delegar novamente sem coordenação explícita.
-
-O coordenador aguarda os resultados necessários, resolve divergências por evidências do código e testes, revisa o diff consolidado e entrega uma única resposta com mudanças, validações e limitações. Para fluxos com indicadores, dados valida a fórmula antes de bi apresentar o resultado; frontend preserva os padrões visuais; qa verifica os cenários afetados. Respeite o limite real de concorrência do cliente, executando em lotes quando necessário.
-
-## Regras obrigatórias para todos, inclusive o coordenador
-
-1. Analise os arquivos existentes antes de propor alterações, incluindo instruções locais, chamadas, testes e dependências relevantes.
-2. Nunca invente models, campos, relações ou regras de negócio. Localize as definições reais e cite evidências; peça esclarecimento se não houver informação suficiente.
-3. Preserve funcionalidades existentes, contratos, permissões e compatibilidade entre módulos.
-4. Preserve rigorosamente a identidade visual do SAARI ERP: componentes, cores, tipografia, espaçamentos, navegação e temas claro/escuro. Consulte o template efetivamente usado e a cascata CSS; não deduza o visual apenas de um arquivo isolado.
-5. Não altere outros módulos desnecessariamente. Restrinja mudanças aos arquivos e objetivos atribuídos.
-6. Valide cálculos com dados verificáveis, indicando origem, fórmula, unidade, período, filtros, precisão e arredondamento. Não apresente números simulados como dados reais.
-7. Execute testes apropriados ao escopo e registre comandos, resultados e limitações. Testes Django somente com banco de teste isolado e configuração verificada; não presuma que o banco local é descartável. Para mudanças apenas de configuração, valide a sintaxe e o carregamento sem iniciar a aplicação ou acessar seu banco.
-8. Não modifique dados de produção. Não execute cargas, seeds, comandos de manutenção ou testes contra produção.
-9. Não realize deploy automaticamente.
-10. Não modifique arquivos `.env` ou credenciais; não exponha segredos em respostas, logs ou artefatos.
-11. Não crie migrações sem justificar a necessidade por uma alteração de esquema demonstrada. Informe impacto e validação; não aplique migrações em produção.
-
-## Referências locais verificadas
-
-- [requirements.txt](requirements.txt) declara Django 6.0.7; confirme o ambiente ativo antes de executar comandos Python.
-- [manage.py](manage.py) utiliza `config.settings`.
-- [templates/layouts/base.html](templates/layouts/base.html) contém identidade SAARI e tratamento de temas; [static/css/base.css](static/css/base.css) também contém estilos. Verifique herança e sobreposições antes de qualquer intervenção visual.
-
-## Limite da etapa inicial
-
-Esta primeira tarefa autoriza apenas criar e validar `AGENTS.md` e a configuração em `.codex/`. Não modificar `relatorios/`, seus templates em qualquer diretório, nem qualquer regra de negócio. Este limite só muda por uma nova solicitação explícita do usuário.
-
-## Configuração e disponibilidade
-
-Configuração em [.codex/config.toml](.codex/config.toml), com cinco arquivos TOML independentes em [.codex/agents/](.codex/agents/). O coordenador é a sessão principal, não um sexto subagente. Modelos e esforço de raciocínio são herdados da sessão; não fixamos nomes de modelos ou permissões adicionais.
-
-Versões identificadas em 2026-11-11: Codex do VS Code 0.163.0 e desktop 0.167.0-alpha.3.2. O executável do VS Code aceita `agents.enabled` e `agents.max_concurrent_threads_per_session` na leitura estrita da configuração. O projeto limita a três subagentes concorrentes, compatível com quatro posições totais desta sessão. Cinco especialidades não significam cinco execuções simultâneas.
-
-Documentação oficial consultada: [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) e [Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference). A disponibilidade efetiva depende do cliente, confiança no projeto e políticas da sessão. As instruções acima são regras de atuação, não uma barreira técnica de permissões. Não afrouxe sandbox ou aprovações para habilitar delegação.
+## Execução das etapas autorizadas
+O prompt mestre de melhorias especifica oito etapas de implementação. Execute somente o escopo autorizado na conversa vigente, em ordem de dependência, com validação isolada após cada etapa. O coordenador identifica módulos e critérios, seleciona especialistas e skills pertinentes, atribui arquivos sem sobreposição e consolida revisão e validação. Especialistas: backend, frontend, financeiro, compras_almoxarifado, planejamento, qa_seguranca. O coordenador não é um sétimo agente. Modelos e esforço são herdados; instruções não mudam sandbox nem aprovações. Não faça commit, push ou implantação sem pedido explícito.

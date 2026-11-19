@@ -119,6 +119,7 @@ class GrandeFornecedorItem(models.Model):
     )
     item = models.CharField(max_length=500)
     especificacao = models.TextField(blank=True)
+    descricao_medidas = models.TextField(blank=True)
     unidade = models.CharField(max_length=20, default="UN")
     quantidade = models.DecimalField(
         max_digits=18,

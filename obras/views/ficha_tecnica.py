@@ -1,9 +1,13 @@
 from decimal import Decimal, InvalidOperation
+from datetime import datetime
+from io import BytesIO
+from xml.sax.saxutils import escape
 
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.db import transaction
 from django.db.models import Count, Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -16,8 +20,9 @@ from cadastros.models import (
     TipoItemGrandeFornecedor,
     TipoPavimento,
     UnidadeMedida,
+    Material,
 )
-from usuarios.decorators import acao_required, modulo_required
+from usuarios.decorators import acao_required, modulo_required, possui_permissao_acao, possui_permissao_modulo
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import (
@@ -28,6 +33,7 @@ from obras.models import (
     Obra,
     PavimentoFichaTecnica,
 )
+from obras.services.consulta_ficha_tecnica import consultar_ficha_tecnica
 
 
 # Regras de escopo específicas da ficha técnica.
@@ -197,7 +203,8 @@ def ficha_tecnica(request, obra_id):
             "itens__tipo_item",
             "itens__unidade",
             "itens__opcao_especificacao",
-            "itens__itens_compatibilizacao_gf",
+            "itens__material",
+        "itens__itens_compatibilizacao_gf",
         )
     )
     aplicacoes_ambiente = []
@@ -209,9 +216,20 @@ def ficha_tecnica(request, obra_id):
                 "itens__tipo_item",
                 "itens__unidade",
                 "itens__opcao_especificacao",
+                "itens__material",
                 "itens__itens_compatibilizacao_gf",
             )
         )
+    sugestoes_por_aplicacao = {}
+    if ambiente_selecionado:
+        tipos = TipoItemGrandeFornecedor.objects.filter(
+            ativo=True, categoria_id__in=[ap.categoria_id for ap in aplicacoes_ambiente],
+            tipos_ambiente_sugeridos=ambiente_selecionado.tipo_ambiente,
+        ).select_related("unidade_padrao").order_by("ordem", "nome")
+        for tipo in tipos:
+            sugestoes_por_aplicacao.setdefault(tipo.categoria_id, []).append(tipo)
+    for ap in aplicacoes_ambiente:
+        ap.sugestoes = sugestoes_por_aplicacao.get(ap.categoria_id, [])
 
     aplicacao_ar_sistema = next(
         (a for a in aplicacoes_obra if a.categoria.nome.upper() == NOME_CAT_AR_SISTEMA),
@@ -241,6 +259,7 @@ def ficha_tecnica(request, obra_id):
         "ar_sistema_tipo_atual": ar_sistema_tipo_atual,
         "tipos_sistema_ar": TIPOS_SISTEMA_AR,
         "unidades": UnidadeMedida.objects.filter(ativo=True).order_by("sigla"),
+        "materiais": Material.objects.filter(ativo=True).select_related("unidade").order_by("nome", "especificacao"),
         "total_ambientes": len(ambientes),
         "total_categorias": ficha.categorias_aplicadas.filter(ativo=True).count(),
         "total_itens": ItemFichaTecnica.objects.filter(aplicacao_categoria__ficha=ficha, ativo=True).count(),
@@ -384,6 +403,8 @@ def ficha_tecnica_acao(request, obra_id):
             unidade=unidade or (tipo_item.unidade_padrao if tipo_item else None),
             opcao_especificacao=opcao,
             especificacao=(request.POST.get("especificacao") or "").strip(),
+            descricao_medidas=(request.POST.get("descricao_medidas") or "").strip(),
+            material=get_object_or_404(Material, pk=_pk_post(request, "material"), ativo=True) if _pk_post(request, "material") else None,
             observacao=(request.POST.get("observacao") or "").strip(),
             ordem=aplicacao.itens.count() + 1,
         )
@@ -417,10 +438,48 @@ def ficha_tecnica_acao(request, obra_id):
         item.unidade = unidade
         item.opcao_especificacao = opcao
         item.especificacao = (request.POST.get("especificacao") or "").strip()
+        item.descricao_medidas = (request.POST.get("descricao_medidas", item.descricao_medidas) or "").strip()
+        material_id = _pk_post(request, "material")
+        item.material = get_object_or_404(Material, pk=material_id, ativo=True) if material_id else None
         item.observacao = (request.POST.get("observacao") or "").strip()
-        item.save(update_fields=["tipo_item", "descricao_item", "quantidade", "unidade", "opcao_especificacao", "especificacao", "observacao", "atualizado_em"])
+        item.save(update_fields=["tipo_item", "descricao_item", "quantidade", "unidade", "opcao_especificacao", "especificacao", "descricao_medidas", "material", "observacao", "atualizado_em"])
         messages.success(request, "Item atualizado.")
         return redirect(destino)
+
+    elif acao == "adicionar_sugestoes":
+        aplicacao = get_object_or_404(
+            CategoriaFichaTecnica.objects.select_for_update().select_related("ambiente"),
+            pk=_pk_post(request, "aplicacao"), ficha=ficha, ativo=True,
+            ambiente__ativo=True, ambiente__pavimento__ativo=True,
+        )
+        valores = request.POST.getlist("sugestoes")
+        if any(not str(v).isascii() or not str(v).isdecimal() or int(v) <= 0 for v in valores):
+            raise Http404("Identificador de sugestão inválido.")
+        selecionados = {int(v) for v in valores}
+        tipos = TipoItemGrandeFornecedor.objects.filter(
+            pk__in=selecionados, categoria=aplicacao.categoria, ativo=True,
+            tipos_ambiente_sugeridos=aplicacao.ambiente.tipo_ambiente,
+        ).select_related("unidade_padrao")
+        if tipos.count() != len(selecionados):
+            raise Http404("Sugestão incompatível com o ambiente ou categoria.")
+        adicionados = 0
+        for tipo in tipos:
+            if aplicacao.itens.filter(tipo_item=tipo, ativo=True).exists():
+                continue
+            quantidade = _decimal(request.POST.get(f"quantidade_{tipo.pk}"), "1")
+            if quantidade <= 0 or quantidade >= Decimal("1000000000000"):
+                messages.error(request, f"Quantidade inválida para {tipo.nome}.")
+                continue
+            ItemFichaTecnica.objects.create(
+                aplicacao_categoria=aplicacao, tipo_item=tipo, quantidade=quantidade,
+                unidade=tipo.unidade_padrao,
+                descricao_medidas=(request.POST.get(f"medidas_{tipo.pk}") or "").strip(),
+                especificacao=(request.POST.get(f"especificacao_{tipo.pk}") or "").strip(),
+                ordem=aplicacao.itens.count() + 1,
+            )
+            adicionados += 1
+        messages.success(request, f"{adicionados} sugestão(ões) adicionada(s).")
+        return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=4&ambiente={aplicacao.ambiente_id}")
 
     elif acao == "excluir_item":
         item = get_object_or_404(ItemFichaTecnica, pk=_pk_post(request, "item_id"), aplicacao_categoria__ficha=ficha)
@@ -445,3 +504,106 @@ def ficha_tecnica_acao(request, obra_id):
         ficha.status = FichaTecnicaObra.Status.EM_PREENCHIMENTO
         ficha.save(update_fields=["status", "atualizado_em"])
     return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa={etapa}")
+
+
+def _consulta_contexto(request):
+    contexto = consultar_ficha_tecnica(request.GET)
+    contexto["pode_editar"] = (
+        possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+        and possui_permissao_acao(request.user, ModuloSistema.OBRAS, "gerenciar_ficha_tecnica")
+    )
+    return contexto
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def ficha_tecnica_consulta(request):
+    return render(request, "obras/ficha_tecnica_consulta.html", _consulta_contexto(request))
+
+
+def _linhas_exportacao(contexto):
+    for item in contexto["itens"]:
+        aplicacao = item.aplicacao_categoria
+        ambiente = aplicacao.ambiente
+        yield [
+            aplicacao.ficha.obra.nome,
+            ambiente.pavimento.nome if ambiente else "Obra inteira",
+            ambiente.identificacao if ambiente else "Obra inteira",
+            aplicacao.categoria.nome,
+            item.nome_item,
+            str(item.quantidade),
+            item.unidade.sigla if item.unidade else "",
+            item.descricao_medidas,
+            item.especificacao_completa,
+            item.material.descricao_completa if item.material else "",
+            item.observacao,
+        ]
+
+
+_CABECALHOS_FICHA = [
+    "Obra", "Pavimento", "Ambiente", "Categoria GF", "Item", "Quantidade", "Unidade",
+    "Descrição de medidas", "Especificação", "Material vinculado", "Observações",
+]
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def ficha_tecnica_consulta_excel(request):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    contexto = _consulta_contexto(request)
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("Ficha técnica")
+    ws.append(["SAARI · Ficha Técnica", timezone.localtime().strftime("%d/%m/%Y %H:%M")])
+    ws.append([f"Filtros: {k}={v}" for k, v in contexto["filtros"].items() if v])
+    ws.append(_CABECALHOS_FICHA)
+    for linha in _linhas_exportacao(contexto):
+        ws.append(["'" + valor if isinstance(valor, str) and valor.startswith(("=", "+", "-", "@")) else valor for valor in linha])
+    buffer = BytesIO()
+    wb.save(buffer)
+    response = HttpResponse(
+        buffer.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="ficha_tecnica_saari.xlsx"'
+    return response
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def ficha_tecnica_consulta_pdf(request):
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A3, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.utils import simpleSplit
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+    contexto = _consulta_contexto(request)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A3), rightMargin=24, leftMargin=24)
+    estilos = getSampleStyleSheet()
+    elementos = [
+        Paragraph("SAARI · Ficha Técnica", estilos["Title"]),
+        Paragraph(f"Emitido em {timezone.localtime().strftime('%d/%m/%Y %H:%M')}", estilos["Normal"]),
+        Paragraph("Filtros: " + escape(", ".join(f"{k}: {v}" for k, v in contexto["filtros"].items() if v) or "Todos"), estilos["Normal"]),
+        Spacer(1, 12),
+    ]
+    colunas = list(range(len(_CABECALHOS_FICHA)))
+    cabecalhos = [_CABECALHOS_FICHA[i] for i in colunas]
+    dados = [[Paragraph(escape(c), estilos["BodyText"]) for c in cabecalhos]]
+    for linha in _linhas_exportacao(contexto):
+        dados.append([Paragraph(escape(str(linha[i] or "")), estilos["BodyText"]) for i in colunas])
+    if len(dados) == 1:
+        elementos.append(Paragraph("Nenhum item corresponde aos filtros.", estilos["Normal"]))
+    else:
+        tabela = Table(dados, repeatRows=1, colWidths=[100, 82, 90, 90, 96, 58, 48, 130, 160, 145, 130])
+        tabela.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#49362f")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f6f2ed")]),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        elementos.append(tabela)
+    doc.build(elementos)
+    response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    response["Content-Disposition"] = 'attachment; filename="ficha_tecnica_saari.pdf"'
+    return response

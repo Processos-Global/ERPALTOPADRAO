@@ -1,0 +1,34 @@
+{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras %}
+{% block financeiro_title %}Liberações de compras{% endblock %}
+{% block financeiro_content %}
+<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Gestão financeira</div><h1 class="fin-title">Liberações de compras</h1><div class="fin-sub">Recebimentos e condições contratuais conferidos antes da criação de títulos.</div></div></header>
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Filtrar liberações</h2></div>
+  <form method="get" class="fin-section__body" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+    <div class="fin-filter-field"><label for="lib-status">Situação</label><select id="lib-status" name="status" class="fin-control"><option value="">Todas</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if status_filtro == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+    <div class="fin-filter-field"><label for="lib-obra">Obra</label><select id="lib-obra" name="obra" class="fin-control"><option value="">Todas</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if obra_filtro == obra.pk|stringformat:"s" %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+    <div class="fin-filter-field"><label for="lib-pedido">ID do pedido</label><input id="lib-pedido" type="number" min="1" name="pedido" class="fin-control" value="{{ pedido_filtro }}"></div>
+    <button class="fin-btn" type="submit">Filtrar</button>
+  </form>
+</section>
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Liberações</h2></div>
+  <div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Pedido / obra</th><th>Fornecedor</th><th>Origem</th><th>Valor</th><th>Situação</th><th>Título</th><th>Ação</th></tr></thead><tbody>
+  {% for liberacao in pagina %}<tr>
+    <td class="fin-main-cell"><strong>{{ liberacao.pedido.numero }}</strong><small>{{ liberacao.pedido.obra.nome }}</small></td>
+    <td>{{ liberacao.pedido.fornecedor.nome_exibicao }}</td>
+    <td>{{ liberacao.get_tipo_display }}<small>{{ liberacao.referencia }}</small>{% if liberacao.recebimento %}<small>NF {{ liberacao.recebimento.numero_nota_fiscal|default:"não informada" }}</small>{% endif %}</td>
+    <td class="fin-money">{{ liberacao.valor|moeda_br }}</td>
+    <td>{{ liberacao.get_status_display }}{% if liberacao.divergencia %}<small>{{ liberacao.divergencia }}</small>{% endif %}</td>
+    <td>{% if liberacao.titulo %}<a href="{% url 'financeiro:titulo_detalhe' liberacao.titulo_id %}">{{ liberacao.titulo.numero }}</a>{% else %}—{% endif %}</td>
+    <td>{% if pode_autorizar and liberacao.status == 'PENDENTE' %}<form method="post" action="{% url 'financeiro:liberacao_autorizar' liberacao.pk %}">{% csrf_token %}<button class="fin-btn" type="submit">Liberar valor</button></form>{% endif %}</td>
+  </tr>{% empty %}<tr><td colspan="7" class="fin-empty">Nenhuma liberação encontrada.</td></tr>{% endfor %}
+  </tbody></table></div>
+  {% if pagina.has_other_pages %}<nav class="fin-section__body" aria-label="Páginas das liberações">
+    {% if pagina.has_previous %}<a class="fin-btn" href="?status={{ status_filtro|urlencode }}&obra={{ obra_filtro|urlencode }}&pedido={{ pedido_filtro|urlencode }}&page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+    {% if pagina.has_next %}<a class="fin-btn" href="?status={{ status_filtro|urlencode }}&obra={{ obra_filtro|urlencode }}&pedido={{ pedido_filtro|urlencode }}&page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+  </nav>{% endif %}
+</section>
+{% endblock %}

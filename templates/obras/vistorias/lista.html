@@ -17,6 +17,7 @@
 
 {% block content %}
 <div class="vs-page">
+  <div class="vs-stage-tabs"><a href="{% url 'obras:vistorias_resumo' %}" class="vs-stage-tab vs-stage-link">Resumo gerencial de vistorias</a></div>
   <header class="vs-head"><span class="vs-head-kicker">Módulo de Obras</span><h1>Vistorias</h1><p>Acompanhamento das atividades de pré e pós Habite-se por obra.</p></header>
   {% if obras %}
   <nav class="vs-tabs" aria-label="Selecionar obra">

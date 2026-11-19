@@ -522,6 +522,10 @@ def _montar_linha_fornecedor(cotacao, processo, solicitacao=None):
                     "quantidade_recebida_formatada": _quantidade_br(
                         item_pedido.quantidade_recebida
                     ),
+                    "quantidade_pendente": item_pedido.saldo_receber,
+                    "quantidade_pendente_formatada": _quantidade_br(item_pedido.saldo_receber),
+                    "valor_unitario_formatado": _moeda_br(item_pedido.valor_unitario),
+                    "desconto_formatado": _moeda_br(item_pedido.desconto),
                     "valor_total": item_pedido.valor_total,
                     "valor_total_formatado": _moeda_br(
                         item_pedido.valor_total
@@ -1438,9 +1442,13 @@ def montar_painel_cronograma_suprimentos(
 
     grupos = []
     categorias_filtro = []
+    # Uma consulta para todas as abas da importação, preservando as opções
+    # globais mesmo quando uma obra ou um suprimento estiver selecionado.
     suprimentos_filtro = sorted({
-        nome for cron in obras
-        for nome in cron.itens.values_list("item", flat=True)
+        nome
+        for nome in ItemCronogramaSuprimento.objects.filter(
+            cronograma_obra_id__in=[cron.id for cron in obras]
+        ).order_by().values_list("item", flat=True)
         if nome
     }, key=str.casefold)
     resumo = vazio["resumo"].copy()
@@ -1448,17 +1456,23 @@ def montar_painel_cronograma_suprimentos(
 
     cronogramas_origem = obras if suprimento else ([selecionado] if selecionado else [])
     todos_itens = []
-    for cron in cronogramas_origem:
-        qs = cron.itens.all().order_by("ordem", "id")
+    if cronogramas_origem:
+        qs = ItemCronogramaSuprimento.objects.filter(
+            cronograma_obra_id__in=[cron.id for cron in cronogramas_origem]
+        ).order_by("ordem", "id")
         if suprimento:
             qs = qs.filter(item=suprimento)
+        itens_por_cronograma = {cron.id: [] for cron in cronogramas_origem}
         for item in qs:
+            itens_por_cronograma[item.cronograma_obra_id].append(item)
+
+    for cron in cronogramas_origem:
+        for item in itens_por_cronograma[cron.id]:
             item = _decorar_item(item, hoje)
             item.obra_exibicao = cron.nome_aba
             todos_itens.append(item)
 
     if todos_itens:
-        _anexar_acompanhamento_compras(todos_itens)
         categorias_filtro = sorted({x.categoria for x in todos_itens if x.categoria}, key=str.casefold)
         resumo["total"] = len(todos_itens)
         resumo["concluidos"] = sum(1 for x in todos_itens if x.etapa_atual == ItemCronogramaSuprimento.Etapa.CONCLUIDO)
@@ -1471,6 +1485,9 @@ def montar_painel_cronograma_suprimentos(
             itens = [x for x in itens if x.categoria == categoria]
         if etapa:
             itens = _filtrar_por_etapa(itens, etapa)
+        # A busca inclui fornecedores e processos. Carregamos o acompanhamento
+        # somente para os itens elegíveis após os filtros locais ao cronograma.
+        _anexar_acompanhamento_compras(itens)
         if busca:
             termo = busca.casefold()
             itens = [x for x in itens if termo in (x.item or "").casefold() or termo in (x.local or "").casefold() or termo in (x.contratada_responsavel or "").casefold() or termo in getattr(x, "acompanhamento_busca", "") or termo in getattr(x, "obra_exibicao", "").casefold()]

@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -11,7 +11,19 @@ from usuarios.decorators import acao_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import MovimentoEstoque, Obra
+from compras.models import ReservaEstoqueCompra
+from compras.services.auditoria import registrar_evento
 from obras.services import obter_estoque, obter_item_estoque, resumo_por_obra
+from obras.services.estoque import chave_estoque
+
+
+def _reservado(obra, material_id, unidade):
+    if not material_id:
+        return Decimal("0")
+    return ReservaEstoqueCompra.objects.filter(
+        obra=obra, material_id=material_id, unidade__iexact=unidade,
+        status=ReservaEstoqueCompra.Status.ATIVA,
+    ).aggregate(total=Sum("quantidade_disponivel"))["total"] or Decimal("0")
 
 
 def _decimal_positivo(valor):
@@ -88,6 +100,12 @@ def almoxarifado_obra(request, obra_id):
         .select_related("obra_origem", "obra_destino", "material", "criado_por")
         .order_by("-data_movimento", "-id")[:100]
     )
+    reservas = list(ReservaEstoqueCompra.objects.filter(
+        obra=obra, status=ReservaEstoqueCompra.Status.ATIVA,
+        quantidade_disponivel__gt=0,
+    ).select_related("material", "necessidade__processo"))
+    for reserva in reservas:
+        reserva.chave_estoque = chave_estoque(reserva.material_id, reserva.material.nome, reserva.unidade)
 
     return render(request, "obras/almoxarifado_obra.html", {
         "obra": obra,
@@ -96,6 +114,7 @@ def almoxarifado_obra(request, obra_id):
         "estoque_modal": estoque_completo,
         "destinos": Obra.objects.filter(ativa=True).exclude(pk=obra.pk).order_by("nome"),
         "movimentos": movimentos,
+        "reservas": reservas,
         "q": request.GET.get("q", ""),
         "total_itens": len(estoque_completo),
         "valor_total_obra": valor_total_obra,
@@ -132,18 +151,50 @@ def saida_estoque(request, obra_id):
             messages.error(request, "O saldo foi alterado. Atualize a página e tente novamente.")
             return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
 
-        MovimentoEstoque.objects.create(
+        reserva_id = request.POST.get("reserva_id")
+        reserva = None
+        if reserva_id:
+            if not str(reserva_id).isdigit():
+                messages.error(request, "Reserva inválida.")
+                return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
+            reserva = ReservaEstoqueCompra.objects.select_for_update().filter(
+                pk=reserva_id, obra=obra, material_id=item_atual["material_id"],
+                unidade__iexact=item_atual["unidade"], status=ReservaEstoqueCompra.Status.ATIVA,
+                quantidade_disponivel__gt=0,
+            ).first()
+            if reserva is None:
+                messages.error(request, "Reserva indisponível para este material e obra.")
+                return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
+        reservado = _reservado(obra, item_atual["material_id"], item_atual["unidade"])
+        livre = max(item_atual["saldo"] - reservado, Decimal("0"))
+        if quantidade > livre + (reserva.quantidade_disponivel if reserva else Decimal("0")):
+            messages.error(request, "Saldo disponível insuficiente após considerar as reservas.")
+            return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
+
+        movimento = MovimentoEstoque.objects.create(
             tipo=MovimentoEstoque.Tipo.SAIDA,
             obra_origem=obra,
             material_id=item_atual["material_id"],
             descricao_item=item_atual["descricao"],
             unidade=item_atual["unidade"],
             quantidade=quantidade,
+            reserva=reserva,
             finalidade=(request.POST.get("finalidade") or "").strip(),
             documento_referencia=(request.POST.get("documento_referencia") or "").strip(),
             observacao=(request.POST.get("observacao") or "").strip(),
             criado_por=request.user,
         )
+        if reserva:
+            consumido = min(quantidade, reserva.quantidade_disponivel)
+            reserva.quantidade_disponivel -= consumido
+            if reserva.quantidade_disponivel == 0:
+                reserva.status = ReservaEstoqueCompra.Status.CONSUMIDA
+            reserva.save(update_fields=["quantidade_disponivel", "status", "atualizado_em"])
+            registrar_evento(
+                reserva.necessidade.processo, "RESERVA_ESTOQUE_CONSUMIDA", request.user,
+                f"Saída de {consumido} {reserva.unidade} da reserva de {reserva.necessidade.descricao}.",
+                {"reserva_id": reserva.pk, "movimento_id": movimento.pk, "quantidade": str(consumido)},
+            )
 
     messages.success(request, "Saída registrada com sucesso.")
     return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
@@ -184,6 +235,13 @@ def transferencia_estoque(request, obra_id):
             item_atual = obter_item_estoque(obra, chave_selecionada)
             if item_atual is None or quantidade > item_atual["saldo"]:
                 messages.error(request, "O saldo foi alterado. Atualize a página e tente novamente.")
+                return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
+            livre = max(
+                item_atual["saldo"] - _reservado(obra, item_atual["material_id"], item_atual["unidade"]),
+                Decimal("0"),
+            )
+            if quantidade > livre:
+                messages.error(request, "Saldo disponível insuficiente após considerar as reservas.")
                 return redirect("obras:almoxarifado_obra", obra_id=obra.pk)
 
             MovimentoEstoque.objects.create(

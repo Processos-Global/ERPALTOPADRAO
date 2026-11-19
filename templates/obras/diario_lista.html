@@ -25,6 +25,8 @@
           <a class="op-btn secondary" href="{% url 'obras:diario_editar' d.pk %}">Editar</a>
         </div>
         <div class="op-diario-text"><strong>Serviços executados</strong><br>{{ d.servicos_executados }}</div>
+        {% if d.atividades_planejadas.all %}<div class="op-diario-text"><strong>Atividades vinculadas</strong>{% for vinculo in d.atividades_planejadas.all %}<br>{{ vinculo.get_origem_display }} · {{ vinculo.atividade.nome_tarefa }} · semana {{ vinculo.semana }}{% endfor %}</div>{% endif %}
+        {% if d.atividades_adicionais.all %}<div class="op-diario-text"><strong>Atividades adicionais</strong>{% for adicional in d.atividades_adicionais.all %}<br>{{ adicional.descricao }} · Justificativa: {{ adicional.justificativa }}{% endfor %}</div>{% endif %}
         {% if d.equipe_presente %}<div class="op-diario-text"><strong>Equipe / terceiros</strong><br>{{ d.equipe_presente }}</div>{% endif %}
         {% if d.ocorrencias %}<div class="op-diario-text"><strong>Ocorrências</strong><br>{{ d.ocorrencias }}</div>{% endif %}
         {% if d.concretagens_dia %}<div class="op-diario-text"><strong>Concretagens do dia</strong>{% for c in d.concretagens_dia %}<br><a href="{% url 'obras:concretagem_detalhe' c.pk %}">{{ c.codigo }}</a> · {{ c.horario_programado|time:"H:i" }} · {{ c.get_status_display }} · {{ c.descricao_servico|default:"—" }} · {{ c.volume_solicitado|numero_br:2 }} m³{% if c.qtd_caminhoes %} ({{ c.qtd_caminhoes }} caminhão(ões), {{ c.vol_entregue|numero_br:2 }} m³ entregues){% endif %}{% endfor %}</div>{% endif %}

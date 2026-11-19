@@ -48,7 +48,7 @@ class InterfaceOperacionalTests(TestCase):
         self.os.status='CONCLUIDO';self.os.save()
         self.client.force_login(self.portal)
         r=self.client.get(reverse('pos_obra:pesquisa',args=[self.os.pk]))
-        self.assertContains(r,'Avalie o atendimento')
+        self.assertContains(r,'Avaliar atendimento')
         self.assertNotContains(r,'<h2>Abrir solicitação</h2>')
 
     def test_portal_encerrado_nao_oferece_resposta_agenda(self):
@@ -91,7 +91,7 @@ class InterfaceOperacionalTests(TestCase):
         r=self.client.post(reverse('pos_obra:detalhe',args=[self.os.pk]),{'etapa':'TRIAGEM','prioridade':'INVALIDA','responsavel':self.admin.pk,'triagem':'Parecer ainda não salvo'})
         self.assertEqual(r.status_code,200)
         self.assertContains(r,'Parecer ainda não salvo</textarea>')
-        self.assertContains(r,'Salvar triagem')
+        self.assertContains(r,'Concluir triagem')
         self.assertContains(r,'data-stage-state="bloqueada"')
         self.os.refresh_from_db();self.assertEqual(self.os.triagem,'')
 

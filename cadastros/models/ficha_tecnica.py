@@ -96,6 +96,12 @@ class TipoItemGrandeFornecedor(ModeloAtivoTimestamp):
         related_name="tipos_itens_grande_fornecedor",
     )
     ordem = models.PositiveIntegerField(default=0)
+    tipos_ambiente_sugeridos = models.ManyToManyField(
+        TipoAmbiente,
+        blank=True,
+        related_name="itens_gf_sugeridos",
+        help_text="Sugestão opcional para ambientes deste tipo; a ficha só recebe itens após confirmação.",
+    )
 
     class Meta:
         ordering = ("categoria__ordem", "ordem", "nome")

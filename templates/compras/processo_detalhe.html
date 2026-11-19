@@ -1215,6 +1215,17 @@
     </div>
   </header>
 
+  <section class="cp-section" aria-label="Prazos do processo"><div class="cp-section__body">
+    <strong>Prazo da etapa: {{ sla.etapa.rotulo }}</strong>
+    {% if sla.etapa.limite %}<span> · Limite {{ sla.etapa.limite|date:'d/m/Y' }}</span>{% endif %}
+    {% if sla.etapa.decorridos != None %}<span> · {{ sla.etapa.decorridos }} de {{ sla.etapa.permitidos|default:'—' }} dias decorridos</span>{% endif %}
+    {% if sla.etapa.restantes != None %}<span> · {{ sla.etapa.restantes }} dias restantes</span>{% endif %}
+    {% if sla.etapa.atraso %}<span> · {{ sla.etapa.atraso }} dias de atraso</span>{% endif %}
+    <div>Prazo geral: {{ sla.geral.rotulo }}{% if sla.geral.limite %} · limite {{ sla.geral.limite|date:'d/m/Y' }}{% endif %}</div>
+    {% if processo.item_cronograma.prazo_limite_contratacao %}<div>Prazo de contratação do cronograma: {{ processo.item_cronograma.prazo_limite_contratacao|date:'d/m/Y' }}</div>{% endif %}
+    {% for pedido, prazo in sla_pedidos %}<div>Pedido {{ pedido.numero }}: previsão comercial {{ prazo.previsao|date:'d/m/Y'|default:'—' }}{% if prazo.realizada %} · entregue {{ prazo.realizada|date:'d/m/Y' }}{% endif %}{% if prazo.dias_atraso_comercial %} · atraso comercial {{ prazo.dias_atraso_comercial }} dias{% endif %}</div>{% endfor %}
+  </div></section>
+
   <div class="pc-tabs-shell">
     <div class="pc-tabs">
       <button class="pc-tab is-active" type="button" data-tab="resumo">Visão geral</button>
@@ -1248,6 +1259,7 @@
               <div><label class="pc-muted" style="display:block;margin-bottom:5px">Quantidade</label>{{ form_necessidade.quantidade }}</div>
               <div><label class="pc-muted" style="display:block;margin-bottom:5px">Observação</label>{{ form_necessidade.observacao }}</div>
               <button type="submit" class="cp-btn cp-btn--primary">+ Adicionar item</button>
+              {% if permissoes_compras.pode_excecao_estoque %}<div style="grid-column:1/-1"><label><input type="checkbox" name="excecao_estoque" value="1"> Autorizar exceção de estoque</label><label class="pc-muted" style="display:block;margin-top:6px">Justificativa da exceção</label><textarea name="justificativa_excecao" class="cp-input" rows="2" placeholder="Informe por que o saldo disponível não pode atender esta necessidade"></textarea></div>{% endif %}
             </form>
           </div>
           {% endif %}
@@ -1273,6 +1285,7 @@
                                 {{ n.form_edicao.material }}
                                 {{ n.form_edicao.quantidade }}
                                 {{ n.form_edicao.observacao }}
+                                {% if permissoes_compras.pode_excecao_estoque %}<label><input type="checkbox" name="excecao_estoque" value="1"> Autorizar exceção de estoque</label><label class="pc-muted">Justificativa da exceção</label><textarea name="justificativa_excecao" class="cp-input" rows="2" placeholder="Motivo da exceção"></textarea>{% endif %}
                                 <button type="submit" class="cp-btn cp-btn--primary cp-btn--sm">Salvar alterações</button>
                               </form>
                             </details>

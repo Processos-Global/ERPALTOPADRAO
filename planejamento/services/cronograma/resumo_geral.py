@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from .consultas import CronogramaBaseError, decimal_para_float, queryset_ativo
 
 
@@ -79,7 +81,7 @@ def obter_serie_resumo_geral(*, projeto):
         .filter(disciplina__iexact="RESUMO GERAL")
         .exclude(semana__isnull=True)
         .values(
-            "id", "semana", "data_atualizacao", "inicio_real", "duracao_real",
+            "id", "semana", "data_atualizacao", "inicio_semana", "inicio_real", "duracao_real",
             "termino_real", "inicio_base", "duracao_base", "termino_base",
             "percentual_concluida", "percentual_previsto_tarefa",
             "percentual_executado", "percentual_previsto",
@@ -95,6 +97,7 @@ def obter_serie_resumo_geral(*, projeto):
         serie.append({
             "semana": numero_semana,
             "data_atualizacao": registro["data_atualizacao"],
+            "inicio_semana": registro["inicio_semana"],
             "executado": executado,
             "previsto": previsto,
             "desvio": executado - previsto,
@@ -105,6 +108,15 @@ def obter_serie_resumo_geral(*, projeto):
             "duracao_base": decimal_para_float(registro["duracao_base"]),
             "termino_base": registro["termino_base"],
         })
+    for indice, item in enumerate(serie):
+        inicio = item["inicio_semana"]
+        seguinte = serie[indice + 1]["inicio_semana"] if indice + 1 < len(serie) else None
+        item["fim_semana"] = (
+            min(seguinte - timedelta(days=1), inicio + timedelta(days=6))
+            if inicio and seguinte and 0 < (seguinte - inicio).days <= 14
+            else (inicio + timedelta(days=6) if inicio else None)
+        )
+        item["data_referencia"] = item["data_atualizacao"] or inicio
     return serie
 
 
@@ -112,7 +124,14 @@ def calcular_avancos_semanais(serie):
     resultado = []
     anterior_executado = None
     anterior_previsto = None
-    for item in serie:
+    for item in sorted(
+        serie,
+        key=lambda registro: (
+            registro.get("data_referencia") or registro.get("data_atualizacao") or registro.get("inicio_semana")
+            or date.min,
+            registro.get("semana") or 0,
+        ),
+    ):
         executado = float(item.get("executado") or 0.0)
         previsto = float(item.get("previsto") or 0.0)
         if anterior_executado is None:
@@ -123,6 +142,9 @@ def calcular_avancos_semanais(serie):
             avanco_previsto = previsto - anterior_previsto
         resultado.append({
             "semana": item["semana"],
+            "inicio_semana": item.get("inicio_semana"),
+            "fim_semana": item.get("fim_semana"),
+            "data_referencia": item.get("data_referencia"),
             "executado_acumulado": executado,
             "previsto_acumulado": previsto,
             "avanco_real": avanco_real,
@@ -135,10 +157,43 @@ def calcular_avancos_semanais(serie):
     return resultado
 
 
+def calcular_avancos_mensais(serie):
+    """Último snapshot de cada mês; incrementos são diferenças entre acumulados."""
+    por_mes = {}
+    for item in sorted(
+        serie,
+        key=lambda registro: (
+            registro.get("data_referencia") or registro.get("data_atualizacao") or registro.get("inicio_semana") or date.min,
+            registro.get("semana") or 0,
+        ),
+    ):
+        data = item.get("data_referencia") or item.get("data_atualizacao") or item.get("inicio_semana")
+        if data:
+            por_mes[(data.year, data.month)] = item
+    resultado = []
+    anterior_real = anterior_previsto = 0.0
+    for ano_mes in sorted(por_mes):
+        item = por_mes[ano_mes]
+        real = float(item.get("executado") or 0.0)
+        previsto = float(item.get("previsto") or 0.0)
+        resultado.append({
+            "ano": ano_mes[0], "mes": ano_mes[1],
+            "periodo": f"{ano_mes[1]:02d}/{ano_mes[0]}",
+            "data_referencia": item.get("data_referencia") or item.get("data_atualizacao") or item.get("inicio_semana"),
+            "executado_acumulado": real, "previsto_acumulado": previsto,
+            "avanco_real": real - anterior_real,
+            "avanco_previsto": previsto - anterior_previsto,
+            "desvio_acumulado": real - previsto,
+        })
+        anterior_real, anterior_previsto = real, previsto
+    return resultado
+
+
 def calcular_media_avancos(avancos, *, limite_semanas=4):
-    if not avancos:
+    # O primeiro retrato é uma base acumulada, não o avanço daquela semana.
+    recorte = avancos[1:][-limite_semanas:]
+    if not recorte:
         return {"media_real": 0.0, "media_previsto": 0.0, "quantidade_semanas": 0}
-    recorte = avancos[-limite_semanas:]
     quantidade = len(recorte)
     return {
         "media_real": sum(i["avanco_real"] for i in recorte) / quantidade,

@@ -35,6 +35,7 @@ from compras.models import (
     CotacaoFornecedor,
     CotacaoFornecedorItem,
     AprovacaoCompra,
+    NecessidadeCompra,
     PedidoCompra,
     ProcessoCompra,
     SolicitacaoCotacaoFornecedor,
@@ -667,6 +668,7 @@ def _montar_dados_comerciais(
     AcaoCompra.VISUALIZAR
 )
 def dashboard(request):
+    from compras.services.sla import resumo_sla_processos
 
     qs = (
         _aplicar_filtros(
@@ -680,6 +682,9 @@ def dashboard(request):
 
     hoje = timezone.localdate()
     processos = list(qs)
+    sla_resumo = resumo_sla_processos(processos)
+    for processo_item in processos:
+        processo_item.sla = sla_resumo["indicadores"][processo_item.pk]
 
     # A mesma consulta alimenta KPIs e colunas. Antes, cada filtro abaixo
     # disparava uma nova consulta complexa com os COUNTs anotados.
@@ -840,6 +845,8 @@ def dashboard(request):
                 .choices
             ),
             "hoje": hoje,
+            "sla_resumo": sla_resumo,
+            "pode_administrar_sla": possui_acao_compras(request.user, AcaoCompra.ADMINISTRAR),
         },
     )
 
@@ -853,6 +860,7 @@ def dashboard(request):
     AcaoCompra.VISUALIZAR
 )
 def lista_processos(request):
+    from compras.services.sla import resumo_sla_processos
 
     qs = (
         _aplicar_filtros(
@@ -864,11 +872,21 @@ def lista_processos(request):
         )
     )
 
+    processos = list(qs)
+    resumo_inicial = resumo_sla_processos(processos)
+    for processo_item in processos:
+        processo_item.sla = resumo_inicial["indicadores"][processo_item.pk]
+    situacao_sla = (request.GET.get("sla") or "").strip()
+    if situacao_sla:
+        processos = [p for p in processos if p.sla["etapa"]["situacao"] == situacao_sla]
+    sla_resumo = resumo_sla_processos(processos)
     return render(
         request,
         "compras/processos_lista.html",
         {
-            "processos": qs,
+            "processos": processos,
+            "sla_resumo": sla_resumo,
+            "pode_administrar_sla": possui_acao_compras(request.user, AcaoCompra.ADMINISTRAR),
             "obras": (
                 Obra.objects
                 .order_by("nome")
@@ -899,6 +917,7 @@ def detalhe_processo(
     request,
     pk,
 ):
+    from compras.services.sla import indicador_processo, indicador_pedido
 
     processo = get_object_or_404(
         ProcessoCompra.objects
@@ -955,6 +974,9 @@ def detalhe_processo(
         "pode_cancelar_pedidos": possui_acao_compras(
             request.user, AcaoCompra.CANCELAR_PEDIDOS
         ),
+        "pode_excecao_estoque": possui_acao_compras(
+            request.user, AcaoCompra.EXCECAO_ESTOQUE
+        ),
         "pode_administrar": possui_acao_compras(
             request.user, AcaoCompra.ADMINISTRAR
         ),
@@ -986,6 +1008,7 @@ def detalhe_processo(
     necessidades = list(
         processo
         .necessidades
+        .exclude(situacao=NecessidadeCompra.Situacao.CANCELADA)
         .select_related(
             "atividade_origem",
             "material__unidade",
@@ -1241,6 +1264,8 @@ def detalhe_processo(
 
     contexto = {
         "processo": processo,
+        "sla": indicador_processo(processo),
+        "sla_pedidos": [(pedido, indicador_pedido(pedido)) for pedido in pedidos],
         "aprovacao_aprovada": aprovacao_aprovada,
         "vinculos": vinculos,
         "necessidades": necessidades,
@@ -1394,7 +1419,8 @@ def nova_compra_avulsa(request):
             return redirect("compras:detalhe_processo", pk=processo.pk)
         except ValidationError as exc:
             form.add_error(None, exc)
-    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset})
+    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset,
+        "pode_excecao_estoque": possui_acao_compras(request.user, AcaoCompra.EXCECAO_ESTOQUE)})
 
 # ============================================================
 # NOVO PROCESSO
@@ -1587,6 +1613,7 @@ def novo_processo(request):
             "permite_sem_atividade": getattr(form, "permite_sem_atividade", False),
             "processos_existentes": processos_existentes,
             "processos_ativos_existentes": processos_ativos_existentes,
+            "pode_excecao_estoque": possui_acao_compras(request.user, AcaoCompra.EXCECAO_ESTOQUE),
         },
     )
 

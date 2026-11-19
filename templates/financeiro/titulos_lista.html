@@ -81,7 +81,7 @@
   </td>
 </tr>
 {% empty %}<tr><td colspan="8" class="fin-empty"><strong>Nenhuma conta encontrada</strong>Ajuste os filtros.</td></tr>{% endfor %}
-</tbody></table></div>{% if page_obj.paginator.num_pages > 1 %}<div class="fin-pagination"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><span>{% if page_obj.has_previous %}<a class="fin-btn fin-btn--sm" href="?page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="fin-btn fin-btn--sm" href="?page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</span></div>{% endif %}</section>
+</tbody></table></div>{% if page_obj.paginator.num_pages > 1 %}<div class="fin-pagination"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><span>{% if page_obj.has_previous %}<a class="fin-btn fin-btn--sm" href="?{% if parametros_paginacao %}{{ parametros_paginacao }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="fin-btn fin-btn--sm" href="?{% if parametros_paginacao %}{{ parametros_paginacao }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</span></div>{% endif %}</section>
 
 <script>
 (function(){

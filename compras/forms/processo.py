@@ -554,6 +554,22 @@ class ItemCompraAberturaForm(forms.Form):
         ),
     )
 
+    excecao_estoque = forms.BooleanField(
+        required=False,
+        label="Autorizar exceção de estoque",
+    )
+    justificativa_excecao = forms.CharField(
+        required=False,
+        label="Justificativa da exceção",
+        widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Explique por que a compra é necessária"}),
+    )
+
+    def clean(self):
+        dados = super().clean()
+        if dados.get("excecao_estoque") and not (dados.get("justificativa_excecao") or "").strip():
+            self.add_error("justificativa_excecao", "Informe a justificativa da exceção.")
+        return dados
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["material"].queryset = (

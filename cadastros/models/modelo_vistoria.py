@@ -2,6 +2,7 @@ from django.db import models
 
 
 class ModeloVistoria(models.Model):
+    id = models.BigAutoField(primary_key=True)
     nome = models.CharField(max_length=160, unique=True)
     descricao = models.TextField(blank=True)
     versao = models.PositiveIntegerField(default=1)
@@ -12,6 +13,7 @@ class ModeloVistoria(models.Model):
 
 
 class CampoModeloVistoria(models.Model):
+    id = models.BigAutoField(primary_key=True)
     class Tipo(models.TextChoices):
         TEXTO = 'TEXTO', 'Texto curto'
         LONGO = 'LONGO', 'Texto longo'

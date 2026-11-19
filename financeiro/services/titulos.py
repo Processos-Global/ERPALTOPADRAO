@@ -4,7 +4,8 @@ from uuid import uuid4
 from django.db import transaction
 from django.utils import timezone
 
-from financeiro.models import TituloPagar
+from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
+from django.db.models import Sum
 from financeiro.services.auditoria import registrar_evento
 from financeiro.services.numeracao import gerar_numero
 from financeiro.services.regras import distribuir_valor_parcelas
@@ -129,10 +130,40 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
 
 @transaction.atomic
 def cancelar_titulo(titulo, *, usuario, motivo):
-    if titulo.status == TituloPagar.Status.PAGO:
+    liberacao = LiberacaoFinanceiraPedido.objects.filter(titulo_id=titulo.pk).first()
+    if liberacao:
+        # Mesma ordem de bloqueio da autorização: pedido, liberação, título.
+        from compras.models import PedidoCompra
+        PedidoCompra.objects.select_for_update().get(pk=liberacao.pedido_id)
+        liberacao = LiberacaoFinanceiraPedido.objects.select_for_update().get(pk=liberacao.pk)
+    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+    if titulo.status == TituloPagar.Status.PAGO or Pagamento.objects.filter(
+        titulo=titulo, status=Pagamento.Status.EFETIVADO,
+    ).exists():
         raise ValueError("Conta paga não pode ser cancelada. Estorne o pagamento primeiro.")
+    if titulo.status == TituloPagar.Status.CANCELADO:
+        return titulo
+    if liberacao and liberacao.tipo == LiberacaoFinanceiraPedido.Tipo.ANTECIPACAO:
+        demais_antecipacoes = LiberacaoFinanceiraPedido.objects.filter(
+            pedido_id=liberacao.pedido_id,
+            tipo=LiberacaoFinanceiraPedido.Tipo.ANTECIPACAO,
+            status=LiberacaoFinanceiraPedido.Status.AUTORIZADA,
+        ).exclude(pk=liberacao.pk).aggregate(total=Sum("valor"))["total"] or 0
+        compensado = LiberacaoFinanceiraPedido.objects.filter(
+            pedido_id=liberacao.pedido_id,
+            tipo=LiberacaoFinanceiraPedido.Tipo.RECEBIMENTO,
+            status__in=[LiberacaoFinanceiraPedido.Status.AUTORIZADA, LiberacaoFinanceiraPedido.Status.COMPENSADA],
+        ).aggregate(total=Sum("valor_compensado"))["total"] or 0
+        if compensado > demais_antecipacoes:
+            raise ValueError("Antecipação já compensada em recebimento; reverta a conciliação antes de cancelar.")
     titulo.status = TituloPagar.Status.CANCELADO
     titulo.cancelado_em = timezone.now()
     titulo.save(update_fields=["status", "cancelado_em", "atualizado_em"])
     registrar_evento(titulo, "CANCELADO", motivo or "Conta a Pagar cancelada.", usuario)
+    if liberacao:
+        liberacao.status = LiberacaoFinanceiraPedido.Status.CANCELADA
+        liberacao.motivo_cancelamento = motivo or "Título da liberação cancelado."
+        liberacao.cancelado_por = usuario
+        liberacao.cancelado_em = timezone.now()
+        liberacao.save(update_fields=["status", "motivo_cancelamento", "cancelado_por", "cancelado_em"])
     return titulo

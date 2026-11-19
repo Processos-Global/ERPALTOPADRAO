@@ -7,17 +7,17 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from obras.models import VistoriaHistorico, VistoriaItem
+from obras.services.resumo_vistorias import (
+    DISCIPLINAS_PRE, DISCIPLINAS_VISTORIA, montar_resumo_vistorias,
+)
 from planejamento.models import ImportacaoCronograma, RegistroCronograma
 from usuarios.decorators import modulo_required, possui_permissao_acao
 from usuarios.models import ModuloSistema, NivelPermissao
 
 # O filtro é executado no banco, antes de percorrer os snapshots semanais.
 # As variantes abaixo preservam textos antigos, antes da normalização do CSV.
-_DISCIPLINAS = (
-    'CHECKLIST HABITE-SE', 'CHECKLIST PRE HABITE-SE',
-    'CHECKLIST PRÉ HABITE-SE', 'POS HABITE-SE', 'PÓS HABITE-SE',
-)
-_PRE = {'CHECKLIST HABITE-SE', 'CHECKLIST PRE HABITE-SE', 'CHECKLIST PRÉ HABITE-SE'}
+_DISCIPLINAS = DISCIPLINAS_VISTORIA
+_PRE = DISCIPLINAS_PRE
 
 
 def _importacao_id():
@@ -91,6 +91,95 @@ def vistorias_lista(request):
     return render(request, 'obras/vistorias/lista.html', {
         'obras': obras, 'obra_id': obra_id, 'grupos': grupos,
     })
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def vistorias_resumo(request):
+    return render(
+        request, "obras/vistorias_resumo.html",
+        montar_resumo_vistorias(request.GET),
+    )
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+def vistorias_resumo_pdf(request):
+    """Exporta a mesma seleção e os mesmos totais do resumo na tela."""
+    from html import escape
+    from io import BytesIO
+
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    dados = montar_resumo_vistorias(request.GET)
+    estilos = getSampleStyleSheet()
+    p = lambda valor: Paragraph(escape(str(valor or "—")), estilos["Normal"])
+    filtros = dados["filtros"]
+    obra_nome = next((obra["obra__nome"] for obra in dados["obras_filtro"]
+                      if obra["obra_id"] == filtros["obra"]), "Todas")
+    tipo = {"PRE": "Pré Habite-se", "POS": "Pós Habite-se"}.get(filtros["tipo"], "Todos")
+    situacao = dict(dados["situacoes_filtro"]).get(filtros["situacao"], "Todas")
+    data_texto = lambda data: data.strftime("%d/%m/%Y") if data else "Sem limite"
+    emissao = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+    ultima = (timezone.localtime(dados["ultima_atualizacao"]).strftime("%d/%m/%Y %H:%M")
+              if dados["ultima_atualizacao"] else "Sem registro")
+
+    conteudo = [
+        Paragraph("SAARI ERP Alto Padrão", estilos["Heading2"]),
+        Paragraph("Resumo Gerencial de Vistorias", estilos["Title"]),
+        p(f"Emitido em: {emissao}"),
+        p(f"Obra: {obra_nome} | Checklist: {tipo} | Situação: {situacao}"),
+        p(f"Período do cronograma: {data_texto(filtros['inicio'])} a {data_texto(filtros['fim'])}"),
+        p(f"Última atualização relevante: {ultima}"),
+        Spacer(1, 6 * mm),
+    ]
+    resumo = dados["resumo"]
+    conteudo.append(p(
+        f"Total: {resumo['total']} | Realizadas: {resumo['realizadas']} | "
+        f"Não realizadas: {resumo['nao_realizadas']} "
+        f"(sem avaliação: {resumo['sem_avaliacao']}) | Conclusão: {resumo['percentual']}%"
+    ))
+    conteudo.append(Spacer(1, 5 * mm))
+
+    def tabela(linhas, larguras):
+        tab = Table(linhas, colWidths=larguras, repeatRows=1, hAlign="LEFT")
+        tab.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#453330")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f5f0e9")]),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+        return tab
+
+    cabecalho = ["Obra", "Total", "Feitas", "Pendentes", "Conclusão", "Última atualização"]
+    linhas = [cabecalho]
+    for linha in dados["linhas"]:
+        atualizado = (timezone.localtime(linha["ultima_atualizacao"]).strftime("%d/%m/%Y")
+                      if linha["ultima_atualizacao"] else "—")
+        linhas.append([p(linha["obra_nome"]), str(linha["total"]), str(linha["realizadas"]),
+                       str(linha["nao_realizadas"]), f"{linha['percentual']}%", atualizado])
+    if len(linhas) == 1:
+        linhas.append(["Nenhuma atividade encontrada", "", "", "", "", ""])
+    conteudo.extend([Paragraph("Resumo por obra", estilos["Heading3"]),
+                     tabela(linhas, [55 * mm, 18 * mm, 18 * mm, 21 * mm, 23 * mm, 42 * mm]),
+                     Spacer(1, 5 * mm), Paragraph("Pendências", estilos["Heading3"])])
+    pendencias = [["Obra", "Tipo", "Atividade / local", "Situação"]]
+    for item in dados["pendencias"]:
+        pendencias.append([p(item["obra_nome"]), p(item["tipo"]),
+                           p(f"{item['atividade']} — {item['local']}"), p(item["situacao"])])
+    if len(pendencias) == 1:
+        pendencias.append(["Nenhuma pendência", "", "", ""])
+    conteudo.append(tabela(pendencias, [38 * mm, 33 * mm, 82 * mm, 24 * mm]))
+    buffer = BytesIO()
+    SimpleDocTemplate(buffer, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
+                      topMargin=16 * mm, bottomMargin=16 * mm).build(conteudo)
+    resposta = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+    resposta["Content-Disposition"] = 'attachment; filename="saari-resumo-vistorias.pdf"'
+    return resposta
 
 
 @require_POST

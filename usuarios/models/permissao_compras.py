@@ -12,6 +12,7 @@ class AcaoCompra(models.TextChoices):
     GERENCIAR_PEDIDOS = "GERENCIAR_PEDIDOS", "Gerenciar pedidos"
     RECEBER_PEDIDOS = "RECEBER_PEDIDOS", "Registrar recebimentos"
     CANCELAR_PEDIDOS = "CANCELAR_PEDIDOS", "Cancelar pedidos"
+    EXCECAO_ESTOQUE = "EXCECAO_ESTOQUE", "Autorizar exceção de estoque"
     ADMINISTRAR = "ADMINISTRAR", "Administrar Compras"
 
 
@@ -66,6 +67,11 @@ class PermissaoCompras(models.Model):
     cancelar_pedidos = models.BooleanField(
         default=False,
         verbose_name="Cancelar pedidos",
+    )
+
+    excecao_estoque = models.BooleanField(
+        default=False,
+        verbose_name="Autorizar exceção de estoque",
     )
 
     administrar = models.BooleanField(

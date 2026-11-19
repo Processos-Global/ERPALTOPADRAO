@@ -1,0 +1,49 @@
+{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% block financeiro_title %}Agenda de pagamentos{% endblock %}
+{% block financeiro_content %}
+<header class="fin-head"><div class="fin-head__copy">
+  <div class="fin-eyebrow">Vencimentos e pagamentos</div>
+  <h1 class="fin-title">Agenda de pagamentos</h1>
+  <div class="fin-sub">Valores por vencimento; pagos pela data efetiva do pagamento.</div>
+</div></header>
+
+<form class="fin-toolbar" method="get" aria-label="Filtros da agenda">
+  <div class="fin-filter-field"><label for="agenda-periodo">Período</label><select class="fin-control" name="periodo" id="agenda-periodo">{% for valor,rotulo in periodos %}<option value="{{ valor }}" {% if periodo == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label for="agenda-data">Data específica</label><input class="fin-control" type="date" id="agenda-data" name="data" value="{{ filtros.data }}"></div>
+  <div class="fin-filter-field"><label for="agenda-inicio">Início</label><input class="fin-control" type="date" id="agenda-inicio" name="inicio" value="{{ filtros.inicio }}"></div>
+  <div class="fin-filter-field"><label for="agenda-fim">Fim</label><input class="fin-control" type="date" id="agenda-fim" name="fim" value="{{ filtros.fim }}"></div>
+  <div class="fin-filter-field"><label for="agenda-mes">Mês</label><input class="fin-control" type="number" min="1" max="12" id="agenda-mes" name="mes" value="{{ filtros.mes }}"></div>
+  <div class="fin-filter-field"><label for="agenda-ano">Ano</label><input class="fin-control" type="number" min="1" max="9998" id="agenda-ano" name="ano" value="{{ filtros.ano }}"></div>
+  <div class="fin-filter-field"><label for="agenda-obra">Obra</label><select class="fin-control" id="agenda-obra" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label for="agenda-fornecedor">Fornecedor</label><select class="fin-control" id="agenda-fornecedor" name="fornecedor"><option value="">Todos</option>{% for f in fornecedores %}<option value="{{ f.pk }}" {% if filtros.fornecedor == f.pk|stringformat:'s' %}selected{% endif %}>{{ f }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label for="agenda-apropriacao">Apropriação</label><select class="fin-control" id="agenda-apropriacao" name="apropriacao"><option value="">Todas</option>{% for a in apropriacoes %}<option value="{{ a.pk }}" {% if filtros.apropriacao == a.pk|stringformat:'s' %}selected{% endif %}>{{ a.pai.nome }} → {{ a.nome }}</option>{% endfor %}</select></div>
+  <div class="fin-filter-field"><label for="agenda-status">Situação</label><select class="fin-control" id="agenda-status" name="status"><option value="">Todas</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+  <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Aplicar</button><a class="fin-btn" href="{% url 'financeiro:agenda' %}">Limpar</a></div>
+</form>
+{% if periodo_invalido %}<p class="fin-form-errors" role="alert">Informe uma data ou período válido.</p>{% endif %}
+
+{% if indicadores %}<div class="fin-kpis">
+  <div class="fin-kpi fin-kpi--danger"><span>Vencido e não pago</span><strong>{{ indicadores.vencido|moeda_br }}</strong></div>
+  <div class="fin-kpi fin-kpi--warning"><span>Vence hoje</span><strong>{{ indicadores.hoje|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Aprovado para hoje</span><strong>{{ indicadores.aprovado_hoje|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Próximos 7 dias</span><strong>{{ indicadores.sete_dias|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Em aberto no período</span><strong>{{ indicadores.em_aberto|moeda_br }}</strong></div>
+  <div class="fin-kpi fin-kpi--success"><span>Pago no período</span><strong>{{ indicadores.pago|moeda_br }}</strong><small>Data efetiva, pagamento confirmado</small></div>
+</div>{% endif %}
+
+<section class="fin-section"><div class="fin-section__head"><h2>Títulos por vencimento</h2></div>
+<div class="fin-section__body--flush fin-table-wrap"><table class="fin-table">
+  <thead><tr><th>Vencimento</th><th>Obra</th><th>Beneficiário / título</th><th>Origem</th><th>Apropriação</th><th>Situação de aprovação</th><th>Situação de pagamento</th><th style="text-align:right">Valor</th><th></th></tr></thead>
+  <tbody>{% for t in page_obj %}<tr>
+    <td>{{ t.vencimento|date:"d/m/Y"|default:"Sem data" }}</td><td>{{ t.obra|default:"—" }}</td>
+    <td class="fin-main-cell"><strong>{{ t.beneficiario_exibicao }}</strong><small>{{ t.numero }} · {{ t.descricao }}</small></td>
+    <td>{{ t.get_origem_display }}</td><td>{{ t.plano_financeiro|default:"—" }}</td>
+    <td>{% if t.status == 'AGUARDANDO_APROVACAO' %}Aguardando{% elif t.status == 'APROVADO' or t.status == 'PAGO' %}Aprovado{% else %}{{ t.get_status_display }}{% endif %}</td>
+    <td>{% if t.pagamento.status == 'EFETIVADO' %}Pago{% elif t.pagamento.status == 'ESTORNADO' %}Estornado{% else %}Em aberto{% endif %}</td>
+    <td class="fin-money">{% if t.pagamento.status == 'EFETIVADO' %}{{ t.pagamento.valor|moeda_br }}{% else %}{{ t.saldo_aberto|moeda_br }}{% endif %}</td>
+    <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' t.pk %}">Consultar</a></td>
+  </tr>{% empty %}<tr><td colspan="9" class="fin-empty"><strong>Nenhum título encontrado</strong>Ajuste os filtros.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% if page_obj.paginator.num_pages > 1 %}<div class="fin-pagination"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><span>{% if page_obj.has_previous %}<a class="fin-btn fin-btn--sm" href="?{{ query_string }}&page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="fin-btn fin-btn--sm" href="?{{ query_string }}&page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</span></div>{% endif %}
+</section>
+{% endblock %}

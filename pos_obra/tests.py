@@ -109,7 +109,7 @@ class FluxoPosObraTests(TestCase):
     def test_finaliza_com_via_e_confirmacao(self):
         self.login_interno()
         c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,10),diagnostico='Diagnóstico',data_execucao=date(2026,10,11),execucao='Serviço executado',conclusao='Problema corrigido')
-        AnexoChamado.objects.create(chamado=c,etapa='FINALIZACAO',arquivo=SimpleUploadedFile('assinada.pdf',b'%PDF-test'))
+        AnexoChamado.objects.create(chamado=c,etapa='FINALIZACAO',arquivo=SimpleUploadedFile('assinada.pdf',b'%PDF-test'),via_assinada_conferida=True)
         url=reverse('pos_obra:finalizar',args=[c.pk])
         self.client.post(url);c.refresh_from_db();self.assertEqual(c.status,'ABERTO')
         self.client.post(url,{'confirmacao_assinatura':'on'});c.refresh_from_db()
@@ -154,7 +154,12 @@ class FluxoPosObraTests(TestCase):
         r=self.client.get(reverse('pos_obra:detalhe',args=[c.pk]))
         self.assertNotContains(r,'Salvar triagem');self.assertNotContains(r,'Adicionar material</button>')
     def test_salvar_execucao_preserva_vistoria(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from pos_obra.models import AgendamentoOS
         self.login_interno();c=self.chamado(responsavel=self.interno,triagem='Parecer',data_vistoria=date(2026,10,10),diagnostico='Diagnóstico')
+        inicio=timezone.now()+timedelta(days=1)
+        AgendamentoOS.objects.create(chamado=c,tipo='EXECUCAO',inicio=inicio,fim=inicio+timedelta(hours=1),responsavel=self.interno)
         self.client.post(reverse('pos_obra:detalhe',args=[c.pk]),{'etapa':'EXECUCAO','data_execucao':'2026-10-11','execucao':'Concluído','materiais_observacao':'Sem sobras'})
         c.refresh_from_db();self.assertEqual(c.data_vistoria,date(2026,10,10));self.assertEqual(c.materiais_observacao,'Sem sobras')
     def test_pdf_concluido_e_bloqueio_alheio(self):

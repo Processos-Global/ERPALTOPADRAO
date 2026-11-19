@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 
 from compras.models import (
     GrandeFornecedorProcesso,
@@ -10,7 +11,7 @@ from compras.models import (
     ParcelaGrandeFornecedor,
     PedidoCompra,
 )
-from financeiro.models import DespesaRecorrente, PrevisaoFinanceira, TituloPagar
+from financeiro.models import DespesaRecorrente, LiberacaoFinanceiraPedido, PrevisaoFinanceira, TituloPagar
 from financeiro.services.auditoria import registrar_evento
 from financeiro.services.numeracao import gerar_numero
 
@@ -160,6 +161,17 @@ def sincronizar_contas_pedido(pedido):
     Uma parcela = uma conta. Pedido sem parcelas = uma conta única. Nenhuma NF
     cria uma segunda obrigação; as NFs continuam vinculadas ao próprio pedido.
     """
+    # Após uma liberação autorizada, a obrigação integral provisória não pode
+    # reaparecer em saves, alterações de parcelas ou sincronizações em lote.
+    if LiberacaoFinanceiraPedido.objects.filter(pedido=pedido).filter(
+        Q(status__in=[LiberacaoFinanceiraPedido.Status.AUTORIZADA, LiberacaoFinanceiraPedido.Status.COMPENSADA])
+        | Q(status=LiberacaoFinanceiraPedido.Status.CANCELADA, titulo__isnull=False)
+    ).exists():
+        PrevisaoFinanceira.objects.filter(pedido=pedido, origem=PrevisaoFinanceira.Origem.COMPRA).update(ativa=False)
+        return TituloPagar.objects.filter(
+            pedido=pedido, referencia_externa__startswith="COMPRA_LIBERACAO:",
+        )
+
     parcelas = list(pedido.parcelas_previstas.all().order_by("ordem", "id"))
     refs_ativas = []
     total_parcelas = len(parcelas)

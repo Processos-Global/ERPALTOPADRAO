@@ -1158,6 +1158,7 @@
                                   <div>
                                     <span class="ps-order-item-name">{{ item_pedido.descricao }}</span>
                                     <span class="ps-order-meta">{{ item_pedido.valor_total_formatado }}</span>
+                                    <span class="ps-order-meta">Contratado: {{ item_pedido.quantidade_formatada }} {{ item_pedido.unidade }} · Recebido: {{ item_pedido.quantidade_recebida_formatada }} {{ item_pedido.unidade }} · Pendente: {{ item_pedido.quantidade_pendente_formatada }} {{ item_pedido.unidade }}</span>
                                   </div>
                                 </div>
                                 {% empty %}
@@ -1528,6 +1529,7 @@
           <td>
             <div class="ps-history-item-name">${escapeHtml(registro.suprimento_historico || '—')}</div>
             ${registro.suprimento_agrupado ? '<span class="ps-history-grouped">Compra agrupada</span>' : ''}
+            ${(registro.itens_pedido || []).map(item => `<div class="ps-order-meta">${escapeHtml(item.descricao)}${item.especificacao ? ' · ' + escapeHtml(item.especificacao) : ''}: ${escapeHtml(item.quantidade)} ${escapeHtml(item.unidade)} × R$ ${escapeHtml(item.valor_unitario)} · desconto R$ ${escapeHtml(item.desconto)} · total R$ ${escapeHtml(item.valor_total)}</div>`).join('')}
           </td>
           <td>${escapeHtml(registro.obra || '—')}</td>
           <td>${escapeHtml(registro.fornecedor || '—')}</td>

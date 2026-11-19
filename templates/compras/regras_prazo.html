@@ -1,0 +1,20 @@
+{% extends "layouts/base.html" %}
+{% block title %}Regras de prazo | Compras{% endblock %}
+{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block content %}
+<div class="cp-page">
+  <header class="cp-head"><div class="cp-head__copy"><div class="cp-eyebrow">Compras</div><h1 class="cp-title">Regras de prazo</h1></div><div class="cp-actions"><a class="cp-btn" href="{% url 'compras:dashboard' %}">Voltar ao painel</a></div></header>
+  <section class="cp-section"><div class="cp-section__head"><h2>Nova regra</h2></div><div class="cp-section__body">
+    <form method="post">{% csrf_token %}
+      {{ form.non_field_errors }}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        {% for campo in form %}<label class="cp-label">{{ campo.label }}{{ campo }}{{ campo.errors }}</label>{% endfor %}
+      </div>
+      <button class="cp-btn cp-btn--primary" type="submit">Registrar regra</button>
+    </form>
+  </div></section>
+  <section class="cp-section"><div class="cp-section__head"><h2>Histórico de regras</h2></div><div class="cp-section__body" style="overflow-x:auto"><table class="cp-table"><thead><tr><th>Escopo</th><th>Etapa</th><th>Fornecedor</th><th>Categoria / material</th><th>Prazo</th><th>Alerta</th><th>Vigência</th><th>Autor</th><th>Justificativa</th></tr></thead><tbody>
+  {% for regra in regras %}<tr><td>{{ regra.get_escopo_display }}</td><td>{{ regra.get_etapa_display|default:'Geral' }}</td><td>{{ regra.get_tipo_fornecedor_display }}</td><td>{{ regra.categoria|default:'Todas' }} / {{ regra.material|default:'Todos' }}</td><td>{{ regra.dias }} {{ regra.get_contagem_display }}</td><td>{{ regra.dias_alerta }} dias</td><td>{{ regra.vigente_desde|date:'d/m/Y' }} a {{ regra.vigente_ate|date:'d/m/Y'|default:'sem fim' }}</td><td>{{ regra.criado_por|default:'—' }}</td><td>{{ regra.justificativa }}</td></tr>{% empty %}<tr><td colspan="9">Nenhuma regra cadastrada.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+</div>
+{% endblock %}

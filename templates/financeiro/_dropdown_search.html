@@ -5,7 +5,7 @@
 (function(){
  function normalize(v){return (v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
  function enhance(select){
-  if(select.dataset.finSearchReady||select.dataset.noSearch!==undefined||select.closest('.fin-combobox, .saari-obras-panel, .fin-searchable')||select.options.length<5||select.options.length>750||select.multiple||select.disabled||select.hidden||select.offsetParent===null||select.classList.contains('select2-hidden-accessible'))return;
+  if(select.dataset.finSearchReady||select.dataset.noSearch!==undefined||select.closest('.fin-combobox, .saari-obras-panel, .fin-searchable')||(select.options.length<5&&!select.dataset.forceSearch)||(select.options.length>750&&!select.dataset.forceSearch)||select.multiple||select.disabled||select.hidden||select.offsetParent===null||select.classList.contains('select2-hidden-accessible'))return;
   select.dataset.finSearchReady='1';
   const container=document.createElement('div');container.className='fin-searchable';select.parentNode.insertBefore(container,select);container.appendChild(select);select.classList.add('fin-searchable__native');
   const button=document.createElement('button');button.type='button';button.className='fin-control fin-searchable__button';button.setAttribute('aria-haspopup','listbox');button.setAttribute('aria-expanded','false');button.innerHTML='<span></span><span aria-hidden="true">⌄</span>';container.appendChild(button);
@@ -23,6 +23,7 @@
   select.addEventListener('change',sync);sync();
  }
  function boot(){document.querySelectorAll('.fin-page select').forEach(enhance);}
+ document.addEventListener('toggle',e=>{if(e.target.open&&e.target.closest('.fin-page'))e.target.querySelectorAll('select').forEach(enhance);},true);
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 </script>

@@ -2,7 +2,7 @@ from collections import OrderedDict
 from decimal import Decimal
 import unicodedata
 
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 from compras.models import RecebimentoPedidoItem
 from obras.models import MovimentoEstoque, Obra
@@ -79,7 +79,7 @@ def obter_estoque(obra=None, somente_com_saldo=True):
         .select_related(
             "recebimento",
             "recebimento__pedido__obra",
-            "item_pedido__necessidade__material",
+            "item_pedido__necessidade__material__unidade",
             "item_pedido__pedido__obra",
         )
         .order_by("recebimento__criado_em", "id")
@@ -109,7 +109,7 @@ def obter_estoque(obra=None, somente_com_saldo=True):
         })
 
     movimentos_base = MovimentoEstoque.objects.select_related(
-        "obra_origem", "obra_destino", "material"
+        "obra_origem", "obra_destino", "material__unidade"
     )
     movimentos = movimentos_base.all()
 
@@ -214,6 +214,39 @@ def obter_item_estoque(obra, chave):
         if linha["chave"] == chave:
             return linha
     return None
+
+
+def saldo_fisico_compativel(obra, material, unidade, especificacao):
+    """Saldo conservador para decisão de compra; especificação ambígua não cobre demanda."""
+    unidade = _normalizar(unidade)
+    especificacao = (especificacao or "").strip()
+    entradas = RecebimentoPedidoItem.objects.filter(
+        item_pedido__pedido__obra=obra,
+        item_pedido__necessidade__material=material,
+        item_pedido__unidade__iexact=unidade,
+    )
+    quantidade_entrada = entradas.aggregate(total=Sum("quantidade"))["total"] or ZERO
+    especificacao_divergente = entradas.exclude(
+        item_pedido__especificacao=especificacao
+    ).exists()
+    movimentos = MovimentoEstoque.objects.filter(material=material, unidade__iexact=unidade)
+    saidas = movimentos.filter(obra_origem=obra).aggregate(total=Sum("quantidade"))["total"] or ZERO
+    transferencias = movimentos.filter(
+        tipo=MovimentoEstoque.Tipo.TRANSFERENCIA, obra_destino=obra
+    )
+    entradas_transferencia = transferencias.aggregate(total=Sum("quantidade"))["total"] or ZERO
+    # Movimentos legados sem material podem representar a mesma descrição.
+    legado_ambiguo = MovimentoEstoque.objects.filter(
+        material__isnull=True, unidade__iexact=unidade,
+        descricao_item__iexact=material.nome,
+    ).filter(Q(obra_origem=obra) | Q(obra_destino=obra)).exists()
+    saldo_fisico = max(quantidade_entrada + entradas_transferencia - saidas, ZERO)
+    ambiguo = especificacao_divergente or entradas_transferencia > ZERO or legado_ambiguo
+    return {
+        "saldo_fisico": saldo_fisico,
+        "saldo_compativel": ZERO if ambiguo else saldo_fisico,
+        "ambiguidade": ambiguo,
+    }
 
 
 def resumo_por_obra(linhas=None):

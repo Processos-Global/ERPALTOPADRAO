@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db import transaction
 
 
 class ProcessoCompra(models.Model):
@@ -109,6 +110,28 @@ class ProcessoCompra(models.Model):
 
     def __str__(self):
         return f"{self.numero} - {self.titulo}"
+
+    def save(self, *args, **kwargs):
+        from compras.services.sla import registrar_mudanca_processo
+
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and not update_fields:
+            return super().save(*args, **kwargs)
+        with transaction.atomic():
+            anterior = type(self).objects.select_for_update().filter(pk=self.pk).values("etapa_atual", "status").first() if self.pk else None
+            super().save(*args, **kwargs)
+            etapa_antiga = anterior["etapa_atual"] if anterior else ""
+            status_antigo = anterior["status"] if anterior else ""
+            if update_fields is not None:
+                if "etapa_atual" not in update_fields:
+                    self.etapa_atual = etapa_antiga
+                if "status" not in update_fields:
+                    self.status = status_antigo
+            registrar_mudanca_processo(
+                self, criado=anterior is None, etapa_anterior=etapa_antiga,
+                status_anterior=status_antigo,
+                usuario=getattr(self, "_usuario_sla", None) or (self.criado_por if anterior is None else None),
+            )
 
 
 class ProcessoCompraAtividade(models.Model):

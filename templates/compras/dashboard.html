@@ -75,7 +75,11 @@
     </div>
   </div>
 
+  {% if pode_administrar_sla %}<p><a class="cp-btn" href="{% url 'compras:regras_prazo' %}">Configurar prazos de compra</a></p>{% endif %}
   <div class="cp-kpis">
+    <div class="cp-kpi"><span>SLA: processos em atraso</span><strong>{{ sla_resumo.processos_atrasados }}</strong><small>Etapas com regra vigente na abertura</small></div>
+    <div class="cp-kpi"><span>SLA: próximos do limite</span><strong>{{ sla_resumo.processos_proximos }}</strong></div>
+    <div class="cp-kpi"><span>Pedidos com entrega atrasada</span><strong>{{ sla_resumo.pedidos_atrasados }}</strong></div>
     <div class="cp-kpi">
       <span>Processos ativos</span>
       <strong>{{ ativos }}</strong>
@@ -178,7 +182,7 @@
               {% endif %}
             </div>
 
-            <span class="cp-process-card__stage">{{ processo.get_etapa_atual_display }}</span>
+            <span class="cp-process-card__stage">{{ processo.get_etapa_atual_display }} · {{ processo.sla.etapa.rotulo }}{% if processo.sla.etapa.atraso %} (+{{ processo.sla.etapa.atraso }} dias){% endif %}</span>
 
             <div class="cp-process-card__foot">
               <div class="cp-process-card__foot-item">

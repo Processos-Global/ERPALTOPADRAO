@@ -10,17 +10,48 @@ from financeiro.services.fluxo_caixa import STATUS_ABERTOS, resumo_por_obra, ser
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 
 
+def _resumo_titulos_abertos(abertos, hoje, em_7, em_30):
+    """Resume os títulos uma vez, mantendo o saldo calculado pelo modelo."""
+    origens = dict(TituloPagar.Origem.choices[:4])
+    por_origem = {codigo: {"codigo": codigo, "rotulo": rotulo, "total": Decimal("0"), "quantidade": 0}
+                  for codigo, rotulo in origens.items()}
+    resumo = {
+        "valor_vencidos": Decimal("0"), "qtd_vencidos": 0,
+        "valor_7": Decimal("0"), "qtd_7": 0,
+        "valor_aprovacao": Decimal("0"), "qtd_aprovacao": 0,
+        "valor_30": Decimal("0"),
+    }
+    for titulo in abertos.select_related("pagamento").iterator(chunk_size=1000):
+        saldo = titulo.saldo_aberto
+        vencimento = titulo.vencimento
+        if vencimento is not None:
+            if vencimento < hoje:
+                resumo["valor_vencidos"] += saldo
+                resumo["qtd_vencidos"] += 1
+            elif vencimento <= em_30:
+                resumo["valor_30"] += saldo
+                if vencimento <= em_7:
+                    resumo["valor_7"] += saldo
+                    resumo["qtd_7"] += 1
+        if titulo.status == TituloPagar.Status.AGUARDANDO_APROVACAO:
+            resumo["valor_aprovacao"] += saldo
+            resumo["qtd_aprovacao"] += 1
+        if titulo.origem in por_origem:
+            linha = por_origem[titulo.origem]
+            linha["total"] += saldo
+            linha["quantidade"] += 1
+    resumo["por_origem"] = [linha for linha in por_origem.values() if linha["total"]]
+    return resumo
+
+
 @financeiro_acao_required("VISUALIZAR")
 def dashboard(request):
     hoje = timezone.localdate()
     em_7 = hoje + timedelta(days=7)
     em_30 = hoje + timedelta(days=30)
 
-    abertos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related("fornecedor", "obra", "pagamento")
-    vencidos = list(abertos.filter(vencimento__lt=hoje))
-    proximos_7 = list(abertos.filter(vencimento__range=(hoje, em_7)))
-    proximos_30 = list(abertos.filter(vencimento__range=(hoje, em_30)))
-    aguardando = list(abertos.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO))
+    abertos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS)
+    resumo = _resumo_titulos_abertos(abertos, hoje, em_7, em_30)
 
     pagos_mes = Pagamento.objects.filter(
         status=Pagamento.Status.EFETIVADO,
@@ -41,13 +72,6 @@ def dashboard(request):
         if (idx + 1) % 7 == 0 or idx == len(desembolsos["serie"]) - 1:
             pontos.append({"rotulo": item["data"].strftime("%d/%m"), "saida": float(acumulado_semana)})
             acumulado_semana = Decimal("0")
-
-    por_origem = []
-    for valor, rotulo in TituloPagar.Origem.choices[:4]:
-        itens = list(abertos.filter(origem=valor))
-        total = sum((x.saldo_aberto for x in itens), Decimal("0"))
-        if total:
-            por_origem.append({"codigo": valor, "rotulo": rotulo, "total": total, "quantidade": len(itens)})
 
     pagos_qs = Pagamento.objects.filter(status=Pagamento.Status.EFETIVADO).select_related("titulo__plano_financeiro__pai", "titulo__obra", "titulo__fornecedor")
     por_classe = list(
@@ -86,24 +110,24 @@ def dashboard(request):
         item["rotulo"] = f"{nomes_meses[mes]}/{ano}" if mes else str(ano)
 
     return render(request, "financeiro/dashboard.html", {
-        "valor_vencidos": sum((t.saldo_aberto for t in vencidos), Decimal("0")),
-        "qtd_vencidos": len(vencidos),
-        "valor_7": sum((t.saldo_aberto for t in proximos_7), Decimal("0")),
-        "qtd_7": len(proximos_7),
-        "valor_aprovacao": sum((t.saldo_aberto for t in aguardando), Decimal("0")),
-        "qtd_aprovacao": len(aguardando),
+        "valor_vencidos": resumo["valor_vencidos"],
+        "qtd_vencidos": resumo["qtd_vencidos"],
+        "valor_7": resumo["valor_7"],
+        "qtd_7": resumo["qtd_7"],
+        "valor_aprovacao": resumo["valor_aprovacao"],
+        "qtd_aprovacao": resumo["qtd_aprovacao"],
         "pagos_mes": pagos_mes,
-        "previsao_30": sum((t.saldo_aberto for t in proximos_30), Decimal("0")) + previsoes_extras_30,
+        "previsao_30": resumo["valor_30"] + previsoes_extras_30,
         "previsoes_extras_30": previsoes_extras_30,
         "pontos_desembolso": pontos,
         "obras_resumo": resumo_por_obra()[:8],
-        "por_origem": por_origem,
+        "por_origem": resumo["por_origem"],
         "por_classe": por_classe,
         "por_apropriacao": por_apropriacao,
         "por_obra_pago": por_obra_pago,
         "por_fornecedor": por_fornecedor,
         "por_mes": por_mes,
-        "proximos_titulos": abertos.filter(vencimento__isnull=False).order_by("vencimento", "id")[:10],
+        "proximos_titulos": abertos.filter(vencimento__isnull=False).select_related("fornecedor", "obra", "pagamento").order_by("vencimento", "id")[:10],
         "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
         "pode_administrar": possui_acao_financeiro(request.user, "ADMINISTRAR"),
     })

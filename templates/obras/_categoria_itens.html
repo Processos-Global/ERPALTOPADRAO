@@ -28,7 +28,7 @@
             <td><strong>{{ item.nome_item }}</strong>{% if item.observacao %}<small class="ft-row-note">{{ item.observacao }}</small>{% endif %}</td>
             <td>{{ item.quantidade|floatformat:2 }}</td>
             <td>{% if item.unidade %}{{ item.unidade.sigla }}{% else %}—{% endif %}</td>
-            <td class="ft-spec">{{ item.especificacao_completa|default:"—" }}</td>
+            <td class="ft-spec">{{ item.especificacao_completa|default:"—" }}{% if item.descricao_medidas %}<small class="ft-row-note"><strong>Medidas:</strong> {{ item.descricao_medidas }}</small>{% endif %}{% if item.material %}<small class="ft-row-note"><strong>Material:</strong> {{ item.material.descricao_completa }}</small>{% endif %}</td>
             <td>
               {% if item.itens_compatibilizacao_gf.exists %}
                 <span class="ft-sync is-linked">Em compras</span>
@@ -61,6 +61,8 @@
                 <label>Unidade<select name="unidade"><option value="">—</option>{% for u in unidades %}<option value="{{ u.pk|unlocalize }}" {% if item.unidade_id == u.pk %}selected{% endif %}>{{ u.sigla }}</option>{% endfor %}</select></label>
                 <label>Especificação padrão<select name="opcao_especificacao"><option value="">Nenhuma</option>{% for o in ap.categoria.opcoes_especificacao.all %}{% if o.ativo %}<option value="{{ o.pk|unlocalize }}" {% if item.opcao_especificacao_id == o.pk %}selected{% endif %}>{{ o.nome }}</option>{% endif %}{% endfor %}</select></label>
                 <label style="grid-column:span 3">Especificação<textarea name="especificacao" rows="2">{{ item.especificacao }}</textarea></label>
+                <label style="grid-column:span 2">Descrição de medidas<textarea name="descricao_medidas" rows="2">{{ item.descricao_medidas }}</textarea></label>
+                <label style="grid-column:span 3">Material do cadastro<select name="material"><option value="">Sem vínculo</option>{% for material in materiais %}<option value="{{ material.pk|unlocalize }}" {% if item.material_id == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></label>
                 <label style="grid-column:span 2">Observação<textarea name="observacao" rows="2">{{ item.observacao }}</textarea></label>
               </div>
               <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="item-{{ item.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
@@ -125,8 +127,10 @@
 
         <div class="ft-field {% if ap.categoria.opcoes_especificacao.all %}c8{% else %}c12{% endif %}">
           <label>Especificação</label>
-          <textarea name="especificacao" rows="2" placeholder="Medidas, material, acabamento, modelo..."></textarea>
+          <textarea name="especificacao" rows="2" placeholder="Material, acabamento, modelo..."></textarea>
         </div>
+        <div class="ft-field c6"><label>Descrição de medidas</label><textarea name="descricao_medidas" rows="2" placeholder="Dimensões e espessura"></textarea></div>
+        <div class="ft-field c6"><label>Material do cadastro</label><select name="material"><option value="">Sem vínculo</option>{% for material in materiais %}<option value="{{ material.pk|unlocalize }}">{{ material.descricao_completa }}</option>{% endfor %}</select></div>
 
         <div class="ft-field c9">
           <label>Observação</label>
@@ -140,4 +144,18 @@
     </form>
   </details>
   {% endif %}
+{% if ap.sugestoes %}
+<details class="ft-add"><summary>Itens sugeridos para este ambiente</summary>
+  <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}
+    <input type="hidden" name="acao" value="adicionar_sugestoes"><input type="hidden" name="aplicacao" value="{{ ap.pk|unlocalize }}">
+    <p>Selecione e ajuste os itens antes de adicionar à ficha.</p>
+    {% for tipo in ap.sugestoes %}<div class="ft-grid compact">
+      <div class="ft-field c4"><label><input type="checkbox" name="sugestoes" value="{{ tipo.pk|unlocalize }}"> {{ tipo.nome }}</label></div>
+      <div class="ft-field c2"><label>Quantidade<input name="quantidade_{{ tipo.pk|unlocalize }}" type="number" min="0.01" step="0.01" value="1"></label></div>
+      <div class="ft-field c3"><label>Medidas<input name="medidas_{{ tipo.pk|unlocalize }}"></label></div>
+      <div class="ft-field c3"><label>Especificação<input name="especificacao_{{ tipo.pk|unlocalize }}"></label></div>
+    </div>{% endfor %}
+    <button class="ft-btn" type="submit">Adicionar selecionados</button>
+  </form>
+</details>{% endif %}
 </section>
