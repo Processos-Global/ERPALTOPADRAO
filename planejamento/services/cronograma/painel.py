@@ -14,6 +14,7 @@ from .marcos import obter_marcos
 from .operacional import obter_operacional
 from .prazos import calcular_indicadores_prazo
 from .resumo_geral import (
+    calcular_avancos_mensais,
     calcular_avancos_semanais,
     calcular_media_avancos,
     obter_resumo_geral,
@@ -39,6 +40,9 @@ def _contexto_base(
         "resumo": None,
         "serie": [],
         "avancos": [],
+        "avancos_mensais": [],
+        "periodo_semana": None,
+        "ultima_medicao": None,
         "medias": None,
         "prazos": None,
         "marcos": [],
@@ -167,6 +171,7 @@ def _montar_painel_com_importacao(
     prazos = calcular_indicadores_prazo(
         resumo=resumo,
         media_avanco_real=medias["media_real"],
+        avancos=avancos_ate_semana,
     )
 
     # Apenas duas consultas de atividades:
@@ -204,6 +209,11 @@ def _montar_painel_com_importacao(
             "resumo": resumo,
             "serie": serie,
             "avancos": avancos_ate_semana,
+            "avancos_mensais": calcular_avancos_mensais(
+                [item for item in serie if item["semana"] <= semana]
+            ),
+            "periodo_semana": next((item for item in serie if item["semana"] == semana), None),
+            "ultima_medicao": max((item["data_atualizacao"] for item in serie if item["data_atualizacao"]), default=None),
             "medias": medias,
             "prazos": prazos,
             "marcos": obter_marcos(

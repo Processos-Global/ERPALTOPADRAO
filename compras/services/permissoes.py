@@ -30,6 +30,7 @@ CAMPO_POR_ACAO = {
     AcaoCompra.GERENCIAR_PEDIDOS: "gerenciar_pedidos",
     AcaoCompra.RECEBER_PEDIDOS: "receber_pedidos",
     AcaoCompra.CANCELAR_PEDIDOS: "cancelar_pedidos",
+    AcaoCompra.EXCECAO_ESTOQUE: "excecao_estoque",
     AcaoCompra.ADMINISTRAR: "administrar",
 }
 
@@ -42,6 +43,7 @@ ACOES_EDICAO = {
     AcaoCompra.GERENCIAR_PEDIDOS,
     AcaoCompra.RECEBER_PEDIDOS,
     AcaoCompra.CANCELAR_PEDIDOS,
+    AcaoCompra.EXCECAO_ESTOQUE,
     AcaoCompra.ADMINISTRAR,
 }
 
@@ -112,7 +114,7 @@ def _possui_acao_por_nivel_legado(nivel, acao):
     if acao == AcaoCompra.APROVAR:
         return nivel == NivelPermissao.APROVACAO
 
-    if acao == AcaoCompra.ADMINISTRAR:
+    if acao in {AcaoCompra.ADMINISTRAR, AcaoCompra.EXCECAO_ESTOQUE}:
         return False
 
     return nivel in {
@@ -160,6 +162,7 @@ def possui_acao_compras(usuario, acao):
             or permissao.gerenciar_pedidos
             or permissao.receber_pedidos
             or permissao.cancelar_pedidos
+            or permissao.excecao_estoque
         )
 
     campo = CAMPO_POR_ACAO.get(acao)

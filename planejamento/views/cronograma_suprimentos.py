@@ -196,7 +196,7 @@ def historico_item_cronograma_suprimentos(request, item_id):
             | Q(suprimento_chave=chave)
         )
         .select_related("obra", "fornecedor", "processo", "pedido")
-        .prefetch_related("suprimentos_referencia")
+        .prefetch_related("suprimentos_referencia", "pedido__itens")
         .distinct()
         .order_by("-data_fechamento", "-id")
     )
@@ -210,6 +210,20 @@ def historico_item_cronograma_suprimentos(request, item_id):
 
     registros = []
     for registro in historico:
+        itens_pedido = []
+        if registro.pedido_id:
+            for item_pedido in registro.pedido.itens.all():
+                itens_pedido.append({
+                    "descricao": item_pedido.descricao,
+                    "especificacao": getattr(item_pedido, "especificacao", "") or "",
+                    "quantidade": str(item_pedido.quantidade),
+                    "unidade": item_pedido.unidade,
+                    "valor_unitario": str(item_pedido.valor_unitario),
+                    "desconto": str(item_pedido.desconto),
+                    "valor_total": str(item_pedido.valor_total),
+                    "quantidade_recebida": str(item_pedido.quantidade_recebida),
+                    "quantidade_pendente": str(item_pedido.saldo_receber),
+                })
         registros.append({
             "id": registro.pk,
             "suprimento_historico": registro.suprimento,
@@ -223,6 +237,7 @@ def historico_item_cronograma_suprimentos(request, item_id):
             "origem": registro.get_origem_display(),
             "processo": registro.processo.numero if registro.processo_id else "",
             "pedido": registro.pedido.numero if registro.pedido_id else "",
+            "itens_pedido": itens_pedido,
         })
 
     ultima = (

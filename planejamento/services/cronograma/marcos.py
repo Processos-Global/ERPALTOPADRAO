@@ -73,8 +73,12 @@ def obter_marcos(*, projeto, semana):
             rotulo = "Planejado"
 
         variacao_dias = None
-        if termino_base and termino_real:
+        if concluido and termino_base and termino_real:
             variacao_dias = (termino_real - termino_base).days
+        atraso_projetado_dias = (
+            max((data_atualizacao - termino_base).days, 0)
+            if not concluido and termino_base and data_atualizacao else None
+        )
 
         marcos.append({
             "id": registro["id"],
@@ -99,6 +103,9 @@ def obter_marcos(*, projeto, semana):
             "inicio_real": formatar_data(registro.get("inicio_real")),
             "termino_real": formatar_data(termino_real),
             "variacao_dias": variacao_dias,
+            "atraso_projetado_dias": atraso_projetado_dias,
+            "termino_base_data": termino_base,
+            "termino_real_data": termino_real,
         })
 
     return marcos

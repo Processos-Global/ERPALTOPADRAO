@@ -15,7 +15,8 @@ STATUS_ABERTOS = {
 }
 
 
-def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
+def serie_desembolsos(*, inicio=None, dias=90, obra_id=None, obra_ids=None,
+                     classe=None, apropriacao=None, fornecedor=None):
     """Saídas futuras conhecidas + previsões ainda não formalizadas."""
     inicio = inicio or timezone.localdate()
     fim = inicio + timedelta(days=dias)
@@ -27,8 +28,13 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
         status__in=STATUS_ABERTOS,
         vencimento__range=(inicio, fim),
     ).select_related("pagamento")
-    if obra_id:
-        titulos = titulos.filter(obra_id=obra_id)
+    from financeiro.services.indicadores_gerenciais import _filtros
+
+    obras_filtro = list(obra_ids or [])
+    if obra_id and obra_id not in obras_filtro:
+        obras_filtro.append(obra_id)
+    titulos = _filtros(titulos, obra_ids=obras_filtro, classe=classe,
+                       apropriacao=apropriacao, fornecedor=fornecedor)
     for titulo in titulos:
         eventos[titulo.vencimento]["contas"] += titulo.saldo_aberto
 
@@ -36,8 +42,8 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
         ativa=True,
         data_prevista__range=(inicio, fim),
     ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
-    if obra_id:
-        previsoes = previsoes.filter(obra_id=obra_id)
+    previsoes = _filtros(previsoes, obra_ids=obras_filtro, classe=classe,
+                         apropriacao=apropriacao, fornecedor=fornecedor)
     for previsao in previsoes:
         eventos[previsao.data_prevista]["previsoes"] += previsao.valor_previsto
 
@@ -60,19 +66,24 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None):
     return {"serie": serie, "total": total}
 
 
-def resumo_por_obra():
+def resumo_por_obra(*, inicio=None, fim=None):
     """Resumo financeiro por obra sem consultas dentro do loop de obras."""
     from obras.models import Obra
 
     obras = list(Obra.objects.all().order_by("id"))
 
+    pagamentos = Pagamento.objects.filter(
+        status=Pagamento.Status.EFETIVADO,
+        titulo__obra_id__isnull=False,
+    )
+    if inicio:
+        pagamentos = pagamentos.filter(data_pagamento__gte=inicio)
+    if fim:
+        pagamentos = pagamentos.filter(data_pagamento__lte=fim)
     pagos_por_obra = {
         item["titulo__obra_id"]: item["total"] or Decimal("0")
         for item in (
-            Pagamento.objects.filter(
-                status=Pagamento.Status.EFETIVADO,
-                titulo__obra_id__isnull=False,
-            )
+            pagamentos
             .values("titulo__obra_id")
             .annotate(total=Sum("valor"))
         )
@@ -86,14 +97,24 @@ def resumo_por_obra():
         )
         .select_related("pagamento")
     )
+    if inicio:
+        titulos_abertos = titulos_abertos.filter(vencimento__gte=inicio)
+    if fim:
+        titulos_abertos = titulos_abertos.filter(vencimento__lte=fim)
     for titulo in titulos_abertos:
         abertos_por_obra[titulo.obra_id] += titulo.saldo_aberto
 
+    previsoes = PrevisaoFinanceira.objects.filter(ativa=True, obra_id__isnull=False).exclude(
+        origem=PrevisaoFinanceira.Origem.COMPRA
+    )
+    if inicio:
+        previsoes = previsoes.filter(data_prevista__gte=inicio)
+    if fim:
+        previsoes = previsoes.filter(data_prevista__lte=fim)
     previstos_por_obra = {
         item["obra_id"]: item["total"] or Decimal("0")
         for item in (
-            PrevisaoFinanceira.objects.filter(ativa=True, obra_id__isnull=False)
-            .exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
+            previsoes
             .values("obra_id")
             .annotate(total=Sum("valor_previsto"))
         )

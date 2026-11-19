@@ -373,7 +373,7 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
             aplicacao_categoria__ativo=True,
         )
         .select_related(
-            "tipo_item", "tipo_item__unidade_padrao", "unidade", "opcao_especificacao",
+            "tipo_item", "tipo_item__unidade_padrao", "unidade", "opcao_especificacao", "material",
             "aplicacao_categoria__ambiente__pavimento",
             "aplicacao_categoria__categoria",
         )
@@ -440,6 +440,7 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
                     "local": local,
                     "item": origem.nome_item,
                     "especificacao": origem.especificacao_completa,
+                    "descricao_medidas": origem.descricao_medidas,
                     "unidade": unidade,
                     "quantidade": origem.quantidade,
                 }
@@ -447,9 +448,6 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
                     if getattr(existente, campo) != valor:
                         setattr(existente, campo, valor)
                         alterados.append(campo)
-                if existente.material_id is not None:
-                    existente.material = None
-                    alterados.append("material")
                 if alterados:
                     existente.save(update_fields=[*alterados, "atualizado_em"])
                     resultado["atualizados"] += 1
@@ -470,9 +468,10 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
             item_ficha_tecnica=origem,
             pavimento=pavimento,
             local=local,
-            material=None,
+            material=origem.material,
             item=origem.nome_item,
             especificacao=origem.especificacao_completa,
+            descricao_medidas=origem.descricao_medidas,
             unidade=unidade,
             quantidade=origem.quantidade,
             ordem=ordem,
@@ -554,16 +553,18 @@ def vincular_item_manual_a_ficha(*, processo, micro_item, item_ficha, usuario):
         if item_ficha.tipo_item_id and item_ficha.tipo_item.unidade_padrao_id else "UN"
     )
     micro_item.item_ficha_tecnica = item_ficha
-    micro_item.material = None
+    if not micro_item.material_id and item_ficha.material_id:
+        micro_item.material = item_ficha.material
     micro_item.pavimento = ambiente.pavimento.nome if ambiente else ""
     micro_item.local = ambiente.identificacao if ambiente else "Obra inteira"
     micro_item.item = item_ficha.nome_item
     micro_item.especificacao = item_ficha.especificacao_completa
+    micro_item.descricao_medidas = item_ficha.descricao_medidas
     micro_item.unidade = unidade
     micro_item.quantidade = item_ficha.quantidade
     micro_item.save(update_fields=[
         "item_ficha_tecnica", "material", "pavimento", "local", "item",
-        "especificacao", "unidade", "quantidade", "atualizado_em",
+        "especificacao", "descricao_medidas", "unidade", "quantidade", "atualizado_em",
     ])
     registrar_evento(
         processo,

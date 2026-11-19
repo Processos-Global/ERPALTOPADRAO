@@ -10,6 +10,22 @@ from pos_obra.models import Chamado, MaterialOS, RegistroChamado
 
 
 class RegressaoOperacionalTests(TestCase):
+    def test_via_assinada_desatualizada_nao_autoriza_finalizacao(self):
+        from pos_obra.models import AnexoChamado
+        from pos_obra.views.atendimento import aceite_valido
+
+        c = self.chamado()
+        via = AnexoChamado.objects.create(
+            chamado=c, etapa='FINALIZACAO', arquivo='via-assinada.pdf',
+            via_assinada_conferida=True,
+        )
+        self.assertTrue(aceite_valido(c))
+        RegistroChamado.objects.create(
+            chamado=c, status_novo=c.status,
+            mensagem='Execucao: informações salvas',
+        )
+        self.assertFalse(aceite_valido(c))
+
     def test_assinatura_png_truncada_rejeitada(self):
         import base64
         from pos_obra.models import DocumentoOS,AceiteOS

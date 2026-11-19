@@ -18,6 +18,8 @@ urlpatterns = [
     path("", views.menu, name="menu"),
 
     path("vistorias/", views.vistorias_lista, name="vistorias_lista"),
+    path("vistorias/resumo/", views.vistorias_resumo, name="vistorias_resumo"),
+    path("vistorias/resumo/pdf/", views.vistorias_resumo_pdf, name="vistorias_resumo_pdf"),
     path("vistorias/<int:atividade_id>/alterar/", views.vistoria_alterar, name="vistoria_alterar"),
 
     path("fvs/", views.fvs_lista, name="fvs_lista"),
@@ -28,6 +30,9 @@ urlpatterns = [
     path("fvs/<int:pk>/decidir/", views.fvs_decidir, name="fvs_decidir"),
 
     path("fichas/", views.fichas_tecnicas, name="fichas_tecnicas"),
+    path("fichas/consulta/", views.ficha_tecnica_consulta, name="ficha_tecnica_consulta"),
+    path("fichas/consulta/pdf/", views.ficha_tecnica_consulta_pdf, name="ficha_tecnica_consulta_pdf"),
+    path("fichas/consulta/excel/", views.ficha_tecnica_consulta_excel, name="ficha_tecnica_consulta_excel"),
     path("fichas/<int:obra_id>/", views.ficha_tecnica, name="ficha_tecnica"),
     path("fichas/<int:obra_id>/acao/", views.ficha_tecnica_acao, name="ficha_tecnica_acao"),
 
@@ -38,6 +43,7 @@ urlpatterns = [
     path("almoxarifado/<int:obra_id>/transferencia/", views.transferencia_estoque, name="transferencia_estoque"),
 
     path("diario/", views.diario_lista, name="diario_lista"),
+    path("diario/atividades/", views.diario_atividades_api, name="diario_atividades_api"),
     path("diario/novo/", views.diario_novo, name="diario_novo"),
     # Mantido para links antigos já salvos/favoritados.
     path("diario/<int:obra_id>/novo/", views.diario_novo, name="diario_novo_obra"),

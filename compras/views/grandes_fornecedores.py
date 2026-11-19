@@ -11,7 +11,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_POST
 
-from cadastros.models import Fornecedor, Material
+from cadastros.models import Fornecedor, Material, TipoItemGrandeFornecedor
+from obras.models import AmbienteFichaTecnica, PavimentoFichaTecnica
 from core.validators import validar_documento_upload
 from usuarios.models import AcaoCompra
 
@@ -80,6 +81,7 @@ def _exigir_edicao(usuario):
 
 @compras_acao_required(AcaoCompra.VISUALIZAR)
 def matriz_grande_fornecedor(request, pk):
+    from compras.services.sla import indicador_processo
     processo = _processo(pk)
     fluxo = obter_ou_criar_fluxo(processo)
 
@@ -112,10 +114,28 @@ def matriz_grande_fornecedor(request, pk):
 
     itens = list(
         fluxo.itens
-        .select_related("material__unidade", "item_ficha_tecnica", "participante_aprovado__fornecedor", "pedido_item__pedido")
+        .select_related("material__unidade", "item_ficha_tecnica__tipo_item", "item_ficha_tecnica__aplicacao_categoria__ambiente__pavimento", "participante_aprovado__fornecedor", "pedido_item__pedido")
         .prefetch_related("ofertas__participante__fornecedor", "ofertas__historico")
         .all()
     )
+    def filtro_id(nome):
+        valor = (request.GET.get(nome) or "").strip()
+        return int(valor) if valor.isascii() and valor.isdecimal() and int(valor) > 0 else None
+
+    filtros_matriz = {nome: filtro_id(nome) for nome in ("pavimento", "ambiente", "material", "tipo")}
+    itens_filtrados = []
+    for item in itens:
+        origem = item.item_ficha_tecnica
+        ambiente = origem.aplicacao_categoria.ambiente if origem else None
+        if filtros_matriz["pavimento"] and (not ambiente or ambiente.pavimento_id != filtros_matriz["pavimento"]):
+            continue
+        if filtros_matriz["ambiente"] and (not ambiente or ambiente.pk != filtros_matriz["ambiente"]):
+            continue
+        if filtros_matriz["material"] and item.material_id != filtros_matriz["material"] and (not origem or origem.material_id != filtros_matriz["material"]):
+            continue
+        if filtros_matriz["tipo"] and (not origem or origem.tipo_item_id != filtros_matriz["tipo"]):
+            continue
+        itens_filtrados.append(item)
     participantes = list(
         fluxo.participantes.select_related("fornecedor").order_by("fornecedor__nome", "id")
     )
@@ -144,7 +164,7 @@ def matriz_grande_fornecedor(request, pk):
 
     # Estrutura pronta para o template: uma linha por material e uma coluna por fornecedor.
     matriz_linhas = []
-    for item in itens:
+    for item in itens_filtrados:
         ofertas_por_participante = {o.participante_id: o for o in item.ofertas.all()}
         celulas = []
         for participante in participantes:
@@ -205,9 +225,14 @@ def matriz_grande_fornecedor(request, pk):
         "compras/grande_fornecedor_matriz.html",
         {
             "processo": processo,
+            "sla": indicador_processo(processo),
             "fluxo": fluxo,
             "itens": itens,
             "matriz_linhas": matriz_linhas,
+            "filtros_matriz": filtros_matriz,
+            "pavimentos_filtro": PavimentoFichaTecnica.objects.filter(ficha__obra=processo.obra, ativo=True).order_by("ordem", "id"),
+            "ambientes_filtro": AmbienteFichaTecnica.objects.filter(pavimento__ficha__obra=processo.obra, ativo=True).select_related("pavimento").order_by("pavimento__ordem", "ordem", "id"),
+            "tipos_filtro": TipoItemGrandeFornecedor.objects.filter(categoria=processo.categoria_grande_fornecedor, ativo=True).order_by("nome"),
             "participantes": participantes,
             "materiais": materiais,
             "materiais_json": materiais_json,

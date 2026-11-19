@@ -18,6 +18,7 @@ from compras.models import (
 )
 
 from .auditoria import registrar_evento
+from .cobertura_estoque import revalidar_necessidade
 from .comercial import (
     condicao_pagamento_final_fornecedor,
     desconto_proposta_final_fornecedor,
@@ -285,6 +286,8 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
     de condição/prazo/local.
     """
     p = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
+    from obras.models import Obra
+    Obra.objects.select_for_update().get(pk=p.obra_id)
     if p.status not in {p.Status.APROVADO, p.Status.EM_CONTRATACAO, p.Status.CONTRATADO}:
         raise ValidationError("O processo precisa estar aprovado para gerar pedidos.")
 
@@ -296,6 +299,12 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
     )
     if not adjudicacoes:
         raise ValidationError("Não existem itens adjudicados para gerar pedidos.")
+    necessidades_com_pedido = set(PedidoCompraItem.objects.filter(
+        pedido__processo=p,
+    ).exclude(pedido__status=PedidoCompra.Status.CANCELADO).values_list("necessidade_id", flat=True))
+    for adjudicacao in adjudicacoes:
+        if adjudicacao.necessidade_id not in necessidades_com_pedido and adjudicacao.necessidade.material_id:
+            revalidar_necessidade(adjudicacao.necessidade)
 
     grupos = defaultdict(list)
     for adjudicacao in adjudicacoes:
@@ -394,6 +403,8 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
             # O post_save do PedidoCompra sincroniza as parcelas já estruturadas
             # com o Financeiro.
             existente.save(update_fields=["atualizado_em"])
+            from .sla import registrar_prazo_entrega
+            registrar_prazo_entrega(existente)
             pedidos_resultado.append(existente)
             continue
 
@@ -431,6 +442,8 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
         # O primeiro post_save ocorre na criação do pedido, antes das parcelas.
         # Este save final dispara a integração financeira com a estrutura completa.
         pedido.save(update_fields=["atualizado_em"])
+        from .sla import registrar_prazo_entrega
+        registrar_prazo_entrega(pedido)
         pedidos_resultado.append(pedido)
         registrar_evento(
             p,
@@ -561,6 +574,8 @@ def registrar_recebimento(
     valores_itens: dict {pedido_item_id: valor_total_do_item_na_nota}
     """
     p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
+    from obras.models import Obra
+    Obra.objects.select_for_update().get(pk=p.obra_id)
     if p.status in {PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE}:
         raise ValidationError("Este pedido não aceita novos recebimentos.")
 
@@ -684,6 +699,11 @@ def registrar_recebimento(
     # ENTREGA_PARCIAL e ENTREGUE já contam como status confirmados na regra
     # de contratação; por isso o processo precisa ser recalculado aqui.
     _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
+    from financeiro.services.liberacoes import registrar_recebimento_para_liberacao
+
+    # O recebimento gera apenas uma candidata rastreável; a aprovação financeira
+    # continua sendo uma ação separada, com permissões próprias.
+    registrar_recebimento_para_liberacao(recebimento, usuario=usuario)
     return recebimento
 
 

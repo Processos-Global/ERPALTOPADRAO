@@ -3,6 +3,7 @@ from django.db import models
 
 
 class VistoriaCautelar(models.Model):
+    id = models.BigAutoField(primary_key=True)
     class Situacao(models.TextChoices):
         RASCUNHO = 'RASCUNHO', 'Em preenchimento'
         FINALIZADA = 'FINALIZADA', 'Finalizada'
@@ -29,6 +30,7 @@ class VistoriaCautelar(models.Model):
 
 
 class OcorrenciaCautelar(models.Model):
+    id = models.BigAutoField(primary_key=True)
     vistoria = models.ForeignKey(VistoriaCautelar, related_name='ocorrencias', on_delete=models.CASCADE)
     ambiente = models.CharField(max_length=120)
     elemento = models.CharField(max_length=120, blank=True)
@@ -42,6 +44,7 @@ class OcorrenciaCautelar(models.Model):
 
 
 class FotoCautelar(models.Model):
+    id = models.BigAutoField(primary_key=True)
     vistoria = models.ForeignKey(VistoriaCautelar, related_name='fotos', on_delete=models.CASCADE)
     ocorrencia = models.ForeignKey(OcorrenciaCautelar, related_name='fotos', on_delete=models.CASCADE, null=True, blank=True)
     imagem = models.ImageField(upload_to='vistorias/cautelares/%Y/%m/')

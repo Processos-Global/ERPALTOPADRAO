@@ -51,3 +51,30 @@ class FotoDiarioObra(models.Model):
 
     class Meta:
         ordering = ["id"]
+
+
+class DiarioAtividadePlanejada(models.Model):
+    class Origem(models.TextChoices):
+        SEMANAL = "SEMANAL", "Cronograma semanal"
+        PRE_HABITESE = "PRE_HABITESE", "Checklist Pré Habite-se"
+        POS_HABITESE = "POS_HABITESE", "Checklist Pós Habite-se"
+
+    diario = models.ForeignKey(DiarioObra, on_delete=models.CASCADE, related_name="atividades_planejadas")
+    atividade = models.ForeignKey(
+        "planejamento.AtividadePlanejamento", on_delete=models.PROTECT,
+        related_name="registros_diario",
+    )
+    origem = models.CharField(max_length=20, choices=Origem.choices)
+    semana = models.PositiveIntegerField()
+    inicio_semana = models.DateField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["diario", "atividade"], name="obr_diario_atividade_uniq")]
+
+
+class DiarioAtividadeAdicional(models.Model):
+    diario = models.ForeignKey(DiarioObra, on_delete=models.CASCADE, related_name="atividades_adicionais")
+    descricao = models.TextField()
+    justificativa = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)

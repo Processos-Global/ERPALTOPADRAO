@@ -21,13 +21,20 @@ def _max_total(lista, chave="total"):
     return maior or Decimal("1")
 
 
+def _data_segura(valor):
+    try:
+        return parse_date((valor or "").strip())
+    except ValueError:
+        return None
+
+
 @financeiro_acao_required("VISUALIZAR")
 def indicadores(request):
     hoje = timezone.localdate()
     em_30 = hoje + timedelta(days=30)
 
-    inicio = parse_date((request.GET.get("inicio") or "").strip()) or date(hoje.year, 1, 1)
-    fim = parse_date((request.GET.get("fim") or "").strip()) or hoje
+    inicio = _data_segura(request.GET.get("inicio")) or date(hoje.year, 1, 1)
+    fim = _data_segura(request.GET.get("fim")) or hoje
     obras_ids = [int(item) for item in request.GET.getlist('obras') if item.isdigit()]
     obra = (request.GET.get("obra") or "").strip()
     if obra.isdigit() and int(obra) not in obras_ids:
@@ -35,6 +42,9 @@ def indicadores(request):
     classe = (request.GET.get("classe") or "").strip()
     apropriacao = (request.GET.get("apropriacao") or "").strip()
     fornecedor = (request.GET.get("fornecedor") or "").strip()
+    classe = classe if classe.isdigit() else ""
+    apropriacao = apropriacao if apropriacao.isdigit() else ""
+    fornecedor = fornecedor if fornecedor.isdigit() else ""
 
     pagos = Pagamento.objects.filter(
         status=Pagamento.Status.EFETIVADO,
@@ -43,15 +53,27 @@ def indicadores(request):
         "titulo__obra", "titulo__fornecedor", "titulo__plano_financeiro", "titulo__plano_financeiro__pai"
     )
     titulos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS).select_related(
-        "obra", "fornecedor", "plano_financeiro", "plano_financeiro__pai"
+        "obra", "fornecedor", "plano_financeiro", "plano_financeiro__pai", "pagamento"
     )
 
     pagos = _filtros(pagos, 'titulo__', obras_ids, classe, apropriacao, fornecedor)
     titulos = _filtros(titulos, '', obras_ids, classe, apropriacao, fornecedor)
+    titulos_periodo = titulos.filter(vencimento__range=(inicio, fim))
 
-    total_pago = pagos.aggregate(total=Sum("valor"))["total"] or Decimal("0")
-    quantidade_pagamentos = pagos.aggregate(total=Count("id"))["total"] or 0
-    total_aberto = sum((titulo.saldo_aberto for titulo in titulos), Decimal("0"))
+    agregados_pagos = pagos.aggregate(total=Sum("valor"), quantidade=Count("id"))
+    total_pago = agregados_pagos["total"] or Decimal("0")
+    quantidade_pagamentos = agregados_pagos["quantidade"] or 0
+    origens = dict(TituloPagar.Origem.choices[:4])
+    resumo_origens = {codigo: {"codigo": codigo, "rotulo": rotulo, "total": Decimal("0"), "quantidade": 0}
+                      for codigo, rotulo in origens.items()}
+    total_aberto = Decimal("0")
+    for titulo in titulos_periodo.iterator(chunk_size=1000):
+        saldo = titulo.saldo_aberto
+        total_aberto += saldo
+        if titulo.origem in resumo_origens:
+            linha = resumo_origens[titulo.origem]
+            linha["total"] += saldo
+            linha["quantidade"] += 1
     media_pagamento = (total_pago / quantidade_pagamentos) if quantidade_pagamentos else Decimal("0")
 
     por_classe = list(
@@ -97,20 +119,11 @@ def indicadores(request):
         Decimal("0"),
     ) + previsoes_extras_30
 
-    por_origem = []
-    for valor, rotulo in TituloPagar.Origem.choices[:4]:
-        itens = list(titulos.filter(origem=valor))
-        total = sum((x.saldo_aberto for x in itens), Decimal("0"))
-        if total:
-            por_origem.append({
-                "codigo": valor,
-                "rotulo": rotulo,
-                "total": total,
-                "quantidade": len(itens),
-            })
+    por_origem = [linha for linha in resumo_origens.values() if linha["total"]]
 
     # Série semanal original: mantém o histórico de saídas projetadas.
-    serie = serie_desembolsos(inicio=hoje, dias=84)
+    serie = serie_desembolsos(inicio=hoje, dias=84, obra_ids=obras_ids,
+                              classe=classe, apropriacao=apropriacao, fornecedor=fornecedor)
     pontos_desembolso = []
     acumulado_semana = Decimal('0')
     for idx, item in enumerate(serie['serie']):
@@ -152,7 +165,7 @@ def indicadores(request):
         "por_fornecedor": por_fornecedor,
         "por_mes": por_mes,
         "por_origem": por_origem,
-        "obras_resumo": resumo_por_obra()[:8] if not (obras_ids or classe or apropriacao or fornecedor) else [],
+        "obras_resumo": resumo_por_obra(inicio=inicio, fim=fim)[:8] if not (obras_ids or classe or apropriacao or fornecedor) else [],
         "resumo_obra_sem_filtro": not (obras_ids or classe or apropriacao or fornecedor),
         "pontos_desembolso": pontos_desembolso,
         "max_pontos_desembolso": _max_total(pontos_desembolso, "saida"),

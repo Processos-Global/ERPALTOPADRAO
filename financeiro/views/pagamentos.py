@@ -1,6 +1,9 @@
+from datetime import date
+
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,11 +17,25 @@ from financeiro.services.permissoes import financeiro_acao_required
 
 @financeiro_acao_required("VISUALIZAR")
 def pagamentos_lista(request):
+    mes_filtro = (request.GET.get("mes") or "").strip()
     qs = Pagamento.objects.select_related(
         "titulo", "titulo__fornecedor", "titulo__obra", "titulo__plano_financeiro", "registrado_por"
     ).order_by("-data_pagamento", "-id")
+    try:
+        ano, mes = (int(parte) for parte in mes_filtro.split("-"))
+        inicio = date(ano, mes, 1)
+        fim = date(ano + (mes == 12), mes % 12 + 1, 1)
+    except (ValueError, TypeError):
+        mes_filtro = ""
+    else:
+        qs = qs.filter(data_pagamento__gte=inicio, data_pagamento__lt=fim)
+    total_pago = qs.filter(status=Pagamento.Status.EFETIVADO).aggregate(total=Sum("valor"))["total"] or 0
     page_obj = Paginator(qs, 30).get_page(request.GET.get("page"))
-    return render(request, "financeiro/pagamentos.html", {"page_obj": page_obj})
+    return render(request, "financeiro/pagamentos.html", {
+        "page_obj": page_obj,
+        "mes_filtro": mes_filtro,
+        "total_pago": total_pago,
+    })
 
 
 @financeiro_acao_required("PAGAR")

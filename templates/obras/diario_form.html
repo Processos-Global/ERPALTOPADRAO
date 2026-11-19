@@ -1,7 +1,9 @@
 {% extends "layouts/base.html" %}
 {% load obras_format %}
 {% block title %}{% if diario %}Editar{% else %}Novo{% endif %} Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
-{% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
+{% block extra_css %}{% include "obras/_operacional_styles.html" %}<style>
+.op-diario-opcao{display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:10px;border:1px solid var(--op-line);border-radius:9px;background:#fff;color:var(--op-text);cursor:pointer}.op-diario-opcao input{width:auto;min-height:0;margin-top:4px;accent-color:var(--op-ink)}.op-diario-opcao span{min-width:0}.op-diario-opcao small{display:block;color:var(--op-muted);font-size:12px}
+</style>{% endblock %}
 {% block content %}
 <div class="op-page">
   <section class="op-head">
@@ -11,7 +13,7 @@
 
   <form method="post" enctype="multipart/form-data" class="op-form">{% csrf_token %}<div class="op-grid">
     <div class="op-field c6"><label>Obra *</label><select name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
-    <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{% if diario %}{{ diario.data|date:'Y-m-d' }}{% else %}{{ hoje }}{% endif %}"></div>
+    <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{{ data_exibida }}"></div>
     <div class="op-field c3"><label>Clima</label><select name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
     <div class="op-field c4"><label>Efetivo no dia</label><input type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo }}{% endif %}" placeholder="Quantidade de pessoas"></div>
     <div class="c12 op-stock-preview" data-conc-dia data-url="{% url 'obras:concretagem_api_dia' %}" hidden>
@@ -24,6 +26,14 @@
     <div class="op-field c12"><label>Observações</label><textarea name="observacoes" placeholder="Outras informações relevantes do dia">{% if diario %}{{ diario.observacoes }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Fotos do dia (até 12 por envio, 10 MB cada)</label><input type="file" name="fotos" accept="image/*" multiple></div>
     {% if diario and diario.fotos.all %}<div class="c12"><strong>Fotos já anexadas</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">{% for foto in diario.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Foto do diário" loading="lazy" style="height:110px;width:145px;object-fit:cover;border-radius:8px"></a>{% endfor %}</div></div>{% endif %}
+    <div class="c12 op-stock-preview" data-diario-atividades data-url="{% url 'obras:diario_atividades_api' %}">
+      <strong>Atividades do dia</strong> <span class="op-muted" data-diario-semana>{% if semana %}Semana {{ semana.semana }} · início {{ semana.inicio_semana|date:'d/m/Y' }}{% else %}Sem semana importada para a obra e data.{% endif %}</span>
+      <div data-diario-opcoes>{% for atividade in atividades %}<label class="op-diario-opcao"><input type="checkbox" name="atividades" value="{{ atividade.id }}" {% if atividade.id in atividades_selecionadas %}checked{% endif %}><span><strong>{{ atividade.nome }}</strong><small>{{ atividade.disciplina }} · {{ atividade.local }} · {{ atividade.origem }}</small></span></label>{% empty %}<p class="op-muted">Nenhuma atividade disponível para a semana importada.</p>{% endfor %}</div>
+    </div>
+    {% if vinculos_historicos %}<div class="c12 op-stock-preview"><strong>Atividades de cronogramas anteriores</strong><p class="op-muted">Estes vínculos permanecem registrados neste diário. Marque apenas os que deseja remover.</p>{% for vinculo in vinculos_historicos %}<label class="op-diario-opcao"><input type="checkbox" name="remover_atividade_historica" value="{{ vinculo.pk }}"><span><strong>{{ vinculo.atividade.nome_tarefa }}</strong><small>{{ vinculo.get_origem_display }} · Semana {{ vinculo.semana }} · início {{ vinculo.inicio_semana|date:'d/m/Y' }}</small></span></label>{% endfor %}</div>{% endif %}
+    {% if atividades_adicionais %}<div class="c12 op-stock-preview"><strong>Atividades adicionais registradas</strong>{% for adicional in atividades_adicionais %}<label class="op-diario-opcao"><input type="checkbox" name="remover_adicional" value="{{ adicional.pk }}"><span><strong>{{ adicional.descricao }}</strong><small>Justificativa: {{ adicional.justificativa }} · marque para remover</small></span></label>{% endfor %}</div>{% endif %}
+    <div class="op-field c6"><label>Atividade adicional</label><textarea name="adicional_descricao" placeholder="Descreva a atividade não prevista">{{ request.POST.adicional_descricao }}</textarea></div>
+    <div class="op-field c6"><label>Justificativa</label><textarea name="adicional_justificativa" placeholder="Motivo da atividade não prevista">{{ request.POST.adicional_justificativa }}</textarea></div>
     <div class="c12 op-actions"><button class="op-btn" type="submit">Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
   </div></form>
 </div>
@@ -48,6 +58,38 @@
       }).catch(function(){box.hidden=true;});
   }
   form.obra.addEventListener('change',carregar);form.data.addEventListener('change',carregar);carregar();
+})();
+</script>
+<script>
+(function(){
+  const quadro=document.querySelector('[data-diario-atividades]');
+  if(!quadro)return;
+  const form=quadro.closest('form'), lista=quadro.querySelector('[data-diario-opcoes]'), info=quadro.querySelector('[data-diario-semana]');
+  let sequencia=0;
+  function mensagem(texto){lista.replaceChildren();const p=document.createElement('p');p.className='op-muted';p.textContent=texto;lista.appendChild(p);}
+  function carregar(){
+    const atual=++sequencia;
+    const obra=form.elements.obra.value, data=form.elements.data.value;
+    if(!obra||!data){info.textContent='Selecione obra e data.';mensagem('Selecione obra e data para ver as atividades.');return;}
+    info.textContent='Carregando atividades...';mensagem('Consultando cronograma.');
+    fetch(quadro.dataset.url+'?obra='+encodeURIComponent(obra)+'&data='+encodeURIComponent(data),{headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r=>{if(!r.ok)throw new Error('Falha ao consultar cronograma');return r.json();})
+      .then(d=>{
+        if(atual!==sequencia)return;
+        info.textContent=d.semana?'Semana '+d.semana+' · início '+d.inicio_semana:'Sem semana importada para a obra e data.';
+        lista.replaceChildren();
+        if(!d.atividades.length){mensagem('Nenhuma atividade disponível para a semana importada.');return;}
+        d.atividades.forEach(a=>{
+          const label=document.createElement('label');label.className='op-diario-opcao';
+          const input=document.createElement('input');input.type='checkbox';input.name='atividades';input.value=a.id;
+          const texto=document.createElement('span'), nome=document.createElement('strong'), detalhe=document.createElement('small');
+          nome.textContent=a.nome;detalhe.textContent=[a.disciplina,a.local,a.origem].filter(Boolean).join(' · ');
+          texto.append(nome,detalhe);label.append(input,texto);lista.appendChild(label);
+        });
+      }).catch(()=>{if(atual===sequencia){info.textContent='Não foi possível carregar as atividades.';mensagem('Tente novamente após verificar a conexão.');}});
+  }
+  form.elements.obra.addEventListener('change',carregar);
+  form.elements.data.addEventListener('change',carregar);
 })();
 </script>
 {% endblock %}

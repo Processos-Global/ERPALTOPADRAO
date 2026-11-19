@@ -35,6 +35,10 @@ class MovimentoEstoque(models.Model):
         related_name="movimentos_estoque_obras",
         verbose_name="Material",
     )
+    reserva = models.ForeignKey(
+        "compras.ReservaEstoqueCompra", null=True, blank=True,
+        on_delete=models.PROTECT, related_name="movimentos",
+    )
     descricao_item = models.CharField(max_length=500, verbose_name="Item")
     unidade = models.CharField(max_length=20, verbose_name="Unidade")
     quantidade = models.DecimalField(

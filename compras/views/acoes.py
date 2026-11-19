@@ -88,6 +88,8 @@ def acao_incluir_necessidade(request, pk):
                     quantidade=form.cleaned_data["quantidade"],
                     observacao=form.cleaned_data["observacao"],
                     usuario=request.user,
+                    excecao_estoque=request.POST.get("excecao_estoque") == "1",
+                    justificativa_excecao=request.POST.get("justificativa_excecao", ""),
                 )
                 messages.success(request, "Item incluído na compra.")
             except ValidationError as exc:
@@ -110,6 +112,8 @@ def acao_editar_necessidade(request, pk, necessidade_id):
                     processo=processo, necessidade=necessidade,
                     material=form.cleaned_data["material"], quantidade=form.cleaned_data["quantidade"],
                     observacao=form.cleaned_data["observacao"], usuario=request.user,
+                    excecao_estoque=request.POST.get("excecao_estoque") == "1",
+                    justificativa_excecao=request.POST.get("justificativa_excecao", ""),
                 )
                 messages.success(request, "Item atualizado com sucesso.")
             except ValidationError as exc:

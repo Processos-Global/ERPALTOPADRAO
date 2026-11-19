@@ -158,6 +158,10 @@ def listar_atividades(*, projeto: str, semana: int) -> list[dict[str, Any]]:
                 data_atualizacao=registro.get("data_atualizacao"),
                 concluida=concluida,
             ),
+            "desvio_real_dias": (
+                (registro["termino_real"] - registro["termino_base"]).days
+                if concluida and registro.get("termino_real") and registro.get("termino_base") else None
+            ),
             "requer_atencao": situacao in {"ATRASADA", "PARA_INICIAR", "PARA_CONCLUIR"},
             "inicio_base_data": registro.get("inicio_base"),
             "termino_base_data": registro.get("termino_base"),

@@ -79,6 +79,7 @@
       </div>
       <div class="op-grid op-modal-grid">
         <div class="op-field c4"><label>Quantidade *</label><input type="number" name="quantidade" min="0.01" step="0.01" inputmode="decimal" required placeholder="0,00"></div>
+        <div class="op-field c8"><label>Reserva da necessidade</label><select name="reserva_id" data-reserva-select><option value="">Usar somente saldo não reservado</option>{% for reserva in reservas %}<option value="{{ reserva.pk }}" data-item-key="{{ reserva.chave_estoque }}">{{ reserva.necessidade.processo.numero }} · {{ reserva.necessidade.descricao }} · {{ reserva.quantidade_disponivel|numero_br }} {{ reserva.unidade }}</option>{% endfor %}</select></div>
         <div class="op-field c8"><label>Finalidade</label><input type="text" name="finalidade" maxlength="255" placeholder="Ex.: consumo na alvenaria"></div>
         <div class="op-field c6"><label>Documento / referência</label><input type="text" name="documento_referencia" maxlength="100" placeholder="Opcional"></div>
         <div class="op-field c12"><label>Observação</label><textarea name="observacao" placeholder="Informações adicionais da saída"></textarea></div>
@@ -164,9 +165,16 @@
       input.setCustomValidity('');
       list.hidden = true;
       input.setAttribute('aria-expanded', 'false');
+      atualizarReservas();
+    }
+    function atualizarReservas() {
+      const reservas=picker.closest('form').querySelector('[data-reserva-select]');
+      if(!reservas)return;
+      reservas.value='';
+      [...reservas.options].forEach(option=>{if(option.value)option.hidden=option.dataset.itemKey!==hidden.value;});
     }
     input.addEventListener('focus', filtrar);
-    input.addEventListener('input', () => {hidden.value = ''; input.setCustomValidity(''); filtrar();});
+    input.addEventListener('input', () => {hidden.value = ''; input.setCustomValidity(''); atualizarReservas(); filtrar();});
     input.addEventListener('keydown', event => {
       if(event.key === 'Escape'){list.hidden=true;input.setAttribute('aria-expanded','false');}
       if(event.key === 'ArrowDown' && !list.hidden){event.preventDefault();options.find(o=>!o.hidden)?.focus();}
@@ -187,7 +195,7 @@
     picker.stockSelect = value => {
       const option = options.find(o => o.dataset.value === value);
       if (option) selecionar(option);
-      else {hidden.value='';input.value='';input.setCustomValidity('');list.hidden=true;}
+      else {hidden.value='';input.value='';input.setCustomValidity('');list.hidden=true;atualizarReservas();}
     };
   }
   document.querySelectorAll('[data-stock-picker]').forEach(iniciarPicker);

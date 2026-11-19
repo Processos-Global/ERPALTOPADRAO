@@ -15,6 +15,7 @@ from financeiro.forms import TituloPagarForm
 from financeiro.models import AnexoTituloPagar
 from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
 from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
+from financeiro.services.agenda import _inteiro_positivo
 from financeiro.services.notificacoes import notificar_aprovadores
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulos_manuais
@@ -112,7 +113,7 @@ def titulos_lista(request):
     fornecedor = (request.GET.get("fornecedor") or "").strip()
     apropriacao = (request.GET.get("apropriacao") or "").strip()
     classe = (request.GET.get("classe") or "").strip()
-    periodo = (request.GET.get("periodo") or "90").strip()
+    periodo = (request.GET.get("periodo") or "").strip()
     atalho = (request.GET.get("atalho") or "").strip()
 
     if busca:
@@ -129,14 +130,10 @@ def titulos_lista(request):
         qs = qs.filter(status=status)
     if origem:
         qs = qs.filter(origem=origem)
-    if obra:
-        qs = qs.filter(obra_id=obra)
-    if fornecedor:
-        qs = qs.filter(fornecedor_id=fornecedor)
-    if apropriacao:
-        qs = qs.filter(plano_financeiro_id=apropriacao)
-    if classe:
-        qs = qs.filter(plano_financeiro__pai_id=classe)
+    for valor, campo in ((obra, "obra_id"), (fornecedor, "fornecedor_id"),
+                         (apropriacao, "plano_financeiro_id"), (classe, "plano_financeiro__pai_id")):
+        if identificador := _inteiro_positivo(valor):
+            qs = qs.filter(**{campo: identificador})
 
     if atalho == "vencidos":
         qs = qs.filter(vencimento__lt=hoje).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
@@ -150,16 +147,27 @@ def titulos_lista(request):
     elif periodo.isdigit() and int(periodo) > 0:
         qs = qs.filter(Q(vencimento__lte=hoje + timedelta(days=int(periodo))) | Q(vencimento__isnull=True))
 
-    page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
+    # Cards e tabela compartilham busca, dimensões e recorte temporal.
+    indicadores = {chave: Decimal("0") for chave in ("vencidos", "sete", "aprovacao", "sem_data")}
+    base_abertos = qs.exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
+    for titulo in base_abertos.select_related("pagamento").iterator(chunk_size=1000):
+        saldo = titulo.saldo_aberto
+        if titulo.vencimento is None:
+            indicadores["sem_data"] += saldo
+        elif titulo.vencimento < hoje:
+            indicadores["vencidos"] += saldo
+        elif titulo.vencimento <= hoje + timedelta(days=7):
+            indicadores["sete"] += saldo
+        if titulo.status == TituloPagar.Status.AGUARDANDO_APROVACAO:
+            indicadores["aprovacao"] += saldo
 
-    base_abertos = TituloPagar.objects.select_related("pagamento").exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
-    vencidos = list(base_abertos.filter(vencimento__lt=hoje))
-    sete = list(base_abertos.filter(vencimento__range=(hoje, hoje + timedelta(days=7))))
-    aprovacao = list(base_abertos.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO))
-    sem_data = list(base_abertos.filter(vencimento__isnull=True))
+    page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
+    parametros_paginacao = request.GET.copy()
+    parametros_paginacao.pop("page", None)
 
     return render(request, "financeiro/titulos_lista.html", {
         "page_obj": page_obj,
+        "parametros_paginacao": parametros_paginacao.urlencode(),
         "status_choices": TituloPagar.Status.choices,
         "origem_choices": TituloPagar.Origem.choices[:4],
         "obras": Obra.objects.all().order_by("id"),
@@ -167,10 +175,10 @@ def titulos_lista(request):
         "classes_financeiras": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome"),
         "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False).select_related("pai").order_by("pai__codigo", "codigo", "nome"),
         "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "apropriacao": apropriacao, "classe": classe, "periodo": periodo, "atalho": atalho},
-        "kpi_vencidos": sum((x.saldo_aberto for x in vencidos), Decimal("0")),
-        "kpi_7": sum((x.saldo_aberto for x in sete), Decimal("0")),
-        "kpi_aprovacao": sum((x.saldo_aberto for x in aprovacao), Decimal("0")),
-        "kpi_sem_data": sum((x.saldo_aberto for x in sem_data), Decimal("0")),
+        "kpi_vencidos": indicadores["vencidos"],
+        "kpi_7": indicadores["sete"],
+        "kpi_aprovacao": indicadores["aprovacao"],
+        "kpi_sem_data": indicadores["sem_data"],
         "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
         "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
     })

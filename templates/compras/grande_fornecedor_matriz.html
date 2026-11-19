@@ -824,7 +824,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="cp-page gf-page{% if processo.etapa_atual == 'APROVACAO' %} gf-page--approval{% endif %}">
+<div class="cp-page gf-page fin-page{% if processo.etapa_atual == 'APROVACAO' %} gf-page--approval{% endif %}">
 
     <header class="cp-head">
         <div class="cp-head__copy">
@@ -858,6 +858,7 @@
         </div>
     </header>
 
+    <div class="cp-card" style="padding:12px;margin-bottom:12px"><strong>Prazo da etapa: {{ sla.etapa.rotulo }}</strong>{% if sla.etapa.limite %} · limite {{ sla.etapa.limite|date:'d/m/Y' }}{% endif %}{% if sla.etapa.atraso %} · {{ sla.etapa.atraso }} dias de atraso{% endif %}<div>Prazo geral: {{ sla.geral.rotulo }}{% if sla.geral.limite %} · limite {{ sla.geral.limite|date:'d/m/Y' }}{% endif %}</div></div>
     <div class="gf-flow">
         <span class="gf-step {% if processo.etapa_atual == 'COMPATIBILIZACAO' %}is-active{% else %}is-done{% endif %}">
             <b>1</b>Compatibilização
@@ -967,6 +968,16 @@
         </div>
         {% endif %}
 
+        <form method="get" class="cp-section" style="padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+            <label class="cp-label">Obra<input class="cp-input" value="{{ processo.obra.nome }}" disabled></label>
+            <label class="cp-label">Categoria GF<input class="cp-input" value="{{ categoria_ficha_processo.nome|default:'Não definida' }}" disabled></label>
+            <label class="cp-label">Pavimento<select class="cp-input" name="pavimento" data-force-search><option value="">Todos</option>{% for pavimento in pavimentos_filtro %}<option value="{{ pavimento.pk }}" {% if filtros_matriz.pavimento == pavimento.pk %}selected{% endif %}>{{ pavimento.nome }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Ambiente<select class="cp-input" name="ambiente" data-force-search><option value="">Todos</option>{% for ambiente in ambientes_filtro %}<option value="{{ ambiente.pk }}" {% if filtros_matriz.ambiente == ambiente.pk %}selected{% endif %}>{{ ambiente.pavimento.nome }} · {{ ambiente.identificacao }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Material<select class="cp-input" name="material" data-force-search><option value="">Todos</option>{% for material in materiais %}<option value="{{ material.pk }}" {% if filtros_matriz.material == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Tipo de item<select class="cp-input" name="tipo" data-force-search><option value="">Todos</option>{% for tipo in tipos_filtro %}<option value="{{ tipo.pk }}" {% if filtros_matriz.tipo == tipo.pk %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
+            <button class="cp-btn cp-btn--primary" type="submit">Filtrar</button>
+            <a class="cp-btn" href="{% url 'compras:grande_fornecedor_matriz' processo.pk %}">Limpar</a>
+        </form>
         <div class="gf-table-wrap">
             <table class="gf-table">
                 <thead>
@@ -1072,7 +1083,7 @@
                                 {% if pode_editar and not linha.item.item_ficha_tecnica_id %}<input class="cp-input js-local" value="{{ linha.item.local }}" placeholder="Local">{% else %}{{ linha.item.local|default:"—" }}{% endif %}
                                 <span class="gf-save-state"></span>
                             </td>
-                            <td class="gf-col-spec"><div class="gf-spec-text">{{ linha.item.especificacao|default:"—" }}</div></td>
+                            <td class="gf-col-spec"><div class="gf-spec-text">{{ linha.item.especificacao|default:"—" }}</div>{% if linha.item.descricao_medidas %}<div class="gf-spec-text"><strong>Medidas:</strong> {{ linha.item.descricao_medidas }}</div>{% endif %}</td>
                             <td>{% if pode_editar and not linha.item.item_ficha_tecnica_id %}<input class="cp-input js-qty" value="{{ linha.item.quantidade|floatformat:2 }}" inputmode="decimal">{% else %}{{ linha.item.quantidade|floatformat:2 }}{% endif %}</td>
 
                             <td class="js-row-unit">{{ linha.item.unidade }}</td>
@@ -1907,4 +1918,5 @@ document.addEventListener('submit', function (event) {
     }
 });
 </script>
+{% include "financeiro/_dropdown_search.html" %}
 {% endblock %}

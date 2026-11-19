@@ -24,6 +24,8 @@ from .pedido import (
     RecebimentoPedidoItem,
 )
 from .historico import HistoricoProcessoCompra
+from .reserva_estoque import ReservaEstoqueCompra
+from .sla import PrazoEntregaPedido, RegraPrazoCompra, TransicaoEtapaCompra
 
 from .grande_fornecedor import (
     GrandeFornecedorProcesso,

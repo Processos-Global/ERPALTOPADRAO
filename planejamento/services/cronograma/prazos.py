@@ -55,7 +55,7 @@ def _classificar_situacao_prazo(
     return "EM_ATRASO", "Em atraso", diferenca_dias, data_comparada
 
 
-def calcular_indicadores_prazo(*, resumo, media_avanco_real):
+def calcular_indicadores_prazo(*, resumo, media_avanco_real, avancos=None):
     executado = max(float(resumo.get("executado") or 0.0), 0.0)
     previsto = max(float(resumo.get("previsto") or 0.0), 0.0)
     restante = max(float(resumo.get("restante") or 0.0), 0.0)
@@ -69,7 +69,13 @@ def calcular_indicadores_prazo(*, resumo, media_avanco_real):
     semanas_restantes = None
     previsao_termino = None
 
-    if media_avanco_real > 0:
+    amostras = list(avancos or [])[-4:]
+    ganhos_positivos = sum(1 for item in amostras[1:] if item.get("avanco_real", 0) > 0)
+    projecao_confiavel = (
+        len(amostras) >= 3 and ganhos_positivos >= 2
+        and media_avanco_real > 0 and bool(data_atualizacao) and not termino_real
+    )
+    if projecao_confiavel:
         semanas_restantes = restante / media_avanco_real
         if data_atualizacao:
             previsao_termino = data_atualizacao + timedelta(
@@ -111,6 +117,21 @@ def calcular_indicadores_prazo(*, resumo, media_avanco_real):
         "termino_planejado": termino_planejado,
         "termino_real": termino_real,
         "previsao_termino": previsao_termino,
+        "projecao_confiavel": projecao_confiavel,
+        "criterio_projecao": "Avanço médio das últimas quatro semanas, com ao menos três medições e dois avanços positivos",
+        "data_base_projecao": data_atualizacao,
+        "dias_diferenca_projetada": (
+            (previsao_termino - termino_planejado).days
+            if previsao_termino and termino_planejado else None
+        ),
+        "dias_diferenca_real": (
+            (termino_real - termino_planejado).days
+            if termino_real and termino_planejado else None
+        ),
+        "dias_atraso_aberto": (
+            max((data_atualizacao - termino_planejado).days, 0)
+            if not termino_real and data_atualizacao and termino_planejado else None
+        ),
         "semanas_restantes_estimadas": semanas_restantes,
         "media_avanco_semanal": media_avanco_real,
         "idp": idp,

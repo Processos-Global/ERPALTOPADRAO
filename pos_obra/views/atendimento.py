@@ -133,7 +133,7 @@ def detalhe(request, pk):
     forms_por_etapa = {
         'TRIAGEM': ['prioridade', 'responsavel', 'triagem'],
         'VISTORIA': ['data_vistoria', 'diagnostico'],
-        'EXECUCAO': ['data_execucao', 'execucao'],
+        'EXECUCAO': ['data_execucao', 'execucao', 'materiais_observacao'],
         'FINALIZACAO': [],
     }
     anterior = c.status
@@ -311,7 +311,7 @@ def _contexto_detalhe(request, c, formulario_etapas, etapa=None, encerrado=False
 
 
 def _erro_operacao(request, c, chave, form, aba, reagendamento_id=None):
-    grupos={'TRIAGEM':['prioridade','responsavel','triagem'], 'VISTORIA':['data_vistoria','diagnostico'], 'EXECUCAO':['data_execucao','execucao'], 'FINALIZACAO':[]}
+    grupos={'TRIAGEM':['prioridade','responsavel','triagem'], 'VISTORIA':['data_vistoria','diagnostico'], 'EXECUCAO':['data_execucao','execucao','materiais_observacao'], 'FINALIZACAO':[]}
     forms={}
     for etapa, campos in grupos.items():
         f=AtendimentoForm(instance=c, auto_id=etapa.lower()+'-%s')
@@ -390,6 +390,8 @@ def latest_document_version(c):
 
 def aceite_valido(c):
     limite=ultima_alteracao_tecnica(c)
+    if c.anexos.filter(etapa='FINALIZACAO', via_assinada_conferida=True, criado_em__gte=limite).exists():
+        return True
     for tipo in ('EXECUCAO','OS'):
         doc=c.documentos_versionados.filter(tipo=tipo).order_by('-versao').first()
         if doc and doc.criado_em >= limite and AceiteOS.objects.filter(documento=doc,resultado__in=['ACEITO','RESSALVA']).exists():
@@ -633,6 +635,9 @@ def agendar(request,pk):
     if not possui_permissao_acao(request.user,ModuloSistema.POS_OBRA,'editar_ocorrencia'):raise PermissionDenied
     c=get_object_or_404(Chamado.objects.select_for_update(),pk=pk)
     if c.status in ('CANCELADO','CONCLUIDO'):raise PermissionDenied('OS encerrada.')
+    tipo_solicitado = request.POST.get('tipo')
+    if tipo_solicitado in dict(AgendamentoOS.TIPOS) and not pode_agendar_etapa(c, tipo_solicitado):
+        raise PermissionDenied('A etapa correspondente está concluída ou ainda não foi liberada para agendamento.')
     from django.contrib.auth import get_user_model
     responsavel_id=request.POST.get('responsavel','')
     if responsavel_id.isdigit():

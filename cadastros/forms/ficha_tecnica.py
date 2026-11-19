@@ -45,7 +45,8 @@ class CategoriaGrandeFornecedorForm(_BaseForm):
 class TipoItemGrandeFornecedorForm(_BaseForm):
     class Meta:
         model = TipoItemGrandeFornecedor
-        fields = ["categoria", "nome", "unidade_padrao", "ordem", "ativo"]
+        fields = ["categoria", "nome", "unidade_padrao", "tipos_ambiente_sugeridos", "ordem", "ativo"]
+        widgets = {"tipos_ambiente_sugeridos": forms.CheckboxSelectMultiple}
 
 
 class OpcaoEspecificacaoGrandeFornecedorForm(_BaseForm):

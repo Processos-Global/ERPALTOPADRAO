@@ -71,6 +71,8 @@ from .grandes_fornecedores import (
 )
 
 from .grandes_fornecedores import selecionar_fornecedor_micro_item as gf_selecionar_fornecedor_micro_item
+from .relatorio_grandes_fornecedores import relatorio_grandes_fornecedores
+from .sla import regras_prazo_compra
 
 from .contratos import (
     contratos_dashboard, contrato_novo, contrato_detalhe, contrato_editar,

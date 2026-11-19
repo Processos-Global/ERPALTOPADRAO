@@ -104,6 +104,7 @@ class PermissaoComprasInline(admin.StackedInline):
                     "gerenciar_pedidos",
                     "receber_pedidos",
                     "cancelar_pedidos",
+                    "excecao_estoque",
                 ),
                 "description": (
                     "Gerenciar pedidos permite atualizar pedido, status, previsão e "
@@ -264,6 +265,7 @@ class PermissaoComprasAdmin(admin.ModelAdmin):
         "gerenciar_pedidos",
         "receber_pedidos",
         "cancelar_pedidos",
+        "excecao_estoque",
         "administrar",
         "ativo",
     ]
@@ -280,6 +282,7 @@ class PermissaoComprasAdmin(admin.ModelAdmin):
         "gerenciar_pedidos",
         "receber_pedidos",
         "cancelar_pedidos",
+        "excecao_estoque",
         "administrar",
         "ativo",
     ]
@@ -295,6 +298,7 @@ class PermissaoComprasAdmin(admin.ModelAdmin):
         "gerenciar_pedidos",
         "receber_pedidos",
         "cancelar_pedidos",
+        "excecao_estoque",
         "administrar",
     ]
 
@@ -376,6 +380,7 @@ class PermissaoComprasAdmin(admin.ModelAdmin):
                     "gerenciar_pedidos",
                     "receber_pedidos",
                     "cancelar_pedidos",
+                    "excecao_estoque",
                 ),
             },
         ),

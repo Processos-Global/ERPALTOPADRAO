@@ -1,4 +1,5 @@
 from .cadastros import DespesaRecorrente, PlanoFinanceiro, SequenciaFinanceira
+from .liberacoes import LiberacaoFinanceiraPedido
 from .pagamentos import Pagamento
 from .previsoes import PrevisaoFinanceira
 from .relatorios import ItemRelatorioPagamento, RelatorioPagamento

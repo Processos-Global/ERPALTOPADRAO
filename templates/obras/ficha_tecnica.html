@@ -16,13 +16,14 @@
 .ft-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#725b50}
 .ft-edit-grid input,.ft-edit-grid select,.ft-edit-grid textarea{width:100%;min-width:0;padding:10px;border:1px solid #dfd4c5;border-radius:8px;background:#fff;color:#49342c;font:inherit;font-size:12px}
 .ft-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+.ft-page .fin-searchable__button{width:100%;min-height:38px;border:1px solid var(--border,#ddceba);border-radius:8px;background:var(--surface,#fff);color:var(--text-primary,#49342c);padding:8px 10px;font:inherit}
 @media(max-width:1000px){.ft-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.ft-edit-grid{grid-template-columns:1fr}.ft-picker select{min-width:100%}}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="ft-page">
+<div class="ft-page fin-page">
   {% if messages %}
     {% for message in messages %}
       <div class="ft-message">{{ message }}</div>
@@ -42,7 +43,7 @@
     <a class="{% if etapa == '1' %}active{% endif %}" href="?etapa=1">1. Pavimentos</a>
     <a class="{% if etapa == '2' %}active{% endif %}" href="?etapa=2">2. Ambientes</a>
     <a class="{% if etapa == '3' %}active{% endif %}" href="?etapa=3">3. Categorias GF</a>
-    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">4. Itens</a>
+    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">4. Detalhamento de Ambientes</a>
     <a class="{% if etapa == '5' %}active{% endif %}" href="?etapa=5">5. Resumo</a>
   </nav>
 
@@ -197,7 +198,7 @@
       </div>
 
       {% elif etapa == '4' %}
-      <div class="ft-panel-head"><h2>Itens</h2></div>
+      <div class="ft-panel-head"><h2>Detalhamento de Ambientes</h2><a href="{% url 'obras:ficha_tecnica_consulta' %}?obra={{ obra.pk|unlocalize }}">Consulta e relatórios</a></div>
       <div class="ft-panel-body">
         <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select>
           <option value="?etapa=4" {% if not ambiente_selecionado %}selected{% endif %}>Itens gerais da obra</option>
@@ -402,3 +403,4 @@
 })();
 </script>
 {% endblock %}
+{% block extra_js %}{{ block.super }}{% include 'financeiro/_dropdown_search.html' %}{% endblock %}

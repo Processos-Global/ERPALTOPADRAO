@@ -59,6 +59,7 @@
               <label class="usr-permission">{{ form.gerenciar_pedidos }}<span><strong>{{ form.gerenciar_pedidos.label }}</strong><small>{{ form.gerenciar_pedidos.help_text }}</small></span></label>
               <label class="usr-permission">{{ form.receber_pedidos }}<span><strong>{{ form.receber_pedidos.label }}</strong><small>{{ form.receber_pedidos.help_text }}</small></span></label>
               <label class="usr-permission usr-permission--danger">{{ form.cancelar_pedidos }}<span><strong>{{ form.cancelar_pedidos.label }}</strong><small>{{ form.cancelar_pedidos.help_text }}</small></span></label>
+              <label class="usr-permission usr-permission--danger">{{ form.excecao_estoque }}<span><strong>{{ form.excecao_estoque.label }}</strong><small>{{ form.excecao_estoque.help_text }}</small></span></label>
               <label class="usr-permission usr-permission--admin" style="grid-column:1/-1">{{ form.administrar }}<span><strong>{{ form.administrar.label }}</strong><small>{{ form.administrar.help_text }}</small></span></label>
             </div>
 
@@ -108,7 +109,7 @@
 
   const names = [
     'solicitar_compra','executar_cotacao','compatibilizar','negociar',
-    'aprovar_compra','gerenciar_pedidos','receber_pedidos','cancelar_pedidos','administrar'
+    'aprovar_compra','gerenciar_pedidos','receber_pedidos','cancelar_pedidos','excecao_estoque','administrar'
   ];
   const presets = {
     engenheiro: ['solicitar_compra'],
