@@ -222,6 +222,8 @@ class NecessidadeCompra(models.Model):
 
     @property
     def quantidade_adjudicada(self):
+        if hasattr(self, "_quantidade_adjudicada"):
+            return self._quantidade_adjudicada
         return self.adjudicacoes.filter(cancelada=False).aggregate(v=models.Sum("quantidade"))["v"] or Decimal("0")
 
     @property

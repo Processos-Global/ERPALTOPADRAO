@@ -683,7 +683,7 @@ class DecisaoComercialLoteForm(forms.Form):
                 CotacaoFornecedorItem.objects.filter(cotacao__processo=processo, cotacao__enviada_negociacao_em__isnull=False, cotacao__enviada_aprovacao_em__isnull=True),
                 processo,
             )
-            .select_related("cotacao__fornecedor", "necessidade")
+            .select_related("cotacao__fornecedor", "necessidade", "negociacao")
             .order_by("necessidade__descricao", "cotacao__fornecedor__nome")
         )
 

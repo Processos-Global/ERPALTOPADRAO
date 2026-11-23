@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 
 from django.contrib import messages
 from django.db import IntegrityError, transaction
@@ -10,76 +10,100 @@ from usuarios.decorators import acao_required, modulo_required
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import (
-    DiarioAtividadeAdicional, DiarioAtividadePlanejada, DiarioObra, Obra,
+    DiarioAtividadePlanejada, DiarioObra, Obra,
     FotoDiarioObra,
 )
 from obras.services.fotos import validar_fotos
-from planejamento.models import ImportacaoCronograma, RegistroCronograma
-from planejamento.services.cronograma.consultas import normalizar_texto
+from planejamento.services.cronograma.agenda_semanal import calcular_programacao_semanal
+from planejamento.services.cronograma.atividades import listar_atividades_do_retrato
+from planejamento.services.cronograma.consultas import (
+    CronogramaBaseError, normalizar_texto, queryset_ativo,
+)
 
 
 PRE_HABITESE = {"CHECKLIST HABITE-SE", "CHECKLIST PRE HABITE-SE"}
 POS_HABITESE = "POS HABITE-SE"
+MAIOR_ID_OBRA = 2**63 - 1
+
+
+def _inteiro_informado(valor, maximo):
+    if not valor or not valor.isascii() or not valor.isdecimal() or len(valor) > len(str(maximo)):
+        return None
+    numero = int(valor)
+    return numero if numero <= maximo else None
 
 
 def _atividades_do_dia(obra, data_registro):
-    """Usa a semana e o início importados, sem supor numeração ISO."""
+    """Calcula a programação entre os retratos da obra selecionada."""
     if not obra or not data_registro:
         return None, []
-    importacao = ImportacaoCronograma.objects.filter(
-        ativa=True, status=ImportacaoCronograma.Status.CONCLUIDA
-    ).order_by("-pk").first()
-    if not importacao:
+    try:
+        registros = queryset_ativo(obra=obra).filter(semana__isnull=False)
+    except CronogramaBaseError:
         return None, []
+
+    primeiro_inicio_possivel = date.fromordinal(max(1, data_registro.toordinal() - 6))
     semana = (
-        RegistroCronograma.objects.filter(
-            importacao=importacao, obra=obra, inicio_semana__lte=data_registro,
-            inicio_semana__gt=data_registro - timedelta(days=7), semana__isnull=False,
-        )
+        registros.filter(inicio_semana__range=(primeiro_inicio_possivel, data_registro))
         .order_by("-inicio_semana", "-semana")
         .values("semana", "inicio_semana")
         .first()
     )
     if not semana:
         return None, []
-    opcoes = {}
-    registros = (
-        RegistroCronograma.objects.filter(
-            importacao=importacao, obra=obra, semana=semana["semana"],
-            atividade_planejamento__isnull=False, atividade_planejamento__obra=obra,
+    # O delta de um retrato mais antigo pode pertencer a uma semana não importada.
+    inicio_anterior_minimo = date.fromordinal(max(1, semana["inicio_semana"].toordinal() - 7))
+    anterior = (
+        registros.filter(
+            inicio_semana__gte=inicio_anterior_minimo, inicio_semana__lt=semana["inicio_semana"],
         )
-        .select_related("atividade_planejamento")
-        .order_by("atividade_planejamento_id", "-pk")
+        .order_by("-inicio_semana", "-semana")
+        .values("semana", "inicio_semana")
+        .first()
     )
-    for registro in registros:
-        atividade = registro.atividade_planejamento
-        if atividade.pk in opcoes:
-            continue
-        disciplina = normalizar_texto(registro.disciplina or atividade.disciplina)
+    registros_vinculaveis = registros.filter(atividade_planejamento__obra=obra)
+    programacao = calcular_programacao_semanal(
+        atividades_atuais=listar_atividades_do_retrato(
+            registros_vinculaveis.filter(**semana), somente_mais_recente_por_atividade=True,
+        ),
+        atividades_anteriores=(
+            listar_atividades_do_retrato(
+                registros_vinculaveis.filter(**anterior), somente_mais_recente_por_atividade=True,
+            )
+            if anterior else []
+        ),
+        semana_anterior=anterior["semana"] if anterior else None,
+        inicio_semana=semana["inicio_semana"],
+    )
+
+    opcoes = []
+    for atividade in programacao:
+        atividade_id = atividade["atividade_planejamento_id"]
+        disciplina = normalizar_texto(atividade["disciplina"])
         if disciplina in PRE_HABITESE:
             origem = DiarioAtividadePlanejada.Origem.PRE_HABITESE
         elif disciplina == POS_HABITESE:
             origem = DiarioAtividadePlanejada.Origem.POS_HABITESE
         else:
             origem = DiarioAtividadePlanejada.Origem.SEMANAL
-        opcoes[atividade.pk] = {
-            "id": atividade.pk,
+        opcoes.append({
+            "id": atividade_id,
             "origem": origem,
-            "disciplina": registro.disciplina or atividade.disciplina,
-            "nome": registro.nome_tarefa or atividade.nome_tarefa,
-            "local": registro.local_tarefa or atividade.local_tarefa,
-        }
-    return semana, list(opcoes.values())
+            "disciplina": atividade["disciplina"],
+            "nome": atividade["atividade"],
+            "local": atividade["local"],
+        })
+    return semana, opcoes
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def diario_atividades_api(request):
-    obra_id = request.GET.get("obra")
+    obra_id = _inteiro_informado(request.GET.get("obra"), MAIOR_ID_OBRA)
     try:
         data_registro = date.fromisoformat(request.GET.get("data") or "")
     except ValueError:
         return JsonResponse({"semana": None, "atividades": []})
-    obra = Obra.objects.filter(pk=obra_id, ativa=True).first() if str(obra_id or "").isdigit() else None
+    obra = Obra.objects.filter(pk=obra_id, ativa=True).first() if obra_id else None
     semana, atividades = _atividades_do_dia(obra, data_registro)
     return JsonResponse({
         "semana": semana["semana"] if semana else None,
@@ -90,13 +114,13 @@ def diario_atividades_api(request):
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def diario_lista(request):
-    obra_id = request.GET.get("obra")
+    obra_id = _inteiro_informado(request.GET.get("obra"), MAIOR_ID_OBRA)
     data_inicio = request.GET.get("inicio")
     data_fim = request.GET.get("fim")
 
     diarios = DiarioObra.objects.select_related("obra", "registrado_por")
-    if obra_id and str(obra_id).isdigit():
-        diarios = diarios.filter(obra_id=int(obra_id))
+    if obra_id:
+        diarios = diarios.filter(obra_id=obra_id)
     if data_inicio:
         diarios = diarios.filter(data__gte=data_inicio)
     if data_fim:
@@ -121,7 +145,7 @@ def diario_lista(request):
     return render(request, "obras/diario_lista.html", {
         "diarios": diarios,
         "obras": Obra.objects.filter(ativa=True).order_by("nome"),
-        "obra_filtro": int(obra_id) if obra_id and str(obra_id).isdigit() else None,
+        "obra_filtro": obra_id,
         "data_inicio": data_inicio or "",
         "data_fim": data_fim or "",
     })
@@ -180,49 +204,41 @@ def _diario_form(request, obra_inicial=None, diario=None):
         data_registro = None
 
     if request.method == "POST":
-        obra_id = request.POST.get("obra")
-        obra_selecionada = obras.filter(pk=int(obra_id)).first() if str(obra_id or "").isdigit() else None
+        obra_id = _inteiro_informado(request.POST.get("obra"), MAIOR_ID_OBRA)
+        obra_selecionada = obras.filter(pk=obra_id).first() if obra_id else None
     semana, opcoes = _atividades_do_dia(obra_selecionada, data_registro)
-    opcoes_por_id = {opcao["id"]: opcao for opcao in opcoes}
+    ids_disponiveis = {opcao["id"] for opcao in opcoes}
     vinculos_existentes = list(diario.atividades_planejadas.select_related("atividade")) if diario else []
     vinculos_historicos = [
         vinculo for vinculo in vinculos_existentes
-        if not semana or vinculo.atividade_id not in opcoes_por_id
+        if not semana or vinculo.atividade_id not in ids_disponiveis
         or vinculo.semana != semana["semana"]
         or vinculo.inicio_semana != semana["inicio_semana"]
     ]
-    ids_historicos = {vinculo.pk for vinculo in vinculos_historicos}
+    ids_historicos = {str(vinculo.pk): vinculo.pk for vinculo in vinculos_historicos}
     atividades_historicas = {vinculo.atividade_id for vinculo in vinculos_historicos}
-    selecionadas = (
-        {int(pk) for pk in request.POST.getlist("atividades") if pk.isdigit()}
-        if request.method == "POST" else
-        {vinculo.atividade_id for vinculo in vinculos_existentes} - atividades_historicas
-    )
+    opcoes = [opcao for opcao in opcoes if opcao["id"] not in atividades_historicas]
+    opcoes_por_id = {opcao["id"]: opcao for opcao in opcoes}
+    selecionadas = {vinculo.atividade_id for vinculo in vinculos_existentes} - atividades_historicas
 
     if request.method == "POST":
-        servicos = (request.POST.get("servicos_executados") or "").strip()
         efetivo_texto = (request.POST.get("efetivo") or "").strip()
-        efetivo = int(efetivo_texto) if efetivo_texto.isdigit() else None
-        adicional_descricao = (request.POST.get("adicional_descricao") or "").strip()
-        adicional_justificativa = (request.POST.get("adicional_justificativa") or "").strip()
-        ids_informados = request.POST.getlist("atividades")
-        ids_remocao = request.POST.getlist("remover_atividade_historica")
-        remover_historicas = {int(pk) for pk in ids_remocao if pk.isdigit()}
+        efetivo = _inteiro_informado(efetivo_texto, 2**31 - 1)
+        ids_informados = set(request.POST.getlist("atividades"))
+        ids_remocao = set(request.POST.getlist("remover_atividade_historica"))
+        ids_opcoes = {str(pk): pk for pk in opcoes_por_id}
+        selecionadas = {ids_opcoes[pk] for pk in ids_informados & ids_opcoes.keys()}
 
         if obra_selecionada is None:
             messages.error(request, "Selecione a obra do diário.")
         elif data_registro is None:
             messages.error(request, "Informe a data do diário.")
-        elif not servicos:
-            messages.error(request, "Informe os serviços executados no dia.")
-        elif any(not pk.isdigit() for pk in ids_informados) or not selecionadas.issubset(opcoes_por_id):
+        elif not ids_informados.issubset(ids_opcoes):
             messages.error(request, "As atividades selecionadas não pertencem à obra e semana informadas.")
-        elif any(not pk.isdigit() for pk in ids_remocao) or not remover_historicas.issubset(ids_historicos):
+        elif not ids_remocao.issubset(ids_historicos):
             messages.error(request, "Os vínculos históricos informados não pertencem a este diário.")
         elif diario and (diario.obra_id, diario.data) != (obra_selecionada.pk, data_registro) and vinculos_existentes:
             messages.error(request, "Remova os vínculos das atividades antes de alterar a obra ou a data do diário.")
-        elif bool(adicional_descricao) != bool(adicional_justificativa):
-            messages.error(request, "Informe descrição e justificativa da atividade adicional.")
         else:
             try:
                 fotos = validar_fotos(request.FILES.getlist("fotos"))
@@ -236,29 +252,32 @@ def _diario_form(request, obra_inicial=None, diario=None):
                     "data_exibida": data_texto, "semana": semana, "atividades": opcoes,
                     "atividades_selecionadas": selecionadas,
                     "vinculos_historicos": vinculos_historicos,
-                    "atividades_adicionais": diario.atividades_adicionais.all() if diario else [],
                 })
-            obj = diario or DiarioObra(registrado_por=request.user)
+            obj = diario or DiarioObra(registrado_por=request.user, servicos_executados="")
             identidade_anterior = (obj.obra_id, obj.data) if obj.pk else None
             obj.obra = obra_selecionada
             obj.data = data_registro
             obj.clima = request.POST.get("clima") or ""
             obj.efetivo = efetivo
-            obj.servicos_executados = servicos
             obj.equipe_presente = (request.POST.get("equipe_presente") or "").strip()
             obj.ocorrencias = (request.POST.get("ocorrencias") or "").strip()
-            obj.observacoes = (request.POST.get("observacoes") or "").strip()
             try:
                 with transaction.atomic():
-                    obj.save()
+                    if diario:
+                        obj.save(update_fields=[
+                            "obra", "data", "clima", "efetivo", "equipe_presente",
+                            "ocorrencias", "atualizado_em",
+                        ])
+                    else:
+                        obj.save()
                     vinculos = obj.atividades_planejadas
                     if identidade_anterior and identidade_anterior != (obj.obra_id, obj.data):
                         vinculos.all().delete()
                     else:
                         vinculos.filter(atividade_id__in=opcoes_por_id).exclude(
-                            atividade_id__in=selecionadas | atividades_historicas
+                            atividade_id__in=selecionadas
                         ).delete()
-                        vinculos.filter(pk__in=remover_historicas).delete()
+                        vinculos.filter(pk__in=[ids_historicos[pk] for pk in ids_remocao]).delete()
                     for pk in selecionadas:
                         opcao = opcoes_por_id[pk]
                         vinculos.update_or_create(atividade_id=pk, defaults={
@@ -266,14 +285,6 @@ def _diario_form(request, obra_inicial=None, diario=None):
                             "semana": semana["semana"],
                             "inicio_semana": semana["inicio_semana"],
                         })
-                    if diario:
-                        remover = [int(pk) for pk in request.POST.getlist("remover_adicional") if pk.isdigit()]
-                        DiarioAtividadeAdicional.objects.filter(diario=obj, pk__in=remover).delete()
-                    if adicional_descricao:
-                        DiarioAtividadeAdicional.objects.create(
-                            diario=obj, descricao=adicional_descricao,
-                            justificativa=adicional_justificativa,
-                        )
                     for foto in fotos:
                         FotoDiarioObra.objects.create(diario=obj, arquivo=foto)
             except IntegrityError:
@@ -293,5 +304,4 @@ def _diario_form(request, obra_inicial=None, diario=None):
         "atividades": opcoes,
         "atividades_selecionadas": selecionadas,
         "vinculos_historicos": vinculos_historicos,
-        "atividades_adicionais": diario.atividades_adicionais.all() if diario else [],
     })

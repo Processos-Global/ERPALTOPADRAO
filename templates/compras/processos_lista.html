@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load l10n %}
 {% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
 {% block content %}
 <div class="cp-page">
@@ -14,7 +15,7 @@
   {% if sla_resumo.medias_etapas %}<p class="cp-muted">Média por etapa concluída: {% for etapa, media in sla_resumo.medias_etapas.items %}{{ etapa }} {{ media }} dias{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
   <form class="cp-filter" method="get">
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar processo, suprimento ou obra">
-    <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
+    <select class="cp-input" name="obra"><option value="">Todas as obras</option>{% for obra in obras %}<option value="{{ obra.pk|unlocalize }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select>
     <select class="cp-input" name="etapa"><option value="">Todas as etapas</option>{% for valor,rotulo in etapa_choices %}<option value="{{ valor }}" {% if request.GET.etapa == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
     <select class="cp-input" name="status"><option value="">Todos os status</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if request.GET.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select>
     <select class="cp-input" name="sla"><option value="">Todos os prazos</option><option value="ATRASADO" {% if request.GET.sla == 'ATRASADO' %}selected{% endif %}>Em atraso</option><option value="PROXIMO" {% if request.GET.sla == 'PROXIMO' %}selected{% endif %}>Próximo do limite</option><option value="NO_PRAZO" {% if request.GET.sla == 'NO_PRAZO' %}selected{% endif %}>Dentro do prazo</option><option value="SEM_REGRA" {% if request.GET.sla == 'SEM_REGRA' %}selected{% endif %}>Sem regra</option></select>
@@ -32,5 +33,6 @@
       <td>{{ processo.item_cronograma.prazo_limite_contratacao|date:'d/m/Y'|default:'—' }}</td>
     </tr>{% empty %}<tr><td colspan="10" class="cp-empty">Nenhum processo encontrado com os filtros atuais.</td></tr>{% endfor %}
   </tbody></table></div></div></section>
+  {% include "compras/_paginacao.html" %}
 </div>
 {% endblock %}

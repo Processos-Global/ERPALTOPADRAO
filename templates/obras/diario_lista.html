@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% load obras_format %}
+{% load obras_format l10n %}
 {% block title %}Obras | Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
 {% block extra_css %}{% include "obras/_operacional_styles.html" %}{% endblock %}
 {% block content %}
@@ -10,7 +10,7 @@
   </section>
 
   <form method="get" class="op-toolbar diario">
-    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk|unlocalize }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
     <div class="op-field"><label>De</label><input type="date" name="inicio" value="{{ data_inicio }}"></div>
     <div class="op-field"><label>Até</label><input type="date" name="fim" value="{{ data_fim }}"></div>
     <button class="op-btn" type="submit">Filtrar</button>
@@ -24,7 +24,8 @@
           <div><h3>{{ d.obra|nome_obra }}</h3><div class="op-diario-meta"><span class="op-badge">{{ d.data|date:"d/m/Y" }}</span>{% if d.clima %}<span class="op-badge">{{ d.get_clima_display }}</span>{% endif %}{% if d.efetivo != None %}<span class="op-badge">Efetivo: {{ d.efetivo }}</span>{% endif %}<span class="op-muted">{{ d.obra.codigo }}</span></div></div>
           <a class="op-btn secondary" href="{% url 'obras:diario_editar' d.pk %}">Editar</a>
         </div>
-        <div class="op-diario-text"><strong>Serviços executados</strong><br>{{ d.servicos_executados }}</div>
+        {% if d.servicos_executados %}<div class="op-diario-text"><strong>Serviços executados (registro manual)</strong><br>{{ d.servicos_executados }}</div>{% endif %}
+        {% if d.observacoes %}<div class="op-diario-text"><strong>Observações registradas</strong><br>{{ d.observacoes }}</div>{% endif %}
         {% if d.atividades_planejadas.all %}<div class="op-diario-text"><strong>Atividades vinculadas</strong>{% for vinculo in d.atividades_planejadas.all %}<br>{{ vinculo.get_origem_display }} · {{ vinculo.atividade.nome_tarefa }} · semana {{ vinculo.semana }}{% endfor %}</div>{% endif %}
         {% if d.atividades_adicionais.all %}<div class="op-diario-text"><strong>Atividades adicionais</strong>{% for adicional in d.atividades_adicionais.all %}<br>{{ adicional.descricao }} · Justificativa: {{ adicional.justificativa }}{% endfor %}</div>{% endif %}
         {% if d.equipe_presente %}<div class="op-diario-text"><strong>Equipe / terceiros</strong><br>{{ d.equipe_presente }}</div>{% endif %}

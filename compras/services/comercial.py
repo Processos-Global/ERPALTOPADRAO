@@ -81,15 +81,16 @@ def ultima_compatibilizacao(item_cotado):
     )
 
 
-def item_tecnicamente_aprovado(item_cotado):
+def item_tecnicamente_aprovado(item_cotado, *, usar_prefetch=False):
     """Valida a análise técnica; materiais variados são elegíveis sem compatibilização."""
-    if not processo_exige_compatibilizacao(item_cotado.cotacao.processo):
+    processo = item_cotado.cotacao.processo
+    if not processo_exige_compatibilizacao(processo):
         return True
-    ultima = ultima_compatibilizacao(item_cotado)
+    # A ordenação padrão da relação é a mesma de ultima_compatibilizacao.
+    ultima = item_cotado.compatibilizacoes.first() if usar_prefetch else ultima_compatibilizacao(item_cotado)
     if not ultima:
         return False
 
-    processo = item_cotado.cotacao.processo
     inicio_ciclo = processo.data_cotacao_concluida
     if inicio_ciclo and ultima.data < inicio_ciclo:
         return False

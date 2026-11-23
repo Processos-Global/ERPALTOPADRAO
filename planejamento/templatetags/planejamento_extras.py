@@ -17,3 +17,14 @@ def percentual(valor, casas=2):
 
     except (TypeError, ValueError):
         return "-"
+
+
+@register.filter
+def desvio_prazo(dias):
+    if dias is None:
+        return "Dados insuficientes"
+    if dias == 0:
+        return "No prazo"
+    unidade = "dia" if abs(dias) == 1 else "dias"
+    situacao = "adiantado" if dias < 0 else "atrasado"
+    return f"{abs(dias)} {unidade} {situacao}"

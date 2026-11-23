@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load l10n %}
 {% block title %}Grande Fornecedor | {{ processo.numero }}{% endblock %}
 
 {% block extra_css %}
@@ -729,6 +730,7 @@
 }
 .gf-ficha-head{
     display:flex;
+    flex-wrap:wrap;
     justify-content:space-between;
     gap:12px;
     align-items:center;
@@ -846,6 +848,7 @@
             {% if pode_editar and processo.etapa_atual == 'COMPATIBILIZACAO' %}
                 <form method="post" action="{% url 'compras:gf_concluir_compatibilizacao' processo.pk %}">
                     {% csrf_token %}
+                    <input type="hidden" name="versao_matriz" value="{{ versao_matriz }}">
                     <button class="cp-btn cp-btn--primary" type="submit">
                         Concluir compatibilização
                     </button>
@@ -918,12 +921,20 @@
                     {% elif qtd_itens_ficha_pendentes %}
                         <span class="gf-ficha-status is-warning">{{ qtd_itens_ficha_pendentes }} pendente(s)</span>
                     {% else %}
-                        <span class="gf-ficha-status">Sincronizada</span>
+                        <span class="gf-ficha-status">Todos os itens vinculados</span>
                     {% endif %}
                 {% else %}
                     <span class="gf-ficha-status is-warning">Revisar categoria</span>
                 {% endif %}
             </div>
+
+            {% if categoria_ficha_processo and ficha_tecnica_existe %}
+            <form class="gf-ficha-body gf-ficha-row" method="post" action="{% url 'compras:gf_importar_ficha_tecnica' processo.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="cp-btn">Sincronizar Ficha Técnica</button>
+                <small>Inclui itens novos e aplica as alterações da ficha aos itens vinculados.</small>
+            </form>
+            {% endif %}
 
             {% if categoria_ficha_processo and ficha_tecnica_existe and itens_ficha_pendentes and itens_manuais %}
             <div class="gf-ficha-body">
@@ -948,12 +959,12 @@
 
                             <form method="post" class="gf-link-form" action="{% url 'compras:gf_vincular_item_ficha' processo.pk itens_manuais.0.pk %}" data-link-template="{% url 'compras:gf_vincular_item_ficha' processo.pk 999999999 %}">
                                 {% csrf_token %}
-                                <input type="hidden" name="item_ficha_tecnica" value="{{ pendente.pk }}">
+                                <input type="hidden" name="item_ficha_tecnica" value="{{ pendente.pk|unlocalize }}">
 
                                 <select class="cp-input js-manual-link-select" required>
                                     <option value="">Selecionar linha manual...</option>
                                     {% for manual in itens_manuais %}
-                                        <option value="{{ manual.pk }}">{{ manual.item }} · {{ manual.pavimento|default:"—" }} / {{ manual.local|default:"—" }}</option>
+                                        <option value="{{ manual.pk|unlocalize }}">{{ manual.item }} · {{ manual.pavimento|default:"—" }} / {{ manual.local|default:"—" }}</option>
                                     {% endfor %}
                                 </select>
 
@@ -971,10 +982,10 @@
         <form method="get" class="cp-section" style="padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:end">
             <label class="cp-label">Obra<input class="cp-input" value="{{ processo.obra.nome }}" disabled></label>
             <label class="cp-label">Categoria GF<input class="cp-input" value="{{ categoria_ficha_processo.nome|default:'Não definida' }}" disabled></label>
-            <label class="cp-label">Pavimento<select class="cp-input" name="pavimento" data-force-search><option value="">Todos</option>{% for pavimento in pavimentos_filtro %}<option value="{{ pavimento.pk }}" {% if filtros_matriz.pavimento == pavimento.pk %}selected{% endif %}>{{ pavimento.nome }}</option>{% endfor %}</select></label>
-            <label class="cp-label">Ambiente<select class="cp-input" name="ambiente" data-force-search><option value="">Todos</option>{% for ambiente in ambientes_filtro %}<option value="{{ ambiente.pk }}" {% if filtros_matriz.ambiente == ambiente.pk %}selected{% endif %}>{{ ambiente.pavimento.nome }} · {{ ambiente.identificacao }}</option>{% endfor %}</select></label>
-            <label class="cp-label">Material<select class="cp-input" name="material" data-force-search><option value="">Todos</option>{% for material in materiais %}<option value="{{ material.pk }}" {% if filtros_matriz.material == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></label>
-            <label class="cp-label">Tipo de item<select class="cp-input" name="tipo" data-force-search><option value="">Todos</option>{% for tipo in tipos_filtro %}<option value="{{ tipo.pk }}" {% if filtros_matriz.tipo == tipo.pk %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Pavimento<select class="cp-input" name="pavimento" data-force-search><option value="">Todos</option>{% for pavimento in pavimentos_filtro %}<option value="{{ pavimento.pk|unlocalize }}" {% if filtros_matriz.pavimento == pavimento.pk %}selected{% endif %}>{{ pavimento.nome }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Ambiente<select class="cp-input" name="ambiente" data-force-search><option value="">Todos</option>{% for ambiente in ambientes_filtro %}<option value="{{ ambiente.pk|unlocalize }}" {% if filtros_matriz.ambiente == ambiente.pk %}selected{% endif %}>{{ ambiente.pavimento.nome }} · {{ ambiente.identificacao }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Material<select class="cp-input" name="material" data-force-search><option value="">Todos</option>{% for material in materiais %}<option value="{{ material.pk|unlocalize }}" {% if filtros_matriz.material == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></label>
+            <label class="cp-label">Tipo de item<select class="cp-input" name="tipo" data-force-search><option value="">Todos</option>{% for tipo in tipos_filtro %}<option value="{{ tipo.pk|unlocalize }}" {% if filtros_matriz.tipo == tipo.pk %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
             <button class="cp-btn cp-btn--primary" type="submit">Filtrar</button>
             <a class="cp-btn" href="{% url 'compras:grande_fornecedor_matriz' processo.pk %}">Limpar</a>
         </form>
@@ -1021,7 +1032,7 @@
                                                     <button
                                                         type="button"
                                                         class="gf-search-option js-search-option"
-                                                        data-value="{{ f.pk }}"
+                                                        data-value="{{ f.pk|unlocalize }}"
                                                         data-label="{{ f.nome_exibicao }}"
                                                     >
                                                         {{ f.nome_exibicao }}
@@ -1056,8 +1067,8 @@
                     {% for linha in matriz_linhas %}
                         <tr
                             class="js-row"
-                            data-item="{{ linha.item.pk }}"
-                            data-material="{{ linha.item.material_id|default:'' }}"
+                            data-item="{{ linha.item.pk|unlocalize }}"
+                            data-material="{{ linha.item.material_id|default:''|unlocalize }}"
                         >
                             <td class="gf-sticky gf-col-n">{{ forloop.counter }}</td>
 
@@ -1091,7 +1102,7 @@
                             {% for celula in linha.celulas %}
                                 <td
                                     class="gf-cell-provider {% if celula.escolhida %}gf-selected{% endif %}"
-                                    data-participante="{{ celula.participante.pk }}"
+                                    data-participante="{{ celula.participante.pk|unlocalize }}"
                                 >
                                     <div class="gf-offer-wrap">
                                         <div class="gf-offer-cell">
@@ -1099,7 +1110,7 @@
                                                 <input
                                                     type="radio"
                                                     class="js-winner"
-                                                    name="winner-{{ linha.item.pk }}"
+                                                    name="winner-{{ linha.item.pk|unlocalize }}"
                                                     {% if celula.escolhida %}checked{% endif %}
                                                 >
 
@@ -1124,7 +1135,7 @@
                                             class="gf-history-btn js-history"
                                             data-url="{% url 'compras:gf_historico_valor' processo.pk linha.item.pk celula.participante.pk %}"
                                         >
-                                            Histórico · <span class="js-history-count">{% if celula.oferta %}{{ celula.oferta.historico.count }}{% else %}0{% endif %}</span>
+                                            Histórico · <span class="js-history-count">{% if celula.oferta %}{{ celula.oferta.qtd_historico }}{% else %}0{% endif %}</span>
                                         </button>
                                         <span class="gf-price-save-state js-price-state"></span>
                                     </div>
@@ -1187,7 +1198,7 @@
                                             <button
                                                 type="button"
                                                 class="gf-search-option js-search-option"
-                                                data-value="{{ m.pk }}"
+                                                data-value="{{ m.pk|unlocalize }}"
                                                 data-label="{{ m.codigo|default:'MAT' }} · {{ m.descricao_completa }}"
                                                 data-unit="{{ m.unidade.sigla }}"
                                             >
@@ -1300,7 +1311,7 @@
                 {% if pode_editar %}
                 <form method="post" action="{% url 'compras:gf_incluir_rateio' processo.pk parcela.pk %}" style="display:grid;grid-template-columns:1.35fr 1.35fr 1fr 1fr 1fr 1fr auto;gap:8px;align-items:end;margin-top:10px">
                     {% csrf_token %}
-                    <div><label class="cp-label">Fornecedor cadastrado</label><select class="cp-input" name="fornecedor"><option value="">Outro beneficiário</option>{% for forn in fornecedores %}<option value="{{ forn.pk }}">{{ forn }}</option>{% endfor %}</select></div>
+                    <div><label class="cp-label">Fornecedor cadastrado</label><select class="cp-input" name="fornecedor"><option value="">Outro beneficiário</option>{% for forn in fornecedores %}<option value="{{ forn.pk|unlocalize }}">{{ forn }}</option>{% endfor %}</select></div>
                     <div><label class="cp-label">Beneficiário</label><input class="cp-input" name="beneficiario_nome" placeholder="Nome se não usar fornecedor"></div>
                     <div><label class="cp-label">Documento</label><input class="cp-input" name="documento" placeholder="CPF/CNPJ"></div>
                     <div><label class="cp-label">Vencimento</label><input class="cp-input" type="date" name="data_vencimento" required></div>
@@ -1358,6 +1369,7 @@
             action="{% url 'compras:gf_enviar_aprovacao' processo.pk %}"
         >
             {% csrf_token %}
+            <input type="hidden" name="versao_matriz" value="{{ versao_matriz }}">
             <input
                 type="hidden"
                 name="condicao_pagamento_resumo"

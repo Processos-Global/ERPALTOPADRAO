@@ -51,6 +51,16 @@ class FichaConsultaIntegracaoTest(TestCase):
             material=self.material,
         )
 
+    def test_detalhamento_oferece_atalho_da_consulta_filtrado_pela_obra(self):
+        url = reverse("obras:ficha_tecnica", args=[self.obra.pk])
+        response = self.client.get(url, {"etapa": "4"})
+        consulta = reverse("obras:ficha_tecnica_consulta")
+        self.assertContains(
+            response,
+            f'<a class="ft-btn" href="{consulta}?obra={self.obra.pk}">Consulta e relatórios</a>',
+            html=True,
+        )
+
     def test_consulta_e_exportacoes_usam_filtro_material(self):
         filtros = f"?obra={self.obra.pk}&material={self.material.pk}"
         pagina = self.client.get(reverse("obras:ficha_tecnica_consulta") + filtros)

@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.http import FileResponse, JsonResponse
-from django.db.models import Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -40,7 +40,6 @@ from compras.services.grandes_fornecedores import (
     excluir_oferta_item,
     obter_ou_criar_fluxo,
     importar_itens_ficha_tecnica,
-    sincronizar_itens_ficha_tecnica,
     vincular_item_manual_a_ficha,
     salvar_valor_oferta,
     selecionar_fornecedor_item,
@@ -79,11 +78,15 @@ def _exigir_edicao(usuario):
         raise PermissionDenied("Sem permissão para editar a matriz de Grande Fornecedor.")
 
 
+def _avisar_revisao_ficha(request):
+    messages.warning(request, "A matriz foi atualizada. Revise a matriz antes de avançar.")
+
+
 @compras_acao_required(AcaoCompra.VISUALIZAR)
 def matriz_grande_fornecedor(request, pk):
     from compras.services.sla import indicador_processo
     processo = _processo(pk)
-    fluxo = obter_ou_criar_fluxo(processo)
+    fluxo = getattr(processo, "grande_fornecedor", None)
 
     pode_editar = _pode_editar_matriz(request.user) and processo.etapa_atual in {
         processo.Etapa.COMPATIBILIZACAO,
@@ -96,31 +99,21 @@ def matriz_grande_fornecedor(request, pk):
         processo.Status.EM_CONTRATACAO,
     }
 
-    # A Ficha Técnica é contínua: sempre que a matriz editável é aberta,
-    # sincronizamos os itens já cadastrados da categoria GF deste processo.
-    # A função é idempotente e não duplica itens já vinculados.
-    resultado_sincronizacao = {
-        "criados": 0,
-        "atualizados": 0,
-        "conflitos": [],
-        "sem_ficha": False,
-        "categoria": processo.categoria_grande_fornecedor,
-    }
-    if pode_editar and processo.categoria_grande_fornecedor_id:
-        resultado_sincronizacao = sincronizar_itens_ficha_tecnica(
-            processo=processo,
-            usuario=request.user,
-        )
-
     itens = list(
-        fluxo.itens
+        GrandeFornecedorItem.objects.filter(fluxo=fluxo)
         .select_related("material__unidade", "item_ficha_tecnica__tipo_item", "item_ficha_tecnica__aplicacao_categoria__ambiente__pavimento", "participante_aprovado__fornecedor", "pedido_item__pedido")
-        .prefetch_related("ofertas__participante__fornecedor", "ofertas__historico")
+        .prefetch_related(Prefetch(
+            "ofertas",
+            queryset=GrandeFornecedorOferta.objects.annotate(qtd_historico=Count("historico")),
+        ))
         .all()
-    )
+    ) if fluxo else []
     def filtro_id(nome):
-        valor = (request.GET.get(nome) or "").strip()
-        return int(valor) if valor.isascii() and valor.isdecimal() and int(valor) > 0 else None
+        valor = (request.GET.get(nome) or "").strip().lstrip("0")
+        if not (0 < len(valor) <= 19 and valor.isascii() and valor.isdecimal()):
+            return None
+        numero = int(valor)
+        return numero if numero <= 2**63 - 1 else None
 
     filtros_matriz = {nome: filtro_id(nome) for nome in ("pavimento", "ambiente", "material", "tipo")}
     itens_filtrados = []
@@ -138,20 +131,12 @@ def matriz_grande_fornecedor(request, pk):
         itens_filtrados.append(item)
     participantes = list(
         fluxo.participantes.select_related("fornecedor").order_by("fornecedor__nome", "id")
-    )
+    ) if fluxo else []
     materiais = list(
         Material.objects.filter(ativo=True)
         .select_related("unidade")
         .order_by("nome", "especificacao", "codigo")
     )
-    materiais_json = [
-        {
-            "id": material.pk,
-            "label": f"{material.codigo or 'MAT'} · {material.descricao_completa}",
-            "unidade": material.unidade.sigla,
-        }
-        for material in materiais
-    ]
     fornecedores = Fornecedor.objects.filter(ativo=True).order_by("nome", "nome_fantasia")
     pedidos = list(
         processo.pedidos
@@ -187,7 +172,7 @@ def matriz_grande_fornecedor(request, pk):
     itens_manuais = [item for item in itens if not item.item_ficha_tecnica_id]
     ficha_tecnica_existe = True
 
-    if categoria_ficha_processo is not None:
+    if pode_editar and categoria_ficha_processo is not None:
         try:
             ficha = processo.obra.ficha_tecnica
         except ObjectDoesNotExist:
@@ -227,6 +212,7 @@ def matriz_grande_fornecedor(request, pk):
             "processo": processo,
             "sla": indicador_processo(processo),
             "fluxo": fluxo,
+            "versao_matriz": fluxo.atualizado_em.isoformat() if fluxo else "",
             "itens": itens,
             "matriz_linhas": matriz_linhas,
             "filtros_matriz": filtros_matriz,
@@ -235,7 +221,6 @@ def matriz_grande_fornecedor(request, pk):
             "tipos_filtro": TipoItemGrandeFornecedor.objects.filter(categoria=processo.categoria_grande_fornecedor, ativo=True).order_by("nome"),
             "participantes": participantes,
             "materiais": materiais,
-            "materiais_json": materiais_json,
             "fornecedores": fornecedores,
             "aprovacoes": aprovacoes,
             "pedidos": pedidos,
@@ -250,7 +235,6 @@ def matriz_grande_fornecedor(request, pk):
             "itens_manuais": itens_manuais,
             "qtd_itens_ficha_pendentes": len(itens_ficha_pendentes),
             "ficha_tecnica_existe": ficha_tecnica_existe,
-            "sincronizacao_ficha": resultado_sincronizacao,
         },
     )
 
@@ -261,13 +245,26 @@ def importar_ficha_tecnica(request, pk):
     _exigir_edicao(request.user)
     processo = _processo(pk)
     try:
-        quantidade = importar_itens_ficha_tecnica(
+        resultado = importar_itens_ficha_tecnica(
             processo=processo,
             usuario=request.user,
         )
-        messages.success(request, f"{quantidade} item(ns) importado(s) da Ficha Técnica.")
     except ValidationError as exc:
         messages.error(request, str(exc))
+    else:
+        if resultado["criados"] or resultado["atualizados"]:
+            messages.success(
+                request,
+                f"Ficha Técnica sincronizada. {resultado['criados']} item(ns) incluído(s) e "
+                f"{resultado['atualizados']} atualizado(s).",
+            )
+        elif not resultado["conflitos"]:
+            messages.info(request, "A matriz já está atualizada com a Ficha Técnica.")
+        if resultado["conflitos"]:
+            messages.warning(
+                request,
+                "Vincule os itens pendentes às linhas manuais correspondentes para preservar ofertas e valores.",
+            )
     return redirect("compras:grande_fornecedor_matriz", pk=pk)
 
 
@@ -462,12 +459,16 @@ def enviar_aprovacao(request, pk):
     _exigir_edicao(request.user)
     processo = _processo(pk)
     try:
-        enviar_para_aprovacao(
+        processo_atualizado = enviar_para_aprovacao(
             processo=processo,
             usuario=request.user,
             condicao_pagamento_resumo=request.POST.get("condicao_pagamento_resumo", ""),
+            versao_exibida=request.POST.get("versao_matriz", ""),
         )
-        messages.success(request, "Matriz enviada para aprovação do gestor.")
+        if processo_atualizado is None:
+            _avisar_revisao_ficha(request)
+        else:
+            messages.success(request, "Matriz enviada para aprovação do gestor.")
     except ValidationError as exc:
         messages.error(request, str(exc))
     return redirect("compras:grande_fornecedor_matriz", pk=pk)
@@ -645,8 +646,14 @@ def baixar_contrato(request, pk, participante_id):
 def concluir_compatibilizacao(request, pk):
     processo = _processo(pk)
     try:
-        avancar_para_negociacao(processo=processo, usuario=request.user)
-        messages.success(request, "Matriz mantida na etapa comercial unificada.")
+        if avancar_para_negociacao(
+            processo=processo,
+            usuario=request.user,
+            versao_exibida=request.POST.get("versao_matriz", ""),
+        ) is None:
+            _avisar_revisao_ficha(request)
+        else:
+            messages.success(request, "Matriz mantida na etapa comercial unificada.")
     except ValidationError as exc:
         messages.error(request, str(exc))
     return redirect("compras:grande_fornecedor_matriz", pk=pk)
@@ -743,8 +750,8 @@ def painel_grandes_fornecedores_compras(request):
     qs = (
         GrandeFornecedorItem.objects
         .select_related(
-            "fluxo__processo", "fluxo__processo__obra", "fluxo__processo__item_cronograma",
-            "material__unidade", "participante_aprovado__fornecedor", "pedido_item__pedido__fornecedor",
+            "fluxo__processo__obra", "material",
+            "participante_aprovado__fornecedor", "pedido_item__pedido__fornecedor",
         )
         .filter(fluxo__processo__fluxo_grande_fornecedor=True)
         .order_by("fluxo__processo__obra__nome", "fluxo__processo__numero", "pedido_item__pedido__numero", "ordem", "id")

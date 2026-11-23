@@ -794,14 +794,14 @@
 
     <div class="ps-actions">
       <a class="ps-btn" href="{% url 'compras:grandes_fornecedores' %}">Grandes Fornecedores</a>
-      <a class="ps-btn ps-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id }}{% endif %}">
+      <a class="ps-btn ps-btn-primary" href="{% url 'planejamento:kanban_cronograma_suprimentos' %}{% if cronograma_obra %}?obra={{ cronograma_obra.obra_id|unlocalize }}{% endif %}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg>
         Kanban
       </a>
       {% if request.user.is_superuser %}
       <form method="post" action="{% url 'planejamento:atualizar_cronograma_suprimentos' %}">
         {% csrf_token %}
-        {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
+        {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id|unlocalize }}">{% endif %}
         <button class="ps-btn" type="submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg>
           Atualizar base
@@ -822,7 +822,7 @@
       <select id="f-obra" name="obra">
         <option value="">{% if filtros.suprimento %}Todas as obras{% else %}Selecione{% endif %}</option>
         {% for registro in obras %}
-        <option value="{{ registro.obra_id }}" {% if cronograma_obra and registro.obra_id == cronograma_obra.obra_id %}selected{% endif %}>{{ registro.nome_aba }}</option>
+        <option value="{{ registro.obra_id|unlocalize }}" {% if cronograma_obra and registro.obra_id == cronograma_obra.obra_id %}selected{% endif %}>{{ registro.nome_aba }}</option>
         {% endfor %}
       </select>
     </div>
@@ -936,7 +936,7 @@
           {% for grupo in categorias %}
           <tr class="ps-category"><td colspan="9">{{ grupo.nome }}</td></tr>
             {% for item in grupo.itens %}
-            <tr class="ps-item-row" id="suprimento-{{ item.id }}">
+            <tr class="ps-item-row" id="suprimento-{{ item.id|unlocalize }}">
               <td class="ps-item-cell">
                 <div class="ps-item">
                   <span class="ps-item-state {% if item.etapa_calculada == 'CONCLUIDO' %}done{% elif item.atrasado_calculado %}late{% endif %}"></span>
@@ -1046,7 +1046,7 @@
 
               <td>
                 <div class="ps-row-actions">
-                  <button type="button" class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" data-detail-target="detalhe-suprimento-{{ item.id }}" aria-expanded="false" title="Ver andamento comercial">
+                  <button type="button" class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" data-detail-target="detalhe-suprimento-{{ item.id|unlocalize }}" aria-expanded="false" title="Ver andamento comercial">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                     Detalhes
                     <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
@@ -1064,7 +1064,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></svg>
                   </a>
                   <button type="button" class="ps-btn ps-btn-sm ps-btn-icon js-open-progress"
-                          data-item-id="{{ item.id }}"
+                          data-item-id="{{ item.id|unlocalize }}"
                           data-url="{% url 'planejamento:salvar_datas_item_cronograma_suprimentos' item.id %}"
                           data-item="{{ item.item|escape }}"
                           data-local="{{ item.local|escape }}"
@@ -1084,7 +1084,7 @@
               </td>
             </tr>
 
-            <tr id="detalhe-suprimento-{{ item.id }}" class="ps-detail-row">
+            <tr id="detalhe-suprimento-{{ item.id|unlocalize }}" class="ps-detail-row">
               <td colspan="9">
                 <div class="ps-detail-shell">
                   <div class="ps-detail-head">
@@ -1211,7 +1211,7 @@
   <div class="ps-modal" role="dialog" aria-modal="true" aria-labelledby="ps-modal-title">
     <form id="ps-progress-form" method="post">
       {% csrf_token %}
-      {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id }}">{% endif %}
+      {% if cronograma_obra %}<input type="hidden" name="obra" value="{{ cronograma_obra.obra_id|unlocalize }}">{% endif %}
       <input type="hidden" name="categoria" value="{{ filtros.categoria }}">
       <input type="hidden" name="etapa" value="{{ filtros.etapa }}">
       <input type="hidden" name="suprimento" value="{{ filtros.suprimento }}">

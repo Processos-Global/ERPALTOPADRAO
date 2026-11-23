@@ -157,6 +157,75 @@ def calcular_avancos_semanais(serie):
     return resultado
 
 
+
+def _calcular_equivalente_dias(*, data_referencia, previsto, realizado, pontos):
+    """Diferença temporal estimada relativa à curva planejada acumulada.
+
+    Convenção: positivo = atraso; negativo = adiantamento.
+    Busca a data em que o planejado alcançou o percentual realizado,
+    interpolando entre medições. Quando o realizado supera todos os pontos
+    disponíveis, extrapola pelo ritmo planejado recente e marca estimado.
+    Não converte diretamente percentual em dias nem considera semana=7 dias.
+    """
+    if data_referencia is None:
+        return None, False
+    if abs(realizado - previsto) <= TOLERANCIA_PERCENTUAL:
+        return 0, False
+
+    por_data = {}
+    for item in pontos:
+        data = item.get("data_referencia") or item.get("data_atualizacao") or item.get("inicio_semana")
+        if data is not None:
+            por_data[data] = float(item.get("previsto") or 0.0)
+    curva = sorted(por_data.items())
+    if len(curva) < 2:
+        return None, False
+
+    # Última passagem pelo percentual, sem assumir que revisões da linha-base
+    # tornem a série necessariamente crescente em todos os momentos.
+    cruzamentos = []
+    for (dia_inicio, valor_inicio), (dia_fim, valor_fim) in zip(curva, curva[1:]):
+        if valor_fim <= valor_inicio or not (valor_inicio <= realizado <= valor_fim):
+            continue
+        proporcao = (realizado - valor_inicio) / (valor_fim - valor_inicio)
+        # Date + timedelta fracionário descarta subdias. Preserve a fração
+        # até o arredondamento final para não transformar 1 dia em "No prazo".
+        dias_alvo_menos_referencia = (
+            (dia_inicio - data_referencia).days
+            + (dia_fim - dia_inicio).days * proporcao
+        )
+        cruzamentos.append(dias_alvo_menos_referencia)
+    if cruzamentos:
+        # Para atraso, escolhe o último cruzamento anterior à medição.
+        # Para adiantamento, escolhe o primeiro cruzamento posterior.
+        possiveis = ([dias for dias in cruzamentos if dias <= 0]
+                     if realizado < previsto else
+                     [dias for dias in cruzamentos if dias >= 0])
+        if possiveis:
+            deslocamento = max(possiveis) if realizado < previsto else min(possiveis)
+            return round(-deslocamento), False
+
+    if realizado <= previsto:
+        # A curva não possui histórico suficiente para situar o avanço físico.
+        return None, False
+
+    # Avanço superior ao último ponto projetado: extrapolação local pela taxa
+    # planejada das medições mais recentes, usando dias efetivamente decorridos.
+    anteriores = [(data, valor) for data, valor in curva if data <= data_referencia]
+    if len(anteriores) < 2:
+        return None, False
+    ultimos = anteriores[-5:]
+    dias = (ultimos[-1][0] - ultimos[0][0]).days
+    ganho = ultimos[-1][1] - ultimos[0][1]
+    if dias <= 0 or ganho <= TOLERANCIA_PERCENTUAL:
+        return None, False
+    ritmo_por_dia = ganho / dias
+    dias_adiantados = (realizado - previsto) / ritmo_por_dia
+    if dias_adiantados > 3650:  # evita projeções absurdas por base quase parada
+        return None, False
+    return -max(1, round(dias_adiantados)), True
+
+
 def calcular_avancos_mensais(serie):
     """Último snapshot de cada mês; incrementos são diferenças entre acumulados."""
     por_mes = {}
@@ -176,6 +245,13 @@ def calcular_avancos_mensais(serie):
         item = por_mes[ano_mes]
         real = float(item.get("executado") or 0.0)
         previsto = float(item.get("previsto") or 0.0)
+        referencia = item.get("data_referencia") or item.get("data_atualizacao") or item.get("inicio_semana")
+        desvio_dias, desvio_estimado = _calcular_equivalente_dias(
+            data_referencia=referencia,
+            previsto=previsto,
+            realizado=real,
+            pontos=serie,
+        )
         resultado.append({
             "ano": ano_mes[0], "mes": ano_mes[1],
             "periodo": f"{ano_mes[1]:02d}/{ano_mes[0]}",
@@ -184,6 +260,8 @@ def calcular_avancos_mensais(serie):
             "avanco_real": real - anterior_real,
             "avanco_previsto": previsto - anterior_previsto,
             "desvio_acumulado": real - previsto,
+            "desvio_dias": desvio_dias,
+            "desvio_dias_estimado": desvio_estimado,
         })
         anterior_real, anterior_previsto = real, previsto
     return resultado

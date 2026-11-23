@@ -10,6 +10,8 @@
 .ft-picker label{font-size:12px;font-weight:800;color:#665047}
 .ft-picker select{flex:1;min-width:240px;max-width:520px;padding:11px 12px;border:1px solid #ddceba;border-radius:9px;background:#fff;color:#50362c;font:inherit;font-size:13px}
 .ft-picker-count{font-size:12px;color:#866f61}
+.ft-panel-head--with-action{flex-wrap:wrap}
+.ft-panel-head--with-action .ft-btn:focus-visible{outline:2px solid var(--saari-gold);outline-offset:2px}
 .ft-row-actions{display:flex;gap:6px;align-items:center}.ft-row-actions form{margin:0}
 .ft-edit-row[hidden]{display:none!important}.ft-edit-row td{background:#fbf8f3!important;padding:16px!important}
 .ft-edit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
@@ -198,7 +200,10 @@
       </div>
 
       {% elif etapa == '4' %}
-      <div class="ft-panel-head"><h2>Detalhamento de Ambientes</h2><a href="{% url 'obras:ficha_tecnica_consulta' %}?obra={{ obra.pk|unlocalize }}">Consulta e relatórios</a></div>
+      <div class="ft-panel-head ft-panel-head--with-action">
+        <h2>Detalhamento de Ambientes</h2>
+        <a class="ft-btn" href="{% url 'obras:ficha_tecnica_consulta' %}?obra={{ obra.pk|unlocalize }}">Consulta e relatórios</a>
+      </div>
       <div class="ft-panel-body">
         <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select>
           <option value="?etapa=4" {% if not ambiente_selecionado %}selected{% endif %}>Itens gerais da obra</option>

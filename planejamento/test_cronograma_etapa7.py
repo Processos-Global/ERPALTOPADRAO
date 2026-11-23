@@ -46,6 +46,7 @@ class CalculosCronogramaEtapa7Tests(SimpleTestCase):
         self.assertIsNone(insuficiente["previsao_termino"])
         self.assertEqual(insuficiente["dias_atraso_aberto"], 5)
         self.assertIsNone(insuficiente["dias_diferenca_real"])
+        resumo["executado"] = 1.0
         resumo["termino_real"] = date(2026, 1, 12)
         encerrado = calcular_indicadores_prazo(resumo=resumo, media_avanco_real=.1, avancos=[])
         self.assertEqual(encerrado["dias_diferenca_real"], 2)
@@ -61,6 +62,56 @@ class CalculosCronogramaEtapa7Tests(SimpleTestCase):
         self.assertTrue(calculo["projecao_confiavel"])
         self.assertEqual(calculo["previsao_termino"], date(2026, 3, 8))
         self.assertEqual(calculo["dias_diferenca_projetada"], 7)
+
+
+class ProjecaoCronogramaTests(SimpleTestCase):
+    def test_projecao_conta_os_quatro_ultimos_avancos_reais(self):
+        resumo = {
+            "restante": 0.20, "data_atualizacao": date(2026, 10, 12),
+            "termino_base": date(2026, 11, 17),
+        }
+        avancos = [{"avanco_real": valor} for valor in (0.5, 0.1, 0, 0, 0.1)]
+        prazos = calcular_indicadores_prazo(resumo=resumo, media_avanco_real=0.05, avancos=avancos)
+        self.assertEqual(prazos["previsao_termino"], date(2026, 11, 9))
+        self.assertEqual(prazos["dias_diferenca_projetada"], -8)
+
+    def test_projecao_fora_do_intervalo_de_datas_retorna_sem_previsao(self):
+        resumo = {"restante": 0.9, "data_atualizacao": date(2026, 10, 12)}
+        avancos = [{"avanco_real": valor} for valor in (0.1, 0.000001, 0.000001)]
+        prazos = calcular_indicadores_prazo(resumo=resumo, media_avanco_real=0.000001, avancos=avancos)
+        self.assertIsNone(prazos["previsao_termino"])
+        self.assertFalse(prazos["projecao_confiavel"])
+
+    def test_painel_exibe_progresso_e_distingue_desvios_do_prazo(self):
+        from django.contrib.auth.models import AnonymousUser
+        from django.template.loader import render_to_string
+        from django.test import RequestFactory
+
+        request = RequestFactory().get('/planejamento/')
+        request.user = AnonymousUser()
+
+        contexto = {
+            "possui_dados": True,
+            "resumo": {"previsto": 0.724, "executado": 0.632, "desvio": -0.092},
+            "prazos": {
+                "previsao_termino": date(2027, 3, 15),
+                "dias_diferenca_real": 0, "dias_diferenca_projetada": -8,
+                "dias_atraso_aberto": 12,
+            },
+        }
+        html = render_to_string("planejamento/painel_cronograma.html", contexto, request=request)
+        self.assertIn('aria-label="Previsto"', html)
+        self.assertIn('aria-label="Realizado"', html)
+        self.assertIn('value="0.7240"', html)
+        self.assertIn('value="0.6320"', html)
+        self.assertIn("15/03/2027", html)
+        self.assertIn("8 dias adiantado", html)
+        self.assertIn("No prazo", html)
+        self.assertIn("12 dias em aberto", html)
+        contexto["prazos"] = {"dias_diferenca_real": 12}
+        html = render_to_string("planejamento/painel_cronograma.html", contexto, request=request)
+        self.assertIn("12 dias atrasado", html)
+        self.assertIn("Dados insuficientes", html)
 
 
 class SerieCronogramaEtapa7Tests(TestCase):

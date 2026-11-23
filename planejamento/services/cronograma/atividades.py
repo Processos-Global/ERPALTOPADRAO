@@ -87,8 +87,15 @@ def _status_atividade(
 
 
 def listar_atividades(*, projeto: str, semana: int) -> list[dict[str, Any]]:
-    registros = list(
-        queryset_ativo(projeto=projeto, semana=semana)
+    return listar_atividades_do_retrato(queryset_ativo(projeto=projeto, semana=semana))
+
+
+def listar_atividades_do_retrato(
+    retrato, *, somente_mais_recente_por_atividade: bool = False,
+) -> list[dict[str, Any]]:
+    ordem = ("-id",) if somente_mais_recente_por_atividade else ("disciplina", "local_tarefa", "nome_tarefa", "id")
+    registros = (
+        retrato
         .values(
             "id",
             "obra_id",
@@ -115,11 +122,18 @@ def listar_atividades(*, projeto: str, semana: int) -> list[dict[str, Any]]:
             "checklist_habitese",
             "checklist_cef",
         )
-        .order_by("disciplina", "local_tarefa", "nome_tarefa", "id")
+        .order_by(*ordem)
     )
 
     atividades: list[dict[str, Any]] = []
-    for registro in registros:
+    ids_vistos = set()
+    for registro in registros.iterator():
+        atividade_id = registro["atividade_planejamento_id"]
+        if somente_mais_recente_por_atividade and atividade_id is not None:
+            if atividade_id in ids_vistos:
+                continue
+            ids_vistos.add(atividade_id)
+
         disciplina = (registro.get("disciplina") or "").strip()
         atividade = (registro.get("nome_tarefa") or "").strip()
         if not disciplina or eh_linha_estrutural(disciplina) or not atividade:
@@ -139,7 +153,7 @@ def listar_atividades(*, projeto: str, semana: int) -> list[dict[str, Any]]:
         atividades.append({
             "id": registro["id"],
             "obra_id": registro.get("obra_id"),
-            "atividade_planejamento_id": registro.get("atividade_planejamento_id"),
+            "atividade_planejamento_id": atividade_id,
             "chave_atividade": registro.get("chave_atividade") or "",
             "atividade": atividade,
             "disciplina": disciplina,

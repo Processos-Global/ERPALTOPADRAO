@@ -1,8 +1,10 @@
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
+from django.urls import reverse
 
 from obras.models import Obra
 from planejamento.models.cronograma_suprimentos import (
@@ -87,3 +89,27 @@ class PainelSuprimentosConsultasTests(TestCase):
             [item.obra_exibicao for item in anexar.call_args.args[0]],
             ["Obra 0", "Obra 1", "Obra 2"],
         )
+
+    @override_settings(USE_THOUSAND_SEPARATOR=True, THOUSAND_SEPARATOR=".")
+    def test_filtro_get_envia_id_da_obra_sem_formatacao_e_renderiza_painel(self):
+        obra = Obra.objects.create(pk=1234, nome="Obra do filtro", codigo="OB1234")
+        cronograma = CronogramaSuprimentosObra.objects.create(
+            importacao=self.itens[0].cronograma_obra.importacao,
+            obra=obra, nome_aba=obra.nome, codigo_aba=obra.codigo, ordem_aba=4,
+        )
+        ItemCronogramaSuprimento.objects.create(
+            cronograma_obra=cronograma, item="Filtro específico", categoria="MATERIAL",
+        )
+        usuario = get_user_model().objects.create_superuser(username="filtro-suprimentos", password="teste")
+        self.client.force_login(usuario)
+        url = reverse("planejamento:painel_cronograma_suprimentos")
+
+        resposta = self.client.get(url, {"obra": obra.pk, "categoria": "MATERIAL"})
+
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIsNone(resposta.headers.get("Content-Disposition"))
+        self.assertEqual(resposta.context["cronograma_obra"].obra_id, obra.pk)
+        self.assertEqual(resposta.context["resumo"]["filtrados"], 1)
+        html = resposta.content.decode()
+        self.assertIn('value="1234" selected', html)
+        self.assertIn(f'{reverse("planejamento:kanban_cronograma_suprimentos")}?obra=1234', html)

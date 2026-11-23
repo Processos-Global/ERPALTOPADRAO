@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from .atividades import listar_atividades
@@ -107,16 +108,48 @@ def obter_programacao_semana(
             else []
         )
 
-    anteriores_por_chave = {_chave_atividade(item): item for item in anteriores}
+    programacao = calcular_programacao_semanal(
+        atividades_atuais=atuais,
+        atividades_anteriores=anteriores,
+        semana_anterior=semana_anterior,
+    )
+    # O resumo é calculado sobre o universo completo. O limite afeta somente
+    # os itens enviados à tabela do painel.
+    resumo = resumir_programacao(programacao)
+    atividades_exibidas = programacao[:limite]
+    return {
+        "semana": semana,
+        "semana_anterior": semana_anterior,
+        "atividades": atividades_exibidas,
+        "resumo": resumo,
+        "total_exibido": len(atividades_exibidas),
+        "limitado": len(programacao) > limite,
+    }
+
+
+def calcular_programacao_semanal(
+    *,
+    atividades_atuais: list[dict[str, Any]],
+    atividades_anteriores: list[dict[str, Any]],
+    semana_anterior: int | None,
+    inicio_semana: date | None = None,
+) -> list[dict[str, Any]]:
+    anteriores_por_chave = {_chave_atividade(item): item for item in atividades_anteriores}
     programacao: list[dict[str, Any]] = []
 
-    for atual in atuais:
+    for atual in atividades_atuais:
         anterior = anteriores_por_chave.get(_chave_atividade(atual))
-        planejado_anterior = float(anterior["planejado"]) if anterior else 0.0
-        realizado_anterior = float(anterior["realizado"]) if anterior else 0.0
-
-        planejado_semana = max(float(atual["planejado"]) - planejado_anterior, 0.0)
-        realizado_semana = max(float(atual["realizado"]) - realizado_anterior, 0.0)
+        termino_real = atual.get("termino_real_data")
+        if inicio_semana is not None and termino_real and termino_real < inicio_semana:
+            continue
+        if inicio_semana is not None and anterior is None:
+            # No Diário, um acumulado sem retrato comparável não comprova avanço semanal.
+            planejado_semana = realizado_semana = 0.0
+        else:
+            planejado_anterior = float(anterior["planejado"]) if anterior else 0.0
+            realizado_anterior = float(anterior["realizado"]) if anterior else 0.0
+            planejado_semana = max(float(atual["planejado"]) - planejado_anterior, 0.0)
+            realizado_semana = max(float(atual["realizado"]) - realizado_anterior, 0.0)
 
         tem_movimento = (
             planejado_semana > TOLERANCIA_PERCENTUAL
@@ -132,13 +165,22 @@ def obter_programacao_semana(
             "termino_real_data",
         ):
             valor = atual.get(campo)
-            if valor and data_referencia and valor <= data_referencia:
-                if anterior is None or (
-                    anterior.get("data_referencia")
+            if not valor:
+                continue
+            if inicio_semana is not None:
+                datas_no_periodo = 0 <= (valor - inicio_semana).days < 7
+            elif data_referencia and valor <= data_referencia:
+                datas_no_periodo = anterior is None or (
+                    anterior.get("data_referencia") is not None
                     and valor > anterior["data_referencia"]
-                ):
-                    datas_no_periodo = True
-                    break
+                )
+            if datas_no_periodo:
+                break
+
+        if not datas_no_periodo and inicio_semana is not None and anterior is None:
+            inicio_base = atual.get("inicio_base_data")
+            termino_base = atual.get("termino_base_data")
+            datas_no_periodo = bool(inicio_base and termino_base and inicio_base <= inicio_semana <= termino_base)
 
         if not tem_movimento and not datas_no_periodo:
             continue
@@ -168,16 +210,4 @@ def obter_programacao_semana(
         )
     )
 
-    # O resumo é calculado sobre o universo completo. O limite afeta somente
-    # os itens enviados à tabela do painel.
-    resumo = resumir_programacao(programacao)
-    atividades_exibidas = programacao[:limite]
-
-    return {
-        "semana": semana,
-        "semana_anterior": semana_anterior,
-        "atividades": atividades_exibidas,
-        "resumo": resumo,
-        "total_exibido": len(atividades_exibidas),
-        "limitado": len(programacao) > limite,
-    }
+    return programacao

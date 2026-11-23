@@ -18,6 +18,7 @@ from compras.models import (
     NecessidadeCompra,
     NegociacaoItem,
     ParcelaGrandeFornecedor,
+    ProcessoCompra,
     RateioParcelaGrandeFornecedor,
 )
 from .auditoria import registrar_evento
@@ -61,6 +62,8 @@ def _matriz_editavel(processo):
         processo.Status.CANCELADO,
         processo.Status.REPROVADO,
         processo.Status.CONTRATADO,
+        processo.Status.APROVADO,
+        processo.Status.EM_CONTRATACAO,
     }
 
 
@@ -341,8 +344,7 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
     - não duplica uma linha manual que seja claramente equivalente ao item técnico;
       nesses casos o item permanece pendente para vínculo manual, preservando ofertas/histórico.
 
-    A função é idempotente e pode ser chamada tanto na criação do processo quanto
-    em cada abertura da matriz.
+    A função é usada na criação do processo e na sincronização solicitada na matriz.
     """
     fluxo = obter_ou_criar_fluxo(processo)
     categoria = processo.categoria_grande_fornecedor
@@ -479,28 +481,31 @@ def sincronizar_itens_ficha_tecnica(*, processo, usuario=None):
         itens_vinculados[origem.pk] = novo
         resultado["criados"] += 1
 
-    if usuario is not None and (resultado["criados"] or resultado["atualizados"]):
-        registrar_evento(
-            processo,
-            "GF_FICHA_TECNICA_SINCRONIZADA",
-            usuario,
-            (
-                f"Ficha Técnica sincronizada · {categoria.nome}: "
-                f"{resultado['criados']} novo(s), {resultado['atualizados']} atualizado(s)."
-            ),
-            {
-                "categoria_id": categoria.pk,
-                "criados": resultado["criados"],
-                "atualizados": resultado["atualizados"],
-            },
-        )
+    if resultado["criados"] or resultado["atualizados"]:
+        fluxo.save(update_fields=["atualizado_em"])
+        if usuario is not None:
+            registrar_evento(
+                processo,
+                "GF_FICHA_TECNICA_SINCRONIZADA",
+                usuario,
+                (
+                    f"Ficha Técnica sincronizada · {categoria.nome}: "
+                    f"{resultado['criados']} novo(s), {resultado['atualizados']} atualizado(s)."
+                ),
+                {
+                    "categoria_id": categoria.pk,
+                    "criados": resultado["criados"],
+                    "atualizados": resultado["atualizados"],
+                },
+            )
 
     return resultado
 
 
 @transaction.atomic
 def importar_itens_ficha_tecnica(*, processo, usuario):
-    """Endpoint legado: agora apenas força a mesma sincronização automática."""
+    """Sincroniza a matriz editável por solicitação explícita do comprador."""
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if not _matriz_editavel(processo):
         raise ValidationError("A matriz está fechada para importação de itens.")
     if processo.categoria_grande_fornecedor_id is None:
@@ -511,14 +516,7 @@ def importar_itens_ficha_tecnica(*, processo, usuario):
     resultado = sincronizar_itens_ficha_tecnica(processo=processo, usuario=usuario)
     if resultado["sem_ficha"]:
         raise ValidationError("A obra ainda não possui Ficha Técnica.")
-    if resultado["criados"]:
-        return resultado["criados"]
-    if resultado["conflitos"]:
-        raise ValidationError(
-            "Os itens novos da Ficha Técnica coincidem com linhas manuais existentes. "
-            "Vincule as linhas manuais para preservar fornecedores e valores já lançados."
-        )
-    raise ValidationError("Todos os itens desta categoria já estão sincronizados com a matriz.")
+    return resultado
 
 
 @transaction.atomic
@@ -576,9 +574,25 @@ def vincular_item_manual_a_ficha(*, processo, micro_item, item_ficha, usuario):
     return micro_item
 
 
+def _sincronizar_ficha_para_revisao(processo, usuario, versao_exibida):
+    if not processo.categoria_grande_fornecedor_id:
+        return False
+    resultado = sincronizar_itens_ficha_tecnica(processo=processo, usuario=usuario)
+    if resultado["criados"] or resultado["atualizados"]:
+        return True
+    if resultado["sem_ficha"] or versao_exibida is None:
+        return False
+    return processo.grande_fornecedor.atualizado_em.isoformat() != versao_exibida
+
+
 @transaction.atomic
-def avancar_para_negociacao(*, processo, usuario):
-    """Compatibilidade: a nova experiência trata compatibilização e negociação como uma etapa."""
+def avancar_para_negociacao(*, processo, usuario, versao_exibida=None):
+    """Retorna None quando a ficha atualizou a matriz e é preciso revisá-la."""
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
+    if not _matriz_editavel(processo):
+        raise ValidationError("O processo não está na etapa de Compatibilização / Negociação.")
+    if _sincronizar_ficha_para_revisao(processo, usuario, versao_exibida):
+        return None
     fluxo = obter_ou_criar_fluxo(processo)
     if not fluxo.itens.exists():
         raise ValidationError("Inclua pelo menos um item.")
@@ -591,12 +605,16 @@ def avancar_para_negociacao(*, processo, usuario):
 
 
 @transaction.atomic
-def enviar_para_aprovacao(*, processo, usuario, condicao_pagamento_resumo=""):
-    fluxo = obter_ou_criar_fluxo(processo)
+def enviar_para_aprovacao(*, processo, usuario, condicao_pagamento_resumo="", versao_exibida=None):
+    """Retorna None quando o envio precisa aguardar revisão da matriz atualizada."""
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if not _matriz_editavel(processo):
         raise ValidationError("O processo não está na etapa de Compatibilização / Negociação.")
     if processo.etapa_atual == processo.Etapa.COMPATIBILIZACAO:
         raise ValidationError("Conclua a compatibilização antes de enviar a negociação ao gestor.")
+    if _sincronizar_ficha_para_revisao(processo, usuario, versao_exibida):
+        return None
+    fluxo = obter_ou_criar_fluxo(processo)
 
     itens = list(
         fluxo.itens

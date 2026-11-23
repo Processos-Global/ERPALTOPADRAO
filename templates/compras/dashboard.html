@@ -31,6 +31,8 @@
   .cp-process-card--overdue{border-color:#e7c7a3}
   .cp-process-card--overdue .cp-process-card__foot span:last-child{color:#986327;font-weight:850}
   .cp-board-hint{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-4px 0 8px;color:#77655c;font-size:10px}
+  .cp-board-more{display:grid;gap:8px;padding:10px 5px;color:var(--cp-muted);font-size:10px;text-align:center}
+  .cp-board-more .cp-btn{justify-self:center}
   @media(max-width:1100px){.cp-kpis{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:680px){
     .cp-kpis{grid-template-columns:1fr}
@@ -143,7 +145,7 @@
             <strong>{{ coluna.titulo }}</strong>
             <small>{{ coluna.descricao }}</small>
           </div>
-          <span class="cp-count">{{ coluna.processos|length }}</span>
+          <span class="cp-count" aria-label="Total de processos na coluna">{{ coluna.quantidade_total }}</span>
         </div>
 
         {% for processo in coluna.processos %}
@@ -198,6 +200,12 @@
         {% empty %}
           <div class="cp-empty" style="padding:18px 8px!important">Nenhum processo neste status.</div>
         {% endfor %}
+        {% if coluna.quantidade_total > coluna.processos|length %}
+          <div class="cp-board-more">
+            Exibindo {{ coluna.processos|length }} de {{ coluna.quantidade_total }} processos.
+            <a class="cp-btn" href="{% url 'compras:lista_processos' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Ver lista completa</a>
+          </div>
+        {% endif %}
       </section>
     {% endfor %}
   </div>

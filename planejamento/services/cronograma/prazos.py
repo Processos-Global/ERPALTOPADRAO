@@ -63,24 +63,31 @@ def calcular_indicadores_prazo(*, resumo, media_avanco_real, avancos=None):
     duracao_real = max(float(resumo.get("duracao_real") or 0.0), 0.0)
 
     termino_planejado = resumo.get("termino_base")
-    termino_real = resumo.get("termino_real")
+    termino_real_informado = resumo.get("termino_real")
     data_atualizacao = resumo.get("data_atualizacao")
+    # A importação pode preencher TERMINO_REAL mesmo com avanço incompleto.
+    # Uma data em uma linha RESUMO GERAL não comprova conclusão da obra.
+    obra_concluida = executado >= 1.0 - TOLERANCIA_PERCENTUAL
+    termino_real = termino_real_informado if obra_concluida else None
+    termino_real_inconsistente = bool(termino_real_informado and not obra_concluida)
 
     semanas_restantes = None
     previsao_termino = None
 
-    amostras = list(avancos or [])[-4:]
-    ganhos_positivos = sum(1 for item in amostras[1:] if item.get("avanco_real", 0) > 0)
+    amostras = list(avancos or [])[1:][-4:]
+    ganhos_positivos = sum(1 for item in amostras if item.get("avanco_real", 0) > 0)
     projecao_confiavel = (
-        len(amostras) >= 3 and ganhos_positivos >= 2
-        and media_avanco_real > 0 and bool(data_atualizacao) and not termino_real
+        ganhos_positivos >= 2
+        and media_avanco_real > 0 and bool(data_atualizacao)
+        and not obra_concluida and restante > TOLERANCIA_PERCENTUAL
     )
     if projecao_confiavel:
         semanas_restantes = restante / media_avanco_real
-        if data_atualizacao:
-            previsao_termino = data_atualizacao + timedelta(
-                days=round(semanas_restantes * 7)
-            )
+        try:
+            previsao_termino = data_atualizacao + timedelta(days=round(semanas_restantes * 7))
+        except OverflowError:
+            projecao_confiavel = False
+            semanas_restantes = None
 
     idp = _calcular_idp(
         duracao_base=duracao_base,
@@ -116,6 +123,9 @@ def calcular_indicadores_prazo(*, resumo, media_avanco_real, avancos=None):
         "data_comparada_prazo": data_comparada_prazo,
         "termino_planejado": termino_planejado,
         "termino_real": termino_real,
+        "termino_real_informado": termino_real_informado,
+        "termino_real_inconsistente": termino_real_inconsistente,
+        "obra_concluida": obra_concluida,
         "previsao_termino": previsao_termino,
         "projecao_confiavel": projecao_confiavel,
         "criterio_projecao": "Avanço médio das últimas quatro semanas, com ao menos três medições e dois avanços positivos",

@@ -36,10 +36,12 @@ class CoberturaEstoqueCompraTest(TestCase):
             numero="PC-COB-01", obra=self.obra, titulo="Compra coberta"
         )
         self.fornecedor = Fornecedor.objects.create(nome="Fornecedor cobertura")
+        self.entradas = 0
 
     def registrar_entrada(self, obra, quantidade, *, especificacao="Granito A"):
+        self.entradas += 1
         processo = ProcessoCompra.objects.create(
-            numero=f"PC-ORIG-{obra.pk}-{quantidade}-{especificacao}", obra=obra, titulo="Origem"
+            numero=f"PC-ORIG-{self.entradas}", obra=obra, titulo="Origem"
         )
         necessidade = NecessidadeCompra.objects.create(
             processo=processo, material=self.material, descricao=self.material.nome,

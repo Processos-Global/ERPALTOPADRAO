@@ -4,7 +4,9 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Prefetch, Q
+from django.core.paginator import Paginator
+from django.db.models import Count, IntegerField, OuterRef, Prefetch, Q, Subquery, Sum
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,29 +16,27 @@ from planejamento.models import ItemCronogramaSuprimento
 from usuarios.models import AcaoCompra, NivelPermissao
 
 from compras.forms import (
-    AdjudicacaoForm,
     AnaliseTecnicaLoteForm,
     AprovacaoForm,
-    CompatibilizacaoForm,
-    DocumentoContratacaoForm,
-    CotacaoFornecedorForm,
-    CotacaoItemForm,
     DecisaoComercialLoteForm,
     CompraAvulsaForm,
     ItemCompraAberturaFormSet,
     ItemCompraAberturaGrandeFornecedorFormSet,
     NecessidadeCompraForm,
-    NegociacaoForm,
     ProcessoCompraForm,
     PropostaCompletaForm,
     SolicitacaoCotacaoEnvioForm,
 )
 from compras.models import (
+    AdjudicacaoCompra,
     CotacaoFornecedor,
     CotacaoFornecedorItem,
     AprovacaoCompra,
+    GrandeFornecedorItem,
+    GrandeFornecedorParticipante,
     NecessidadeCompra,
     PedidoCompra,
+    PedidoCompraAnexo,
     ProcessoCompra,
     SolicitacaoCotacaoFornecedor,
 )
@@ -62,6 +62,17 @@ from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotac
 # ============================================================
 
 
+def _contar_relacao_por_processo(modelo, referencia, campo="pk"):
+    contagem = (
+        modelo.objects.filter(**{referencia: OuterRef("pk")})
+        .order_by()
+        .values(referencia)
+        .annotate(total=Count(campo, distinct=campo != "pk"))
+        .values("total")
+    )
+    return Coalesce(Subquery(contagem, output_field=IntegerField()), 0)
+
+
 def _qs_processos():
     return (
         ProcessoCompra.objects
@@ -71,21 +82,11 @@ def _qs_processos():
             "item_cronograma",
         )
         .annotate(
-            qtd_itens=Count(
-                "necessidades",
-                distinct=True,
-            ),
-            qtd_fornecedores=Count(
-                "cotacoes__fornecedor",
-                distinct=True,
-            ),
-            qtd_itens_grande_fornecedor=Count(
-                "grande_fornecedor__itens",
-                distinct=True,
-            ),
-            qtd_fornecedores_grande_fornecedor=Count(
-                "grande_fornecedor__participantes",
-                distinct=True,
+            qtd_itens=_contar_relacao_por_processo(NecessidadeCompra, "processo_id"),
+            qtd_fornecedores=_contar_relacao_por_processo(CotacaoFornecedor, "processo_id", "fornecedor_id"),
+            qtd_itens_grande_fornecedor=_contar_relacao_por_processo(GrandeFornecedorItem, "fluxo__processo_id"),
+            qtd_fornecedores_grande_fornecedor=_contar_relacao_por_processo(
+                GrandeFornecedorParticipante, "fluxo__processo_id"
             ),
         )
     )
@@ -160,12 +161,16 @@ def _montar_dados_comerciais(
     adjudicacoes = list(
         adjudicacoes
     )
+    quantidade_por_item = defaultdict(lambda: zero)
+    for adjudicacao in adjudicacoes:
+        quantidade_por_item[adjudicacao.item_cotado_id] += adjudicacao.quantidade
 
     # --------------------------------------------------------
     # ITENS POR COTAÇÃO / NECESSIDADE
     # --------------------------------------------------------
 
     itens_por_cotacao_necessidade = {}
+    itens_por_id = {}
 
     todos_itens = []
 
@@ -180,6 +185,7 @@ def _montar_dados_comerciais(
         negociacoes_com_frete = []
 
         for item in itens:
+            itens_por_id[item.pk] = item
 
             todos_itens.append(
                 item
@@ -293,7 +299,7 @@ def _montar_dados_comerciais(
                 elegivel_aprovacao = bool(
                     cotado_valido
                     and cotacao.enviada_aprovacao_em
-                    and item_tecnicamente_aprovado(item)
+                    and item_tecnicamente_aprovado(item, usar_prefetch=True)
                 )
 
             ofertas.append(
@@ -400,17 +406,7 @@ def _montar_dados_comerciais(
             else item.valor_unitario_cotado
         )
 
-        quantidade_selecionada = sum(
-            (
-                adjudicacao.quantidade
-                for adjudicacao in adjudicacoes
-                if (
-                    adjudicacao.item_cotado_id
-                    == item.pk
-                )
-            ),
-            zero,
-        )
+        quantidade_selecionada = quantidade_por_item.get(item.pk, zero)
 
         mapa_itens.append(
             {
@@ -512,7 +508,7 @@ def _montar_dados_comerciais(
 
     for adjudicacao in adjudicacoes:
 
-        item_cotado = adjudicacao.item_cotado
+        item_cotado = itens_por_id.get(adjudicacao.item_cotado_id) or adjudicacao.item_cotado
 
         compat = None
         compatibilizacoes = list(
@@ -670,24 +666,26 @@ def _montar_dados_comerciais(
 def dashboard(request):
     from compras.services.sla import resumo_sla_processos
 
+    # Os KPIs/SLA devem representar TODOS os processos filtrados. Porém as
+    # quatro subconsultas de composição e os relacionamentos dos cartões são
+    # necessários apenas aos cartões efetivamente exibidos no Kanban.
     qs = (
         _aplicar_filtros(
             request,
-            _qs_processos(),
+            ProcessoCompra.objects.select_related("item_cronograma"),
         )
-        .order_by(
-            "-atualizado_em"
+        .only(
+            "pk", "status", "etapa_atual", "data_contratacao_concluida",
+            "item_cronograma__prazo_limite_contratacao",
         )
+        .order_by("-atualizado_em", "-pk")
     )
 
     hoje = timezone.localdate()
     processos = list(qs)
     sla_resumo = resumo_sla_processos(processos)
-    for processo_item in processos:
-        processo_item.sla = sla_resumo["indicadores"][processo_item.pk]
 
-    # A mesma consulta alimenta KPIs e colunas. Antes, cada filtro abaixo
-    # disparava uma nova consulta complexa com os COUNTs anotados.
+    # Agregações e SLAs continuam usando o conjunto integral de filtros.
     status_terminais = {
         ProcessoCompra.Status.CONTRATADO,
         ProcessoCompra.Status.REPROVADO,
@@ -801,24 +799,40 @@ def dashboard(request):
     for processo_item in processos:
         processos_por_status[processo_item.status].append(processo_item)
 
-    colunas = [
-        {
+    # Limita apenas os cartões renderizados, sem afetar totais, SLA ou filtros.
+    # A listagem completa continua disponível e paginada.
+    limite_cartoes_coluna = 30
+    colunas = []
+    ids_exibidos = []
+    for chave, titulo, statuses, descricao in definicoes:
+        quantidade_total = sum(len(processos_por_status.get(status, ())) for status in statuses)
+        ids_coluna = []
+        for status in statuses:
+            disponiveis = limite_cartoes_coluna - len(ids_coluna)
+            if disponiveis <= 0:
+                break
+            ids_coluna.extend(
+                processo.pk for processo in processos_por_status.get(status, ())[:disponiveis]
+            )
+        ids_exibidos.extend(ids_coluna)
+        colunas.append({
             "chave": chave,
             "titulo": titulo,
             "descricao": descricao,
-            "processos": [
-                processo_item
-                for status in statuses
-                for processo_item in processos_por_status.get(status, [])
-            ],
-        }
-        for (
-            chave,
-            titulo,
-            statuses,
-            descricao,
-        ) in definicoes
-    ]
+            "quantidade_total": quantidade_total,
+            "ids_exibidos": ids_coluna,
+        })
+
+    cartoes_por_id = {
+        processo.pk: processo
+        for processo in _qs_processos().filter(pk__in=ids_exibidos)
+    } if ids_exibidos else {}
+    for processo in cartoes_por_id.values():
+        processo.sla = sla_resumo["indicadores"][processo.pk]
+    for coluna in colunas:
+        coluna["processos"] = [
+            cartoes_por_id[pk] for pk in coluna.pop("ids_exibidos")
+        ]
 
     return render(
         request,
@@ -862,29 +876,23 @@ def dashboard(request):
 def lista_processos(request):
     from compras.services.sla import resumo_sla_processos
 
-    qs = (
-        _aplicar_filtros(
-            request,
-            _qs_processos(),
-        )
-        .order_by(
-            "-criado_em"
-        )
+    ordem = ("-criado_em", "-pk")
+    qs = _aplicar_filtros(request, ProcessoCompra.objects.all()).order_by(*ordem)
+    sla_resumo = resumo_sla_processos(
+        qs.only("pk", "status", "etapa_atual"),
+        situacao_etapa=(request.GET.get("sla") or "").strip(),
     )
-
-    processos = list(qs)
-    resumo_inicial = resumo_sla_processos(processos)
-    for processo_item in processos:
-        processo_item.sla = resumo_inicial["indicadores"][processo_item.pk]
-    situacao_sla = (request.GET.get("sla") or "").strip()
-    if situacao_sla:
-        processos = [p for p in processos if p.sla["etapa"]["situacao"] == situacao_sla]
-    sla_resumo = resumo_sla_processos(processos)
+    indicadores = sla_resumo["indicadores"]
+    pagina = Paginator(list(indicadores), 30).get_page(request.GET.get("page"))
+    pagina.object_list = list(_qs_processos().filter(pk__in=pagina.object_list).order_by(*ordem))
+    for processo_item in pagina:
+        processo_item.sla = indicadores[processo_item.pk]
     return render(
         request,
         "compras/processos_lista.html",
         {
-            "processos": processos,
+            "processos": pagina.object_list,
+            "pagina": pagina,
             "sla_resumo": sla_resumo,
             "pode_administrar_sla": possui_acao_compras(request.user, AcaoCompra.ADMINISTRAR),
             "obras": (
@@ -995,20 +1003,18 @@ def detalhe_processo(
         )
     )
 
-    # ========================================================
-    # CORREÇÃO:
-    #
-    # NecessidadeCompra não possui mais relacionamento "insumo".
-    # Os relacionamentos válidos são:
-    #
-    # - processo
-    # - atividade_origem
-    # ========================================================
-
+    valores_adjudicados = (
+        AdjudicacaoCompra.objects.filter(necessidade_id=OuterRef("pk"), cancelada=False)
+        .order_by()
+        .values("necessidade_id")
+        .annotate(total=Sum("quantidade"))
+        .values("total")
+    )
     necessidades = list(
         processo
         .necessidades
         .exclude(situacao=NecessidadeCompra.Situacao.CANCELADA)
+        .annotate(_quantidade_adjudicada=Coalesce(Subquery(valores_adjudicados), Decimal("0")))
         .select_related(
             "atividade_origem",
             "material__unidade",
@@ -1026,7 +1032,7 @@ def detalhe_processo(
     form_necessidade = None
     if pode_editar_itens:
         form_necessidade = NecessidadeCompraForm(processo=processo)
-        material_choices = list(form_necessidade.fields["material"].choices)
+        material_choices = [opcao for opcao in form_necessidade.fields["material"].choices]
         form_necessidade.fields["material"].choices = material_choices
 
         for necessidade in necessidades:
@@ -1047,7 +1053,6 @@ def detalhe_processo(
             .select_related(
                 "necessidade",
                 "negociacao",
-                "cotacao__fornecedor",
             )
             .prefetch_related(
                 "compatibilizacoes"
@@ -1061,8 +1066,6 @@ def detalhe_processo(
         .select_related("fornecedor", "enviada_por")
         .order_by("fornecedor__nome")
     )
-
-    form_envio_fornecedor = SolicitacaoCotacaoEnvioForm(processo=processo)
 
     cotacoes = list(
         processo
@@ -1136,11 +1139,11 @@ def detalhe_processo(
         processo
         .pedidos
         .select_related(
-            "fornecedor"
+            "fornecedor", "prazo_sla",
         )
         .prefetch_related(
             "itens",
-            "anexos",
+            Prefetch("anexos", queryset=PedidoCompraAnexo.objects.select_related("enviado_por")),
         )
         .order_by(
             "fornecedor__nome"
@@ -1202,20 +1205,9 @@ def detalhe_processo(
         reverse=True,
     )
 
-    propostas_forms = [
-        {
-            "cotacao": cotacao,
-            "form": PropostaCompletaForm(
-                processo=processo,
-                cotacao=cotacao,
-                necessidades=necessidades,
-            ),
-        }
-        for cotacao in cotacoes
-    ]
+    form_envio_fornecedor = None
     form_proposta_nova = None
     pode_cadastrar_nova_proposta = False
-    form_analise_lote = None
     compatibilizacoes_forms = []
     form_decisao_lote = None
 
@@ -1227,14 +1219,27 @@ def detalhe_processo(
         ProcessoCompra.Etapa.COMPATIBILIZACAO, ProcessoCompra.Etapa.NEGOCIACAO, ProcessoCompra.Etapa.APROVACAO,
     }
 
-    if pode_editar and fase_comercial_aberta:
+    pode_cotar = fase_comercial_aberta and permissoes_compras["pode_cotar"]
+    propostas_forms = []
+    for cotacao in cotacoes:
+        form = None
+        if pode_cotar and not (
+            cotacao.enviada_compatibilizacao_em or cotacao.enviada_negociacao_em or cotacao.enviada_aprovacao_em
+        ):
+            form = PropostaCompletaForm(processo=processo, cotacao=cotacao, necessidades=necessidades)
+            fornecedor = form.fields["fornecedor"]
+            fornecedor.choices = [(cotacao.fornecedor_id, fornecedor.label_from_instance(cotacao.fornecedor))]
+        propostas_forms.append({"cotacao": cotacao, "form": form})
+
+    if pode_cotar:
+        form_envio_fornecedor = SolicitacaoCotacaoEnvioForm(processo=processo)
         form_proposta_nova = PropostaCompletaForm(
             processo=processo,
             necessidades=necessidades,
         )
         pode_cadastrar_nova_proposta = form_proposta_nova.fields["fornecedor"].queryset.exists()
     if pode_editar and fase_analise_aberta:
-        if exige_compatibilizacao:
+        if exige_compatibilizacao and permissoes_compras["pode_compatibilizar"]:
             cotacoes_para_compatibilizar = [
                 cotacao
                 for cotacao in cotacoes
@@ -1253,7 +1258,8 @@ def detalhe_processo(
                 }
                 for cotacao in cotacoes_para_compatibilizar
             ]
-        form_decisao_lote = DecisaoComercialLoteForm(processo=processo)
+        if permissoes_compras["pode_negociar"]:
+            form_decisao_lote = DecisaoComercialLoteForm(processo=processo)
 
     aprovacao_aprovada = (
         processo.aprovacoes.filter(decisao=AprovacaoCompra.Decisao.APROVADO)
@@ -1327,62 +1333,13 @@ def detalhe_processo(
         "propostas_forms": propostas_forms,
         "form_proposta_nova": form_proposta_nova,
         "pode_cadastrar_nova_proposta": pode_cadastrar_nova_proposta,
-        "form_analise_lote": form_analise_lote,
         "form_decisao_lote": form_decisao_lote,
 
         "form_necessidade": form_necessidade,
 
-        "form_cotacao": (
-            CotacaoFornecedorForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
-
-        "form_item_cotacao": (
-            CotacaoItemForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
-
-        "form_compat": (
-            CompatibilizacaoForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
-
-        "form_negociacao": (
-            NegociacaoForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
-
-        "form_adjudicacao": (
-            AdjudicacaoForm(
-                processo=processo
-            )
-            if pode_editar
-            else None
-        ),
-
         "form_aprovacao": (
             AprovacaoForm(processo=processo)
             if pode_aprovar and cotacoes_em_aprovacao
-            else None
-        ),
-
-        "form_documento_contratacao": (
-            DocumentoContratacaoForm(
-                processo=processo
-            )
-            if pode_editar
             else None
         ),
 
@@ -1682,12 +1639,16 @@ def lista_pedidos(request):
             "obra",
             "fornecedor",
             "processo",
-            "responsavel",
         )
-        .prefetch_related("itens", "anexos", "recebimentos__usuario", "recebimentos__itens__item_pedido")
+        .prefetch_related(
+            "itens",
+            Prefetch("anexos", queryset=PedidoCompraAnexo.objects.select_related("enviado_por")),
+            "recebimentos__usuario",
+            "recebimentos__itens__item_pedido",
+        )
         .filter(processo__fluxo_grande_fornecedor=False)
         .order_by(
-            "-criado_em"
+            "-criado_em", "-pk"
         )
     )
 
@@ -1728,17 +1689,17 @@ def lista_pedidos(request):
             )
         )
 
-    pedidos = list(pedidos)
-    for pedido in pedidos:
+    pagina = Paginator(pedidos, 25).get_page(request.GET.get("page"))
+    pagina.object_list = list(pagina.object_list)
+    for pedido in pagina:
         pedido.transicoes_status_permitidas = transicoes_status_permitidas(pedido)
 
     return render(
         request,
         "compras/pedidos_lista.html",
         {
-            "pedidos": (
-                pedidos
-            ),
+            "pedidos": pagina.object_list,
+            "pagina": pagina,
 
             "obras": (
                 Obra.objects

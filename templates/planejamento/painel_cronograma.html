@@ -183,6 +183,7 @@
 }
 
 .pc-progress-title {
+    margin: 0;
     color: var(--pc-muted);
     font-size: 12px;
     font-weight: 700;
@@ -216,32 +217,29 @@
 .pc-badge-info, .pc-badge.andamento { background: #eee8d6; color: var(--pc-primary); }
 .pc-badge-neutral, .pc-badge.planejada, .pc-badge.nao-iniciado { background: #f5f1e9; color: #66534c; }
 
-.pc-progress-track {
-    position: relative;
-    height: 10px;
-    margin: 8px 0 7px;
-    overflow: hidden;
-    background: #f5f1e9;
-    border-radius: 999px;
+.pc-progress-comparison {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(10px, 3vw, 24px);
 }
-.pc-progress-plan,
-.pc-progress-real {
-    position: absolute;
-    left: 0;
-    top: 0;
-    height: 100%;
-    border-radius: 999px;
-}
-.pc-progress-plan { background: #eee8d6; }
-.pc-progress-real { background: var(--pc-primary); height: 6px; top: 2px; }
 
-.pc-progress-legend {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--pc-muted);
-    font-size: 11px;
+.pc-progress-meter {
+    display: block;
+    width: 100%;
+    height: 10px;
+    margin-top: 10px;
+    appearance: none;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surface-muted, #f5f1e9);
+    accent-color: var(--pc-meter-color);
 }
+
+.pc-progress-meter--previsto { --pc-meter-color: var(--saari-gold, #b9aa72); }
+.pc-progress-meter--realizado { --pc-meter-color: var(--pc-primary); }
+.pc-progress-meter::-webkit-progress-bar { background: transparent; }
+.pc-progress-meter::-webkit-progress-value { border-radius: 999px; background: var(--pc-meter-color); }
+.pc-progress-meter::-moz-progress-bar { border-radius: 999px; background: var(--pc-meter-color); }
 
 .pc-kpi-strip {
     display: grid;
@@ -886,7 +884,7 @@ body.pc-modal-open { overflow:hidden; }
 
 .pc-progress-value {
     margin-top: 7px;
-    font-size: clamp(38px, 4vw, 52px);
+    font-size: clamp(28px, 4vw, 52px);
     font-weight: 830;
     color: var(--pc-primary-deep);
     letter-spacing: -.055em;
@@ -923,33 +921,6 @@ body.pc-modal-open { overflow:hidden; }
     border-color: #eee8d6;
     background: #f5f7f8;
 }
-
-/* Barra de progresso em duas camadas */
-.pc-progress-track {
-    height: 15px;
-    margin: 16px 0 9px;
-    background: #f5f1e9;
-    border: 1px solid #f5f1e9;
-    box-shadow: inset 0 1px 2px rgba(45,32,28,.04);
-}
-
-.pc-progress-plan {
-    background: linear-gradient(90deg, #eee8d6, #d9d0c2);
-    opacity: .72;
-}
-
-.pc-progress-real {
-    top: 3px;
-    height: 7px;
-    background: linear-gradient(90deg, var(--pc-primary-dark), #77655c);
-    box-shadow: 0 1px 5px rgba(119,101,92,.26);
-}
-
-.pc-progress-legend {
-    color: #77655c;
-    font-size: 11px;
-}
-.pc-progress-legend strong { color: #453330; }
 
 /* KPIs */
 .pc-kpi-strip {
@@ -1407,21 +1378,12 @@ body.pc-modal-open { overflow:hidden; }
 
 
 
-/* Ajustes solicitados — botões e legenda do avanço */
+/* Contraste dos botões principais */
 .pc-btn-primary,
 .pc-btn-primary:visited,
 .pc-btn-primary:hover,
 .pc-btn-primary:focus,
 .pc-btn-primary:active{color:#fff!important}
-.pc-progress-legend span,
-.pc-progress-legend strong{
-    background:transparent!important;
-    border:0!important;
-    box-shadow:none!important;
-    padding:0!important;
-    color:#2d201c!important;
-    text-decoration:none!important;
-}
 .pc-milestone-timeline { margin: 0 16px 16px; padding: 0 0 0 20px; border-left: 2px solid var(--pc-border, #d9d0c4); list-style: none; }
 .pc-milestone-timeline li { position: relative; padding: 7px 0 10px 14px; color: var(--pc-text, #2d201c); font-size: 12px; }
 .pc-milestone-timeline li::before { content: ""; position: absolute; left: -26px; top: 12px; width: 9px; height: 9px; border-radius: 50%; background: var(--pc-primary, #77655c); }
@@ -1436,9 +1398,9 @@ body.pc-modal-open { overflow:hidden; }
             <div class="pc-title-meta">
                 <strong>{{ projeto_selecionado|default:"Nenhuma obra selecionada" }}</strong>
                 {% if semana_selecionada != None %}<span class="pc-dot">•</span><span>Semana {{ semana_selecionada }}</span>{% endif %}
-                {% if periodo_semana.inicio_semana %}<span class="pc-dot">•</span><span>{{ periodo_semana.inicio_semana|date:"d/m" }} a {{ periodo_semana.fim_semana|date:"d/m" }}</span>{% endif %}
+                {# inicio_semana do CSV representa a data importada, não a data da medição semanal. #}
                 {% if resumo.data_atualizacao %}<span class="pc-dot">•</span><span>Referência da medição: {{ resumo.data_atualizacao|date:"d/m/Y" }}</span>{% endif %}
-                {% if ultima_medicao %}<span class="pc-dot">•</span><span>Última medição: {{ ultima_medicao|date:"d/m/Y" }}</span>{% endif %}
+                {% if ultima_medicao and ultima_medicao != resumo.data_atualizacao %}<span class="pc-dot">•</span><span>Última medição: {{ ultima_medicao|date:"d/m/Y" }}</span>{% endif %}
                 {% if importacao_ativa.finalizou_em %}<span class="pc-dot">•</span><span>Importado em {{ importacao_ativa.finalizou_em|date:"d/m/Y H:i" }}</span>{% endif %}
             </div>
         </div>
@@ -1496,10 +1458,7 @@ body.pc-modal-open { overflow:hidden; }
         <section class="pc-overview">
             <div class="pc-card pc-progress-card">
                 <div class="pc-progress-top">
-                    <div>
-                        <div class="pc-progress-title">Avanço físico acumulado</div>
-                        <div class="pc-progress-value">{{ resumo.executado|percentual }}%</div>
-                    </div>
+                    <h2 class="pc-progress-title">Avanço físico acumulado</h2>
                     <div>
                         {% if prazos.situacao == "NO_PRAZO" %}
                             <span class="pc-status-badge pc-badge-success">{{ prazos.situacao_rotulo }}</span>
@@ -1511,18 +1470,24 @@ body.pc-modal-open { overflow:hidden; }
                     </div>
                 </div>
 
-                <div class="pc-progress-track" title="Previsto {{ resumo.previsto|percentual }}% • Executado {{ resumo.executado|percentual }}%">
-                    <span class="pc-progress-plan" style="width:{{ resumo.previsto|percentual }}%"></span>
-                    <span class="pc-progress-real" style="width:{{ resumo.executado|percentual }}%"></span>
-                </div>
-                <div class="pc-progress-legend">
-                    <span>Executado <strong>{{ resumo.executado|percentual }}%</strong></span>
-                    <span>Previsto <strong>{{ resumo.previsto|percentual }}%</strong></span>
+                <div class="pc-progress-comparison">
+                    <div>
+                        <div class="pc-progress-title">Previsto</div>
+                        <div class="pc-progress-value">{{ resumo.previsto|percentual }}%</div>
+                        <progress class="pc-progress-meter pc-progress-meter--previsto" aria-label="Previsto"
+                                  max="1" value="{{ resumo.previsto|stringformat:".4f" }}"></progress>
+                    </div>
+                    <div>
+                        <div class="pc-progress-title">Realizado</div>
+                        <div class="pc-progress-value">{{ resumo.executado|percentual }}%</div>
+                        <progress class="pc-progress-meter pc-progress-meter--realizado" aria-label="Realizado"
+                                  max="1" value="{{ resumo.executado|stringformat:".4f" }}"></progress>
+                    </div>
                 </div>
 
                 <div class="pc-kpi-strip">
                     <div class="pc-mini-kpi {% if resumo.desvio < 0 %}danger{% elif resumo.desvio > 0 %}success{% endif %}">
-                        <span>Desvio</span><strong>{{ resumo.desvio|percentual }}%</strong>
+                        <span>Desvio físico</span><strong>{{ resumo.desvio|percentual }}%</strong>
                     </div>
                     <div class="pc-mini-kpi">
                         <span>Aderência</span><strong>{% if prazos.aderencia_fisica != None %}{{ prazos.aderencia_fisica|percentual }}%{% else %}-{% endif %}</strong>
@@ -1534,11 +1499,24 @@ body.pc-modal-open { overflow:hidden; }
                         <span>Média semanal</span><strong>{{ medias.media_real|percentual }}%</strong>
                     </div>
                     <div class="pc-mini-kpi">
-                        <span>Previsão término</span><strong style="font-size:14px">{% if prazos.previsao_termino %}{{ prazos.previsao_termino|date:"d/m/Y" }}{% else %}-{% endif %}</strong>
+                        <span>Previsão de término</span>
+                        <strong>{% if prazos.previsao_termino %}{{ prazos.previsao_termino|date:"d/m/Y" }}{% else %}Dados insuficientes{% endif %}</strong>
                     </div>
-                    <div class="pc-mini-kpi">
-                        <span>Desvio de prazo</span><strong>{% if prazos.dias_diferenca_real != None %}{{ prazos.dias_diferenca_real }} dias (real){% elif prazos.dias_diferenca_projetada != None %}{{ prazos.dias_diferenca_projetada }} dias (projetado){% elif prazos.dias_atraso_aberto != None %}{{ prazos.dias_atraso_aberto }} dias em aberto{% else %}-{% endif %}</strong>
-                    </div>
+                    {% if prazos.dias_diferenca_real != None %}
+                        <div class="pc-mini-kpi">
+                            <span>Desvio real</span><strong>{{ prazos.dias_diferenca_real|desvio_prazo }}</strong>
+                        </div>
+                    {% endif %}
+                    {% if prazos.dias_diferenca_projetada != None %}
+                        <div class="pc-mini-kpi">
+                            <span>Desvio projetado</span><strong>{{ prazos.dias_diferenca_projetada|desvio_prazo }}</strong>
+                        </div>
+                    {% endif %}
+                    {% if prazos.dias_atraso_aberto %}
+                        <div class="pc-mini-kpi danger">
+                            <span>Atraso em aberto</span><strong>{{ prazos.dias_atraso_aberto }} dia{{ prazos.dias_atraso_aberto|pluralize }} em aberto</strong>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -1553,8 +1531,7 @@ body.pc-modal-open { overflow:hidden; }
                     <div class="pc-health-item"><span>Reprogramadas</span><strong>{{ contadores_atividades.reprogramadas|default:0 }}</strong></div>
                 </div>
                 <div class="pc-health-meta">
-                    <strong>{{ contadores_atividades.total|default:0 }}</strong> atividades no retrato atual.<br>
-                    {% if prazos.dias_diferenca_prazo != None %}Diferença de prazo: <strong>{{ prazos.dias_diferenca_prazo }} dia(s)</strong>.{% endif %}
+                    <strong>{{ contadores_atividades.total|default:0 }}</strong> atividades no retrato atual.
                 </div>
             </div>
         </section>
@@ -1575,11 +1552,12 @@ body.pc-modal-open { overflow:hidden; }
                     <div class="pc-chart-panel" data-chart-panel="mensal" hidden>
                         <div class="pc-chart-box"><canvas id="graficoAvancoMensal"></canvas></div>
                         <div class="pc-table-wrap"><table class="pc-table">
-                            <thead><tr><th>Mês</th><th>Previsto acumulado</th><th>Realizado acumulado</th><th>Desvio</th><th>Avanço no mês (prev./real)</th></tr></thead>
-                            <tbody>{% for mes in avancos_mensais %}<tr><td>{{ mes.periodo }}</td><td>{{ mes.previsto_acumulado|percentual }}%</td><td>{{ mes.executado_acumulado|percentual }}%</td><td>{{ mes.desvio_acumulado|percentual }}%</td><td>{{ mes.avanco_previsto|percentual }}% / {{ mes.avanco_real|percentual }}%</td></tr>{% empty %}<tr><td colspan="5">Sem datas de medição para comparação mensal.</td></tr>{% endfor %}</tbody>
+                            <thead><tr><th>Mês</th><th>Previsto acumulado</th><th>Realizado acumulado</th><th>Desvio de prazo (estimado)</th><th>Avanço no mês (prev./real)</th></tr></thead>
+                            <tbody>{% for mes in avancos_mensais %}<tr><td>{{ mes.periodo }}</td><td>{{ mes.previsto_acumulado|percentual }}%</td><td>{{ mes.executado_acumulado|percentual }}%</td><td>{% if mes.desvio_dias != None %}{{ mes.desvio_dias|desvio_prazo }}{% if mes.desvio_dias_estimado %} <small title="Extrapolado pelo ritmo planejado recente">(projetado)</small>{% endif %}{% else %}Sem referência{% endif %}</td><td>{{ mes.avanco_previsto|percentual }}% / {{ mes.avanco_real|percentual }}%</td></tr>{% empty %}<tr><td colspan="5">Sem datas de medição para comparação mensal.</td></tr>{% endfor %}</tbody>
                         </table></div>
+                        <p class="pc-footer-meta">Desvio em dias: equivalência temporal entre o avanço realizado e a curva planejada, com interpolação das medições. Quando necessário, o adiantamento é projetado pelo ritmo previsto recente. Não representa a data contratual de término.</p>
                     </div>
-                    {% if prazos.data_base_projecao %}<p>Data-base da projeção: {{ prazos.data_base_projecao|date:"d/m/Y" }}. {{ prazos.criterio_projecao }}.{% if not prazos.projecao_confiavel %} Dados insuficientes para projetar término.{% endif %}</p>{% endif %}
+                    {% if prazos.data_base_projecao %}<p>Data-base da projeção: {{ prazos.data_base_projecao|date:"d/m/Y" }}. {{ prazos.criterio_projecao }}.{% if not prazos.projecao_confiavel and not prazos.obra_concluida %} Dados insuficientes para projetar término.{% endif %}{% if prazos.termino_real_inconsistente %} O campo "Término real" do arquivo foi desconsiderado porque o avanço físico ainda não atingiu 100%.{% endif %}</p>{% endif %}
                 </div>
             </div>
 
@@ -1808,7 +1786,7 @@ body.pc-modal-open { overflow:hidden; }
                     <div class="pc-info-item"><span>Data atualização</span><strong>{% if resumo.data_atualizacao %}{{ resumo.data_atualizacao|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
                     <div class="pc-info-item"><span>Início-base</span><strong>{% if resumo.inicio_base %}{{ resumo.inicio_base|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
                     <div class="pc-info-item"><span>Término-base</span><strong>{% if resumo.termino_base %}{{ resumo.termino_base|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
-                    <div class="pc-info-item"><span>Término real</span><strong>{% if resumo.termino_real %}{{ resumo.termino_real|date:"d/m/Y" }}{% else %}-{% endif %}</strong></div>
+                    <div class="pc-info-item"><span>Término real</span><strong>{% if prazos.termino_real %}{{ prazos.termino_real|date:"d/m/Y" }}{% elif resumo.termino_real %}Não confirmado{% else %}-{% endif %}</strong></div>
                     <div class="pc-info-item"><span>Linhas importadas</span><strong>{{ importacao_ativa.linhas_importadas|default:0 }}</strong></div>
                     <div class="pc-info-item"><span>Obras identificadas</span><strong>{{ importacao_ativa.projetos_identificados|default:0 }}</strong></div>
                 </div>
@@ -1914,7 +1892,17 @@ document.addEventListener("DOMContentLoaded", function () {
     const avancos = avancosEl ? JSON.parse(avancosEl.textContent || "[]") : [];
     const mensais = mensaisEl ? JSON.parse(mensaisEl.textContent || "[]") : [];
     const dataCurta = valor => valor ? valor.slice(8, 10) + "/" + valor.slice(5, 7) : "";
-    const rotuloSemana = item => item.inicio_semana ? "S" + item.semana + " · " + dataCurta(item.inicio_semana) + (item.fim_semana ? " a " + dataCurta(item.fim_semana) : "") : "S" + item.semana;
+    const dataCompleta = valor => dataCurta(valor) + "/" + valor.slice(0, 4);
+    // No CSV, inicio_semana pode repetir a data de início do planejamento em
+    // todos os snapshots. O eixo temporal deve mostrar a medição efetiva.
+    const dataMedicao = item => item.data_referencia || item.data_atualizacao || null;
+    const rotuloSemana = item => dataCurta(dataMedicao(item)) || "S" + item.semana;
+    const tituloSemana = dados => pontos => {
+        const item = dados[pontos[0]?.dataIndex];
+        if (!item) return "";
+        const medicao = dataMedicao(item);
+        return "Semana " + item.semana + (medicao ? " · Medição: " + dataCompleta(medicao) : "");
+    };
 
     const curva = document.getElementById("graficoCurvaS");
     if (curva && serie.length) {
@@ -1942,14 +1930,14 @@ document.addEventListener("DOMContentLoaded", function () {
                         fill: false
                     },
                     {
-                        label: "Executado",
+                        label: "Realizado",
                         data: serie.map(i => Number(i.executado || 0) * 100),
-                        borderColor: "#b9aa72",
+                        borderColor: "#77655c",
                         backgroundColor: gradExecutado,
                         borderWidth: 3,
                         pointRadius: 0,
                         pointHoverRadius: 5,
-                        pointHoverBackgroundColor: "#b9aa72",
+                        pointHoverBackgroundColor: "#77655c",
                         pointHoverBorderColor: "#ffffff",
                         pointHoverBorderWidth: 2,
                         tension: .34,
@@ -1984,6 +1972,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         padding: 11,
                         cornerRadius: 9,
                         callbacks: {
+                            title: tituloSemana(serie),
                             label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%"
                         }
                     }
@@ -1992,7 +1981,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     x: {
                         grid: { display: false },
                         border: { display: false },
-                        ticks: { color: "#77655c", font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 }
+                        ticks: {
+                            color: "#77655c", font: { size: 10 }, maxRotation: 0,
+                            autoSkip: true, maxTicksLimit: 8,
+                            callback: function (value, index) {
+                                const atual = this.getLabelForValue(value);
+                                const anterior = index > 0 ? this.getLabelForValue(value - 1) : null;
+                                return atual && atual !== anterior ? atual : "";
+                            }
+                        }
                     },
                     y: {
                         beginAtZero: true,
@@ -2060,6 +2057,7 @@ document.addEventListener("DOMContentLoaded", function () {
                         padding: 11,
                         cornerRadius: 9,
                         callbacks: {
+                            title: tituloSemana(avancos),
                             label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%"
                         }
                     }
@@ -2068,7 +2066,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     x: {
                         grid: { display: false },
                         border: { display: false },
-                        ticks: { color: "#77655c", font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 14 }
+                        ticks: { color: "#77655c", font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 8 }
                     },
                     y: {
                         border: { display: false },
@@ -2092,7 +2090,7 @@ document.addEventListener("DOMContentLoaded", function () {
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: {tooltip: {callbacks: {label: ctx => ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "% · avanço no mês: " + (Number(mensais[ctx.dataIndex][ctx.datasetIndex ? "avanco_real" : "avanco_previsto"] || 0) * 100).toFixed(1) + "%"}}},
+                plugins: {tooltip: {callbacks: {label: ctx => ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "% · avanço no mês: " + (Number(mensais[ctx.dataIndex][ctx.datasetIndex ? "avanco_real" : "avanco_previsto"] || 0) * 100).toFixed(1) + "%", footer: items => { const mes = mensais[items[0]?.dataIndex]; if (!mes || mes.desvio_dias == null) return "Desvio temporal: sem referência"; const dias = mes.desvio_dias; return "Desvio temporal estimado: " + (dias > 0 ? dias + " dias atrasado" : dias < 0 ? Math.abs(dias) + " dias adiantado" : "no prazo") + (mes.desvio_dias_estimado ? " (projetado)" : ""); }}}},
                 scales: {y: {beginAtZero: true, suggestedMax: 100, ticks: {callback: v => v + "%"}}}
             }
         });

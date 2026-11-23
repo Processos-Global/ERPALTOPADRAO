@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load l10n %}
 {% block extra_css %}{% include "compras/_styles.html" %}
 <style>
   .cp-orders-page{display:grid;gap:16px}
@@ -190,7 +191,7 @@
     <input class="cp-input" name="q" value="{{ request.GET.q }}" placeholder="Buscar pedido, processo ou fornecedor">
     <select class="cp-input" name="obra">
       <option value="">Todas as obras</option>
-      {% for obra in obras %}<option value="{{ obra.pk }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}
+      {% for obra in obras %}<option value="{{ obra.pk|unlocalize }}" {% if request.GET.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}
     </select>
     <select class="cp-input" name="status">
       <option value="">Todos os status</option>
@@ -418,11 +419,11 @@
                           </div>
                           <div>
                             <span class="cp-mini-label">Qtd. recebida</span>
-                            <input class="cp-input js-receipt-qty" type="number" name="item_{{ item.pk }}" min="0" step="0.0001" placeholder="0">
+                            <input class="cp-input js-receipt-qty" type="number" name="item_{{ item.pk|unlocalize }}" min="0" step="0.0001" placeholder="0">
                           </div>
                           <div>
                             <span class="cp-mini-label">Valor na NF</span>
-                            <div class="cp-money-wrap"><input class="cp-input js-receipt-value" type="number" name="valor_item_{{ item.pk }}" min="0.01" step="0.01" placeholder="0,00"></div>
+                            <div class="cp-money-wrap"><input class="cp-input js-receipt-value" type="number" name="valor_item_{{ item.pk|unlocalize }}" min="0.01" step="0.01" placeholder="0,00"></div>
                           </div>
                         </div>
                         {% endfor %}
@@ -510,6 +511,7 @@
   {% empty %}
     <section class="cp-section"><div class="cp-empty">Nenhum pedido encontrado.</div></section>
   {% endfor %}
+  {% include "compras/_paginacao.html" %}
 </div>
 
 <script>

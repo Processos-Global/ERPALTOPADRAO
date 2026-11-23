@@ -2,6 +2,7 @@
     "use strict";
 
     const doc = document;
+    const nativeDownloadAction = doc.currentScript?.dataset.nativeDownloadAction;
     const body = doc.body;
     const root = doc.documentElement;
     const desktopBreakpoint = 1024;
@@ -94,136 +95,68 @@
     }
 
     function isNavigableTransition(event, link) {
-        if (event.defaultPrevented || event.button > 0) return false;
+        if (event.defaultPrevented || event.button !== 0) return false;
         if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
-        if (link.target === "_blank" || link.hasAttribute("download")) return false;
-        if (!link.href || link.href.startsWith("javascript:")) return false;
+        if (link.target && link.target.toLowerCase() !== "_self") return false;
+        if (link.matches("[download], [data-download]")) return false;
 
-        let current;
+        const current = new URL(window.location.href);
         let destination;
         try {
-            current = new URL(window.location.href);
-            destination = new URL(link.href, window.location.origin);
-        } catch (_) { return false; }
-
-        if (destination.origin !== current.origin) return false;
-        if (destination.href === current.href) return false;
-        if (destination.pathname === current.pathname && destination.search === current.search && destination.hash) return false;
-        return true;
+            destination = new URL(link.href, current);
+        } catch (_) {
+            return false;
+        }
+        if (destination.origin !== current.origin || !["http:", "https:"].includes(destination.protocol)) {
+            return false;
+        }
+        return destination.pathname !== current.pathname || destination.search !== current.search;
     }
 
     function initPageTransitions() {
-        const transitionLayer = qs(".page-transition");
-        const transitionMark = qs(".page-transition__mark");
-        let navigating = false;
-        let activeAnimation = null;
+        const layer = qs("[data-page-transition]");
+        const mark = layer && qs(".page-transition__mark", layer);
+        let cover = null;
+        let logo = null;
 
-        const resetTransition = () => {
-            navigating = false;
-            body.classList.remove("is-transitioning");
-
-            if (activeAnimation) {
-                try { activeAnimation.cancel(); } catch (_) {}
-                activeAnimation = null;
-            }
-
-            if (transitionLayer) {
-                transitionLayer.getAnimations().forEach(animation => animation.cancel());
-                transitionLayer.style.transition = "none";
-                transitionLayer.style.transform = "translate3d(0, 104%, 0)";
-                transitionLayer.style.pointerEvents = "none";
-            }
-
-            if (transitionMark) {
-                transitionMark.getAnimations().forEach(animation => animation.cancel());
-                transitionMark.style.opacity = "0";
-                transitionMark.style.transform = "translateY(20px) scale(.92)";
-            }
-        };
-
-        // Garante estado limpo inclusive ao voltar pelo histórico/BFCache.
-        resetTransition();
+        function reset() {
+            cover?.cancel();
+            logo?.cancel();
+            cover = null;
+            logo = null;
+        }
 
         doc.addEventListener("click", event => {
-            const link = event.target.closest("a[data-transition-link]");
-            if (!link || !isNavigableTransition(event, link) || navigating) return;
+            const link = event.target.closest("a[href][data-transition-link]");
+            if (!link || !isNavigableTransition(event, link)) return;
+            if (reduceMotion.matches || !layer?.animate) return;
 
             event.preventDefault();
-            navigating = true;
-
-            const destination = link.href;
-            const go = () => {
-                window.location.assign(destination);
-            };
-
-            if (!transitionLayer || typeof transitionLayer.animate !== "function") {
-                body.classList.add("is-transitioning");
-                window.setTimeout(go, 1050);
-                return;
-            }
-
-            // Cancela qualquer animação/estado herdado da navegação anterior.
-            transitionLayer.getAnimations().forEach(animation => animation.cancel());
-            transitionLayer.style.transition = "none";
-            transitionLayer.style.transform = "translate3d(0, 104%, 0)";
-            transitionLayer.style.pointerEvents = "all";
-
-            if (transitionMark) {
-                transitionMark.getAnimations().forEach(animation => animation.cancel());
-                transitionMark.style.opacity = "0";
-                transitionMark.style.transform = "translateY(20px) scale(.92)";
-            }
-
-            // Força o browser a registrar 104% como quadro inicial antes de animar.
-            void transitionLayer.offsetHeight;
-            body.classList.add("is-transitioning");
-
-            activeAnimation = transitionLayer.animate(
+            reset();
+            const animation = layer.animate(
                 [
-                    { transform: "translate3d(0, 104%, 0)" },
-                    { transform: "translate3d(0, 0, 0)" }
+                    { transform: "translateY(100%)" },
+                    { transform: "translateY(0)" }
                 ],
-                {
-                    duration: 1150,
-                    easing: "cubic-bezier(.22, .78, .18, 1)",
-                    fill: "forwards"
-                }
+                { duration: 240, easing: "cubic-bezier(.22, .78, .18, 1)", fill: "forwards" }
             );
-
-            if (transitionMark) {
-                transitionMark.animate(
-                    [
-                        { opacity: 0, transform: "translateY(20px) scale(.92)" },
-                        { opacity: 1, transform: "translateY(0) scale(1)" }
-                    ],
-                    {
-                        duration: 650,
-                        delay: 300,
-                        easing: "cubic-bezier(.16, 1, .3, 1)",
-                        fill: "forwards"
-                    }
-                );
-            }
-
-            let navigated = false;
-            const finishNavigation = () => {
-                if (navigated) return;
-                navigated = true;
-                window.setTimeout(go, 260);
-            };
-
-            activeAnimation.finished.then(finishNavigation).catch(() => {
-                if (navigating) window.setTimeout(go, 1200);
-            });
-
-            // Fallback apenas para browsers com comportamento anormal da Web Animations API.
-            window.setTimeout(() => {
-                if (!navigated && navigating) finishNavigation();
-            }, 1450);
+            cover = animation;
+            logo = mark?.animate(
+                [{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }],
+                { duration: 160, delay: 80, fill: "forwards" }
+            );
+            animation.finished.then(() => {
+                if (cover !== animation) return;
+                reset();
+                window.location.assign(link.href);
+            }, () => {});
         });
 
-        window.addEventListener("pageshow", resetTransition);
-        window.addEventListener("pagehide", () => body.classList.remove("sidebar-mobile-open"));
+        window.addEventListener("pageshow", reset);
+        window.addEventListener("pagehide", () => {
+            reset();
+            body.classList.remove("sidebar-mobile-open");
+        });
     }
 
     function initPressFeedback() {
@@ -304,19 +237,41 @@
     }
 
     function initSubmittingStates() {
-        qsa("form").forEach(form => {
-            form.addEventListener("submit", () => {
-                const submit = qs('button[type="submit"], input[type="submit"], [data-login-submit]', form);
-                if (!submit || submit.dataset.noLoading !== undefined) return;
+        const active = new Set();
 
+        function reset() {
+            active.forEach(submit => {
+                submit.classList.remove("is-submitting", "is-loading");
+                submit.removeAttribute("aria-busy");
+            });
+            active.clear();
+        }
+
+        doc.addEventListener("submit", event => {
+            const form = event.target;
+            const submit = event.submitter || qs("[data-login-submit]", form);
+            if (!submit || submit.matches("[data-no-loading], [data-download]")) return;
+            if (form.matches("[data-no-loading], [data-download]")) return;
+
+            const method = submit.getAttribute("formmethod") ?? form.method;
+            const target = submit.getAttribute("formtarget") ?? form.target;
+            if (method.toLowerCase() !== "post" || (target && target.toLowerCase() !== "_self")) return;
+
+            const action = submit.hasAttribute("formaction") ? submit.formAction : form.action;
+            // O POST de emissão redireciona para o arquivo ou para a página com mensagens.
+            if (nativeDownloadAction && new URL(action, doc.baseURI).pathname === nativeDownloadAction) return;
+
+            queueMicrotask(() => {
+                if (event.defaultPrevented) return;
+                active.add(submit);
                 submit.classList.add("is-submitting");
                 if (submit.matches("button")) submit.setAttribute("aria-busy", "true");
+                if (submit.matches("[data-login-submit]")) submit.classList.add("is-loading");
             });
         });
 
-        const loginForm = qs("[data-login-form]");
-        const loginSubmit = qs("[data-login-submit]");
-        loginForm?.addEventListener("submit", () => loginSubmit?.classList.add("is-loading"));
+        window.addEventListener("pagehide", reset);
+        window.addEventListener("pageshow", reset);
     }
 
     function dismissMessage(message) {

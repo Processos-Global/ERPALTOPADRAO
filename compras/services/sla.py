@@ -4,9 +4,10 @@ from datetime import timedelta
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
-from django.db.models import prefetch_related_objects
+from django.db.models import Prefetch, prefetch_related_objects
 from django.utils import timezone
 
+from compras.models.pedido import PedidoCompra
 from compras.models.sla import PrazoEntregaPedido, RegraPrazoCompra, TransicaoEtapaCompra
 from compras.services.permissoes import possui_acao_compras
 from usuarios.models import AcaoCompra
@@ -215,13 +216,21 @@ def indicador_pedido(pedido, referencia=None):
             "prazo_regra_dias": prazo_regra.prazo_dias if prazo_regra else None}
 
 
-def resumo_sla_processos(queryset, referencia=None):
+def resumo_sla_processos(queryset, referencia=None, *, situacao_etapa=""):
+    referencia = referencia or timezone.now()
     if hasattr(queryset, "prefetch_related"):
-        processos = list(queryset.prefetch_related("transicoes_sla", "pedidos__prazo_sla"))
+        processos = list(queryset.prefetch_related("transicoes_sla"))
     else:
         processos = list(queryset)
-        prefetch_related_objects(processos, "transicoes_sla", "pedidos__prazo_sla")
+        prefetch_related_objects(processos, "transicoes_sla")
     indicadores = {p.pk: indicador_processo(p, referencia) for p in processos}
+    if situacao_etapa:
+        processos = [p for p in processos if indicadores[p.pk]["etapa"]["situacao"] == situacao_etapa]
+        indicadores = {p.pk: indicadores[p.pk] for p in processos}
+    prefetch_related_objects(
+        processos,
+        Prefetch("pedidos", queryset=PedidoCompra.objects.select_related("prazo_sla")),
+    )
     etapas = [passagem for p in processos for passagem in indicadores[p.pk]["passagens"] if passagem.etapa != "PROCESSO"]
     atrasos = [indicadores[p.pk]["etapa"]["atraso"] or 0 for p in processos
                if indicadores[p.pk]["etapa"]["situacao"] == "ATRASADO"]
