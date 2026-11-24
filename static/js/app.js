@@ -39,66 +39,58 @@
         const toggle = qs("[data-sidebar-toggle]");
         const mobileClose = qs("[data-sidebar-mobile-close]");
         const backdrop = qs("[data-sidebar-backdrop]");
-        let resizeTimer = null;
-
-        const closeMobile = () => body.classList.remove("sidebar-mobile-open");
+        const content = qs(".app-content");
+        if (!sidebar || !toggle) return;
+        let desktopCollapsed = safeStorage.get("erpSidebarCollapsed") === "true";
 
         const syncSidebarState = () => {
-            if (!isDesktop()) {
-                body.classList.remove("sidebar-collapsed");
-                body.classList.remove("sidebar-is-collapsed");
-                return;
-            }
-
-            const collapsed = safeStorage.get("erpSidebarCollapsed") === "true";
+            const desktop = isDesktop();
+            if (desktop) body.classList.remove("sidebar-mobile-open");
+            const mobileOpen = body.classList.contains("sidebar-mobile-open");
+            const collapsed = desktop && desktopCollapsed;
             body.classList.toggle("sidebar-collapsed", collapsed);
             body.classList.toggle("sidebar-is-collapsed", collapsed);
+            sidebar.inert = !desktop && !mobileOpen;
+            if (content) content.inert = mobileOpen;
+            toggle.setAttribute("aria-expanded", String(desktop ? !collapsed : mobileOpen));
         };
 
+        function closeMobile(restoreFocus = false) {
+            if (!body.classList.contains("sidebar-mobile-open")) return;
+            body.classList.remove("sidebar-mobile-open");
+            syncSidebarState();
+            if (restoreFocus) toggle.focus({ preventScroll: true });
+        }
+
         syncSidebarState();
-
-        toggle?.addEventListener("click", () => {
-            body.classList.add("is-resizing-sidebar");
-            window.clearTimeout(resizeTimer);
-            resizeTimer = window.setTimeout(() => body.classList.remove("is-resizing-sidebar"), 360);
-
+        toggle.addEventListener("click", () => {
             if (isDesktop()) {
-                const next = !body.classList.contains("sidebar-collapsed");
-                body.classList.toggle("sidebar-collapsed", next);
-                body.classList.toggle("sidebar-is-collapsed", next);
-                safeStorage.set("erpSidebarCollapsed", String(next));
-            } else {
-                body.classList.toggle("sidebar-mobile-open");
+                desktopCollapsed = !desktopCollapsed;
+                safeStorage.set("erpSidebarCollapsed", String(desktopCollapsed));
+                syncSidebarState();
+                return;
             }
+            body.classList.add("sidebar-mobile-open");
+            syncSidebarState();
+            mobileClose?.focus({ preventScroll: true });
         });
 
-        mobileClose?.addEventListener("click", closeMobile);
-        backdrop?.addEventListener("click", closeMobile);
-
-        window.addEventListener("resize", rafThrottle(() => {
-            if (isDesktop()) closeMobile();
-            syncSidebarState();
-        }), { passive: true });
+        mobileClose?.addEventListener("click", () => closeMobile(true));
+        backdrop?.addEventListener("click", () => closeMobile(true));
+        window.addEventListener("resize", rafThrottle(syncSidebarState), { passive: true });
+        window.addEventListener("pagehide", () => closeMobile());
+        window.addEventListener("pageshow", syncSidebarState);
 
         doc.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") closeMobile();
+            if (event.key === "Escape" && !event.defaultPrevented) closeMobile(true);
         });
-
-        // Mantém compatibilidade com CSS/template que inferem o estado pela largura.
-        if (sidebar && "ResizeObserver" in window) {
-            const observer = new ResizeObserver(entries => {
-                const width = entries[0]?.contentRect?.width || 0;
-                if (isDesktop() && width) body.classList.toggle("sidebar-is-collapsed", width <= 120);
-            });
-            observer.observe(sidebar);
-        }
     }
 
     function isNavigableTransition(event, link) {
         if (event.defaultPrevented || event.button !== 0) return false;
         if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
         if (link.target && link.target.toLowerCase() !== "_self") return false;
-        if (link.matches("[download], [data-download]")) return false;
+        if (link.matches("[download], [data-download], [data-no-loading]")) return false;
 
         const current = new URL(window.location.href);
         let destination;
@@ -153,10 +145,7 @@
         });
 
         window.addEventListener("pageshow", reset);
-        window.addEventListener("pagehide", () => {
-            reset();
-            body.classList.remove("sidebar-mobile-open");
-        });
+        window.addEventListener("pagehide", reset);
     }
 
     function initPressFeedback() {
@@ -171,11 +160,16 @@
             const rect = target.getBoundingClientRect();
             const wave = doc.createElement("span");
             wave.className = "ui-press-wave";
-            wave.style.left = `${event.clientX - rect.left}px`;
-            wave.style.top = `${event.clientY - rect.top}px`;
-            target.classList.add("ui-wave-host");
+            wave.style.setProperty("--press-x", `${event.clientX - rect.left}px`);
+            wave.style.setProperty("--press-y", `${event.clientY - rect.top}px`);
+            if (window.getComputedStyle(target).position === "static") {
+                target.classList.add("ui-wave-host");
+            }
             target.appendChild(wave);
-            wave.addEventListener("animationend", () => wave.remove(), { once: true });
+            wave.addEventListener("animationend", () => {
+                wave.remove();
+                if (!qs(".ui-press-wave", target)) target.classList.remove("ui-wave-host");
+            }, { once: true });
         }, { passive: true });
     }
 
@@ -185,9 +179,7 @@
         const selectors = [
             ".dashboard-heading",
             ".modules__header",
-            ".module-card",
-            ".pc-card",
-            ".pc-filterbar"
+            ".module-card"
         ].join(",");
 
         const items = qsa(selectors).filter(el => !el.closest("[hidden]"));
@@ -237,14 +229,17 @@
     }
 
     function initSubmittingStates() {
-        const active = new Set();
+        const active = new Map();
+
+        function resetButton(submit) {
+            window.clearTimeout(active.get(submit));
+            active.delete(submit);
+            submit.classList.remove("is-submitting", "is-loading");
+            submit.removeAttribute("aria-busy");
+        }
 
         function reset() {
-            active.forEach(submit => {
-                submit.classList.remove("is-submitting", "is-loading");
-                submit.removeAttribute("aria-busy");
-            });
-            active.clear();
+            for (const submit of active.keys()) resetButton(submit);
         }
 
         doc.addEventListener("submit", event => {
@@ -253,9 +248,10 @@
             if (!submit || submit.matches("[data-no-loading], [data-download]")) return;
             if (form.matches("[data-no-loading], [data-download]")) return;
 
-            const method = submit.getAttribute("formmethod") ?? form.method;
+            const method = (submit.getAttribute("formmethod") ?? form.method).toLowerCase();
             const target = submit.getAttribute("formtarget") ?? form.target;
-            if (method.toLowerCase() !== "post" || (target && target.toLowerCase() !== "_self")) return;
+            const localFilter = method === "get" && form.matches("[data-local-submit-loading]");
+            if ((method !== "post" && !localFilter) || (target && target.toLowerCase() !== "_self")) return;
 
             const action = submit.hasAttribute("formaction") ? submit.formAction : form.action;
             // O POST de emissão redireciona para o arquivo ou para a página com mensagens.
@@ -263,13 +259,19 @@
 
             queueMicrotask(() => {
                 if (event.defaultPrevented) return;
-                active.add(submit);
+                window.clearTimeout(active.get(submit));
+                // Cancelamentos nativos sem pagehide podem deixar o documento aberto.
+                const timeout = window.setTimeout(() => resetButton(submit), localFilter ? 4000 : 12000);
+                active.set(submit, timeout);
                 submit.classList.add("is-submitting");
-                if (submit.matches("button")) submit.setAttribute("aria-busy", "true");
+                submit.setAttribute("aria-busy", "true");
                 if (submit.matches("[data-login-submit]")) submit.classList.add("is-loading");
             });
         });
 
+        doc.addEventListener("keydown", event => {
+            if (event.key === "Escape" && !event.defaultPrevented) reset();
+        });
         window.addEventListener("pagehide", reset);
         window.addEventListener("pageshow", reset);
     }

@@ -198,6 +198,15 @@ class RecebimentoPedido(models.Model):
         blank=True,
         validators=[MinValueValidator(Decimal("0.01"))],
     )
+    valor_frete_nota = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        editable=False,
+        validators=[MinValueValidator(Decimal("0"))],
+        help_text="Frete discriminado na nota do fornecedor, cobrado à parte dos itens.",
+    )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

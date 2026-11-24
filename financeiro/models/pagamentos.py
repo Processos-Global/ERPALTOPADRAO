@@ -63,3 +63,10 @@ class Pagamento(models.Model):
 
     def __str__(self):
         return f"{self.titulo.numero} · R$ {self.valor}"
+
+
+class ProgramacaoPagamento(models.Model):
+    titulo = models.OneToOneField(TituloPagar, on_delete=models.PROTECT, related_name="programacao_pagamento")
+    data_programada = models.DateField(db_index=True)
+    ciclo_aprovacao = models.PositiveIntegerField()
+    ativa = models.BooleanField(default=True)

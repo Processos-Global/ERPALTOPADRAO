@@ -112,18 +112,18 @@ body>.app-shell>.app-content>.page-content{
 }
 
 /* Navegação interna */
+.fin-module-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .fin-subnav{
   display:flex;
   align-items:center;
+  flex-wrap:wrap;
   gap:6px;
-  margin:0 0 22px;
+  margin:0;
   padding:6px;
-  overflow-x:auto;
-  border:1px solid var(--fin-line);
-  border-radius:14px;
-  background:#fff;
-  box-shadow:var(--fin-shadow);
-  scrollbar-width:thin;
+  min-width:0;
+  border:1px solid var(--saari-line);
+  border-radius:10px;
+  background:var(--saari-surface);
 }
 .fin-subnav a{
   display:flex;
@@ -132,19 +132,32 @@ body>.app-shell>.app-content>.page-content{
   min-height:40px;
   padding:8px 14px;
   border-radius:10px;
-  color:#77655c;
+  color:var(--saari-muted);
   text-decoration:none;
   white-space:nowrap;
   font-size:13px;
   font-weight:750;
   transition:.16s ease;
 }
-.fin-subnav a:hover{background:#f5f1e9;color:var(--fin-primary-dark)}
+.fin-subnav a:hover{background:var(--saari-surface-soft);color:var(--saari-text)}
 .fin-subnav a.is-active{
-  background:var(--fin-primary-soft);
-  color:var(--fin-primary-dark);
-  box-shadow:inset 0 0 0 1px var(--fin-primary-border);
+  background:var(--saari-surface-soft);
+  color:var(--saari-text);
+  box-shadow:inset 0 -2px 0 var(--saari-accent);
 }
+.fin-config{position:relative}
+.fin-config__links{position:absolute;z-index:5;inset-inline-end:0;min-width:12rem;padding:5px;border:1px solid var(--saari-line);border-radius:8px;background:var(--saari-surface)}
+.fin-config__links a{display:block;padding:8px 10px;color:var(--saari-text);text-decoration:none}
+.fin-config__links a:hover,.fin-config__links a:focus-visible{background:var(--saari-surface-soft)}
+.fin-tabs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fin-tabs [aria-current="page"]{border-color:var(--saari-accent);background:var(--saari-surface-soft)}
+.fin-filter-more{min-width:0;color:var(--saari-text)}
+.fin-filter-more summary{cursor:pointer}
+.fin-filter-more__campos{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.fin-filter-more__campos>*{flex:1 1 155px;min-width:0;max-width:100%}
+.fin-desembolsos{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px}
+.fin-desembolsos div{display:grid;gap:4px}
+.fin-desembolsos meter{width:100%;height:14px;accent-color:var(--saari-accent)}
 
 /* Botões */
 .fin-btn{

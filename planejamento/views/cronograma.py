@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -14,10 +16,26 @@ from planejamento.services.cronograma import (
 from planejamento.services.cronograma.consultas import CronogramaBaseError
 
 
+ABAS_CRONOGRAMA = {
+    "visao-geral": "Visão geral",
+    "semanal": "Avanço semanal",
+    "mensal": "Avanço mensal",
+    "marcos": "Marcos",
+    "indicadores": "Indicadores",
+    "programacao": "Programação",
+    "disciplinas": "Disciplinas",
+    "checklists": "Checklists",
+    "importacao": "Importação",
+}
+
+
 @modulo_required(ModuloSistema.PLANEJAMENTO, NivelPermissao.LEITURA)
 def painel_cronograma(request):
     projeto = (request.GET.get("projeto") or "").strip()
     semana_texto = (request.GET.get("semana") or "").strip()
+    aba = request.GET.get("aba")
+    if aba not in ABAS_CRONOGRAMA:
+        aba = "visao-geral"
 
     try:
         semana = int(semana_texto) if semana_texto else None
@@ -28,6 +46,7 @@ def painel_cronograma(request):
         contexto = montar_painel_cronograma(
             projeto=projeto or None,
             semana=semana,
+            aba=aba,
         )
     except CronogramaBaseError as exc:
         contexto = {
@@ -54,6 +73,12 @@ def painel_cronograma(request):
             "importacao_ativa": None,
         }
 
+    contexto["aba"] = aba
+    contexto["abas"] = ABAS_CRONOGRAMA
+    contexto["filtros_aba"] = urlencode({
+        "projeto": contexto["projeto_selecionado"],
+        "semana": contexto["semana_selecionada"],
+    })
     return render(request, "planejamento/painel_cronograma.html", contexto)
 
 

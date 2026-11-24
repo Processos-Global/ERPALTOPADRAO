@@ -11,6 +11,20 @@ from .cadastros import PlanoFinanceiro
 from .previsoes import PrevisaoFinanceira
 
 
+class SolicitacaoAvulsa(models.Model):
+    """Identifica uma tentativa de criação e o conjunto de parcelas produzido."""
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    chave = models.UUIDField()
+    impressao_digital = models.CharField(max_length=64)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("usuario", "chave"), name="fin_avulsa_usuario_chave_uniq"),
+        ]
+
+
 class TituloPagar(models.Model):
     """Conta a pagar.
 
@@ -127,6 +141,9 @@ class TituloPagar(models.Model):
         help_text="Chave idempotente da origem integrada, ex.: COMPRA_PARCELA:123.",
     )
     origem_detalhe = models.CharField(max_length=255, blank=True)
+    solicitacao_avulsa = models.ForeignKey(
+        SolicitacaoAvulsa, null=True, blank=True, on_delete=models.PROTECT, related_name="titulos",
+    )
     parcela_ordem = models.PositiveIntegerField(null=True, blank=True)
     parcela_total = models.PositiveIntegerField(null=True, blank=True)
     parcela_descricao = models.CharField(max_length=255, blank=True)
@@ -175,6 +192,11 @@ class TituloPagar(models.Model):
 
     class Meta:
         ordering = ("vencimento", "numero")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("solicitacao_avulsa", "parcela_ordem"), name="fin_avulsa_ordem_uniq",
+            ),
+        ]
         indexes = [
             models.Index(fields=["status", "vencimento"], name="fin_tit_st_venc_idx"),
             models.Index(fields=["obra", "status"], name="fin_tit_obra_st_idx"),

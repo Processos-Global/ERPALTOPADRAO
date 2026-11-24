@@ -1,0 +1,77 @@
+<section class="pc-card">
+  <div class="pc-card-head"><div><h2>Pedidos gerados</h2></div><a class="cp-btn cp-btn--sm" href="{% url 'compras:lista_pedidos' %}?q={{ processo.numero|urlencode }}">Abrir acompanhamento completo</a></div>
+  <div class="pc-card-body pc-card-body--flush">
+    {% for pedido, prazo in sla_pedidos %}
+      <div class="pc-order-wrap">
+        <div class="pc-order">
+          <div><span>Pedido</span><strong>{{ pedido.numero }} · {{ pedido.fornecedor.nome_exibicao }}</strong></div>
+          <div><span>Status</span><strong>{{ pedido.get_status_display }}</strong></div>
+          <div><span>{% if prazo.origem_previsao == 'REGRA' %}Limite comercial{% else %}Previsão{% endif %}</span><strong>{{ prazo.previsao|date:"d/m/Y"|default:"—" }}</strong></div>
+          <div><span>Recebido</span><strong>{{ pedido.percentual_recebido|floatformat:0 }}%</strong></div>
+          <div class="value">R$ {{ pedido.valor_total|floatformat:2 }}</div>
+        </div>
+        <div class="pc-order-files">
+          {% include "compras/_prazo_pedido.html" with prazo=prazo pedido=pedido only %}
+          {% if pedido.status == 'ENTREGA_PARCIAL' %}
+            <details>
+              <summary>Quantidades pendentes</summary>
+              <ul>
+                {% for item in pedido.itens.all %}
+                  {% if item.saldo_receber %}<li>{{ item.descricao }} · {{ item.saldo_receber|floatformat:"-4" }} {{ item.unidade }}</li>{% endif %}
+                {% endfor %}
+              </ul>
+            </details>
+          {% endif %}
+          {% if pode_gerenciar_pedidos %}
+            <form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}" class="pc-upload-inline">
+              {% csrf_token %}<input type="hidden" name="origem" value="processo">
+              <input class="cp-input" type="file" name="arquivos" multiple required>
+              <input class="cp-input" type="text" name="descricao" placeholder="Descrição (opcional)">
+              <button class="cp-btn cp-btn--sm" type="submit">Anexar</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}<div class="pc-empty">Nenhum pedido gerado ainda.</div>{% endfor %}
+  </div>
+</section>
+
+<section class="pc-card">
+  <div class="pc-card-head"><div><h2>Documentos anexos</h2></div></div>
+  <div class="pc-card-body pc-card-body--flush">
+    {% if documentos_processo %}
+      <div class="cp-table-wrap">
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th>Etapa</th>
+              <th>Fornecedor</th>
+              <th>Arquivo</th>
+              <th>Responsável</th>
+              <th>Data</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documentos_processo %}
+              <tr>
+                <td><span class="cp-badge">{{ doc.etapa }}</span></td>
+                <td><strong>{{ doc.fornecedor.nome_exibicao }}</strong></td>
+                <td>
+                  <div class="pc-doc-name">
+                    <strong>{{ doc.nome }}</strong>
+                  </div>
+                </td>
+                <td>{{ doc.responsavel|default:"—" }}</td>
+                <td>{{ doc.data|date:"d/m/Y H:i"|default:"—" }}</td>
+                <td><a class="cp-btn cp-btn--sm" href="{% url doc.rota_download doc.pk %}" target="_blank" rel="noopener">Abrir arquivo</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="pc-empty">Nenhum arquivo foi anexado a este processo.</div>
+    {% endif %}
+  </div>
+</section>

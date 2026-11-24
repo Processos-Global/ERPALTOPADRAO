@@ -1,35 +1,56 @@
 {% extends "layouts/base.html" %}
+{% load l10n static %}
 {% block title %}Consulta da Ficha Técnica | SAARI ERP{% endblock %}
 {% block page_name %}Ficha Técnica{% endblock %}
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/ficha-material.css' %}">
 {{ block.super }}
 <style>
-.fc-page{color:var(--text-primary,#40332e)}.fc-head,.fc-panel{background:var(--surface,#fff);border:1px solid var(--border,#e3dcd2);border-radius:10px;padding:20px;margin-bottom:14px}.fc-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}.fc-head h1{font-family:var(--font-serif,Georgia,serif);font-size:30px;margin:4px 0}.fc-actions{display:flex;gap:8px;flex-wrap:wrap}.fc-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border,#cdbdac);border-radius:7px;background:var(--surface,#fff);color:var(--text-primary,#40332e);padding:8px 12px;text-decoration:none!important;font:inherit;cursor:pointer}.fc-btn-primary{background:#49362f;color:white!important}.fc-filters{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px}.fc-field label{display:block;font-size:12px;font-weight:650;margin-bottom:5px}.fc-field select,.fc-field input,.fc-field .fin-searchable__button{width:100%;min-height:38px;border:1px solid var(--border,#cdbdac);border-radius:7px;background:var(--surface,#fff);color:var(--text-primary,#40332e);padding:7px 9px}.fc-field .fin-searchable__button{text-align:left}.fc-panel h2{font-size:18px;margin:0 0 12px}.fc-tree details{border:1px solid var(--border,#e3dcd2);border-radius:8px;margin:8px 0;padding:10px}.fc-tree summary{cursor:pointer;font-weight:650}.fc-muted{color:var(--text-muted,#796c63)}.fc-scroll{overflow-x:auto}.fc-table{width:100%;min-width:950px;border-collapse:collapse;font-size:12px}.fc-table th,.fc-table td{padding:9px;border-bottom:1px solid var(--border,#e3dcd2);text-align:left;vertical-align:top}.fc-table th{background:var(--surface-muted,#f7f4ef)}.fc-table td:nth-child(3),.fc-table td:nth-child(4){white-space:nowrap}.fc-btn:focus-visible,.fc-field :focus-visible,.fc-tree summary:focus-visible{outline:3px solid #b99679;outline-offset:2px}@media(max-width:900px){.fc-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.fc-filters{grid-template-columns:1fr}}
+.fc-page{color:var(--saari-text,#40332e)}.fc-head,.fc-panel{background:var(--surface,#fff);border:1px solid var(--saari-line,#e3dcd2);border-radius:10px;padding:20px;margin-bottom:14px}.fc-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center}.fc-head h1{font-family:var(--font-serif,Georgia,serif);font-size:30px;margin:4px 0}.fc-actions{display:flex;gap:8px;flex-wrap:wrap}.fc-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--saari-line,#cdbdac);border-radius:7px;background:var(--surface,#fff);color:var(--saari-text,#40332e);padding:8px 12px;text-decoration:none!important;font:inherit;cursor:pointer}.fc-btn-primary{background:#49362f;color:white!important}.fc-filters{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:12px}.fc-field label{display:block;font-size:12px;font-weight:650;margin-bottom:5px}.fc-field select,.fc-field input,.fc-field .fin-searchable__button{width:100%;min-height:38px;border:1px solid var(--saari-line,#cdbdac);border-radius:7px;background:var(--surface,#fff);color:var(--saari-text,#40332e);padding:7px 9px}.fc-field .fin-searchable__button{text-align:left}.fc-panel h2{font-size:18px;margin:0 0 12px}.fc-tree details{border:1px solid var(--saari-line,#e3dcd2);border-radius:8px;margin:8px 0;padding:10px}.fc-tree summary{cursor:pointer;font-weight:650}.fc-muted{color:var(--saari-muted,#796c63)}.fc-scroll{overflow-x:auto}.fc-table{width:100%;min-width:950px;border-collapse:collapse;font-size:12px}.fc-table th,.fc-table td{padding:9px;border-bottom:1px solid var(--saari-line,#e3dcd2);text-align:left;vertical-align:top}.fc-table th{background:var(--saari-surface-soft,#f7f4ef)}.fc-table td:nth-child(3),.fc-table td:nth-child(4){white-space:nowrap}.fc-btn:focus-visible,.fc-field :focus-visible,.fc-tree summary:focus-visible{outline:3px solid #b99679;outline-offset:2px}@media(max-width:900px){.fc-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.fc-filters{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="fc-page fin-page">
-  <header class="fc-head"><div><small>Obras / Ficha Técnica</small><h1>Consulta por ambiente</h1><span class="fc-muted">{{ total }} item{{ total|pluralize }} nos filtros selecionados.</span></div><div class="fc-actions"><a class="fc-btn" href="{% url 'obras:fichas_tecnicas' %}">Fichas técnicas</a><a class="fc-btn" href="{% url 'obras:ficha_tecnica_consulta_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">PDF</a><a class="fc-btn fc-btn-primary" href="{% url 'obras:ficha_tecnica_consulta_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Excel</a></div></header>
+  <header class="fc-head"><div><small>Obras / Ficha Técnica</small><h1>Consulta por ambiente</h1><span class="fc-muted">{{ total }} item{{ total|pluralize }} nos filtros selecionados.</span></div><div class="fc-actions"><a class="fc-btn" href="{% url 'obras:fichas_tecnicas' %}">Fichas técnicas</a><a class="fc-btn" data-download href="{% url 'obras:ficha_tecnica_consulta_pdf' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">PDF</a><a class="fc-btn fc-btn-primary" data-download href="{% url 'obras:ficha_tecnica_consulta_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Excel</a></div></header>
   <section class="fc-panel"><form method="get" class="fc-filters">
-    <div class="fc-field"><label for="fc-obra">Obra</label><select data-force-search="1" id="fc-obra" name="obra"><option value="">Todas</option>{% for obra in obras_filtro %}<option value="{{ obra.pk }}" {% if filtros.obra == obra.pk %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
-    <div class="fc-field"><label for="fc-pavimento">Pavimento</label><select data-force-search="1" id="fc-pavimento" name="pavimento"><option value="">Todos</option>{% for pavimento in pavimentos_filtro %}<option value="{{ pavimento.pk }}" {% if filtros.pavimento == pavimento.pk %}selected{% endif %}>{{ pavimento.ficha.obra.nome }} / {{ pavimento.nome }}</option>{% endfor %}</select></div>
-    <div class="fc-field"><label for="fc-ambiente">Ambiente</label><select data-force-search="1" id="fc-ambiente" name="ambiente"><option value="">Todos</option>{% for ambiente in ambientes_filtro %}<option value="{{ ambiente.pk }}" {% if filtros.ambiente == ambiente.pk %}selected{% endif %}>{{ ambiente.pavimento.nome }} / {{ ambiente.identificacao }}</option>{% endfor %}</select></div>
-    <div class="fc-field"><label for="fc-categoria">Categoria GF</label><select data-force-search="1" id="fc-categoria" name="categoria"><option value="">Todas</option>{% for categoria in categorias_filtro %}<option value="{{ categoria.pk }}" {% if filtros.categoria == categoria.pk %}selected{% endif %}>{{ categoria.nome }}</option>{% endfor %}</select></div>
-    <div class="fc-field"><label for="fc-tipo">Tipo de item</label><select data-force-search="1" id="fc-tipo" name="tipo"><option value="">Todos</option>{% for tipo in tipos_filtro %}<option value="{{ tipo.pk }}" {% if filtros.tipo == tipo.pk %}selected{% endif %}>{{ tipo.categoria.nome }} / {{ tipo.nome }}</option>{% endfor %}</select></div>
-    <div class="fc-field"><label for="fc-material">Material do cadastro</label><select data-force-search="1" id="fc-material" name="material"><option value="">Todos</option>{% for material in materiais_filtro %}<option value="{{ material.pk }}" {% if filtros.material == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></div>
+    <div class="fc-field"><label for="fc-obra">Obra</label><select data-force-search="1" id="fc-obra" name="obra"><option value="">Todas</option>{% for obra in obras_filtro %}<option value="{{ obra.pk|unlocalize }}" {% if filtros.obra == obra.pk %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+    <div class="fc-field"><label for="fc-pavimento">Pavimento</label><select data-force-search="1" id="fc-pavimento" name="pavimento"><option value="">Todos</option>{% for pavimento in pavimentos_filtro %}<option value="{{ pavimento.pk|unlocalize }}" {% if filtros.pavimento == pavimento.pk %}selected{% endif %}>{{ pavimento.ficha.obra.nome }} / {{ pavimento.nome }}</option>{% endfor %}</select></div>
+    <div class="fc-field"><label for="fc-ambiente">Ambiente</label><select data-force-search="1" id="fc-ambiente" name="ambiente"><option value="">Todos</option>{% for ambiente in ambientes_filtro %}<option value="{{ ambiente.pk|unlocalize }}" {% if filtros.ambiente == ambiente.pk %}selected{% endif %}>{{ ambiente.pavimento.nome }} / {{ ambiente.identificacao }}</option>{% endfor %}</select></div>
+    <div class="fc-field"><label for="fc-categoria">Categoria GF</label><select data-force-search="1" id="fc-categoria" name="categoria"><option value="">Todas</option>{% for categoria in categorias_filtro %}<option value="{{ categoria.pk|unlocalize }}" {% if filtros.categoria == categoria.pk %}selected{% endif %}>{{ categoria.nome }}</option>{% endfor %}</select></div>
+    <div class="fc-field"><label for="fc-tipo">Tipo de item</label><select data-force-search="1" id="fc-tipo" name="tipo"><option value="">Todos</option>{% for tipo in tipos_filtro %}<option value="{{ tipo.pk|unlocalize }}" {% if filtros.tipo == tipo.pk %}selected{% endif %}>{{ tipo.categoria.nome }} / {{ tipo.nome }}</option>{% endfor %}</select></div>
+    <div class="fc-field">{% include 'obras/_busca_material.html' with material=material_selecionado material_id=filtros.material vazio='Todos' only %}</div>
     <div class="fc-field"><label for="fc-busca">Busca textual</label><input id="fc-busca" name="busca" type="search" value="{{ filtros.busca }}" placeholder="Item, especificação ou medida"></div>
     <div class="fc-actions" style="align-items:end"><button type="submit" class="fc-btn fc-btn-primary">Aplicar filtros</button><a class="fc-btn" href="{% url 'obras:ficha_tecnica_consulta' %}">Limpar</a></div>
   </form><p class="fc-muted">O filtro Material usa somente vínculos escolhidos no cadastro do item.</p></section>
-  <section class="fc-panel fc-tree"><h2>Obra → Pavimento → Ambiente → Itens</h2>
-    {% for no in arvore %}<details {% if filtros.obra == no.obra.pk %}open{% endif %}><summary>{{ no.obra.nome }}</summary>
-      {% if no.gerais %}<details><summary>Itens gerais da obra ({{ no.gerais|length }})</summary>{% include 'obras/_ficha_consulta_itens.html' with itens=no.gerais %}</details>{% endif %}
-      {% for pav in no.pavimentos %}<details><summary>{{ pav.pavimento.nome }}</summary>
-        {% for grupo in pav.ambientes %}<details><summary>{{ grupo.ambiente.identificacao }} · {{ grupo.ambiente.total_itens_ativos }} cadastrado{{ grupo.ambiente.total_itens_ativos|pluralize }}{% if not grupo.itens %} · nenhum item nos filtros{% endif %}</summary>
-          {% if grupo.itens %}{% include 'obras/_ficha_consulta_itens.html' with itens=grupo.itens %}{% else %}<p class="fc-muted">Nenhum item corresponde aos filtros.</p>{% endif %}
-        </details>{% endfor %}
+  <section id="fc-resultados" class="fc-panel fc-tree">
+    <h2>Ambientes e itens</h2>
+    {% if not resumo_navegacao %}<p><a class="fc-btn" href="{% querystring ambiente=None gerais=None %}#fc-resultados">Voltar ao resumo</a></p>{% endif %}
+    {% for no in arvore %}<details {% if filtros.obra == no.obra.pk or filtros.ambiente %}open{% endif %}><summary>{{ no.obra.nome }}</summary>
+      {% if no.total_gerais %}
+        {% if apenas_gerais %}
+          <h3>Itens gerais da obra</h3>
+          {% include 'obras/_ficha_consulta_itens.html' with itens=no.gerais %}
+        {% else %}
+          <p><a class="fc-btn" href="{% querystring obra=no.obra.pk gerais=1 %}#fc-resultados">Itens gerais da obra ({{ no.total_gerais }})</a></p>
+        {% endif %}
+      {% endif %}
+      {% for pav in no.pavimentos %}<details {% if filtros.ambiente %}open{% endif %}><summary>{{ pav.pavimento.nome }}</summary>
+        {% for grupo in pav.ambientes %}
+          {% if resumo_navegacao %}
+            <p>{{ grupo.ambiente.identificacao }} · {{ grupo.total_filtrado }} item{{ grupo.total_filtrado|pluralize }}
+            {% if grupo.total_filtrado %}<a class="fc-btn" href="{% querystring obra=no.obra.pk ambiente=grupo.ambiente.pk %}#fc-resultados">Detalhar</a>{% endif %}</p>
+          {% else %}
+            <h3>{{ grupo.ambiente.identificacao }}</h3>
+            {% if grupo.itens %}{% include 'obras/_ficha_consulta_itens.html' with itens=grupo.itens %}{% else %}<p class="fc-muted">Nenhum item corresponde aos filtros.</p>{% endif %}
+          {% endif %}
+        {% endfor %}
       </details>{% endfor %}
     </details>{% empty %}<p class="fc-muted">Nenhuma ficha técnica corresponde aos filtros.</p>{% endfor %}
   </section>
 </div>
 {% endblock %}
-{% block extra_js %}{{ block.super }}{% include 'financeiro/_dropdown_search.html' %}{% endblock %}
+{% block extra_js %}
+{{ block.super }}
+{% include 'financeiro/_dropdown_search.html' %}
+<script defer src="{% static 'js/ficha-material.js' %}"></script>
+{% endblock %}

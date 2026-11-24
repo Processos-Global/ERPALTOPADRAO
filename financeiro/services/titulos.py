@@ -12,7 +12,9 @@ from financeiro.services.regras import distribuir_valor_parcelas
 
 
 @transaction.atomic
-def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias=30, **dados):
+def criar_titulos_manuais(
+    *, usuario=None, quantidade_parcelas=1, intervalo_dias=30, solicitacao_avulsa=None, **dados,
+):
     """Cria uma ou mais Contas a Pagar manuais.
 
     Lançamento manual usa fornecedor cadastrado, obra obrigatória e parcelas
@@ -54,6 +56,7 @@ def criar_titulos_manuais(*, usuario=None, quantidade_parcelas=1, intervalo_dias
             parcela_total=quantidade,
             parcela_descricao=(f"Parcela {indice}/{quantidade}" if quantidade > 1 else "Pagamento único"),
             criado_por=usuario,
+            solicitacao_avulsa=solicitacao_avulsa,
             **parcela_dados,
         )
         if materiais is not None:
@@ -77,8 +80,10 @@ def criar_titulo_manual(*, usuario=None, **dados):
 
 @transaction.atomic
 def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar atualizados."):
-    if titulo.status == TituloPagar.Status.PAGO:
+    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+    if titulo.esta_pago:
         raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento antes de qualquer ajuste financeiro.")
+    valor_anterior = titulo.valor_liquido
     materiais = dados.pop("materiais", None)
     classificacao = dados.pop("tipo_pagamento", None)
     # A listagem usa beneficiario_nome (snapshot), não o FK fornecedor.
@@ -100,23 +105,23 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
         dados['classificacao'] = classificacao
     criticos = {
         "valor_original", "desconto", "juros", "multa", "outros_acrescimos",
-        "vencimento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento",
+        "vencimento", "competencia", "condicao_pagamento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento",
         "beneficiario_banco", "beneficiario_agencia", "beneficiario_conta_corrente",
         "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular", "obra",
     }
-    alterou_critico = False
+    campos_criticos_alterados = []
     for campo, valor in dados.items():
         if campo in {"quantidade_parcelas", "intervalo_dias"}:
             continue
         if getattr(titulo, campo) != valor:
             if campo in criticos:
-                alterou_critico = True
+                campos_criticos_alterados.append(campo)
             setattr(titulo, campo, valor)
 
     if titulo.fornecedor_id and not titulo.beneficiario_nome:
         titulo.beneficiario_nome = getattr(titulo.fornecedor, "nome_exibicao", None) or str(titulo.fornecedor)
 
-    if alterou_critico and titulo.status in {TituloPagar.Status.APROVADO, TituloPagar.Status.REJEITADO}:
+    if campos_criticos_alterados and titulo.status in {TituloPagar.Status.APROVADO, TituloPagar.Status.REJEITADO}:
         titulo.ciclo_aprovacao += 1
         titulo.status = TituloPagar.Status.AGUARDANDO_APROVACAO
         registrar_evento(titulo, "APROVACAO_REABERTA", "A Conta a Pagar voltou para aprovação porque dados financeiros foram alterados.", usuario)
@@ -124,7 +129,11 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
     titulo.save()
     if materiais is not None:
         titulo.materiais.set(materiais)
-    registrar_evento(titulo, "ATUALIZADO", motivo, usuario)
+    registrar_evento(titulo, "ATUALIZADO", motivo, usuario, {
+        "valor_liquido_anterior": format(valor_anterior, ".2f"),
+        "valor_liquido_posterior": format(titulo.valor_liquido, ".2f"),
+        "campos_criticos_alterados": sorted(campos_criticos_alterados),
+    })
     return titulo
 
 

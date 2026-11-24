@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from compras.models import NecessidadeCompra, ProcessoCompra
+from obras.models import Obra
 
 from .auditoria import registrar_evento
 from .cobertura_estoque import avaliar_solicitacao, registrar_cobertura
@@ -77,6 +78,7 @@ def criar_processo(
         # Os itens reais nascem exclusivamente na matriz de compatibilização.
         itens = []
 
+    Obra.objects.select_for_update().get(pk=obra_id)
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra_id=obra_id,
@@ -97,8 +99,6 @@ def criar_processo(
     )
 
     necessidades = []
-    from obras.models import Obra
-    Obra.objects.select_for_update().get(pk=obra_id)
     for item in itens:
         quantidade = Decimal(str(item["quantidade"]))
         if quantidade <= 0:
@@ -181,6 +181,7 @@ def incluir_necessidade(
     excecao_estoque=False,
     justificativa_excecao="",
 ):
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.etapa_atual != processo.Etapa.COTACAO or processo.status in {
         processo.Status.CANCELADO,
         processo.Status.REPROVADO,
@@ -194,7 +195,6 @@ def incluir_necessidade(
     if material is None or not material.ativo:
         raise ValidationError("Selecione um material ativo do catálogo.")
 
-    from obras.models import Obra
     Obra.objects.select_for_update().get(pk=processo.obra_id)
     cobertura, quantidade_compra, quantidade_reservada, justificativa = avaliar_solicitacao(
         processo=processo, material=material, quantidade=quantidade, usuario=usuario,
@@ -238,6 +238,7 @@ def excluir_necessidade(*, processo, necessidade, usuario):
     Se qualquer proposta que contenha o item já tiver avançado no fluxo, a
     exclusão é bloqueada para preservar o histórico comercial.
     """
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.fluxo_grande_fornecedor:
         raise ValidationError("Use a exclusão própria do fluxo de Grandes Fornecedores.")
 
@@ -253,10 +254,12 @@ def excluir_necessidade(*, processo, necessidade, usuario):
 
     if necessidade.processo_id != processo.pk:
         raise ValidationError("O item informado não pertence a este processo.")
+    necessidade = NecessidadeCompra.objects.filter(pk=necessidade.pk, processo=processo).first()
+    if necessidade is None:
+        raise ValidationError("O item informado não pertence a este processo.")
     if necessidade.situacao == NecessidadeCompra.Situacao.CANCELADA:
         raise ValidationError("Este item já foi cancelado.")
 
-    from obras.models import Obra
     from compras.models import ReservaEstoqueCompra
     Obra.objects.select_for_update().get(pk=processo.obra_id)
     reserva = ReservaEstoqueCompra.objects.select_for_update().filter(necessidade=necessidade).first()
@@ -319,6 +322,7 @@ def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprado
     if apropriacao is None or apropriacao.pai_id is None:
         raise ValidationError("Selecione uma apropriação financeira válida.")
 
+    Obra.objects.select_for_update().get(pk=obra.pk)
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra=obra,
@@ -335,8 +339,6 @@ def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprado
     )
 
     necessidades = []
-    from obras.models import Obra
-    Obra.objects.select_for_update().get(pk=obra.pk)
     for item in itens:
         quantidade = Decimal(str(item["quantidade"]))
         material = item.get("material")
@@ -376,12 +378,18 @@ def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprado
 @transaction.atomic
 def editar_necessidade(*, processo, necessidade, material, quantidade, observacao, usuario,
                       excecao_estoque=False, justificativa_excecao=""):
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.fluxo_grande_fornecedor:
         raise ValidationError("Use a edição própria do fluxo de Grandes Fornecedores.")
-    if processo.etapa_atual != ProcessoCompra.Etapa.COTACAO:
+    if processo.etapa_atual != ProcessoCompra.Etapa.COTACAO or processo.status in {
+        processo.Status.CANCELADO, processo.Status.REPROVADO, processo.Status.CONTRATADO,
+    }:
         raise ValidationError("Itens só podem ser editados enquanto o processo estiver na etapa de cotação.")
     if necessidade.processo_id != processo.pk:
         raise ValidationError("O item informado não pertence a este processo.")
+    necessidade = NecessidadeCompra.objects.filter(pk=necessidade.pk, processo=processo).first()
+    if necessidade is None or necessidade.situacao == NecessidadeCompra.Situacao.CANCELADA:
+        raise ValidationError("Este item não está disponível para edição.")
     itens_cotados = list(necessidade.itens_cotados.select_related("cotacao"))
     if any(i.cotacao.enviada_compatibilizacao_em or i.cotacao.enviada_negociacao_em or i.cotacao.enviada_aprovacao_em for i in itens_cotados):
         raise ValidationError("Este item já faz parte de uma proposta que avançou no fluxo e não pode mais ser editado.")
@@ -392,7 +400,6 @@ def editar_necessidade(*, processo, necessidade, material, quantidade, observaca
         raise ValidationError("A quantidade deve ser maior que zero.")
     if material is None or not material.ativo:
         raise ValidationError("Selecione um material ativo do catálogo.")
-    from obras.models import Obra
     from compras.models import ReservaEstoqueCompra
     Obra.objects.select_for_update().get(pk=processo.obra_id)
     reserva = ReservaEstoqueCompra.objects.select_for_update().filter(necessidade=necessidade).first()

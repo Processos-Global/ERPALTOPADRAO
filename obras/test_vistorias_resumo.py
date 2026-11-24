@@ -4,6 +4,7 @@ from io import BytesIO
 from django.contrib.auth.models import AnonymousUser, User
 from django.core.exceptions import PermissionDenied
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 from pypdf import PdfReader
 
 from obras.models import Obra, VistoriaItem
@@ -88,6 +89,20 @@ class ResumoVistoriasTests(TestCase):
         self.assertIn("Obra Alfa", texto)
         self.assertIn("Atividade 1", texto)
         self.assertNotIn("Obra Beta", texto)
+
+    def test_resumo_exibe_pendencias_apenas_da_obra_selecionada(self):
+        self.client.force_login(self.usuario)
+        url = reverse("obras:vistorias_resumo")
+        consolidado = self.client.get(url)
+        self.assertEqual(consolidado.context["resumo"]["nao_realizadas"], 2)
+        self.assertNotContains(consolidado, "Atividade 1")
+        self.assertNotContains(consolidado, "Atividade 2")
+        detalhe = self.client.get(url, {"obra": self.obra_a.pk})
+        self.assertContains(detalhe, "Atividade 1")
+        self.assertNotContains(detalhe, "Atividade 2")
+
+    def test_filtro_obra_ignora_identificador_fora_da_faixa(self):
+        self.assertIsNone(montar_resumo_vistorias({"obra": "9" * 4500})["filtros"]["obra"])
 
     def test_pdf_exige_permissao_de_leitura(self):
         request = RequestFactory().get("/obras/vistorias/resumo/pdf/")

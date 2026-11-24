@@ -97,7 +97,7 @@ def vistorias_lista(request):
 def vistorias_resumo(request):
     return render(
         request, "obras/vistorias_resumo.html",
-        montar_resumo_vistorias(request.GET),
+        montar_resumo_vistorias(request.GET, detalhar_todas_obras=False),
     )
 
 

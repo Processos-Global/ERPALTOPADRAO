@@ -10,6 +10,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_safe
 
 from obras.models import Obra
 from planejamento.models import ItemCronogramaSuprimento
@@ -38,6 +39,7 @@ from compras.models import (
     PedidoCompra,
     PedidoCompraAnexo,
     ProcessoCompra,
+    RecebimentoPedido,
     SolicitacaoCotacaoFornecedor,
 )
 from compras.services.permissoes import (
@@ -52,6 +54,8 @@ from compras.services.comercial import (
     processo_exige_compatibilizacao,
 )
 from compras.services.pedidos import transicoes_status_permitidas
+from compras.services.cobertura_estoque import resumir_cobertura_necessidade
+from compras.services.integracao_planejamento import data_necessaria_processo
 from compras.services.valores import calcular_total_proposta
 from compras.services.pdf_solicitacao import gerar_pdf_pedido_compra
 from compras.services.pdf_solicitacao_cotacao import gerar_pdf_solicitacao_cotacao
@@ -664,50 +668,32 @@ def _montar_dados_comerciais(
     AcaoCompra.VISUALIZAR
 )
 def dashboard(request):
-    from compras.services.sla import resumo_sla_processos
+    from datetime import UTC, datetime, time
 
-    # Os KPIs/SLA devem representar TODOS os processos filtrados. Porém as
-    # quatro subconsultas de composição e os relacionamentos dos cartões são
-    # necessários apenas aos cartões efetivamente exibidos no Kanban.
-    qs = (
-        _aplicar_filtros(
-            request,
-            ProcessoCompra.objects.select_related("item_cronograma"),
-        )
-        .only(
-            "pk", "status", "etapa_atual", "data_contratacao_concluida",
-            "item_cronograma__prazo_limite_contratacao",
-        )
-        .order_by("-atualizado_em", "-pk")
-    )
+    from compras.services.sla import indicador_processo, resumir_sla_listagem
 
-    hoje = timezone.localdate()
-    processos = list(qs)
-    sla_resumo = resumo_sla_processos(processos)
-
-    # Agregações e SLAs continuam usando o conjunto integral de filtros.
+    qs = _aplicar_filtros(request, ProcessoCompra.objects.all())
+    referencia = timezone.now()
+    hoje = timezone.localdate(referencia)
+    _, sla_resumo = resumir_sla_listagem(qs, referencia)
     status_terminais = {
         ProcessoCompra.Status.CONTRATADO,
         ProcessoCompra.Status.REPROVADO,
         ProcessoCompra.Status.CANCELADO,
     }
-    ativos = [p for p in processos if p.status not in status_terminais]
-    atrasados = [
-        p for p in ativos
-        if p.item_cronograma_id
-        and p.item_cronograma.prazo_limite_contratacao
-        and p.item_cronograma.prazo_limite_contratacao < hoje
-        and p.data_contratacao_concluida is None
-    ]
-    aguardando = [p for p in processos if p.status == ProcessoCompra.Status.AGUARDANDO_APROVACAO]
-    ajustes = [p for p in processos if p.status == ProcessoCompra.Status.AJUSTE_SOLICITADO]
-    limite_contratados = hoje - timedelta(days=30)
-    contratados = [
-        p for p in processos
-        if p.status == ProcessoCompra.Status.CONTRATADO
-        and p.data_contratacao_concluida
-        and p.data_contratacao_concluida.date() >= limite_contratados
-    ]
+    # A contagem anterior comparava a data do timestamp retornado pelo banco (UTC).
+    limite_contratados = datetime.combine(hoje - timedelta(days=30), time.min, tzinfo=UTC)
+    totais_por_status = {
+        linha["status"]: linha for linha in qs.order_by().values("status").annotate(
+            total=Count("pk"),
+            atrasados=Count("pk", filter=Q(
+                item_cronograma__prazo_limite_contratacao__lt=hoje,
+                data_contratacao_concluida__isnull=True,
+            )),
+            recentes=Count("pk", filter=Q(data_contratacao_concluida__gte=limite_contratados)),
+        )
+    }
+    ativos = [linha for status, linha in totais_por_status.items() if status not in status_terminais]
 
     # O Kanban é organizado pelos STATUS reais do processo.
     # Isso é importante porque alguns estados relevantes, como
@@ -795,25 +781,22 @@ def dashboard(request):
         ),
     ]
 
-    processos_por_status = defaultdict(list)
-    for processo_item in processos:
-        processos_por_status[processo_item.status].append(processo_item)
-
     # Limita apenas os cartões renderizados, sem afetar totais, SLA ou filtros.
     # A listagem completa continua disponível e paginada.
     limite_cartoes_coluna = 30
+    qs_ids = qs.order_by("-atualizado_em", "-pk").values_list("pk", flat=True)
     colunas = []
     ids_exibidos = []
     for chave, titulo, statuses, descricao in definicoes:
-        quantidade_total = sum(len(processos_por_status.get(status, ())) for status in statuses)
+        quantidade_total = sum(totais_por_status.get(status, {}).get("total", 0) for status in statuses)
         ids_coluna = []
         for status in statuses:
+            if status not in totais_por_status:
+                continue
             disponiveis = limite_cartoes_coluna - len(ids_coluna)
             if disponiveis <= 0:
                 break
-            ids_coluna.extend(
-                processo.pk for processo in processos_por_status.get(status, ())[:disponiveis]
-            )
+            ids_coluna.extend(qs_ids.filter(status=status)[:disponiveis])
         ids_exibidos.extend(ids_coluna)
         colunas.append({
             "chave": chave,
@@ -825,24 +808,24 @@ def dashboard(request):
 
     cartoes_por_id = {
         processo.pk: processo
-        for processo in _qs_processos().filter(pk__in=ids_exibidos)
+        for processo in _qs_processos().filter(pk__in=ids_exibidos).prefetch_related("transicoes_sla")
     } if ids_exibidos else {}
     for processo in cartoes_por_id.values():
-        processo.sla = sla_resumo["indicadores"][processo.pk]
+        processo.sla = indicador_processo(processo, referencia)
     for coluna in colunas:
         coluna["processos"] = [
-            cartoes_por_id[pk] for pk in coluna.pop("ids_exibidos")
+            cartoes_por_id[pk] for pk in coluna.pop("ids_exibidos") if pk in cartoes_por_id
         ]
 
     return render(
         request,
         "compras/dashboard.html",
         {
-            "ativos": len(ativos),
-            "atrasados": len(atrasados),
-            "aguardando": len(aguardando),
-            "ajustes": len(ajustes),
-            "contratados": len(contratados),
+            "ativos": sum(linha["total"] for linha in ativos),
+            "atrasados": sum(linha["atrasados"] for linha in ativos),
+            "aguardando": totais_por_status.get(ProcessoCompra.Status.AGUARDANDO_APROVACAO, {}).get("total", 0),
+            "ajustes": totais_por_status.get(ProcessoCompra.Status.AJUSTE_SOLICITADO, {}).get("total", 0),
+            "contratados": totais_por_status.get(ProcessoCompra.Status.CONTRATADO, {}).get("recentes", 0),
             "colunas": colunas,
             "obras": (
                 Obra.objects
@@ -874,19 +857,19 @@ def dashboard(request):
     AcaoCompra.VISUALIZAR
 )
 def lista_processos(request):
-    from compras.services.sla import resumo_sla_processos
+    from compras.services.sla import indicador_processo, resumir_sla_listagem
 
-    ordem = ("-criado_em", "-pk")
-    qs = _aplicar_filtros(request, ProcessoCompra.objects.all()).order_by(*ordem)
-    sla_resumo = resumo_sla_processos(
-        qs.only("pk", "status", "etapa_atual"),
+    referencia = timezone.now()
+    qs, sla_resumo = resumir_sla_listagem(
+        _aplicar_filtros(request, _qs_processos()),
+        referencia,
         situacao_etapa=(request.GET.get("sla") or "").strip(),
     )
-    indicadores = sla_resumo["indicadores"]
-    pagina = Paginator(list(indicadores), 30).get_page(request.GET.get("page"))
-    pagina.object_list = list(_qs_processos().filter(pk__in=pagina.object_list).order_by(*ordem))
+    qs = qs.order_by("-criado_em", "-pk").prefetch_related("transicoes_sla")
+    pagina = Paginator(qs, 30).get_page(request.GET.get("page"))
+    pagina.object_list = list(pagina.object_list)
     for processo_item in pagina:
-        processo_item.sla = indicadores[processo_item.pk]
+        processo_item.sla = indicador_processo(processo_item, referencia)
     return render(
         request,
         "compras/processos_lista.html",
@@ -918,6 +901,139 @@ def lista_processos(request):
 # ============================================================
 
 
+@require_safe
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def cobertura_necessidade(request, pk, necessidade_id):
+    necessidade = get_object_or_404(
+        NecessidadeCompra.objects.select_related("processo__obra", "material").filter(
+            processo_id=pk, material_id__isnull=False,
+        ).exclude(situacao=NecessidadeCompra.Situacao.CANCELADA),
+        pk=necessidade_id,
+    )
+    return render(request, "compras/necessidade_cobertura.html", {
+        "necessidade": necessidade,
+        "cobertura": resumir_cobertura_necessidade(necessidade),
+    })
+
+
+@require_safe
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def historico_processo(request, pk):
+    processo = get_object_or_404(ProcessoCompra.objects.only("pk", "numero", "titulo"), pk=pk)
+    return _render_secao_processo(request, processo, "Histórico do processo", "compras/_processo_historico.html", {
+        "historico": processo.historico.select_related("usuario")[:100],
+    })
+
+
+def _render_secao_processo(request, processo, titulo, template, contexto):
+    if request.GET.get("fragmento") == "1":
+        return render(request, template, {"processo": processo, **contexto})
+    return render(request, "compras/processo_secao.html", {
+        "processo": processo, "titulo": titulo, "template_secao": template, **contexto,
+    })
+
+
+@require_safe
+@compras_acao_required(AcaoCompra.VISUALIZAR)
+def pedidos_processo(request, pk):
+    from compras.services.sla import indicador_pedido
+
+    processo = get_object_or_404(ProcessoCompra.objects.only("pk", "numero", "titulo"), pk=pk)
+    contratacoes = list(
+        processo
+        .contratacoes
+        .filter(
+            cancelada=False, documento__isnull=False,
+        )
+        .select_related(
+            "fornecedor",
+            "formalizado_por",
+        )
+        .order_by(
+            "fornecedor__nome"
+        )
+    )
+
+    pedidos = list(
+        processo
+        .pedidos
+        .select_related(
+            "fornecedor", "prazo_sla", "processo__item_cronograma__cronograma_obra",
+        )
+        .annotate(ultimo_recebimento_em=Subquery(
+            RecebimentoPedido.objects.filter(pedido_id=OuterRef("pk"))
+            .order_by("-criado_em", "-pk").values("criado_em")[:1],
+        ))
+        .prefetch_related(
+            "itens",
+            Prefetch("anexos", queryset=PedidoCompraAnexo.objects.select_related("enviado_por")),
+        )
+        .order_by(
+            "fornecedor__nome"
+        )
+    )
+
+    # Centraliza, para consulta, todos os arquivos já anexados ao processo.
+    # A tela de Pedidos apenas exibe esses arquivos; não exige nova seleção
+    # de fornecedor nem novo upload nesta etapa.
+    documentos_processo = []
+
+    cotacoes_com_documento = (processo.cotacoes.exclude(documento="")
+                              .exclude(documento__isnull=True).select_related("fornecedor", "criado_por"))
+    for cotacao in cotacoes_com_documento:
+        if cotacao.documento:
+            documentos_processo.append(
+                {
+                    "etapa": "Cotação",
+                    "pk": cotacao.pk,
+                    "rota_download": "compras:baixar_documento_cotacao",
+                    "fornecedor": cotacao.fornecedor,
+                    "nome": cotacao.documento.name.rsplit("/", 1)[-1],
+                    "responsavel": cotacao.criado_por,
+                    "data": cotacao.atualizado_em,
+                }
+            )
+
+    for contratacao in contratacoes:
+        if contratacao.documento:
+            documentos_processo.append(
+                {
+                    "etapa": "Formalização",
+                    "pk": contratacao.pk,
+                    "rota_download": "compras:baixar_documento_contratacao",
+                    "fornecedor": contratacao.fornecedor,
+                    "nome": contratacao.documento.name.rsplit("/", 1)[-1],
+                    "responsavel": contratacao.formalizado_por,
+                    "data": contratacao.formalizado_em,
+                }
+            )
+
+    for pedido in pedidos:
+        for anexo in pedido.anexos.all():
+            documentos_processo.append(
+                {
+                    "etapa": "Pedido",
+                    "pk": anexo.pk,
+                    "rota_download": "compras:baixar_anexo_pedido",
+                    "fornecedor": pedido.fornecedor,
+                    "nome": anexo.nome_arquivo,
+                    "responsavel": anexo.enviado_por,
+                    "data": anexo.criado_em,
+                }
+            )
+
+    documentos_processo.sort(
+        key=lambda item: item["data"],
+        reverse=True,
+    )
+
+    return _render_secao_processo(request, processo, "Pedidos", "compras/_processo_pedidos.html", {
+        "sla_pedidos": [(pedido, indicador_pedido(pedido)) for pedido in pedidos],
+        "documentos_processo": documentos_processo,
+        "pode_gerenciar_pedidos": possui_acao_compras(request.user, AcaoCompra.GERENCIAR_PEDIDOS),
+    })
+
+
 @compras_acao_required(
     AcaoCompra.VISUALIZAR
 )
@@ -925,14 +1041,14 @@ def detalhe_processo(
     request,
     pk,
 ):
-    from compras.services.sla import indicador_processo, indicador_pedido
+    from compras.services.sla import indicador_processo
 
     processo = get_object_or_404(
         ProcessoCompra.objects
         .select_related(
             "obra",
             "comprador",
-            "item_cronograma",
+            "item_cronograma__cronograma_obra",
         ),
         pk=pk,
     )
@@ -1120,91 +1236,6 @@ def detalhe_processo(
         )
     )
 
-    contratacoes = list(
-        processo
-        .contratacoes
-        .filter(
-            cancelada=False
-        )
-        .select_related(
-            "fornecedor",
-            "formalizado_por",
-        )
-        .order_by(
-            "fornecedor__nome"
-        )
-    )
-
-    pedidos = list(
-        processo
-        .pedidos
-        .select_related(
-            "fornecedor", "prazo_sla",
-        )
-        .prefetch_related(
-            "itens",
-            Prefetch("anexos", queryset=PedidoCompraAnexo.objects.select_related("enviado_por")),
-        )
-        .order_by(
-            "fornecedor__nome"
-        )
-    )
-
-    # Centraliza, para consulta, todos os arquivos já anexados ao processo.
-    # A tela de Pedidos apenas exibe esses arquivos; não exige nova seleção
-    # de fornecedor nem novo upload nesta etapa.
-    documentos_processo = []
-
-    for cotacao in cotacoes:
-        if cotacao.documento:
-            documentos_processo.append(
-                {
-                    "etapa": "Cotação",
-                    "pk": cotacao.pk,
-                    "rota_download": "compras:baixar_documento_cotacao",
-                    "fornecedor": cotacao.fornecedor,
-                    "documento": cotacao.documento,
-                    "nome": cotacao.documento.name.rsplit("/", 1)[-1],
-                    "responsavel": cotacao.criado_por,
-                    "data": cotacao.atualizado_em,
-                }
-            )
-
-    for contratacao in contratacoes:
-        if contratacao.documento:
-            documentos_processo.append(
-                {
-                    "etapa": "Formalização",
-                    "pk": contratacao.pk,
-                    "rota_download": "compras:baixar_documento_contratacao",
-                    "fornecedor": contratacao.fornecedor,
-                    "documento": contratacao.documento,
-                    "nome": contratacao.documento.name.rsplit("/", 1)[-1],
-                    "responsavel": contratacao.formalizado_por,
-                    "data": contratacao.formalizado_em,
-                }
-            )
-
-    for pedido in pedidos:
-        for anexo in pedido.anexos.all():
-            documentos_processo.append(
-                {
-                    "etapa": "Pedido",
-                    "pk": anexo.pk,
-                    "rota_download": "compras:baixar_anexo_pedido",
-                    "fornecedor": pedido.fornecedor,
-                    "documento": anexo.arquivo,
-                    "nome": anexo.nome_arquivo,
-                    "responsavel": anexo.enviado_por,
-                    "data": anexo.criado_em,
-                }
-            )
-
-    documentos_processo.sort(
-        key=lambda item: item["data"],
-        reverse=True,
-    )
-
     form_envio_fornecedor = None
     form_proposta_nova = None
     pode_cadastrar_nova_proposta = False
@@ -1271,7 +1302,7 @@ def detalhe_processo(
     contexto = {
         "processo": processo,
         "sla": indicador_processo(processo),
-        "sla_pedidos": [(pedido, indicador_pedido(pedido)) for pedido in pedidos],
+        "data_necessaria_obra": data_necessaria_processo(processo),
         "aprovacao_aprovada": aprovacao_aprovada,
         "vinculos": vinculos,
         "necessidades": necessidades,
@@ -1298,25 +1329,7 @@ def detalhe_processo(
             )
         ),
 
-        "contratacoes": (
-            contratacoes
-        ),
-
-        "pedidos": (
-            pedidos
-        ),
-
-        "documentos_processo": (
-            documentos_processo
-        ),
-
-        "historico": (
-            processo
-            .historico
-            .select_related(
-                "usuario"
-            )[:100]
-        ),
+        "pedidos_total": processo.pedidos.count(),
 
         "pode_editar": (
             pode_editar
@@ -1632,13 +1645,15 @@ def pdf_solicitacao_cotacao(request, pk):
     AcaoCompra.VISUALIZAR
 )
 def lista_pedidos(request):
+    from compras.services.sla import indicador_pedido
 
     pedidos = (
         PedidoCompra.objects
         .select_related(
             "obra",
             "fornecedor",
-            "processo",
+            "processo__item_cronograma__cronograma_obra",
+            "prazo_sla",
         )
         .prefetch_related(
             "itens",
@@ -1692,6 +1707,9 @@ def lista_pedidos(request):
     pagina = Paginator(pedidos, 25).get_page(request.GET.get("page"))
     pagina.object_list = list(pagina.object_list)
     for pedido in pagina:
+        pedido.indicador_prazo = indicador_pedido(pedido)
+        ultimo_recebimento = next(iter(pedido.recebimentos.all()), None)
+        pedido.ultimo_recebimento_em = ultimo_recebimento.criado_em if ultimo_recebimento else None
         pedido.transicoes_status_permitidas = transicoes_status_permitidas(pedido)
 
     return render(

@@ -1,0 +1,126 @@
+<section class="ps-detail-shell" aria-label="Detalhe comercial de {{ item.item }}">
+  <div class="ps-detail-head">
+    <div class="ps-detail-context">
+      <span class="ps-context-pill"><strong>{{ item.item }}</strong></span>
+      <span class="ps-context-pill">Data necessária na obra <strong>{{ item.data_necessaria_obra|date:"d/m/Y"|default:"Não definida" }}</strong></span>
+      {% if item.acompanhamento_atividades %}<span class="ps-context-pill">Atividades <strong>{{ item.acompanhamento_atividades_texto }}</strong></span>{% endif %}
+    </div>
+    {% if item.acompanhamento_processos %}
+    <div class="ps-processes">
+      {% for processo in item.acompanhamento_processos %}
+      <a class="ps-process-pill" href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}">
+        {{ processo.numero }} · {{ processo.get_status_display }}{% if processo.comprador %} · {{ processo.comprador }}{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if historico_data_necessaria %}
+  <details class="ps-commercial-history">
+    <summary>Alterações da data necessária</summary>
+    <ul class="ps-commercial-list">
+      {% for registro in historico_data_necessaria %}
+      <li>{{ registro.criado_em|date:"d/m/Y H:i" }}{% if registro.alterado_por %} · {{ registro.alterado_por }}{% endif %} · {{ registro.data_anterior|date:"d/m/Y"|default:"Sem data" }} → {{ registro.data_nova|date:"d/m/Y"|default:"Sem data" }}</li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  {% if item.acompanhamento_fornecedores %}
+  <div class="ps-supplier-wrap" tabindex="0" aria-label="Propostas e pedidos por fornecedor">
+    <table class="ps-supplier-table">
+      <thead>
+        <tr>
+          <th scope="col">Fornecedor</th>
+          <th scope="col">Cotado</th>
+          <th scope="col">Negociado</th>
+          <th scope="col">Aprovado</th>
+          <th scope="col">Contratado em pedidos</th>
+          <th scope="col">Situação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fornecedor in item.acompanhamento_fornecedores %}
+        <tr>
+          <td><strong class="ps-supplier-name">{{ fornecedor.fornecedor_nome }}</strong><span class="ps-supplier-process">{{ fornecedor.processo_numero }}</span></td>
+          <td class="ps-money">{{ fornecedor.valor_cotado_formatado }}</td>
+          <td class="ps-money">{{ fornecedor.valor_negociado_formatado }}</td>
+          <td class="ps-money">{{ fornecedor.valor_aprovado_formatado }}</td>
+          <td class="ps-money">{{ fornecedor.valor_pedido_formatado }}</td>
+          <td><span class="ps-status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span></td>
+        </tr>
+        {% if fornecedor.solicitacao_registro or fornecedor.proposta_detalhe or fornecedor.pedidos_detalhes %}
+        <tr>
+          <td colspan="6">
+            <details class="ps-commercial-details">
+              <summary>Itens e condições <span class="visually-hidden">de {{ fornecedor.fornecedor_nome }}, processo {{ fornecedor.processo_numero }}</span></summary>
+              {% with solicitacao=fornecedor.solicitacao_registro %}
+              {% if solicitacao %}
+              <p>Solicitação · {{ solicitacao.get_status_display }}{% if solicitacao.enviada_em %} · Enviada em {{ solicitacao.enviada_em|date:"d/m/Y H:i" }}{% endif %}{% if solicitacao.enviada_por %} por {{ solicitacao.enviada_por }}{% endif %}{% if solicitacao.respondida_em %} · Resposta em {{ solicitacao.respondida_em|date:"d/m/Y H:i" }}{% endif %}</p>
+              {% endif %}
+              {% endwith %}
+              {% with proposta=fornecedor.proposta_detalhe %}
+              {% if proposta %}
+              <h3>Proposta</h3>
+              <p>{% if proposta.cotacao.data_proposta %}{{ proposta.cotacao.data_proposta|date:"d/m/Y" }} · {% endif %}{% if proposta.cotacao.criado_por %}Registrada por {{ proposta.cotacao.criado_por }} · {% endif %}Frete cotado {{ proposta.frete_cotado }} · Desconto da proposta {{ proposta.desconto_proposta }}{% if fornecedor.valor_negociado != None %} · Frete após negociação {{ proposta.frete_negociado }}{% endif %}</p>
+              <ul class="ps-commercial-list">
+              {% for linha in proposta.itens %}
+                <li>
+                  <strong>{{ linha.item.descricao_comercial|default:linha.item.necessidade.descricao }}</strong>
+                  <span>{{ linha.quantidade }} {{ linha.item.necessidade.unidade }} · Unitário {{ linha.unitario_cotado }} · Desconto do item {{ linha.desconto_cotado }} · Total do item {{ linha.total_cotado }}</span>
+                  {% if linha.compatibilizacao %}<span>Compatibilização {{ linha.compatibilizacao.get_resultado_display }} · {{ linha.compatibilizacao.data|date:"d/m/Y H:i" }}{% if linha.compatibilizacao.responsavel %} · {{ linha.compatibilizacao.responsavel }}{% endif %}</span>{% endif %}
+                  {% if linha.negociacao %}<span>Negociação · {{ linha.negociacao.atualizado_em|date:"d/m/Y H:i" }}{% if linha.negociacao.atualizado_por %} · {{ linha.negociacao.atualizado_por }}{% endif %}{% if linha.negociacao.valor_unitario_negociado != None %} · Unitário R$ {{ linha.negociacao.valor_unitario_negociado|floatformat:"4" }}{% endif %}</span>{% endif %}
+                </li>
+              {% endfor %}
+              </ul>
+              {% endif %}
+              {% endwith %}
+              {% if fornecedor.adjudicacoes %}
+              <h3>Aprovação</h3>
+              <p>Frete aprovado {{ fornecedor.frete_aprovado }} · Total aprovado {{ fornecedor.valor_aprovado_formatado }}</p>
+              <ul class="ps-commercial-list">
+                {% for adjudicacao in fornecedor.adjudicacoes %}
+                <li>
+                  <strong>{{ adjudicacao.necessidade.descricao }}</strong>
+                  <span>{{ adjudicacao.quantidade|floatformat:"-4" }} {{ adjudicacao.necessidade.unidade }} · Unitário R$ {{ adjudicacao.valor_unitario_final|floatformat:"4" }} · Desconto do item R$ {{ adjudicacao.desconto_final|floatformat:"2" }}</span>
+                  <span>{{ adjudicacao.selecionado_em|date:"d/m/Y H:i" }}{% if adjudicacao.selecionado_por %} · {{ adjudicacao.selecionado_por }}{% endif %}</span>
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% for registro in fornecedor.pedidos_detalhes %}
+              {% with pedido=registro.pedido prazo=registro.prazo %}
+              <h3><a href="{% url 'compras:lista_pedidos' %}?q={{ pedido.numero|urlencode }}">{{ pedido.numero }}</a> · {{ pedido.get_status_display }}</h3>
+              <p>Emissão {{ pedido.data|date:"d/m/Y" }}{% if pedido.responsavel %} · {{ pedido.responsavel }}{% endif %}</p>
+              <p>Subtotal {{ registro.subtotal }} · Descontos {{ registro.descontos }} · Frete {{ registro.frete }} · Total {{ registro.total }}</p>
+              <p>Previsão {{ prazo.previsao|date:"d/m/Y"|default:"Sem previsão" }} · Entrega integral {{ prazo.realizada|date:"d/m/Y"|default:"Sem registro" }}{% if pedido.recebido_por %} · {{ pedido.recebido_por }}{% endif %}{% if prazo.dias_atraso_comercial %} · Atraso comercial {{ prazo.dias_atraso_comercial }} dia{{ prazo.dias_atraso_comercial|pluralize }}{% endif %}</p>
+              {% if prazo.defasagem_necessidade != None %}<p>Desvio da data necessária na obra {{ prazo.defasagem_necessidade }} dia{{ prazo.defasagem_necessidade|pluralize }}</p>{% endif %}
+              <ul class="ps-commercial-list">
+                {% for linha in registro.itens %}
+                <li>
+                  <strong>{{ linha.descricao }}</strong>
+                  <span>Contratado {{ linha.quantidade_formatada }} {{ linha.unidade }} · Recebido {{ linha.quantidade_recebida_formatada }} {{ linha.unidade }}{% if pedido.status != "CANCELADO" %} · Pendente {{ linha.quantidade_pendente_formatada }} {{ linha.unidade }}{% endif %}</span>
+                  <span>Unitário {{ linha.valor_unitario_formatado }} · Desconto do item {{ linha.desconto_formatado }} · Total do item {{ linha.valor_total_formatado }}</span>
+                  {% for recebimento in linha.recebimentos %}
+                  <span>Entrega de {{ recebimento.quantidade }} {{ linha.unidade }} em {{ recebimento.registro.criado_em|date:"d/m/Y H:i" }}{% if recebimento.registro.usuario %} · {{ recebimento.registro.usuario }}{% endif %}</span>
+                  {% endfor %}
+                </li>
+                {% empty %}<li>Sem itens registrados.</li>{% endfor %}
+              </ul>
+              {% endwith %}
+              {% endfor %}
+            </details>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% elif item.acompanhamento_tem_compras %}
+  <div class="ps-detail-empty">Sem propostas, solicitações ou pedidos registrados.</div>
+  {% else %}
+  <div class="ps-detail-empty">Sem processo de compra vinculado.</div>
+  {% endif %}
+</section>

@@ -40,6 +40,7 @@ def obter_marcos(*, projeto, semana):
             valor_previsto = registro.get("percentual_previsto")
         previsto = decimal_para_float(valor_previsto)
 
+        inicio_base = registro.get("inicio_base")
         termino_base = registro.get("termino_base")
         termino_real = registro.get("termino_real")
         data_atualizacao = registro.get("data_atualizacao")
@@ -51,30 +52,37 @@ def obter_marcos(*, projeto, semana):
             and data_atualizacao
             and termino_base < data_atualizacao
         )
-        concluido_com_atraso = bool(
-            concluido
-            and termino_base
-            and termino_real
-            and termino_real > termino_base
+        variacao_dias = None
+        if concluido and termino_base and termino_real:
+            variacao_dias = (termino_real - termino_base).days
+        concluido_com_atraso = variacao_dias is not None and variacao_dias > 0
+        futuro = (
+            not concluido and not realizado and not registro.get("inicio_real")
+            and inicio_base and data_atualizacao and inicio_base > data_atualizacao
         )
 
         if concluido:
             situacao = "CONCLUIDO"
-            rotulo = (
-                "Concluído com atraso"
-                if concluido_com_atraso
-                else "Concluído"
-            )
+            if concluido_com_atraso:
+                rotulo = "Concluído com atraso"
+            elif variacao_dias is not None and variacao_dias < 0:
+                rotulo = "Concluído adiantado"
+            elif variacao_dias == 0:
+                rotulo = "Concluído no prazo"
+            else:
+                rotulo = "Concluído"
         elif atrasado:
             situacao = "ATRASADO"
             rotulo = "Atrasado"
         else:
             situacao = "PLANEJADO"
-            rotulo = "Planejado"
+            if futuro:
+                rotulo = "Futuro"
+            elif termino_base and data_atualizacao:
+                rotulo = "No prazo"
+            else:
+                rotulo = "Planejado"
 
-        variacao_dias = None
-        if concluido and termino_base and termino_real:
-            variacao_dias = (termino_real - termino_base).days
         atraso_projetado_dias = (
             max((data_atualizacao - termino_base).days, 0)
             if not concluido and termino_base and data_atualizacao else None
@@ -98,7 +106,7 @@ def obter_marcos(*, projeto, semana):
             "concluido": concluido,
             "concluido_com_atraso": concluido_com_atraso,
             "atrasado": atrasado,
-            "inicio_base": formatar_data(registro.get("inicio_base")),
+            "inicio_base": formatar_data(inicio_base),
             "termino_base": formatar_data(termino_base),
             "inicio_real": formatar_data(registro.get("inicio_real")),
             "termino_real": formatar_data(termino_real),

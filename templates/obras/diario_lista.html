@@ -5,7 +5,7 @@
 {% block content %}
 <div class="op-page">
   <section class="op-head">
-    <div class="op-head-copy"><span class="op-eyebrow">Obras · Registros diários</span><h1>Diário de Obra</h1><p>Acompanhe o histórico diário de execução, equipes, clima e ocorrências de todas as obras.</p></div>
+    <div class="op-head-copy"><h1>Diário de Obra</h1></div>
     <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar ao menu</a><a class="op-btn" href="{% url 'obras:diario_novo' %}">Novo diário</a></div>
   </section>
 
@@ -17,7 +17,7 @@
   </form>
 
   <section class="op-panel">
-    <div class="op-panel-head"><div><h2>Registros realizados</h2><span class="op-muted">Os mais recentes aparecem primeiro</span></div></div>
+    <div class="op-panel-head"><h2>Registros</h2></div>
     {% for d in diarios %}
       <article class="op-diario-card">
         <div class="op-diario-top">
@@ -34,7 +34,16 @@
         {% if d.fotos.all %}<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">{% for foto in d.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Evidência fotográfica" loading="lazy" style="width:100px;height:78px;object-fit:cover;border-radius:7px"></a>{% endfor %}</div>{% endif %}
         <div class="op-muted" style="margin-top:12px">Registrado por {% if d.registrado_por %}{{ d.registrado_por.get_full_name|default:d.registrado_por.username }}{% else %}—{% endif %} · atualizado {{ d.atualizado_em|date:"d/m/Y H:i" }}</div>
       </article>
-    {% empty %}<div class="op-empty">Nenhum diário encontrado para os filtros informados. Use “Novo diário” para criar o primeiro registro.</div>{% endfor %}
+    {% empty %}<div class="op-empty">Nenhum diário encontrado.</div>{% endfor %}
+    {% if pagina.has_other_pages %}
+      <nav class="op-panel-head" aria-label="Paginação dos diários">
+        <span class="op-muted">Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+        <div class="op-head-actions">
+          {% if pagina.has_previous %}<a class="op-btn secondary" href="{% querystring page=pagina.previous_page_number %}">Anterior</a>{% endif %}
+          {% if pagina.has_next %}<a class="op-btn secondary" href="{% querystring page=pagina.next_page_number %}">Próxima</a>{% endif %}
+        </div>
+      </nav>
+    {% endif %}
   </section>
 </div>
 {% endblock %}

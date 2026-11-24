@@ -2,6 +2,7 @@ import json
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from usuarios.decorators import possui_permissao_acao, modulo_required
 from usuarios.models import ModuloSistema
 from django.db import transaction
@@ -249,12 +250,13 @@ def alteracoes_projeto(request):
 
     obra_id = (request.GET.get("obra") or "").strip()
     obras = list(Obra.objects.filter(ativa=True).order_by("codigo", "nome"))
-    qs = AlteracaoProjeto.objects.select_related("obra", "criado_por")
-    if obra_id.isdigit():
+    qs = AlteracaoProjeto.objects.select_related("obra", "criado_por", "disciplina")
+    if obra_id.isascii() and obra_id.isdecimal() and len(obra_id) <= 19:
         qs = qs.filter(obra_id=int(obra_id))
 
+    pagina = Paginator(qs, 15).get_page(request.GET.get("page"))
     alteracoes = []
-    for registro in qs[:300]:
+    for registro in pagina:
         alteracoes.append({
             "obj": registro,
             "obra_label": _obra_label(registro.obra),
@@ -263,6 +265,7 @@ def alteracoes_projeto(request):
     return render(request, "projetos/alteracoes.html", {
         "form": form,
         "alteracoes": alteracoes,
+        "pagina": pagina,
         "obra_opcoes": [{"id": o.pk, "label": _obra_label(o)} for o in obras],
         "obra_id": obra_id,
     })

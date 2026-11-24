@@ -1,0 +1,9 @@
+{% if pagina.has_other_pages %}
+<nav class="cad-actions" aria-label="Paginação">
+  <span class="cad-muted">{{ pagina.paginator.count }} registros · Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  <div class="cad-actions__main">
+    {% if pagina.has_previous %}<a class="cad-btn cad-btn--secondary" href="{% querystring page=pagina.previous_page_number %}">Anterior</a>{% endif %}
+    {% if pagina.has_next %}<a class="cad-btn cad-btn--secondary" href="{% querystring page=pagina.next_page_number %}">Próxima</a>{% endif %}
+  </div>
+</nav>
+{% endif %}

@@ -1198,7 +1198,7 @@
       <div class="pc-hero-meta">
         <span class="pc-hero-chip"><strong>{{ necessidades|length }}</strong> item{{ necessidades|length|pluralize }}</span>
         <span class="pc-hero-chip"><strong>{{ cotacoes|length }}</strong> fornecedor{{ cotacoes|length|pluralize }}</span>
-        <span class="pc-hero-chip"><strong>{{ pedidos|length }}</strong> pedido{{ pedidos|length|pluralize }}</span>
+        <span class="pc-hero-chip"><strong>{{ pedidos_total }}</strong> pedido{{ pedidos_total|pluralize }}</span>
       </div>
     </div>
 
@@ -1217,13 +1217,15 @@
 
   <section class="cp-section" aria-label="Prazos do processo"><div class="cp-section__body">
     <strong>Prazo da etapa: {{ sla.etapa.rotulo }}</strong>
+    {% if sla.etapa.iniciada_em %}<span> · Início {{ sla.etapa.iniciada_em|date:'d/m/Y' }}</span>{% endif %}
+    {% if sla.etapa.encerrada_em %}<span> · Fim {{ sla.etapa.encerrada_em|date:'d/m/Y' }}</span>{% endif %}
     {% if sla.etapa.limite %}<span> · Limite {{ sla.etapa.limite|date:'d/m/Y' }}</span>{% endif %}
     {% if sla.etapa.decorridos != None %}<span> · {{ sla.etapa.decorridos }} de {{ sla.etapa.permitidos|default:'—' }} dias decorridos</span>{% endif %}
     {% if sla.etapa.restantes != None %}<span> · {{ sla.etapa.restantes }} dias restantes</span>{% endif %}
     {% if sla.etapa.atraso %}<span> · {{ sla.etapa.atraso }} dias de atraso</span>{% endif %}
     <div>Prazo geral: {{ sla.geral.rotulo }}{% if sla.geral.limite %} · limite {{ sla.geral.limite|date:'d/m/Y' }}{% endif %}</div>
     {% if processo.item_cronograma.prazo_limite_contratacao %}<div>Prazo de contratação do cronograma: {{ processo.item_cronograma.prazo_limite_contratacao|date:'d/m/Y' }}</div>{% endif %}
-    {% for pedido, prazo in sla_pedidos %}<div>Pedido {{ pedido.numero }}: previsão comercial {{ prazo.previsao|date:'d/m/Y'|default:'—' }}{% if prazo.realizada %} · entregue {{ prazo.realizada|date:'d/m/Y' }}{% endif %}{% if prazo.dias_atraso_comercial %} · atraso comercial {{ prazo.dias_atraso_comercial }} dias{% endif %}</div>{% endfor %}
+    <div>Data necessária na obra: {% if data_necessaria_obra %}{{ data_necessaria_obra|date:'d/m/Y' }} · Cronograma de Suprimentos{% else %}Não definida{% endif %}</div>
   </div></section>
 
   <div class="pc-tabs-shell">
@@ -1233,8 +1235,8 @@
       <button class="pc-tab" type="button" data-tab="comparacao">Compatibilização</button>
       <button class="pc-tab" type="button" data-tab="negociacao">Negociação</button>
       <button class="pc-tab" type="button" data-tab="aprovacao">Aprovação</button>
-      <button class="pc-tab" type="button" data-tab="pedido">Pedidos <span class="pc-count">{{ pedidos|length }}</span></button>
-      <button class="pc-tab" type="button" data-tab="historico">Histórico</button>
+      <a class="pc-tab" href="{% url 'compras:pedidos_processo' processo.pk %}" data-tab="pedido">Pedidos <span class="pc-count">{{ pedidos_total }}</span></a>
+      <a class="pc-tab" data-tab="historico" href="{% url 'compras:historico_processo' processo.pk %}">Histórico</a>
     </div>
   </div>
 
@@ -1246,7 +1248,7 @@
           <div class="pc-kpi"><span>Itens</span><strong>{{ necessidades|length }}</strong><small>Itens solicitados</small></div>
           <div class="pc-kpi"><span>Fornecedores</span><strong>{{ cotacoes|length }}</strong><small>Propostas abertas</small></div>
           <div class="pc-kpi"><span>Selecionado</span><strong>R$ {{ valor_total_selecionado|floatformat:2 }}</strong><small>Valor adjudicado</small></div>
-          <div class="pc-kpi"><span>Pedidos</span><strong>{{ pedidos|length }}</strong><small>Pedidos gerados</small></div>
+          <div class="pc-kpi"><span>Pedidos</span><strong>{{ pedidos_total }}</strong><small>Pedidos gerados</small></div>
         </div>
 
         <section class="pc-card" id="itens-compra">
@@ -1270,7 +1272,7 @@
                 <tbody>
                   {% for n in necessidades %}
                     <tr>
-                      <td><strong>{{ n.descricao }}</strong>{% if n.material %}<small class="pc-muted" style="display:block">{{ n.material.codigo }} · {{ n.material.unidade.sigla }}</small>{% endif %}</td>
+                      <td><strong>{{ n.descricao }}</strong>{% if n.material %}<small class="pc-muted" style="display:block">{{ n.material.codigo }} · {{ n.material.unidade.sigla }}</small><a href="{% url 'compras:cobertura_necessidade' processo.pk n.pk %}" aria-label="Cobertura de {{ n.descricao }}">Cobertura</a>{% endif %}</td>
                       <td>{{ n.especificacao|default:"—" }}</td>
                       <td>{{ n.quantidade_necessaria|floatformat:"-4" }} {{ n.unidade }}</td>
                       <td>{{ n.quantidade_incluida|floatformat:"-4" }} {{ n.unidade }}</td>
@@ -2460,85 +2462,11 @@
     </div>
   </section>
 
-  <!-- PEDIDOS -->
   <section class="pc-tab-panel" data-panel="pedido">
     <div class="pc-workspace">
-      <main class="pc-main">
-        <section class="pc-card">
-          <div class="pc-card-head"><div><h2>Pedidos gerados</h2></div><a class="cp-btn cp-btn--sm" href="{% url 'compras:lista_pedidos' %}?q={{ processo.numero|urlencode }}">Abrir acompanhamento completo</a></div>
-          <div class="pc-card-body pc-card-body--flush">
-            {% for pedido in pedidos %}
-              <div class="pc-order-wrap">
-                <div class="pc-order">
-                  <div><span>Pedido</span><strong>{{ pedido.numero }} · {{ pedido.fornecedor.nome_exibicao }}</strong></div>
-                  <div><span>Status</span><strong>{{ pedido.get_status_display }}</strong></div>
-                  <div><span>Previsão</span><strong>{{ pedido.previsao_entrega_atual|date:"d/m/Y"|default:"—" }}</strong></div>
-                  <div><span>Recebido</span><strong>{{ pedido.percentual_recebido|floatformat:0 }}%</strong></div>
-                  <div class="value">R$ {{ pedido.valor_total|floatformat:2 }}</div>
-                </div>
-                <div class="pc-order-files">
-                  {% if pedido.anexos.all %}
-                    <div class="pc-file-chips">{% for anexo in pedido.anexos.all %}<a href="{% url 'compras:baixar_anexo_pedido' anexo.pk %}" target="_blank" rel="noopener">{{ anexo.nome_arquivo }}</a>{% endfor %}</div>
-                  {% endif %}
-                  {% if permissoes_compras.pode_gerenciar_pedidos %}
-                    <form method="post" enctype="multipart/form-data" action="{% url 'compras:anexar_arquivo_pedido' pedido.pk %}" class="pc-upload-inline">
-                      {% csrf_token %}<input type="hidden" name="origem" value="processo">
-                      <input class="cp-input" type="file" name="arquivos" multiple required>
-                      <input class="cp-input" type="text" name="descricao" placeholder="Descrição (opcional)">
-                      <button class="cp-btn cp-btn--sm" type="submit">Anexar</button>
-                    </form>
-                  {% endif %}
-                </div>
-              </div>
-            {% empty %}<div class="pc-empty">Nenhum pedido gerado ainda.</div>{% endfor %}
-          </div>
-        </section>
-
-        <section class="pc-card">
-          <div class="pc-card-head">
-            <div>
-              <h2>Documentos anexos</h2>
-
-            </div>
-          </div>
-          <div class="pc-card-body pc-card-body--flush">
-            {% if documentos_processo %}
-              <div class="cp-table-wrap">
-                <table class="cp-table">
-                  <thead>
-                    <tr>
-                      <th>Etapa</th>
-                      <th>Fornecedor</th>
-                      <th>Arquivo</th>
-                      <th>Responsável</th>
-                      <th>Data</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for doc in documentos_processo %}
-                      <tr>
-                        <td><span class="cp-badge">{{ doc.etapa }}</span></td>
-                        <td><strong>{{ doc.fornecedor.nome_exibicao }}</strong></td>
-                        <td>
-                          <div class="pc-doc-name">
-                            <strong>{{ doc.nome }}</strong>
-                            <small>Arquivo anexado ao processo</small>
-                          </div>
-                        </td>
-                        <td>{{ doc.responsavel|default:"—" }}</td>
-                        <td>{{ doc.data|date:"d/m/Y H:i"|default:"—" }}</td>
-                        <td><a class="cp-btn cp-btn--sm" href="{% url doc.rota_download doc.pk %}" target="_blank" rel="noopener">Abrir arquivo</a></td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              </div>
-            {% else %}
-              <div class="pc-empty">Nenhum arquivo foi anexado a este processo.</div>
-            {% endif %}
-          </div>
-        </section>
+      <main class="pc-main" data-section-url="{% url 'compras:pedidos_processo' processo.pk %}?fragmento=1">
+        <p data-section-status role="status"></p>
+        <a href="{% url 'compras:pedidos_processo' processo.pk %}">Abrir pedidos e anexos em uma página</a>
       </main>
       {% include "compras/_processo_contexto.html" %}
     </div>
@@ -2548,12 +2476,9 @@
   <section class="pc-tab-panel" data-panel="historico">
     <section class="pc-card">
       <div class="pc-card-head"><div><h2>Histórico do processo</h2></div></div>
-      <div class="pc-card-body">
-        <div class="pc-timeline">
-          {% for evento in historico %}
-            <div class="pc-event"><strong>{{ evento.tipo|default:"Evento" }}{% if evento.usuario %} · {{ evento.usuario }}{% endif %}</strong><p>{{ evento.descricao|default:"—" }}</p><time>{{ evento.criado_em|date:"d/m/Y H:i" }}</time></div>
-          {% empty %}<div class="pc-empty">Nenhum evento registrado.</div>{% endfor %}
-        </div>
+      <div class="pc-card-body" data-section-url="{% url 'compras:historico_processo' processo.pk %}?fragmento=1">
+        <p data-section-status role="status"></p>
+        <a href="{% url 'compras:historico_processo' processo.pk %}">Abrir histórico em uma página</a>
       </div>
     </section>
   </section>
@@ -3389,13 +3314,35 @@
   if(!root)return;
   const tabs=[...root.querySelectorAll('[data-tab]')];
   const panels=[...root.querySelectorAll('[data-panel]')];
+  async function loadSection(panel){
+    if(!panel || panel.dataset.loaded==='true' || panel.getAttribute('aria-busy')==='true')return;
+    const status=panel.querySelector('[data-section-status]');
+    panel.setAttribute('aria-busy','true');
+    status.textContent='Carregando…';
+    try{
+      const response=await fetch(panel.dataset.sectionUrl, {redirect:'error'});
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      panel.innerHTML=await response.text();
+      panel.dataset.loaded='true';
+      root.dispatchEvent(new Event('purchase-section-loaded'));
+    }catch(error){
+      status.textContent='Não foi possível carregar esta seção.';
+    }finally{
+      panel.removeAttribute('aria-busy');
+    }
+  }
   function openTab(name,scroll=false){
     tabs.forEach(t=>t.classList.toggle('is-active',t.dataset.tab===name));
     panels.forEach(p=>p.classList.toggle('is-active',p.dataset.panel===name));
     try{history.replaceState(null,'','#'+name)}catch(e){}
+    loadSection(panels.find(p=>p.dataset.panel===name)?.querySelector('[data-section-url]'));
     if(scroll)root.querySelector('.pc-tabs-shell')?.scrollIntoView({behavior:'smooth',block:'start'});
   }
-  tabs.forEach(t=>t.addEventListener('click',()=>openTab(t.dataset.tab)));
+  tabs.forEach(t=>t.addEventListener('click',event=>{
+    if(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)return;
+    event.preventDefault();
+    openTab(t.dataset.tab);
+  }));
   root.querySelectorAll('[data-open-tab]').forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.openTab,true)));
   const hash=location.hash.replace('#','');
   if(hash&&panels.some(p=>p.dataset.panel===hash)){
@@ -3861,6 +3808,7 @@
     if (event.target.matches('.pc-tech-decision select')) requestAnimationFrame(applyFilter);
   });
 
+  root.addEventListener('purchase-section-loaded', applyFilter);
   applyFilter();
 })();
 </script>

@@ -20,8 +20,26 @@ from usuarios.models import ModuloSistema
 
 @interno
 def painel(request):
-    qs=Chamado.objects.all()
-    return render(request,'pos_obra/painel.html',{'total':qs.count(),'abertos':qs.exclude(status__in=['CONCLUIDO','CANCELADO']).count(),'concluidos':qs.filter(status='CONCLUIDO').count(),'satisfacao':PesquisaSatisfacao.objects.aggregate(x=Avg('atendimento'))['x'],'compromissos':AgendamentoOS.objects.select_related('chamado__cliente','responsavel').filter(fim__gte=timezone.now(),situacao__in=['PROPOSTO','CONFIRMADO','REAGENDAMENTO']).exclude(chamado__status__in=['CONCLUIDO','CANCELADO']).order_by('inicio')[:6], 'chamados':qs.select_related('cliente','empreendimento__obra').order_by('-criado_em')[:12]})
+    chamados = Chamado.objects.all()
+    encerrados = ('CONCLUIDO', 'CANCELADO')
+    contagens = chamados.aggregate(
+        total=Count('pk'),
+        abertos=Count('pk', filter=~Q(status__in=encerrados)),
+        concluidos=Count('pk', filter=Q(status='CONCLUIDO')),
+    )
+    compromissos = (
+        AgendamentoOS.objects.select_related('chamado__cliente', 'responsavel')
+        .filter(fim__gte=timezone.now(), situacao__in=['PROPOSTO', 'CONFIRMADO', 'REAGENDAMENTO'])
+        .exclude(chamado__status__in=encerrados).order_by('inicio')[:6]
+    )
+    return render(request, 'pos_obra/painel.html', {
+        **contagens,
+        'satisfacao': PesquisaSatisfacao.objects.aggregate(media=Avg('atendimento'))['media'],
+        'compromissos': compromissos,
+        'chamados': chamados.select_related('cliente', 'empreendimento__obra').order_by('-criado_em')[:12],
+    })
+
+
 def filtros_chamados(request, qs):
     for name in ('status', 'prioridade'):
         if request.GET.get(name):
@@ -57,7 +75,7 @@ def lista(request):
 def kanban(request):
     qs = filtros_chamados(request, Chamado.objects.select_related(
         'cliente', 'empreendimento__obra', 'tipo_problema', 'responsavel')).order_by('-criado_em', '-pk')
-    contagens = dict(qs.values('status').annotate(total=Count('pk')).values_list('status', 'total'))
+    contagens = dict(qs.order_by().values('status').annotate(total=Count('pk')).values_list('status', 'total'))
     grupos = [{'codigo': key, 'nome': label, 'total': contagens.get(key, 0),
                'itens': list(qs.filter(status=key)[:30])} for key, label in Chamado.STATUS]
     return render(request, 'pos_obra/kanban.html', {'grupos': grupos, 'filtros_query': pagina_contexto(request), 'prioridade_choices': Chamado.PRIORIDADES})

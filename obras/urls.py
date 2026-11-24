@@ -31,6 +31,7 @@ urlpatterns = [
 
     path("fichas/", views.fichas_tecnicas, name="fichas_tecnicas"),
     path("fichas/consulta/", views.ficha_tecnica_consulta, name="ficha_tecnica_consulta"),
+    path("fichas/consulta/materiais/", views.ficha_tecnica_consulta_materiais, name="ficha_tecnica_consulta_materiais"),
     path("fichas/consulta/pdf/", views.ficha_tecnica_consulta_pdf, name="ficha_tecnica_consulta_pdf"),
     path("fichas/consulta/excel/", views.ficha_tecnica_consulta_excel, name="ficha_tecnica_consulta_excel"),
     path("fichas/<int:obra_id>/", views.ficha_tecnica, name="ficha_tecnica"),

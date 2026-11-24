@@ -2,12 +2,13 @@
 {% load obras_format l10n %}
 {% block title %}{% if diario %}Editar{% else %}Novo{% endif %} Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
 {% block extra_css %}{% include "obras/_operacional_styles.html" %}<style>
-.op-diario-opcao{display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:10px;border:1px solid var(--op-line);border-radius:9px;background:#fff;color:var(--op-text);cursor:pointer}.op-diario-opcao input{width:auto;min-height:0;margin-top:4px;accent-color:var(--op-ink)}.op-diario-opcao span{min-width:0}.op-diario-opcao small{display:block;color:var(--op-muted);font-size:12px}
+.op-diario-opcao{display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:10px;border:1px solid var(--op-line);border-radius:9px;background:var(--surface,#fff);color:var(--saari-text);cursor:pointer}.op-diario-opcao input{width:auto;min-height:0;margin-top:4px;accent-color:var(--op-ink)}.op-diario-opcao span{min-width:0}.op-diario-opcao small{display:block;color:var(--saari-muted);font-size:12px}
+.op-diario-grupo{margin-top:10px}.op-diario-grupo summary{cursor:pointer;font-weight:700;padding:8px 0}
 </style>{% endblock %}
 {% block content %}
 <div class="op-page">
   <section class="op-head">
-    <div class="op-head-copy"><span class="op-eyebrow">Diário de Obra</span><h1>{% if diario %}Editar registro{% else %}Novo registro diário{% endif %}</h1><p>Selecione a obra e registre as informações do dia.</p></div>
+    <div class="op-head-copy"><span class="op-eyebrow">Diário de Obra</span><h1>{% if diario %}Editar registro{% else %}Novo registro diário{% endif %}</h1></div>
     <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Voltar aos registros</a></div>
   </section>
 
@@ -22,13 +23,23 @@
     </div>
     <div class="op-field c12"><label>Equipe / terceiros presentes</label><textarea name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
     <div class="op-field c12"><label>Ocorrências / impedimentos</label><textarea name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
-    <div class="op-field c12"><label>Fotos do dia (até 12 por envio, 10 MB cada)</label><input type="file" name="fotos" accept="image/*" multiple></div>
-    {% if diario and diario.fotos.all %}<div class="c12"><strong>Fotos já anexadas</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">{% for foto in diario.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Foto do diário" loading="lazy" style="height:110px;width:145px;object-fit:cover;border-radius:8px"></a>{% endfor %}</div></div>{% endif %}
     <div class="c12 op-stock-preview" data-diario-atividades data-url="{% url 'obras:diario_atividades_api' %}">
       <strong>Atividades da semana</strong> <span class="op-muted" data-diario-semana aria-live="polite">{% if semana %}Semana {{ semana.semana }} · início {{ semana.inicio_semana|date:'d/m/Y' }}{% else %}Sem semana importada para a obra e data.{% endif %}</span>
-      <div data-diario-opcoes>{% for atividade in atividades %}<label class="op-diario-opcao"><input type="checkbox" name="atividades" value="{{ atividade.id|unlocalize }}" {% if atividade.id in atividades_selecionadas %}checked{% endif %}><span><strong>{{ atividade.nome }}</strong><small>{{ atividade.disciplina }} · {{ atividade.local }} · {{ atividade.origem }}</small></span></label>{% empty %}<p class="op-muted">Nenhuma atividade disponível para a semana selecionada.</p>{% endfor %}</div>
+      {% regroup atividades by grupo as grupos %}
+      <div data-diario-opcoes>
+        {% for grupo in grupos %}
+          <details class="op-diario-grupo" name="diario-checklists"{% if forloop.first %} open{% endif %}>
+            <summary>{{ grupo.grouper }}</summary>
+            {% for atividade in grupo.list %}
+              <label class="op-diario-opcao"><input type="checkbox" name="atividades" value="{{ atividade.id|unlocalize }}" {% if atividade.id in atividades_selecionadas %}checked{% endif %}><span><strong>{{ atividade.nome }}</strong><small>{{ atividade.disciplina }} · {{ atividade.local }} · {{ atividade.origem }}</small></span></label>
+            {% endfor %}
+          </details>
+        {% empty %}<p class="op-muted">Nenhuma atividade disponível para a semana selecionada.</p>{% endfor %}
+      </div>
     </div>
     {% if vinculos_historicos %}<div class="c12 op-stock-preview"><strong>Atividades de cronogramas anteriores</strong><p class="op-muted">Estes vínculos permanecem registrados neste diário. Marque apenas os que deseja remover.</p>{% for vinculo in vinculos_historicos %}<label class="op-diario-opcao"><input type="checkbox" name="remover_atividade_historica" value="{{ vinculo.pk|unlocalize }}" data-diario-vinculo-historico="{{ vinculo.atividade_id|unlocalize }}"><span><strong>{{ vinculo.atividade.nome_tarefa }}</strong><small>{{ vinculo.get_origem_display }} · Semana {{ vinculo.semana }} · início {{ vinculo.inicio_semana|date:'d/m/Y' }}</small></span></label>{% endfor %}</div>{% endif %}
+    <div class="op-field c12"><label>Fotos do dia (até 12 por envio, 10 MB cada)</label><input type="file" name="fotos" accept="image/*" multiple></div>
+    {% if diario and diario.fotos.all %}<div class="c12"><strong>Fotos já anexadas</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">{% for foto in diario.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Foto do diário" loading="lazy" style="height:110px;width:145px;object-fit:cover;border-radius:8px"></a>{% endfor %}</div></div>{% endif %}
     <div class="c12 op-actions"><button class="op-btn" type="submit" data-diario-salvar>Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
   </div></form>
 </div>
@@ -87,12 +98,24 @@
         lista.replaceChildren();
         const disponiveis=d.atividades.filter(a=>!historicas.has(String(a.id)));
         if(!disponiveis.length){mensagem('Nenhuma atividade disponível para a semana selecionada.');return;}
+        const grupos = new Map();
         disponiveis.forEach(a=>{
+          if (!grupos.has(a.grupo)) {
+            const grupo = document.createElement('details');
+            grupo.className = 'op-diario-grupo';
+            grupo.name = 'diario-checklists';
+            grupo.open = grupos.size === 0;
+            const titulo = document.createElement('summary');
+            titulo.textContent = a.grupo;
+            grupo.append(titulo);
+            grupos.set(a.grupo, grupo);
+            lista.append(grupo);
+          }
           const label=document.createElement('label');label.className='op-diario-opcao';
           const input=document.createElement('input');input.type='checkbox';input.name='atividades';input.value=a.id;
           const texto=document.createElement('span'), nome=document.createElement('strong'), detalhe=document.createElement('small');
           nome.textContent=a.nome;detalhe.textContent=[a.disciplina,a.local,a.origem].filter(Boolean).join(' · ');
-          texto.append(nome,detalhe);label.append(input,texto);lista.appendChild(label);
+          texto.append(nome,detalhe);label.append(input,texto);grupos.get(a.grupo).append(label);
         });
       }).catch(()=>{
         if(atual!==sequencia)return;

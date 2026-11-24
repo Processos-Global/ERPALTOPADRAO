@@ -7,19 +7,41 @@
     <div class="cp-head__copy"><div class="cp-eyebrow">Compras</div><h1 class="cp-title">Relatório de Grandes Fornecedores</h1></div>
     <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:grandes_fornecedores' %}">Voltar ao acompanhamento</a></div>
   </header>
-  <form method="get" class="cp-filter" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
+  <form method="get" class="cp-filter" data-local-submit-loading style="display:flex;flex-wrap:wrap;gap:8px;align-items:end">
     <label class="cp-label">Obra<select class="cp-input" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.nome }}</option>{% endfor %}</select></label>
     <label class="cp-label">Categoria GF<select class="cp-input" name="categoria"><option value="">Todas</option>{% for c in categorias %}<option value="{{ c.pk }}" {% if filtros.categoria == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></label>
     <label class="cp-label">Fornecedor<select class="cp-input" name="fornecedor"><option value="">Todos</option>{% for f in fornecedores %}<option value="{{ f.pk }}" {% if filtros.fornecedor == f.pk|stringformat:'s' %}selected{% endif %}>{{ f.nome }}</option>{% endfor %}</select></label>
     <label class="cp-label">Situação<select class="cp-input" name="status"><option value="">Todas</option><option value="APROVACAO_PROJETO" {% if filtros.status == 'APROVACAO_PROJETO' %}selected{% endif %}>Aprovação de projeto</option><option value="LIBERADO_MEDICAO" {% if filtros.status == 'LIBERADO_MEDICAO' %}selected{% endif %}>Liberado para medição</option><option value="PRODUCAO" {% if filtros.status == 'PRODUCAO' %}selected{% endif %}>Produção</option><option value="PARCIAL" {% if filtros.status == 'PARCIAL' %}selected{% endif %}>Entrega parcial</option><option value="ENTREGUE" {% if filtros.status == 'ENTREGUE' %}selected{% endif %}>Entregue</option></select></label>
     <label class="cp-label">Busca<input class="cp-input" name="busca" value="{{ filtros.busca }}"></label>
     <button class="cp-btn cp-btn--primary" type="submit">Filtrar</button>
-    <button class="cp-btn" name="formato" value="xlsx" type="submit">Excel</button>
-    <button class="cp-btn" name="formato" value="pdf" type="submit">PDF</button>
+    <button class="cp-btn" name="formato" value="xlsx" type="submit" data-download>Excel</button>
+    <button class="cp-btn" name="formato" value="pdf" type="submit" data-download>PDF</button>
   </form>
   <div class="cp-card" style="overflow-x:auto">
-    <table class="cp-table"><thead><tr><th>Obra</th><th>Categoria GF</th><th>Fornecedor</th><th>Processo</th><th>Etapa</th><th>Pedido</th><th>Item</th><th>Contratado</th><th>Recebido</th><th>Pendente</th><th>Valor</th><th>Previsão</th><th>Realizado</th><th>Atraso</th><th>Pendência</th></tr></thead>
-    <tbody>{% for linha in linhas %}<tr><td>{{ linha.obra }}</td><td>{{ linha.categoria }}</td><td>{{ linha.fornecedor }}</td><td>{{ linha.processo }}</td><td>{{ linha.etapa }}</td><td>{{ linha.pedido }}</td><td>{{ linha.item }}</td><td>{{ linha.quantidade }} {{ linha.unidade }}</td><td>{{ linha.recebida }} {{ linha.unidade }}</td><td>{{ linha.pendente }} {{ linha.unidade }}</td><td>{% if linha.valor_contratado is not None %}R$ {{ linha.valor_contratado }}{% else %}—{% endif %}</td><td>{{ linha.previsao|date:'d/m/Y'|default:'—' }}</td><td>{{ linha.realizada|date:'d/m/Y'|default:'—' }}</td><td>{{ linha.dias_atraso|default_if_none:'—' }}</td><td>{{ linha.pendencia|default:'—' }}</td></tr>{% empty %}<tr><td colspan="15">Nenhum item encontrado para os filtros.</td></tr>{% endfor %}</tbody></table>
+    <table class="cp-table">
+      <thead><tr><th>Obra</th><th>Categoria GF</th><th>Fornecedor</th><th>Processo</th><th>Etapa</th><th>Pedido</th><th>Responsável</th><th>Item</th><th>Solicitado</th><th>Contratado</th><th>Recebido</th><th>Pendente</th><th>Valor</th><th>Previsão</th><th>Entrega</th><th>Desvio comercial (dias)</th><th>Data necessária na obra</th><th>Prazo na obra</th><th>Situação</th><th>Pendência</th></tr></thead>
+      <tbody>
+        {% for linha in linhas %}
+          <tr>
+            <td>{{ linha.obra }}</td><td>{{ linha.categoria }}</td><td>{{ linha.fornecedor }}</td>
+            <td>{{ linha.processo }}</td><td>{{ linha.etapa }}</td><td>{{ linha.pedido|default:'—' }}</td>
+            <td>{{ linha.responsavel|default:'—' }}</td><td>{{ linha.item }}</td>
+            <td>{{ linha.solicitada }} {{ linha.unidade_solicitada }}</td>
+            <td>{% if linha.contratada is not None %}{{ linha.contratada }} {{ linha.unidade }}{% else %}—{% endif %}</td>
+            <td>{{ linha.recebida }} {{ linha.unidade }}</td><td>{{ linha.pendente }} {{ linha.unidade }}</td>
+            <td>{% if linha.valor_contratado is not None %}R$ {{ linha.valor_contratado }}{% else %}—{% endif %}</td>
+            <td>{{ linha.previsao|date:'d/m/Y'|default:'—' }}</td>
+            <td>{% if linha.realizada %}{{ linha.realizada|date:'d/m/Y' }}{% elif linha.ultimo_recebimento %}Último recebimento · {{ linha.ultimo_recebimento|date:'d/m/Y' }}{% else %}—{% endif %}</td>
+            <td>{{ linha.desvio_comercial|default_if_none:'—' }}</td>
+            <td>{% if linha.data_necessaria_obra %}{{ linha.data_necessaria_obra|date:'d/m/Y' }} · Cronograma atual{% else %}—{% endif %}</td>
+            <td>{{ linha.situacao_obra }}{% if linha.desvio_obra != None %} · {{ linha.desvio_obra }} dias{% endif %}</td>
+            <td>{{ linha.status_entrega }}</td><td>{{ linha.pendencia|default:'—' }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="20">Nenhum item encontrado para os filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 </div>
 {% endblock %}

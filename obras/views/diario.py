@@ -3,6 +3,7 @@ from datetime import date
 from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -23,6 +24,11 @@ from planejamento.services.cronograma.consultas import (
 
 PRE_HABITESE = {"CHECKLIST HABITE-SE", "CHECKLIST PRE HABITE-SE"}
 POS_HABITESE = "POS HABITE-SE"
+GRUPOS_ATIVIDADES = {
+    DiarioAtividadePlanejada.Origem.PRE_HABITESE: "Pré Habite-se",
+    DiarioAtividadePlanejada.Origem.POS_HABITESE: "Pós Habite-se",
+    DiarioAtividadePlanejada.Origem.SEMANAL: "Outras atividades",
+}
 MAIOR_ID_OBRA = 2**63 - 1
 
 
@@ -89,10 +95,13 @@ def _atividades_do_dia(obra, data_registro):
         opcoes.append({
             "id": atividade_id,
             "origem": origem,
+            "grupo": GRUPOS_ATIVIDADES[origem],
             "disciplina": atividade["disciplina"],
             "nome": atividade["atividade"],
             "local": atividade["local"],
         })
+    ordem = {grupo: indice for indice, grupo in enumerate(GRUPOS_ATIVIDADES)}
+    opcoes.sort(key=lambda opcao: ordem[opcao["origem"]])
     return semana, opcoes
 
 
@@ -126,13 +135,14 @@ def diario_lista(request):
     if data_fim:
         diarios = diarios.filter(data__lte=data_fim)
 
-    diarios = list(
-        diarios.prefetch_related(
-            "fotos",
-            "atividades_planejadas__atividade",
-            "atividades_adicionais",
-        ).order_by("-data", "obra__nome", "-id")[:300]
-    )
+    diarios = diarios.prefetch_related(
+        "fotos",
+        "atividades_planejadas__atividade",
+        "atividades_adicionais",
+    ).order_by("-data", "obra__nome", "-id")
+    pagina = Paginator(diarios, 30).get_page(request.GET.get("page"))
+    diarios = list(pagina.object_list)
+    pagina.object_list = diarios
 
     from obras.services.concretagem.permissoes import pode_concretagem
 
@@ -144,6 +154,7 @@ def diario_lista(request):
 
     return render(request, "obras/diario_lista.html", {
         "diarios": diarios,
+        "pagina": pagina,
         "obras": Obra.objects.filter(ativa=True).order_by("nome"),
         "obra_filtro": obra_id,
         "data_inicio": data_inicio or "",

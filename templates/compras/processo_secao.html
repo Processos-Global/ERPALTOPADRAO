@@ -1,0 +1,15 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block content %}
+<div class="cp-page">
+  <header class="cp-head">
+    <div class="cp-head__copy">
+      <h1 class="cp-title">{{ titulo }}</h1>
+      <p>{{ processo.numero }} · {{ processo.titulo }}</p>
+    </div>
+    <a class="cp-btn" href="{% url 'compras:detalhe_processo' processo.pk %}">Voltar ao processo</a>
+  </header>
+  {% include template_secao %}
+</div>
+{% endblock %}

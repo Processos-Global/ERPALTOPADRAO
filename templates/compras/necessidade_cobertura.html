@@ -1,0 +1,35 @@
+{% extends "layouts/base.html" %}
+{% block title %}Cobertura da necessidade{% endblock %}
+{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block content %}
+<div class="cp-page">
+  <header class="cp-head">
+    <div class="cp-head__copy">
+      <h1 class="cp-title">{{ necessidade.descricao }}</h1>
+      <p>{{ necessidade.processo.obra }} · {{ necessidade.processo.numero }}</p>
+    </div>
+    <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:detalhe_processo' necessidade.processo_id %}#itens-compra">Voltar ao processo</a></div>
+  </header>
+  <div class="cp-kpis">
+    <div class="cp-kpi"><span>Necessidade</span><strong>{{ cobertura.necessidade|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
+    <div class="cp-kpi"><span>Disponível em estoque</span><strong>{{ cobertura.disponivel|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
+    <div class="cp-kpi"><span>Atendida</span><strong>{{ cobertura.atendida|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
+    <div class="cp-kpi"><span>Falta cobrir</span><strong>{{ cobertura.descoberta|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
+  </div>
+  {% if cobertura.especificacao_ambigua %}
+  <p role="status">Confirme a compatibilidade do estoque com a especificação do item.</p>
+  {% endif %}
+  <details>
+    <summary>Detalhes da cobertura</summary>
+    <dl>
+      <dt>Estoque físico</dt><dd>{{ cobertura.saldo_fisico|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Reservado na obra</dt><dd>{{ cobertura.reservado|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Reserva desta necessidade</dt><dd>{{ cobertura.reserva_propria|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Atendido pela reserva</dt><dd>{{ cobertura.reserva_consumida|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Recebido para esta necessidade</dt><dd>{{ cobertura.recebido|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Em pedidos ativos</dt><dd>{{ cobertura.contratado|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+      <dt>Pendente de recebimento</dt><dd>{{ cobertura.pendente_proprio|floatformat:"-4" }} {{ necessidade.unidade }}</dd>
+    </dl>
+  </details>
+</div>
+{% endblock %}

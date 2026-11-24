@@ -8,27 +8,31 @@
 {% pode_financeiro "LANCAR_TITULOS" as fin_pode_lancar %}
 {% pode_financeiro "ADMINISTRAR" as fin_pode_admin %}
 <div class="fin-page">
-  <nav class="fin-subnav" id="fin-subnav" aria-label="Navegação do Financeiro" style="display:none">
-    <a href="{% url 'financeiro:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">Resumo geral</a>
-    <a href="{% url 'financeiro:titulos' %}" class="{% if request.resolver_match.url_name != 'titulo_novo' and 'titulo' in request.resolver_match.url_name or request.resolver_match.url_name == 'titulos' %}is-active{% endif %}">Contas a pagar</a>
-    <a href="{% url 'financeiro:agenda' %}" class="{% if request.resolver_match.url_name == 'agenda' %}is-active{% endif %}">Agenda de pagamentos</a>
-    <a href="{% url 'financeiro:compromissos' %}" class="{% if request.resolver_match.url_name == 'compromissos' %}is-active{% endif %}">Compromissos contratados</a>
-    <a href="{% url 'financeiro:liberacoes' %}" class="{% if request.resolver_match.url_name == 'liberacoes' %}is-active{% endif %}">Liberações de compras</a>
-    {% if fin_pode_aprovar %}<a href="{% url 'financeiro:aprovacoes' %}" class="{% if request.resolver_match.url_name == 'aprovacoes' %}is-active{% endif %}">Aprovações</a>{% endif %}
-    {% if fin_pode_lancar %}<a href="{% url 'financeiro:titulo_novo' %}" class="{% if request.resolver_match.url_name == 'titulo_novo' %}is-active{% endif %}">Solicitação avulsa</a>{% endif %}
-    <a href="{% url 'financeiro:indicadores' %}" class="{% if request.resolver_match.url_name == 'indicadores' %}is-active{% endif %}">Indicadores</a>
-    <a href="{% url 'financeiro:relatorios_pagamento' %}" class="{% if 'relatorio_pagamento' in request.resolver_match.url_name or request.resolver_match.url_name == 'relatorios_pagamento' %}is-active{% endif %}">Relatórios</a>
-    {% if fin_pode_admin %}<a href="{% url 'financeiro:plano_financeiro' %}" class="{% if 'plano_financeiro' in request.resolver_match.url_name %}is-active{% endif %}">Apropriações</a>{% endif %}
-  </nav>
+  {% with rota=request.resolver_match.url_name %}
+    <div class="fin-module-toolbar">
+      <nav class="fin-subnav" id="fin-subnav" aria-label="Navegação do Financeiro">
+        <a href="{% url 'financeiro:dashboard' %}" {% if rota == 'dashboard' %}class="is-active" aria-current="page"{% endif %}>Visão geral</a>
+        <a href="{% url 'financeiro:titulos' %}" {% if 'titulo' in rota or rota == 'agenda' or rota == 'aprovacoes' %}class="is-active" aria-current="page"{% endif %}>Contas a pagar</a>
+        <a href="{% url 'financeiro:pagamentos' %}" {% if 'pagamento' in rota %}class="is-active" aria-current="page"{% endif %}>Pagamentos</a>
+        <a href="{% url 'financeiro:compromissos' %}" {% if rota == 'compromissos' or rota == 'liberacoes' %}class="is-active" aria-current="page"{% endif %}>Compromissos</a>
+        <a href="{% url 'financeiro:previsoes' %}" {% if 'previso' in rota %}class="is-active" aria-current="page"{% endif %}>Planejamento financeiro</a>
+        <a href="{% url 'financeiro:indicadores' %}" {% if rota == 'indicadores' or rota == 'gastos' or rota == 'analises' %}class="is-active" aria-current="page"{% endif %}>Relatórios e indicadores</a>
+      </nav>
+      <div class="fin-actions">
+        {% if fin_pode_admin %}
+          <details class="fin-config">
+            <summary class="fin-btn">Configurações</summary>
+            <div class="fin-config__links">
+              <a href="{% url 'financeiro:plano_financeiro' %}">Apropriações</a>
+              <a href="{% url 'financeiro:despesas_recorrentes' %}">Despesas recorrentes</a>
+            </div>
+          </details>
+        {% endif %}
+        {% if fin_pode_lancar and rota != 'titulo_novo' %}<a class="fin-btn fin-btn--primary" href="{% url 'financeiro:titulo_novo' %}">Nova solicitação</a>{% endif %}
+      </div>
+    </div>
+  {% endwith %}
   {% block financeiro_content %}{% endblock %}
   {% include "financeiro/_dropdown_search.html" %}
 </div>
-<script>
-(function(){
-  const nav = document.getElementById('fin-subnav');
-  const head = document.querySelector('.fin-page .fin-head');
-  if (nav && head) head.insertAdjacentElement('afterend', nav);
-  if (nav) nav.style.display = '';
-})();
-</script>
 {% endblock %}

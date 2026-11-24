@@ -62,7 +62,7 @@
                 <label>Especificação padrão<select name="opcao_especificacao"><option value="">Nenhuma</option>{% for o in ap.categoria.opcoes_especificacao.all %}{% if o.ativo %}<option value="{{ o.pk|unlocalize }}" {% if item.opcao_especificacao_id == o.pk %}selected{% endif %}>{{ o.nome }}</option>{% endif %}{% endfor %}</select></label>
                 <label style="grid-column:span 3">Especificação<textarea name="especificacao" rows="2">{{ item.especificacao }}</textarea></label>
                 <label style="grid-column:span 2">Descrição de medidas<textarea name="descricao_medidas" rows="2">{{ item.descricao_medidas }}</textarea></label>
-                <label style="grid-column:span 3">Material do cadastro<select name="material"><option value="">Sem vínculo</option>{% for material in materiais %}<option value="{{ material.pk|unlocalize }}" {% if item.material_id == material.pk %}selected{% endif %}>{{ material.descricao_completa }}</option>{% endfor %}</select></label>
+                <div class="ft-edit-material">{% include 'obras/_busca_material.html' with material=item.material material_id=item.material_id vazio='Sem vínculo' only %}</div>
                 <label style="grid-column:span 2">Observação<textarea name="observacao" rows="2">{{ item.observacao }}</textarea></label>
               </div>
               <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="item-{{ item.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
@@ -130,7 +130,7 @@
           <textarea name="especificacao" rows="2" placeholder="Material, acabamento, modelo..."></textarea>
         </div>
         <div class="ft-field c6"><label>Descrição de medidas</label><textarea name="descricao_medidas" rows="2" placeholder="Dimensões e espessura"></textarea></div>
-        <div class="ft-field c6"><label>Material do cadastro</label><select name="material"><option value="">Sem vínculo</option>{% for material in materiais %}<option value="{{ material.pk|unlocalize }}">{{ material.descricao_completa }}</option>{% endfor %}</select></div>
+        <div class="ft-field c6">{% include 'obras/_busca_material.html' with vazio='Sem vínculo' only %}</div>
 
         <div class="ft-field c9">
           <label>Observação</label>

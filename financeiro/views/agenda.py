@@ -5,44 +5,44 @@ from django.utils import timezone
 from cadastros.models import Fornecedor
 from financeiro.models import PlanoFinanceiro, TituloPagar
 from financeiro.services.agenda import (
-    PERIODOS, filtrar_por_vencimento, filtrar_titulos_base,
-    indicadores_agenda, periodo_vencimento,
+    PERIODOS, _inteiro_positivo, indicadores_agenda, recorte_contas_a_pagar,
 )
-from financeiro.services.permissoes import financeiro_acao_required
+from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 from obras.models import Obra
 
 
 @financeiro_acao_required("VISUALIZAR")
 def agenda_pagamentos(request):
-    hoje = timezone.localdate()
-    codigo, inicio, fim = periodo_vencimento(request.GET, hoje)
-    base = filtrar_titulos_base(request.GET)
-    titulos = filtrar_por_vencimento(base, inicio, fim)
-    periodo_invalido = (
-        (codigo == "data" and inicio is None)
-        or (codigo == "intervalo" and (inicio is None or fim is None or inicio > fim))
-        or (codigo == "mes" and inicio is None)
-    )
-    if periodo_invalido:
-        titulos = base.none()
-    indicadores = indicadores_agenda(base, titulos, hoje, inicio, fim) if not periodo_invalido else None
+    return render(request, "financeiro/titulos_lista.html", contexto_contas_a_pagar(request, timezone.localdate(), agenda=True))
+
+
+def contexto_contas_a_pagar(request, hoje, *, agenda=False):
+    base, titulos, periodo, inicio, fim, invalido, filtros = recorte_contas_a_pagar(request.GET, hoje)
+    indicadores = indicadores_agenda(base, titulos, hoje, inicio, fim) if not invalido else None
     page_obj = Paginator(
         titulos.select_related("obra", "fornecedor", "plano_financeiro", "pagamento")
         .order_by("vencimento", "numero"), 40
     ).get_page(request.GET.get("page"))
     filtros_paginacao = request.GET.copy()
     filtros_paginacao.pop("page", None)
-    return render(request, "financeiro/agenda.html", {
+    return {
+        "agenda": agenda,
         "page_obj": page_obj,
         "indicadores": indicadores,
+        "kpi_vencidos": indicadores["vencido"] if indicadores else 0,
         "periodos": PERIODOS,
-        "periodo": codigo,
-        "periodo_invalido": periodo_invalido,
-        "filtros": request.GET,
+        "periodo": periodo,
+        "periodo_invalido": invalido,
+        "mes_entrada": inicio.strftime("%Y-%m") if periodo == "mes" and inicio else "",
+        "filtros": filtros,
         "status_choices": TituloPagar.Status.choices,
+        "origem_choices": TituloPagar.Origem.choices,
+        "conferencia_choices": TituloPagar.Conferencia.choices,
         "obras": Obra.objects.order_by("id"),
-        "fornecedores": Fornecedor.objects.filter(ativo=True).order_by("nome"),
+        "fornecedor_selecionado": Fornecedor.objects.filter(pk=_inteiro_positivo(filtros.get("fornecedor"))).first(),
+        "classes_financeiras": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome"),
         "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False)
         .select_related("pai").order_by("pai__codigo", "codigo", "nome"),
         "query_string": filtros_paginacao.urlencode(),
-    })
+        "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
+    }

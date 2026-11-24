@@ -957,6 +957,7 @@ def acao_receber_pedido(request, pedido_id):
                 usuario=request.user,
                 numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
                 valor_total_nota=request.POST.get("valor_total_nota", ""),
+                valor_frete_nota=request.POST.get("valor_frete_nota", ""),
                 arquivo_nota_fiscal=arquivo_nota_fiscal,
                 observacao=request.POST.get("observacao", ""),
             )

@@ -10,6 +10,15 @@ MAPA = {
 }
 
 
+def data_necessaria_processo(processo):
+    if not processo.item_cronograma_id:
+        return None
+    item = processo.item_cronograma
+    if item.cronograma_obra.obra_id != processo.obra_id:
+        return None
+    return item.data_necessaria_obra
+
+
 def _menor_data(data_atual, nova_data):
     """Mantém a primeira conclusão registrada para o suprimento."""
     if data_atual is None:

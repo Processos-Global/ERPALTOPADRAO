@@ -1,0 +1,10 @@
+<nav class="fin-tabs" aria-label="Pagamentos">
+  {% url 'financeiro:pagamentos' as pagamentos_url %}
+  {% for codigo, rotulo in abas_pagamentos %}
+    {% if codigo == 'pacotes' %}
+      <a class="fin-btn" href="{% url 'financeiro:relatorios_pagamento' %}" {% if aba == codigo %}aria-current="page"{% endif %}>{{ rotulo }}</a>
+    {% else %}
+      <a class="fin-btn" href="{{ pagamentos_url }}?aba={{ codigo }}" {% if aba == codigo %}aria-current="page"{% endif %}>{{ rotulo }}</a>
+    {% endif %}
+  {% endfor %}
+</nav>

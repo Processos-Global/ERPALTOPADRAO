@@ -3,18 +3,20 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from cadastros.models import Fornecedor, Material, UnidadeMedida
 from compras.models import (
+    AdjudicacaoCompra, AprovacaoCompra, CotacaoFornecedor, CotacaoFornecedorItem,
     HistoricoProcessoCompra, NecessidadeCompra, PedidoCompra, PedidoCompraItem,
-    ProcessoCompra, RecebimentoPedido, RecebimentoPedidoItem,
+    ProcessoCompra, RecebimentoPedido, RecebimentoPedidoItem, ReservaEstoqueCompra,
 )
+from compras.services.cobertura_estoque import obter_cobertura, resumir_cobertura_necessidade, revalidar_necessidade
+from compras.services.etapas import decidir_aprovacao
+from compras.services.pedidos import cancelar_pedido, gerar_pedidos, registrar_recebimento
 from compras.services.processos import editar_necessidade, excluir_necessidade, incluir_necessidade
-from compras.services.cobertura_estoque import obter_cobertura, revalidar_necessidade
 from obras.models import MovimentoEstoque, Obra
 from obras.services.estoque import chave_estoque
-from compras.models import ReservaEstoqueCompra
-from django.urls import reverse
 from planejamento.models.cronograma_suprimentos import (
     CronogramaSuprimentosObra, ImportacaoCronogramaSuprimentos,
     ItemCronogramaSuprimento,
@@ -72,6 +74,63 @@ class CoberturaEstoqueCompraTest(TestCase):
                 usuario=self.usuario,
             )
         self.assertFalse(self.processo.necessidades.exists())
+
+    def test_resumo_cobertura_distingue_pedido_proprio_parcial_e_controle_de_acesso(self):
+        self.registrar_entrada(self.obra, Decimal("55"))
+        outra_necessidade = NecessidadeCompra.objects.create(
+            processo=self.processo, material=self.material, descricao=self.material.nome,
+            especificacao=self.material.especificacao, unidade="UN",
+            quantidade_necessaria=100, quantidade_incluida=100,
+        )
+        necessidade = NecessidadeCompra.objects.create(
+            processo=self.processo, material=self.material, descricao=self.material.nome,
+            especificacao=self.material.especificacao, unidade="UN",
+            quantidade_necessaria=100, quantidade_incluida=100,
+        )
+        ReservaEstoqueCompra.objects.create(
+            necessidade=outra_necessidade, obra=self.obra, material=self.material,
+            especificacao=self.material.especificacao, unidade="UN",
+            quantidade_original=20, quantidade_disponivel=20,
+        )
+        for i, (vinculo, qtd, recebido, status) in enumerate([
+            (necessidade, 35, 5, PedidoCompra.Status.ENTREGA_PARCIAL),
+            (necessidade, 70, 0, PedidoCompra.Status.CANCELADO),
+            (outra_necessidade, 60, 0, PedidoCompra.Status.CONFIRMADO),
+        ]):
+            pedido = PedidoCompra.objects.create(
+                obra=self.obra, processo=self.processo, fornecedor=self.fornecedor,
+                numero=f"PC-COB-SALDO-{i}", status=status,
+            )
+            item = PedidoCompraItem.objects.create(
+                pedido=pedido, necessidade=vinculo, descricao=self.material.nome,
+                especificacao=self.material.especificacao, unidade="UN",
+                quantidade=qtd, quantidade_recebida=recebido, valor_unitario=1, valor_total=qtd,
+            )
+            if recebido:
+                entrada = RecebimentoPedido.objects.create(pedido=pedido)
+                RecebimentoPedidoItem.objects.create(
+                    recebimento=entrada, item_pedido=item, quantidade=recebido, valor_recebido=recebido,
+                )
+        url = reverse("compras:cobertura_necessidade", args=[self.processo.pk, necessidade.pk])
+        self.assertEqual(self.client.get(url).status_code, 302)
+        self.client.force_login(self.usuario)
+        resposta = self.client.get(url)
+        self.assertEqual(resposta.status_code, 200)
+        cobertura = resposta.context["cobertura"]
+        self.assertEqual(cobertura["saldo_fisico"], Decimal("60"))
+        self.assertEqual(cobertura["reservado"], Decimal("20"))
+        self.assertEqual(cobertura["disponivel"], Decimal("40"))
+        self.assertEqual(cobertura["contratado"], Decimal("35"))
+        self.assertEqual(cobertura["recebido"], Decimal("5"))
+        self.assertEqual(cobertura["pendente_proprio"], Decimal("30"))
+        self.assertEqual(cobertura["descoberta"], Decimal("30"))
+        origem = ProcessoCompra.objects.get(numero="PC-ORIG-1")
+        self.assertEqual(
+            self.client.get(reverse("compras:cobertura_necessidade", args=[origem.pk, necessidade.pk])).status_code,
+            404,
+        )
+        self.client.force_login(get_user_model().objects.create_user(username="sem-permissao-compras"))
+        self.assertEqual(self.client.get(url).status_code, 403)
 
     def test_solicita_apenas_falta_e_nao_usa_saldo_de_outra_obra(self):
         self.registrar_entrada(self.obra, Decimal("4"))
@@ -164,6 +223,106 @@ class CoberturaEstoqueCompraTest(TestCase):
         self.registrar_entrada(self.obra, Decimal("4"))
         with self.assertRaises(ValidationError):
             revalidar_necessidade(necessidade)
+
+    def emitir_pedido(self, necessidade):
+        cotacao = CotacaoFornecedor.objects.create(processo=self.processo, fornecedor=self.fornecedor)
+        item = CotacaoFornecedorItem.objects.create(
+            cotacao=cotacao, necessidade=necessidade, quantidade=necessidade.quantidade_incluida,
+            valor_unitario_cotado=10,
+        )
+        AdjudicacaoCompra.objects.create(
+            processo=self.processo, necessidade=necessidade, cotacao=cotacao, item_cotado=item,
+            quantidade=necessidade.quantidade_incluida, valor_unitario_final=10,
+        )
+        self.processo.status = ProcessoCompra.Status.APROVADO
+        self.processo.save(update_fields=["status"])
+        return gerar_pedidos(self.processo, self.usuario)[0]
+
+    def receber(self, pedido, quantidade, nota):
+        item = pedido.itens.get()
+        return registrar_recebimento(
+            pedido=pedido, quantidades={item.pk: Decimal(quantidade)},
+            valores_itens={item.pk: Decimal(quantidade) * 10},
+            usuario=self.usuario, numero_nota_fiscal=nota, valor_total_nota=Decimal(quantidade) * 10,
+            arquivo_nota_fiscal=None, dados_fiscais_opcionais=True,
+        )
+
+    def consumir(self, quantidade, reserva=None):
+        self.client.force_login(self.usuario)
+        dados = {"item": chave_estoque(self.material.pk, self.material.nome, "UN"), "quantidade": str(quantidade)}
+        if reserva:
+            dados["reserva_id"] = reserva.pk
+        resposta = self.client.post(reverse("obras:saida_estoque", args=[self.obra.pk]), dados)
+        self.assertEqual(resposta.status_code, 302)
+        self.assertTrue(MovimentoEstoque.objects.filter(obra_origem=self.obra, quantidade=quantidade).exists())
+
+    def test_recebimento_parcial_e_consumo_integral_preservam_cobertura_da_necessidade(self):
+        necessidade = incluir_necessidade(
+            processo=self.processo, material=self.material, quantidade=100, usuario=self.usuario,
+        )
+        pedido = self.emitir_pedido(necessidade)
+        self.receber(pedido, 40, "NF-40")
+        parcial = resumir_cobertura_necessidade(necessidade)
+        self.assertEqual(parcial["recebido"], Decimal("40"))
+        self.assertEqual(parcial["pendente_proprio"], Decimal("60"))
+        self.assertEqual(parcial["descoberta"], Decimal("0"))
+        self.receber(pedido, 60, "NF-60")
+        self.consumir(100)
+        cobertura = resumir_cobertura_necessidade(necessidade)
+        self.assertEqual(cobertura["saldo_fisico"], Decimal("0"))
+        self.assertEqual(cobertura["atendida"], Decimal("100"))
+        self.assertEqual(cobertura["descoberta"], Decimal("0"))
+        self.assertEqual(gerar_pedidos(self.processo, self.usuario)[0].pk, pedido.pk)
+
+    def test_cancelamento_parcial_preserva_entrega_e_bloqueia_reemissao_integral(self):
+        necessidade = incluir_necessidade(
+            processo=self.processo, material=self.material, quantidade=100, usuario=self.usuario,
+        )
+        pedido = self.emitir_pedido(necessidade)
+        self.receber(pedido, 40, "NF-PARCIAL")
+        cancelar_pedido(pedido=pedido, usuario=self.usuario, motivo="Fornecedor não entregará o restante")
+        self.consumir(40)
+        cobertura = resumir_cobertura_necessidade(necessidade)
+        self.assertEqual(cobertura["contratado"], Decimal("0"))
+        self.assertEqual(cobertura["recebido"], Decimal("40"))
+        self.assertEqual(cobertura["pendente_proprio"], Decimal("0"))
+        self.assertEqual(cobertura["descoberta"], Decimal("60"))
+        with self.assertRaises(ValidationError):
+            gerar_pedidos(self.processo, self.usuario)
+        self.assertEqual(self.processo.pedidos.count(), 1)
+        self.assertEqual(pedido.recebimentos.count(), 1)
+
+    def test_edicao_sem_excecao_revoga_autorizacao_anterior(self):
+        necessidade = incluir_necessidade(
+            processo=self.processo, material=self.material, quantidade=10,
+            usuario=self.usuario, excecao_estoque=True, justificativa_excecao="Demanda emergencial",
+        )
+        necessidade = editar_necessidade(
+            processo=self.processo, necessidade=necessidade, material=self.material,
+            quantidade=10, observacao="", usuario=self.usuario,
+        )
+        self.registrar_entrada(self.obra, Decimal("4"))
+        with self.assertRaises(ValidationError):
+            revalidar_necessidade(necessidade)
+        self.assertTrue(self.processo.historico.filter(tipo="EXCECAO_ESTOQUE").exists())
+
+    def test_reprovacao_libera_saldo_reservado_e_preserva_atendimento_consumido(self):
+        self.registrar_entrada(self.obra, Decimal("10"))
+        necessidade = incluir_necessidade(
+            processo=self.processo, material=self.material, quantidade=20, usuario=self.usuario,
+        )
+        reserva = necessidade.reserva_estoque
+        self.consumir(3, reserva)
+        self.processo.etapa_atual = ProcessoCompra.Etapa.APROVACAO
+        self.processo.status = ProcessoCompra.Status.AGUARDANDO_APROVACAO
+        self.processo.save(update_fields=["etapa_atual", "status"])
+        decidir_aprovacao(self.processo, self.usuario, AprovacaoCompra.Decisao.REPROVADO, "Compra reprovada")
+        reserva.refresh_from_db()
+        self.assertEqual(reserva.status, ReservaEstoqueCompra.Status.LIBERADA)
+        self.assertEqual(reserva.movimentos.get().quantidade, Decimal("3"))
+        cobertura = resumir_cobertura_necessidade(necessidade)
+        self.assertEqual(cobertura["disponivel"], Decimal("7"))
+        self.assertEqual(cobertura["reserva_consumida"], Decimal("3"))
 
     def test_pedido_do_mesmo_suprimento_nao_cobre_demanda_independente(self):
         importacao = ImportacaoCronogramaSuprimentos.objects.create()

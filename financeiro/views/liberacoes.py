@@ -1,34 +1,47 @@
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from cadastros.models import Fornecedor
 from financeiro.models import LiberacaoFinanceiraPedido
+from financeiro.services.agenda import _inteiro_positivo
 from financeiro.services.liberacoes import autorizar_liberacao
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 from obras.models import Obra
 
 
-@financeiro_acao_required("VISUALIZAR")
-def liberacoes_lista(request):
+def recorte_liberacoes(parametros):
     qs = LiberacaoFinanceiraPedido.objects.select_related(
         "pedido__obra", "pedido__fornecedor", "recebimento", "titulo", "autorizado_por",
     )
-    status = request.GET.get("status", "")
+    status = parametros.get("status", "")
     if status in LiberacaoFinanceiraPedido.Status.values:
         qs = qs.filter(status=status)
-    obra = request.GET.get("obra", "")
-    if obra.isdigit():
-        qs = qs.filter(pedido__obra_id=int(obra))
-    pedido = request.GET.get("pedido", "")
-    if pedido.isdigit():
-        qs = qs.filter(pedido_id=int(pedido))
+    elif parametros.get("pendencias") == "1":
+        qs = qs.filter(status__in=[LiberacaoFinanceiraPedido.Status.PENDENTE, LiberacaoFinanceiraPedido.Status.DIVERGENTE])
+    for chave, campo in (("obra", "pedido__obra_id"), ("pedido", "pedido_id"), ("fornecedor", "pedido__fornecedor_id")):
+        if identificador := _inteiro_positivo(parametros.get(chave)):
+            qs = qs.filter(**{campo: identificador})
+    busca = parametros.get("q", "").strip()[:120]
+    if busca:
+        qs = qs.filter(Q(pedido__numero__icontains=busca) | Q(pedido__processo__numero__icontains=busca))
+    return qs
+
+
+@financeiro_acao_required("VISUALIZAR")
+def liberacoes_lista(request):
+    qs = recorte_liberacoes(request.GET)
     return render(request, "financeiro/liberacoes.html", {
         "pagina": Paginator(qs, 25).get_page(request.GET.get("page")),
         "status_choices": LiberacaoFinanceiraPedido.Status.choices,
         "obras": Obra.objects.order_by("nome"),
-        "status_filtro": status, "obra_filtro": obra, "pedido_filtro": pedido,
+        "fornecedores": Fornecedor.objects.order_by("nome"),
+        "status_filtro": request.GET.get("status", ""), "obra_filtro": request.GET.get("obra", ""),
+        "pedido_filtro": request.GET.get("pedido", ""), "fornecedor_filtro": request.GET.get("fornecedor", ""),
+        "busca": request.GET.get("q", "").strip()[:120],
         "pode_autorizar": possui_acao_financeiro(request.user, "APROVAR"),
     })
 

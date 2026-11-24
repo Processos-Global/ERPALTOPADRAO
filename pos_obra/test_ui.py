@@ -1,6 +1,8 @@
 from datetime import timedelta
 from unittest.mock import patch
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
@@ -101,6 +103,32 @@ class InterfaceOperacionalTests(TestCase):
         self.client.force_login(self.admin)
         r=self.client.get(reverse('pos_obra:painel'))
         self.assertEqual(len(r.context['compromissos']),0)
+
+    def test_kanban_totaliza_coluna_antes_do_limite_de_cartoes(self):
+        for i in range(30):
+            Chamado.objects.create(
+                cliente=self.cliente, empreendimento=self.obra, tipo_problema=self.tipo,
+                descricao=f'Chamado aberto {i}', ambiente_padrao='Sala',
+            )
+        self.client.force_login(self.admin)
+        resposta = self.client.get(reverse('pos_obra:kanban'), {'status': 'ABERTO'})
+        abertos = next(grupo for grupo in resposta.context['grupos'] if grupo['codigo'] == 'ABERTO')
+        self.assertEqual(abertos['total'], 31)
+        self.assertEqual(len(abertos['itens']), 30)
+        self.assertEqual(sum(g['total'] for g in resposta.context['grupos']), 31)
+
+    def test_dashboard_totaliza_status_em_uma_consulta(self):
+        for status in ('CONCLUIDO', 'CANCELADO'):
+            Chamado.objects.create(
+                cliente=self.cliente, empreendimento=self.obra, tipo_problema=self.tipo,
+                descricao='Chamado encerrado', ambiente_padrao='Sala', status=status,
+            )
+        self.client.force_login(self.admin)
+        with CaptureQueriesContext(connection) as consultas:
+            resposta = self.client.get(reverse('pos_obra:painel'))
+        self.assertEqual([resposta.context[chave] for chave in ('total', 'abertos', 'concluidos')], [3, 1, 1])
+        contagens = [q['sql'] for q in consultas if 'COUNT(' in q['sql'] and f'FROM "{Chamado._meta.db_table}"' in q['sql']]
+        self.assertEqual(len(contagens), 1)
 
     def test_encerramento_respeita_permissao_especifica(self):
         self.client.force_login(self.admin)

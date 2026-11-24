@@ -3,6 +3,7 @@ from functools import wraps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -61,7 +62,7 @@ def materiais_lista(request):
             | Q(nome__icontains=q)
             | Q(especificacao__icontains=q)
         )
-    if unidade_id.isdigit():
+    if unidade_id.isascii() and unidade_id.isdecimal() and len(unidade_id) <= 19:
         qs = qs.filter(unidade_id=int(unidade_id))
     if status == "ativos":
         qs = qs.filter(ativo=True)
@@ -69,7 +70,7 @@ def materiais_lista(request):
         qs = qs.filter(ativo=False)
 
     contexto = {
-        "materiais": qs[:1000],
+        "materiais": Paginator(qs.order_by("nome", "especificacao", "codigo", "pk"), 30).get_page(request.GET.get("page")),
         "q": q,
         "unidade_id": unidade_id,
         "status": status,
@@ -145,7 +146,8 @@ def fornecedores_lista(request):
     elif status == "inativos":
         qs = qs.filter(ativo=False)
     return render(request, "cadastros/fornecedores/lista.html", {
-        "fornecedores": qs[:1000], "q": q, "status": status,
+        "fornecedores": Paginator(qs.order_by("nome", "pk"), 30).get_page(request.GET.get("page")),
+        "q": q, "status": status,
         **_permissoes_contexto(request.user),
     })
 
@@ -210,7 +212,8 @@ def mao_obra_lista(request):
     elif status == "inativos":
         qs = qs.filter(ativo=False)
     return render(request, "cadastros/mao_obra/lista.html", {
-        "itens": qs[:1000], "q": q, "status": status,
+        "itens": Paginator(qs.order_by("categoria", "descricao", "pk"), 30).get_page(request.GET.get("page")),
+        "q": q, "status": status,
         **_permissoes_contexto(request.user),
     })
 

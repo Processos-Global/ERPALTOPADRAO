@@ -910,6 +910,14 @@
                         <input class="cp-input" name="valor_total_nota" inputmode="decimal">
                     </div>
 
+                    {% if grupo.pedido.frete %}
+                    <div>
+                        <label class="cp-label" for="gfa-frete-nf-{{ grupo.pedido.pk }}">Frete discriminado na nota</label>
+                        <input class="cp-input" id="gfa-frete-nf-{{ grupo.pedido.pk }}" name="valor_frete_nota" inputmode="decimal" aria-describedby="gfa-frete-nf-ajuda-{{ grupo.pedido.pk }}">
+                        <small id="gfa-frete-nf-ajuda-{{ grupo.pedido.pk }}">Informe se o fornecedor cobrou o frete à parte dos itens nesta nota.</small>
+                    </div>
+                    {% endif %}
+
                     <div>
                         <label class="cp-label">Arquivo da NF</label>
                         <input class="cp-input" type="file" name="arquivo_nota_fiscal">

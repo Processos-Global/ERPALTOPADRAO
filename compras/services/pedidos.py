@@ -1,11 +1,14 @@
 from collections import defaultdict
 import re
 from datetime import timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
+from django.core.validators import DecimalValidator
 from django.db import models, transaction
 from django.utils import timezone
+
+from financeiro.services.integracoes import adiar_sinais_financeiros_pedido, sincronizar_contas_pedido
 
 from compras.models import (
     HistoricoPrevisaoPedido,
@@ -21,16 +24,15 @@ from .auditoria import registrar_evento
 from .cobertura_estoque import revalidar_necessidade
 from .comercial import (
     condicao_pagamento_final_fornecedor,
-    desconto_proposta_final_fornecedor,
-    frete_final_fornecedor,
     prazo_final_fornecedor,
     quantizar_moeda,
+    valores_adjudicados_fornecedor,
 )
 from .integracao_planejamento import limpar_data_real, sincronizar_data_real
 from .grande_fornecedor_status import status_por_recebimento
 from .historico_suprimentos import remover_historico_processo, sincronizar_historico_processo
 from .numeracao import gerar_numero
-from .valores import calcular_total_proposta
+from .valores import CENTAVO
 
 ZERO = Decimal("0")
 
@@ -54,13 +56,10 @@ def _quantidade_parcelas_da_condicao(condicao):
 
 
 def _valores_parcelados(total, quantidade):
-    total = Decimal(total or 0).quantize(Decimal("0.01"))
+    total_centavos = int(quantizar_moeda(total) / CENTAVO)
     quantidade = max(int(quantidade or 1), 1)
-    base = (total / quantidade).quantize(Decimal("0.01"))
-    valores = [base for _ in range(quantidade)]
-    diferenca = total - sum(valores, Decimal("0"))
-    valores[0] += diferenca
-    return valores
+    base, resto = divmod(total_centavos, quantidade)
+    return [base * CENTAVO] * (quantidade - resto) + [(base + 1) * CENTAVO] * resto
 
 
 def sincronizar_parcelas_previstas_condicao(pedido):
@@ -276,6 +275,7 @@ def _sincronizar_status_contratacao_processo(*, processo, usuario):
 
 
 @transaction.atomic
+@adiar_sinais_financeiros_pedido()
 def gerar_pedidos(processo, usuario, local_entrega=""):
     """
     Gera um pedido por fornecedor adjudicado.
@@ -294,35 +294,54 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
     adjudicacoes = list(
         p.adjudicacoes
         .filter(cancelada=False)
-        .select_related("cotacao__fornecedor", "necessidade", "item_cotado")
+        .select_related("cotacao__fornecedor", "necessidade", "item_cotado__negociacao")
         .order_by("cotacao__fornecedor_id", "id")
     )
     if not adjudicacoes:
         raise ValidationError("Não existem itens adjudicados para gerar pedidos.")
-    necessidades_com_pedido = set(PedidoCompraItem.objects.filter(
-        pedido__processo=p,
-    ).exclude(pedido__status=PedidoCompra.Status.CANCELADO).values_list("necessidade_id", flat=True))
-    for adjudicacao in adjudicacoes:
-        if adjudicacao.necessidade_id not in necessidades_com_pedido and adjudicacao.necessidade.material_id:
-            revalidar_necessidade(adjudicacao.necessidade)
-
     grupos = defaultdict(list)
     for adjudicacao in adjudicacoes:
         grupos[adjudicacao.cotacao.fornecedor_id].append(adjudicacao)
 
+    pedidos_por_fornecedor = {}
+    for pedido_ativo in p.pedidos.select_for_update().filter(fornecedor_id__in=grupos).exclude(
+        status=PedidoCompra.Status.CANCELADO,
+    ).order_by("id"):
+        pedidos_por_fornecedor.setdefault(pedido_ativo.fornecedor_id, pedido_ativo)
+    necessidades_por_pedido = defaultdict(set)
+    for pedido_id, necessidade_id in PedidoCompraItem.objects.filter(
+        pedido_id__in=[pedido.pk for pedido in pedidos_por_fornecedor.values()],
+    ).values_list("pedido_id", "necessidade_id"):
+        necessidades_por_pedido[pedido_id].add(necessidade_id)
+
+    faltantes_por_fornecedor = {}
+    quantidades_novas = defaultdict(lambda: ZERO)
+    necessidades_novas = {}
+    for fornecedor_id, grupo in grupos.items():
+        existente = pedidos_por_fornecedor.get(fornecedor_id)
+        existentes = necessidades_por_pedido[existente.pk] if existente else set()
+        faltantes = [a for a in grupo if a.necessidade_id not in existentes]
+        faltantes_por_fornecedor[fornecedor_id] = faltantes
+        for adjudicacao in faltantes:
+            quantidades_novas[adjudicacao.necessidade_id] += adjudicacao.quantidade
+            necessidades_novas[adjudicacao.necessidade_id] = adjudicacao.necessidade
+    for necessidade_id, quantidade in quantidades_novas.items():
+        revalidar_necessidade(necessidades_novas[necessidade_id], quantidade_compra=quantidade)
+
     pedidos_resultado = []
     for fornecedor_id, grupo in grupos.items():
+        existente = pedidos_por_fornecedor.get(fornecedor_id)
+        faltantes = faltantes_por_fornecedor[fornecedor_id]
+        if existente and not faltantes:
+            pedidos_resultado.append(existente)
+            continue
+
         fornecedor = grupo[0].cotacao.fornecedor
         formalizacao = p.contratacoes.filter(fornecedor_id=fornecedor_id, cancelada=False).first()
 
         # Todos os itens aprovados do mesmo fornecedor compõem um único pedido.
         # Frete, condição e prazo também são calculados uma única vez por fornecedor.
-        subtotal = quantizar_moeda(sum((a.valor_bruto for a in grupo), ZERO))
-        descontos_itens = quantizar_moeda(sum((a.desconto_final or ZERO for a in grupo), ZERO))
-        desconto_proposta = desconto_proposta_final_fornecedor(p, fornecedor_id)
-        descontos = quantizar_moeda(descontos_itens + desconto_proposta)
-        frete = frete_final_fornecedor(p, fornecedor_id)
-        total = calcular_total_proposta(subtotal=subtotal, desconto=descontos, frete=frete)
+        subtotal, descontos, frete, total = valores_adjudicados_fornecedor(grupo)
 
         condicao = (
             (formalizacao.condicao_pagamento or "").strip()
@@ -334,24 +353,7 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
         previsao = formalizacao.previsao_entrega if formalizacao else _previsao_por_prazo(prazo)
         destino = ((formalizacao.local_entrega or "").strip() if formalizacao else "") or (local_entrega or "").strip()
 
-        existente = (
-            PedidoCompra.objects
-            .select_for_update()
-            .filter(processo=p, fornecedor_id=fornecedor_id)
-            .exclude(status=PedidoCompra.Status.CANCELADO)
-            .order_by("id")
-            .first()
-        )
         if existente:
-            necessidades_existentes = set(
-                existente.itens.values_list("necessidade_id", flat=True)
-            )
-            faltantes = [
-                adjudicacao
-                for adjudicacao in grupo
-                if adjudicacao.necessidade_id not in necessidades_existentes
-            ]
-
             # Se a rotina for executada novamente e houver novos itens aprovados
             # para o MESMO fornecedor, eles entram no pedido já existente em vez
             # de gerar um segundo pedido para esse fornecedor.
@@ -400,9 +402,7 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
                 )
 
             sincronizar_parcelas_previstas_condicao(existente)
-            # O post_save do PedidoCompra sincroniza as parcelas já estruturadas
-            # com o Financeiro.
-            existente.save(update_fields=["atualizado_em"])
+            sincronizar_contas_pedido(existente)
             from .sla import registrar_prazo_entrega
             registrar_prazo_entrega(existente)
             pedidos_resultado.append(existente)
@@ -439,9 +439,7 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
             for a in grupo
         ])
         sincronizar_parcelas_previstas_condicao(pedido)
-        # O primeiro post_save ocorre na criação do pedido, antes das parcelas.
-        # Este save final dispara a integração financeira com a estrutura completa.
-        pedido.save(update_fields=["atualizado_em"])
+        sincronizar_contas_pedido(pedido)
         from .sla import registrar_prazo_entrega
         registrar_prazo_entrega(pedido)
         pedidos_resultado.append(pedido)
@@ -510,9 +508,18 @@ def transicoes_status_permitidas(pedido):
     ]
 
 
+def _bloquear_pedido_no_fluxo(pedido):
+    from obras.models import Obra
+
+    # Emissão e aprovação já bloqueiam processo → obra → pedidos.
+    ProcessoCompra.objects.select_for_update().get(pk=pedido.processo_id)
+    Obra.objects.select_for_update().get(pk=pedido.obra_id)
+    return PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
+
+
 @transaction.atomic
 def atualizar_status_pedido(*, pedido, novo_status, usuario, observacao=""):
-    p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
+    p = _bloquear_pedido_no_fluxo(pedido)
     if novo_status not in PedidoCompra.Status.values:
         raise ValidationError("Status de pedido inválido.")
     if novo_status in STATUS_DERIVADOS_RECEBIMENTO:
@@ -564,6 +571,7 @@ def registrar_recebimento(
     numero_nota_fiscal,
     valor_total_nota,
     arquivo_nota_fiscal,
+    valor_frete_nota=None,
     observacao="",
     dados_fiscais_opcionais=False,
 ):
@@ -573,9 +581,7 @@ def registrar_recebimento(
     quantidades: dict {pedido_item_id: quantidade_recebida_nesta_entrega}
     valores_itens: dict {pedido_item_id: valor_total_do_item_na_nota}
     """
-    p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
-    from obras.models import Obra
-    Obra.objects.select_for_update().get(pk=p.obra_id)
+    p = _bloquear_pedido_no_fluxo(pedido)
     if p.status in {PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE}:
         raise ValidationError("Este pedido não aceita novos recebimentos.")
 
@@ -600,6 +606,18 @@ def registrar_recebimento(
             raise ValidationError("O valor total da Nota Fiscal deve ser maior que zero.")
     elif not dados_fiscais_opcionais:
         raise ValidationError("Informe um valor total válido para a Nota Fiscal.")
+
+    frete_nota = None
+    if valor_frete_nota not in (None, ""):
+        try:
+            frete_nota = Decimal(str(valor_frete_nota).replace(",", "."))
+        except InvalidOperation as exc:
+            raise ValidationError("Informe um valor de frete válido para a Nota Fiscal.") from exc
+        if not frete_nota.is_finite() or frete_nota < ZERO:
+            raise ValidationError("Informe um valor de frete válido para a Nota Fiscal.")
+        DecimalValidator(18, 2)(frete_nota)
+        if frete_nota and not (numero_nota_fiscal and total_nota and arquivo_nota_fiscal):
+            raise ValidationError("O frete discriminado exige número, valor e arquivo da Nota Fiscal.")
 
     itens_receber = []
     for item in p.itens.select_for_update().all():
@@ -641,6 +659,7 @@ def registrar_recebimento(
         numero_nota_fiscal=numero_nota_fiscal,
         arquivo_nota_fiscal=arquivo_nota_fiscal,
         valor_total_nota=quantizar_moeda(total_nota) if total_nota is not None else None,
+        valor_frete_nota=frete_nota,
         usuario=usuario,
         observacao=(observacao or "").strip(),
     )
@@ -690,6 +709,7 @@ def registrar_recebimento(
             "recebimento_id": recebimento.pk,
             "numero_nota_fiscal": numero_nota_fiscal,
             "valor_total_nota": str(recebimento.valor_total_nota),
+            "valor_frete_nota": str(frete_nota) if frete_nota is not None else None,
             "excedentes": excedentes,
         },
     )
@@ -709,7 +729,7 @@ def registrar_recebimento(
 
 @transaction.atomic
 def cancelar_pedido(*, pedido, usuario, motivo):
-    p = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
+    p = _bloquear_pedido_no_fluxo(pedido)
     motivo = (motivo or "").strip()
     if not motivo:
         raise ValidationError("Informe o motivo do cancelamento do pedido.")

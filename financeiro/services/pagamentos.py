@@ -2,8 +2,31 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from financeiro.models import Pagamento, TituloPagar
+from financeiro.models import Pagamento, ProgramacaoPagamento, TituloPagar
 from financeiro.services.auditoria import registrar_evento
+
+
+@transaction.atomic
+def programar_pagamento(titulo, *, data_programada, usuario, motivo=""):
+    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+    if titulo.status != TituloPagar.Status.APROVADO or titulo.esta_pago or titulo.valor_liquido <= 0:
+        raise ValidationError("A programação exige uma conta aprovada e disponível para pagamento.")
+    programacao = ProgramacaoPagamento.objects.filter(titulo=titulo).first()
+    anterior = programacao.data_programada if programacao else None
+    if programacao and programacao.ativa and programacao.ciclo_aprovacao == titulo.ciclo_aprovacao and anterior == data_programada:
+        return programacao
+
+    programacao, _ = ProgramacaoPagamento.objects.update_or_create(
+        titulo=titulo,
+        defaults={"data_programada": data_programada, "ciclo_aprovacao": titulo.ciclo_aprovacao, "ativa": True},
+    )
+    registrar_evento(titulo, "PAGAMENTO_PROGRAMADO", motivo or "Programação de pagamento registrada.", usuario, {
+        "programacao_id": programacao.pk,
+        "data_anterior": anterior.isoformat() if anterior else None,
+        "data_nova": data_programada.isoformat(),
+        "ciclo_aprovacao": titulo.ciclo_aprovacao,
+    })
+    return programacao
 
 
 @transaction.atomic
@@ -54,12 +77,15 @@ def registrar_pagamento(*, titulo, data_pagamento=None, forma=None, usuario, com
 
     titulo.status = TituloPagar.Status.PAGO
     titulo.save(update_fields=["status", "atualizado_em"])
+    ProgramacaoPagamento.objects.filter(titulo=titulo, ativa=True).update(ativa=False)
     registrar_evento(
         titulo,
         "PAGAMENTO",
         f"Pagamento integral de R$ {valor:,.2f} registrado.",
         usuario,
-        {"pagamento_id": pagamento.pk},
+        {"pagamento_id": pagamento.pk, "valor_anterior": "0.00", "valor_novo": str(valor),
+         "data_pagamento": data_pagamento.isoformat(), "forma": forma,
+         "comprovante": pagamento.comprovante.name or ""},
     )
     if titulo.origem == TituloPagar.Origem.GRANDE_FORNECEDOR and titulo.referencia_externa:
         try:
@@ -85,6 +111,8 @@ def registrar_pagamento(*, titulo, data_pagamento=None, forma=None, usuario, com
 
 @transaction.atomic
 def estornar_pagamento(pagamento, *, usuario, motivo):
+    titulo = TituloPagar.objects.select_for_update().get(pk=pagamento.titulo_id)
+    pagamento = Pagamento.objects.select_for_update().get(pk=pagamento.pk)
     if pagamento.status == Pagamento.Status.ESTORNADO:
         return pagamento
 
@@ -94,8 +122,11 @@ def estornar_pagamento(pagamento, *, usuario, motivo):
     pagamento.motivo_estorno = motivo
     pagamento.save(update_fields=["status", "estornado_em", "estornado_por", "motivo_estorno"])
 
-    titulo = pagamento.titulo
     titulo.status = TituloPagar.Status.APROVADO
     titulo.save(update_fields=["status", "atualizado_em"])
-    registrar_evento(titulo, "ESTORNO", motivo or "Pagamento estornado.", usuario, {"pagamento_id": pagamento.pk})
+    registrar_evento(titulo, "ESTORNO", motivo or "Pagamento estornado.", usuario, {
+        "pagamento_id": pagamento.pk, "valor_anterior": str(pagamento.valor), "valor_novo": "0.00",
+        "data_pagamento": pagamento.data_pagamento.isoformat(), "forma": pagamento.forma,
+        "comprovante": pagamento.comprovante.name or "", "motivo": motivo,
+    })
     return pagamento

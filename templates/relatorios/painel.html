@@ -21,7 +21,7 @@
 
     <div class="sa-actions" aria-label="Ações do relatório">
 
-      {% if pode_exportar %}<a class="sa-button" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}exportar=csv" aria-label="Exportar indicadores filtrados para CSV">
+      {% if pode_exportar %}<a class="sa-button" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}exportar=csv" data-download aria-label="Exportar indicadores filtrados para CSV">
 
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></svg> Exportar CSV
 

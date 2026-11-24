@@ -46,6 +46,46 @@
         Georgia,
         "Times New Roman",
         serif;
+
+    --saari-accent: #00898a;
+    --saari-focus: #007476;
+}
+
+:root[data-theme="light"] {
+    --saari-background: #f4f7f6;
+    --saari-surface: #ffffff;
+    --saari-line: #e2e8f0;
+    --saari-action: #007476;
+    --saari-action-hover: #005d5e;
+}
+
+:root[data-theme="dark"] {
+    --saari-focus: #78d5ca;
+}
+
+[data-theme="light"] .app-body :is(
+    .cp-btn--primary,
+    .cad-btn:not(.cad-btn--secondary, .cad-btn--danger),
+    .fin-btn--primary,
+    .usr-btn--primary,
+    .obra-btn--primary,
+    .ps-btn-primary
+) {
+    background: var(--saari-action) !important;
+    border-color: var(--saari-accent) !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+}
+
+[data-theme="light"] .app-body :is(
+    .cp-btn--primary,
+    .cad-btn:not(.cad-btn--secondary, .cad-btn--danger),
+    .fin-btn--primary,
+    .usr-btn--primary,
+    .obra-btn--primary,
+    .ps-btn-primary
+):hover {
+    background: var(--saari-action-hover) !important;
 }
 
 * {
@@ -781,7 +821,6 @@ body.sidebar-collapsed .sidebar-logout {
     --motion-slow: 360ms;
     --ease-ui: cubic-bezier(.2,.8,.2,1);
     --ease-out-soft: cubic-bezier(.16,1,.3,1);
-    --focus-ring: 0 0 0 4px rgba(29,145,166,.13);
 }
 
 html { scroll-behavior: smooth; }
@@ -803,14 +842,17 @@ a,
     touch-action: manipulation;
 }
 
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-[tabindex]:focus-visible {
-    outline: 0;
-    box-shadow: var(--focus-ring);
+.app-body :is(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--saari-focus) !important;
+    outline-offset: 2px;
+}
+
+.sidebar {
+    --saari-focus: #b5ede6;
+}
+
+.sidebar :is(a, button, summary):focus-visible {
+    outline-offset: -3px;
 }
 
 /* Transição entre telas: a camada precisa completar o percurso antes da navegação. */
@@ -836,12 +878,12 @@ body.is-transitioning .page-transition__mark {
 
 /* A nova tela entra de forma perceptível, mas sem atrasar a interação. */
 .page-reveal {
-    animation: pageRevealFluid 780ms var(--ease-out-soft) both;
+    animation: pageRevealFluid var(--motion-base) var(--ease-out-soft) backwards;
     transform-origin: 50% 0;
 }
 @keyframes pageRevealFluid {
     from { opacity: 0; transform: translate3d(0, 10px, 0); }
-    to { opacity: 1; transform: translate3d(0, 0, 0); }
+    to { opacity: 1; transform: none; }
 }
 
 /* Sidebar mais rápida para acompanhar o gesto do usuário. */
@@ -902,16 +944,26 @@ body.is-transitioning .page-transition__mark {
 }
 
 /* Feedback universal de clique sem dependência de framework. */
-.ui-wave-host { position: relative !important; overflow: hidden !important; }
+.ui-wave-host { position: relative; }
 .ui-press-wave {
     position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.ui-press-wave::before {
+    content: "";
+    position: absolute;
+    left: var(--press-x);
+    top: var(--press-y);
     width: 12px;
     height: 12px;
     margin: -6px 0 0 -6px;
     border-radius: 999px;
     background: currentColor;
     opacity: .10;
-    pointer-events: none;
     transform: scale(0);
     animation: uiPressWave 470ms var(--ease-out-soft) forwards;
 }
@@ -930,9 +982,14 @@ body.is-transitioning .page-transition__mark {
         transform 420ms var(--ease-out-soft);
     transition-delay: var(--ui-delay, 0ms);
 }
-[data-ui-reveal].is-ui-visible {
+[data-ui-reveal].is-ui-visible,
+[data-ui-reveal]:focus-within {
     opacity: 1;
-    transform: translate3d(0,0,0);
+    transform: none;
+}
+
+[data-ui-reveal]:focus-within {
+    transition: none;
 }
 
 /* Inputs e selects deixam claro onde o usuário está sem brilho excessivo. */
@@ -991,9 +1048,6 @@ button.is-submitting::after {
 }
 @keyframes uiSpin { to { transform: rotate(360deg); } }
 
-/* O conteúdo não sofre animações custosas enquanto a sidebar está redimensionando. */
-body.is-resizing-sidebar .page-content { pointer-events: none; }
-
 @media (hover: hover) and (pointer: fine) {
     .ui-hover-lift {
         transition: transform var(--motion-base) var(--ease-ui), box-shadow var(--motion-base) ease;
@@ -1014,21 +1068,5 @@ body.is-resizing-sidebar .page-content { pointer-events: none; }
     html { scroll-behavior: auto; }
     .ui-press-wave { display: none !important; }
     [data-ui-reveal] { opacity: 1 !important; transform: none !important; }
-}
-
-
-/*
- * A preferência global de movimento reduzido acima usa !important e poderia
- * zerar especificamente a transição entre páginas. Como esta interface usa a
- * transição como feedback explícito de navegação, preservamos apenas este efeito.
- */
-@media (prefers-reduced-motion: reduce) {
-    .page-transition__mark {
-        transition-duration: 460ms, 650ms !important;
-        transition-delay: 280ms, 260ms !important;
-    }
-
-    .page-reveal {
-        animation-duration: 780ms !important;
-    }
+    .page-reveal { animation: none !important; }
 }

@@ -1,7 +1,10 @@
 from .menu import menu_suprimentos
 from .processos import (
+    cobertura_necessidade,
     dashboard,
     detalhe_processo,
+    historico_processo,
+    pedidos_processo,
     lista_pedidos,
     lista_processos,
     novo_processo,

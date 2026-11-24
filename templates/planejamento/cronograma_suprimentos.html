@@ -714,6 +714,15 @@
   .ps-status{padding:3px 6px;font-size:.57rem;border-radius:999px}
   .ps-order-block{min-width:180px}
   .ps-detail-foot{padding:8px 10px;font-size:.6rem;background:#faf7f1}
+  .ps-supplier-table { min-width: 640px; }
+  .ps-commercial-history { margin: 0 12px 8px; color: var(--ps-text); }
+  .ps-commercial-details { white-space: normal; color: var(--ps-text); }
+  .ps-commercial-details summary, .ps-commercial-history summary { cursor: pointer; font-weight: 700; }
+  .ps-commercial-details h3 { font-size: .85rem; margin: .75rem 0 .25rem; }
+  .ps-commercial-details p { margin: .25rem 0; }
+  .ps-commercial-list { padding-inline-start: 1.25rem; margin: .4rem 0; }
+  .ps-commercial-list li + li { margin-block-start: .35rem; }
+  .ps-commercial-list li > span { display: block; }
 
   .ps-modal{width:min(660px,100%);border-radius:11px;box-shadow:0 18px 48px rgba(45,32,28,.20)}
   .ps-modal-head{padding:13px 15px}
@@ -816,7 +825,7 @@
   </div>
 
   {% if importacao_ativa %}
-  <form class="ps-toolbar" method="get">
+  <form class="ps-toolbar" method="get" data-local-submit-loading>
     <div class="ps-field">
       <label for="f-obra">Obra</label>
       <select id="f-obra" name="obra">
@@ -878,28 +887,23 @@
   <div class="ps-summary">
     <div class="ps-summary-item">
       <span class="ps-summary-label">Suprimentos</span>
-      <strong class="ps-summary-value">{{ resumo.total }}</strong>
-      <span class="ps-summary-note">itens no filtro atual</span>
+      <strong class="ps-summary-value">{{ resumo_filtrado.total }}</strong>
     </div>
     <div class="ps-summary-item is-accent">
       <span class="ps-summary-label">Avanço médio</span>
-      <strong class="ps-summary-value">{{ resumo.percentual_medio }}%</strong>
-      <span class="ps-summary-note">etapas concluídas</span>
+      <strong class="ps-summary-value">{{ resumo_filtrado.percentual_medio }}%</strong>
     </div>
     <div class="ps-summary-item">
       <span class="ps-summary-label">Em andamento</span>
-      <strong class="ps-summary-value">{{ resumo.em_andamento }}</strong>
-      <span class="ps-summary-note">processos ativos</span>
+      <strong class="ps-summary-value">{{ resumo_filtrado.em_andamento }}</strong>
     </div>
     <div class="ps-summary-item is-success">
       <span class="ps-summary-label">Concluídos</span>
-      <strong class="ps-summary-value">{{ resumo.concluidos }}</strong>
-      <span class="ps-summary-note">contratação realizada</span>
+      <strong class="ps-summary-value">{{ resumo_filtrado.concluidos }}</strong>
     </div>
     <div class="ps-summary-item is-warning">
       <span class="ps-summary-label">Atrasados</span>
-      <strong class="ps-summary-value">{{ resumo.atrasados }}</strong>
-      <span class="ps-summary-note">etapa fora do prazo</span>
+      <strong class="ps-summary-value">{{ resumo_filtrado.atrasados }}</strong>
     </div>
   </div>
 
@@ -907,13 +911,11 @@
     <div class="ps-board-head">
       <div class="ps-board-title">
         <strong>Registro de suprimentos</strong>
-        <span>Datas planejadas, realizadas e situação atual do processo.</span>
       </div>
       <div class="ps-legend" aria-label="Legenda de status">
         <span class="ps-legend-item"><span class="ps-dot done"></span>Realizado</span>
         <span class="ps-legend-item"><span class="ps-dot"></span>Pendente</span>
         <span class="ps-legend-item"><span class="ps-dot late"></span>Atrasado</span>
-        <span class="ps-count">{{ resumo.total }} item{{ resumo.total|pluralize }}</span>
       </div>
     </div>
 
@@ -922,7 +924,7 @@
         <thead>
           <tr>
             <th>Suprimento</th>
-            <th>Fornecedores</th>
+            <th>Etapa atual</th>
             <th>Cotação</th>
             <th>Compatibilização</th>
             <th>Negociação</th>
@@ -951,28 +953,10 @@
                 </div>
               </td>
 
-              <td class="ps-supplier-overview-cell">
-                {% if item.acompanhamento_fornecedores %}
-                  <div class="ps-supplier-overview">
-                    <div class="ps-supplier-overview__head">
-                      <span class="ps-supplier-overview__label">Em processo</span>
-                      <span class="ps-supplier-overview__count">{{ item.acompanhamento_fornecedores|length }}</span>
-                    </div>
-                    {% for fornecedor in item.acompanhamento_fornecedores %}
-                      {% if forloop.counter <= 3 %}
-                        <div class="ps-supplier-overview__row" title="{{ fornecedor.fornecedor_nome }} · {{ fornecedor.status_atual.label }}">
-                          <span class="ps-supplier-overview__name">{{ fornecedor.fornecedor_nome }}</span>
-                          <span class="ps-supplier-overview__status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span>
-                        </div>
-                      {% endif %}
-                    {% endfor %}
-                    {% if item.acompanhamento_fornecedores|length > 3 %}
-                      <div class="ps-supplier-overview__more">+{{ item.acompanhamento_fornecedores|length|add:"-3" }} fornecedor{{ item.acompanhamento_fornecedores|length|add:"-3"|pluralize }}</div>
-                    {% endif %}
-                  </div>
-                {% else %}
-                  <span class="ps-supplier-overview__empty">Sem fornecedor no processo</span>
-                {% endif %}
+              <td>
+                <strong>{{ item.etapa_calculada_label }}</strong>
+                {% if item.usa_fluxo_grande_fornecedor %}<div class="ps-item-local">Grande fornecedor</div>{% endif %}
+                {% if item.atrasado_calculado %}<div class="ps-milestone-real late">Em atraso</div>{% endif %}
               </td>
 
               <td class="ps-milestone">
@@ -1037,6 +1021,7 @@
                 {% else %}
                   <div class="ps-milestone-real">Sem previsão</div>
                 {% endif %}
+                {% if item.data_necessaria_obra %}<div class="ps-milestone-real">Na obra {{ item.data_necessaria_obra|date:"d/m/Y" }}</div>{% endif %}
               </td>
 
               <td class="ps-progress">
@@ -1046,11 +1031,11 @@
 
               <td>
                 <div class="ps-row-actions">
-                  <button type="button" class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" data-detail-target="detalhe-suprimento-{{ item.id|unlocalize }}" aria-expanded="false" title="Ver andamento comercial">
+                  <a href="{% url 'planejamento:detalhe_item_cronograma_suprimentos' item.id %}" data-no-loading class="ps-btn ps-btn-sm ps-detail-trigger js-toggle-detail" aria-controls="detalhe-suprimento-{{ item.id|unlocalize }}" aria-expanded="false" title="Ver andamento comercial">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                     Detalhes
                     <svg class="ps-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                  </button>
+                  </a>
 
                   <button type="button"
                           class="ps-btn ps-btn-sm ps-history-trigger js-open-history"
@@ -1063,7 +1048,7 @@
                   <a href="{% url 'compras:novo_processo' %}?item={{ item.id|unlocalize }}" class="ps-btn ps-btn-sm ps-btn-icon" title="Abrir uma nova compra para este suprimento, mesmo que já existam outros processos em andamento">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1"/><circle cx="19" cy="20" r="1"/><path d="M3 4h2l2.6 10.4a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L21 8H6"/></svg>
                   </a>
-                  <button type="button" class="ps-btn ps-btn-sm ps-btn-icon js-open-progress"
+                  {% if pode_editar_datas %}<button type="button" class="ps-btn ps-btn-sm ps-btn-icon js-open-progress"
                           data-item-id="{{ item.id|unlocalize }}"
                           data-url="{% url 'planejamento:salvar_datas_item_cronograma_suprimentos' item.id %}"
                           data-item="{{ item.item|escape }}"
@@ -1077,121 +1062,17 @@
                           data-real-compat="{{ item.data_real_compatibilizacao|date:'Y-m-d' }}"
                           data-real-negociacao="{{ item.data_real_negociacao|date:'Y-m-d' }}"
                           data-real-contratacao="{{ item.data_real_contratacao|date:'Y-m-d' }}"
-                          title="Atualizar datas realizadas">
+                          {% if item.data_necessaria_obra %}data-necessaria="{{ item.data_necessaria_obra|date:'Y-m-d' }}"{% endif %}
+                          title="Editar datas do suprimento" aria-label="Editar datas do suprimento">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
-                  </button>
+                  </button>{% endif %}
                 </div>
               </td>
             </tr>
 
             <tr id="detalhe-suprimento-{{ item.id|unlocalize }}" class="ps-detail-row">
               <td colspan="9">
-                <div class="ps-detail-shell">
-                  <div class="ps-detail-head">
-                    <div class="ps-detail-context">
-                      <span class="ps-context-pill"><strong>Atividade{% if item.acompanhamento_atividades|length != 1 %}s{% endif %}:</strong>{{ item.acompanhamento_atividades_texto }}</span>
-                    </div>
-                    {% if item.acompanhamento_processos %}
-                    <div class="ps-process-summary">
-                      {% if item.acompanhamento_qtd_processos_ativos %}<span class="ps-process-count active">{{ item.acompanhamento_qtd_processos_ativos }} ativo{{ item.acompanhamento_qtd_processos_ativos|pluralize }}</span>{% endif %}
-                      {% if item.acompanhamento_qtd_processos_contratados %}<span class="ps-process-count done">{{ item.acompanhamento_qtd_processos_contratados }} contratado{{ item.acompanhamento_qtd_processos_contratados|pluralize }}</span>{% endif %}
-                      <div class="ps-processes">
-                        {% for processo in item.acompanhamento_processos %}
-                        <a class="ps-process-pill" href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}" title="Abrir processo {{ processo.numero }}">{{ processo.numero }} · {{ processo.get_status_display }}</a>
-                        {% endfor %}
-                      </div>
-                    </div>
-                    {% endif %}
-                  </div>
-
-                  {% if item.acompanhamento_tem_compras %}
-                  <div class="ps-detail-summary">
-                    <div class="ps-detail-kpi"><span>Processos</span><strong>{{ item.acompanhamento_resumo.processos }}</strong><small>{{ item.acompanhamento_resumo.processos_ativos }} ativo{{ item.acompanhamento_resumo.processos_ativos|pluralize }}</small></div>
-                    <div class="ps-detail-kpi"><span>Fornecedores</span><strong>{{ item.acompanhamento_resumo.fornecedores }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Propostas</span><strong>{{ item.acompanhamento_resumo.propostas_recebidas }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Compatibilizados</span><strong>{{ item.acompanhamento_resumo.compatibilizados }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Solicitações enviadas</span><strong>{{ item.acompanhamento_resumo.solicitacoes_enviadas }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Menor cotado</span><strong class="money">{{ item.acompanhamento_resumo.menor_valor_formatado }}</strong></div>
-                    <div class="ps-detail-kpi"><span>Menor negociado</span><strong class="money">{{ item.acompanhamento_resumo.menor_negociado_formatado }}</strong></div>
-                  </div>
-
-                  <div class="ps-supplier-wrap">
-                    <table class="ps-supplier-table">
-                      <thead>
-                        <tr>
-                          <th>Fornecedor</th>
-                          <th>Solicitação / proposta</th>
-                          <th>Valor cotado</th>
-                          <th>Compatibilização</th>
-                          <th>Negociação</th>
-                          <th>Valor negociado</th>
-                          <th>Aprovação</th>
-                          <th>Itens</th>
-                          <th>Valor pedido</th>
-                          <th>Status atual</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for fornecedor in item.acompanhamento_fornecedores %}
-                        <tr>
-                          <td><span class="ps-supplier-name">{{ fornecedor.fornecedor_nome }}</span><span class="ps-supplier-process">{{ fornecedor.processo_numero }}</span></td>
-                          <td>
-                            {% if fornecedor.solicitacao.codigo == 'RESPONDIDA' %}
-                              <span class="ps-status success">Proposta recebida</span>
-                            {% else %}
-                              <span class="ps-status {{ fornecedor.solicitacao.classe }}">{{ fornecedor.solicitacao.label }}</span>
-                            {% endif %}
-                          </td>
-                          <td class="ps-money">{{ fornecedor.valor_cotado_formatado }}</td>
-                          <td><span class="ps-status {{ fornecedor.compatibilizacao.classe }}">{{ fornecedor.compatibilizacao.label }}</span></td>
-                          <td><span class="ps-status {{ fornecedor.negociacao.classe }}">{{ fornecedor.negociacao.label }}</span></td>
-                          <td class="ps-money">{{ fornecedor.valor_negociado_formatado }}</td>
-                          <td><span class="ps-status {{ fornecedor.aprovacao.classe }}">{{ fornecedor.aprovacao.label }}</span></td>
-                          <td>
-                            {% if fornecedor.pedidos_detalhes %}
-                              {% for pedido in fornecedor.pedidos_detalhes %}
-                              <div class="ps-order-block">
-                                <a class="ps-order-number ps-order-link" href="{% url 'compras:lista_pedidos' %}?q={{ pedido.numero|urlencode }}" title="Abrir pedido {{ pedido.numero }}">{{ pedido.numero }}</a>
-                                {% if pedido.previsao_entrega %}<span class="ps-order-meta">Previsão: {{ pedido.previsao_entrega|date:"d/m/Y" }}</span>{% endif %}
-                                {% for item_pedido in pedido.itens|slice:":5" %}
-                                <div class="ps-order-item">
-                                  <div>
-                                    <span class="ps-order-item-name">{{ item_pedido.descricao }}</span>
-                                    <span class="ps-order-meta">{{ item_pedido.valor_total_formatado }}</span>
-                                    <span class="ps-order-meta">Contratado: {{ item_pedido.quantidade_formatada }} {{ item_pedido.unidade }} · Recebido: {{ item_pedido.quantidade_recebida_formatada }} {{ item_pedido.unidade }} · Pendente: {{ item_pedido.quantidade_pendente_formatada }} {{ item_pedido.unidade }}</span>
-                                  </div>
-                                </div>
-                                {% empty %}
-                                <span class="ps-order-meta">Pedido sem itens.</span>
-                                {% endfor %}
-                                {% if pedido.itens|length > 5 %}
-                                <div class="ps-order-more">
-                                  + {{ pedido.itens|length|add:"-5" }} item{{ pedido.itens|length|add:"-5"|pluralize }} no pedido
-                                </div>
-                                {% endif %}
-                              </div>
-                              {% endfor %}
-                            {% else %}—{% endif %}
-                          </td>
-                          <td class="ps-money">{{ fornecedor.valor_pedido_formatado }}</td>
-                          <td><span class="ps-status {{ fornecedor.status_atual.classe }}">{{ fornecedor.status_atual.label }}</span></td>
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div class="ps-detail-foot">
-                    <span>{{ item.acompanhamento_resumo.fornecedores }} fornecedor{{ item.acompanhamento_resumo.fornecedores|pluralize }} no acompanhamento</span>
-                    <span>
-                      {% if item.acompanhamento_resumo.valor_pedidos %}Pedidos emitidos: <strong>{{ item.acompanhamento_resumo.valor_pedidos_formatado }}</strong>{% endif %}
-                      {% if item.acompanhamento_resumo.ultima_atualizacao %}{% if item.acompanhamento_resumo.valor_pedidos %}&nbsp;&nbsp;•&nbsp;&nbsp;{% endif %}Última atualização: <strong>{{ item.acompanhamento_resumo.ultima_atualizacao|date:"d/m/Y H:i" }}</strong>{% endif %}
-                    </span>
-                  </div>
-                  {% else %}
-                  <div class="ps-detail-empty">Ainda não existe processo de compra iniciado para este suprimento. Use <strong>Nova compra</strong> para iniciar o acompanhamento.</div>
-                  {% endif %}
-                </div>
+                <div data-detail-content aria-live="polite"></div>
               </td>
             </tr>
             {% endfor %}
@@ -1215,6 +1096,7 @@
       <input type="hidden" name="categoria" value="{{ filtros.categoria }}">
       <input type="hidden" name="etapa" value="{{ filtros.etapa }}">
       <input type="hidden" name="suprimento" value="{{ filtros.suprimento }}">
+      <input type="hidden" name="busca" value="{{ filtros.busca }}">
 
       <div class="ps-modal-head">
         <div class="ps-modal-title-row">
@@ -1222,7 +1104,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
           </div>
           <div>
-            <h2 id="ps-modal-title" class="ps-modal-title">Atualizar andamento</h2>
+            <h2 id="ps-modal-title" class="ps-modal-title">Editar datas do suprimento</h2>
             <p id="ps-modal-subtitle" class="ps-modal-subtitle"></p>
           </div>
         </div>
@@ -1230,10 +1112,8 @@
       </div>
 
       <div class="ps-modal-body">
-        <div class="ps-modal-note">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-          <span>As datas base vêm do planejamento e permanecem bloqueadas. Informe apenas a data em que cada etapa foi efetivamente concluída.</span>
-        </div>
+        <label for="data-necessaria">Data necessária na obra</label>
+        <input class="ps-real-input" id="data-necessaria" name="data_necessaria_obra" type="date">
 
         <div class="ps-edit-grid">
           <div class="ps-edit-cell ps-edit-head">Etapa</div><div class="ps-edit-cell ps-edit-head">Data base</div><div class="ps-edit-cell ps-edit-head">Data realizada</div>
@@ -1259,7 +1139,7 @@
         <button type="button" class="ps-btn js-close-progress">Cancelar</button>
         <button type="submit" class="ps-btn ps-btn-primary">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
-          Salvar andamento
+          Salvar datas
         </button>
       </div>
     </form>
@@ -1340,19 +1220,28 @@
   const subtitle = document.getElementById('ps-modal-subtitle');
   let opener = null;
 
-  document.querySelectorAll('.js-toggle-detail').forEach((button) => {
-    button.addEventListener('click', () => {
-      const targetId = button.dataset.detailTarget;
-      const detail = targetId ? document.getElementById(targetId) : null;
-      if (!detail) return;
+  document.querySelectorAll('.js-toggle-detail').forEach((link) => {
+    link.addEventListener('click', async (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const detail = document.getElementById(link.getAttribute('aria-controls'));
+      const content = detail?.querySelector('[data-detail-content]');
+      if (!content) return;
+      event.preventDefault();
       const willOpen = !detail.classList.contains('open');
       detail.classList.toggle('open', willOpen);
-      button.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-      if (willOpen) {
-        requestAnimationFrame(() => {
-          const row = button.closest('.ps-item-row');
-          if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        });
+      link.setAttribute('aria-expanded', String(willOpen));
+      if (!willOpen || content.dataset.loaded || content.getAttribute('aria-busy') === 'true') return;
+      content.setAttribute('aria-busy', 'true');
+      content.textContent = 'Carregando detalhes…';
+      try {
+        const response = await fetch(link.href);
+        if (!response.ok || response.redirected) throw new Error('Detalhes indisponíveis');
+        content.innerHTML = await response.text();
+        content.dataset.loaded = 'true';
+      } catch {
+        content.textContent = 'Não foi possível carregar os detalhes. Feche e abra para tentar novamente.';
+      } finally {
+        content.removeAttribute('aria-busy');
       }
     });
   });
@@ -1365,7 +1254,8 @@
     realCotacao: document.getElementById('real-cotacao'),
     realCompat: document.getElementById('real-compat'),
     realNegociacao: document.getElementById('real-negociacao'),
-    realContratacao: document.getElementById('real-contratacao')
+    realContratacao: document.getElementById('real-contratacao'),
+    necessaria: document.getElementById('data-necessaria')
   };
 
   function closeModal() {
@@ -1391,12 +1281,12 @@
     fields.realCompat.value = button.dataset.realCompat || '';
     fields.realNegociacao.value = button.dataset.realNegociacao || '';
     fields.realContratacao.value = button.dataset.realContratacao || '';
+    fields.necessaria.value = button.dataset.necessaria || '';
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('ps-modal-open');
     requestAnimationFrame(() => {
-      const firstEmpty = [fields.realCotacao, fields.realCompat, fields.realNegociacao, fields.realContratacao].find((input) => !input.disabled && !input.value);
-      (firstEmpty || fields.realContratacao).focus({ preventScroll: true });
+      fields.necessaria.focus({ preventScroll: true });
     });
   }
 

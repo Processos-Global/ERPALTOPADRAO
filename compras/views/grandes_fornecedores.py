@@ -950,6 +950,7 @@ def receber_pedido_grande_fornecedor_compras(request, pedido_id):
             pedido=pedido, quantidades=quantidades, valores_itens=valores_itens, usuario=request.user,
             numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
             valor_total_nota=request.POST.get("valor_total_nota", ""),
+            valor_frete_nota=request.POST.get("valor_frete_nota", ""),
             arquivo_nota_fiscal=arquivo, observacao=request.POST.get("observacao", ""),
             dados_fiscais_opcionais=True,
         )

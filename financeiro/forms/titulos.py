@@ -1,4 +1,10 @@
+from copy import copy
+from hashlib import sha256
+from json import dumps
+from uuid import UUID, uuid4
+
 from django import forms
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -21,6 +27,31 @@ class MultipleFileField(forms.FileField):
         return [single_clean(arquivo, initial) for arquivo in arquivos]
 
 
+class CatalogoOptions:
+    def optgroups(self, name, value, attrs=None):
+        # Limita a renderização sem restringir o queryset usado para validar o POST.
+        originais = self.choices
+        selecionados = [
+            int(item) for item in value
+            if item and item.isascii() and item.isdecimal() and len(item) <= 19 and int(item) <= 2**63 - 1
+        ]
+        escolhas = copy(originais)
+        escolhas.queryset = originais.queryset.filter(pk__in=selecionados)
+        self.choices = escolhas
+        try:
+            return super().optgroups(name, value, attrs)
+        finally:
+            self.choices = originais
+
+
+class CatalogoSelect(CatalogoOptions, forms.Select):
+    pass
+
+
+class CatalogoSelectMultiple(CatalogoOptions, forms.SelectMultiple):
+    pass
+
+
 class TituloPagarForm(ERPModelForm):
     """Formulário enxuto para solicitação avulsa e manutenção de contas."""
 
@@ -30,10 +61,10 @@ class TituloPagarForm(ERPModelForm):
         label="Classificação",
     )
     materiais = forms.ModelMultipleChoiceField(
-        queryset=Material.objects.all(),
+        queryset=Material.objects.select_related("unidade"),
         required=False,
         label="Materiais",
-        widget=forms.SelectMultiple(attrs={"size": "8"}),
+        widget=CatalogoSelectMultiple(attrs={"data-fin-catalogo": "material", "data-no-search": ""}),
     )
     quantidade_parcelas = forms.IntegerField(
         min_value=1,
@@ -80,7 +111,9 @@ class TituloPagarForm(ERPModelForm):
             "meio_pagamento",
             "anexos",
             "data_emissao",
+            "competencia",
             "vencimento",
+            "condicao_pagamento",
             "valor_original",
             "desconto",
             "juros",
@@ -89,7 +122,11 @@ class TituloPagarForm(ERPModelForm):
             "observacao",
         )
         widgets = {
+            "obra": CatalogoSelect(attrs={"data-fin-catalogo": "obra", "data-no-search": ""}),
+            "fornecedor": CatalogoSelect(attrs={"data-fin-catalogo": "fornecedor", "data-no-search": ""}),
+            "plano_financeiro": CatalogoSelect(attrs={"data-fin-catalogo": "apropriacao", "data-no-search": ""}),
             "data_emissao": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "competencia": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "vencimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "especificacao_pagamento": forms.Textarea(attrs={"rows": 3, "placeholder": "Descreva o serviço, taxa ou outro pagamento."}),
             "observacao": forms.Textarea(attrs={"rows": 3}),
@@ -107,7 +144,10 @@ class TituloPagarForm(ERPModelForm):
             "plano_financeiro": "Apropriação financeira",
             "descricao": "Descrição do pagamento",
             "especificacao_pagamento": "O que está sendo pago",
+            "especificacao_pagamento": "O que está sendo pago",
             "documento_numero": "Documento / NF",
+            "competencia": "Competência",
+            "condicao_pagamento": "Condição de pagamento",
             "valor_original": "Valor bruto",
             "desconto": "Desconto",
             "juros": "Juros",
@@ -167,7 +207,7 @@ class TituloPagarForm(ERPModelForm):
                 "fornecedor", "beneficiario_nome", "beneficiario_documento",
                 "beneficiario_banco", "beneficiario_agencia", "beneficiario_conta_corrente",
                 "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular",
-                "valor_original",
+                "valor_original", "condicao_pagamento", "competencia", "data_emissao",
             ):
                 self.fields[campo].disabled = True
             self.fields["tipo_pagamento"].widget = forms.HiddenInput()
@@ -228,6 +268,48 @@ class TituloPagarForm(ERPModelForm):
         if quantidade > 1 and not cleaned.get("intervalo_dias"):
             raise ValidationError("Informe o intervalo entre as parcelas.")
         return cleaned
+
+
+class SolicitacaoAvulsaForm(TituloPagarForm):
+    chave_idempotencia = forms.CharField(max_length=256, widget=forms.HiddenInput)
+    _assinador = signing.Signer(salt="financeiro.solicitacao_avulsa")
+
+    def __init__(self, *args, usuario, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        if not self.is_bound:
+            self.initial["chave_idempotencia"] = self._assinador.sign_object([usuario.pk, uuid4().hex])
+
+    def chave_da_tentativa(self):
+        try:
+            campo = self["chave_idempotencia"]
+            chave_assinada = campo.field.clean(campo.data)
+            usuario_id, chave = self._assinador.unsign_object(chave_assinada)
+            if usuario_id == self.usuario.pk:
+                return UUID(hex=chave)
+        except (signing.BadSignature, ValidationError, ValueError, TypeError):
+            pass
+        raise ValidationError("Tentativa inválida. Abra uma nova solicitação e envie novamente.")
+
+    def impressao_da_tentativa(self):
+        # Os valores enviados são estáveis mesmo se um cadastro usado no formulário mudar.
+        campos = {
+            nome: valores for nome, valores in self.data.lists()
+            if nome not in {self.add_prefix("chave_idempotencia"), "csrfmiddlewaretoken"}
+        }
+        anexos = []
+        for arquivo in self.files.getlist(self.add_prefix("anexos")):
+            try:
+                validar_documento_upload(arquivo)
+            except ValidationError as erro:
+                raise ValidationError({"anexos": erro}) from erro
+            conteudo = sha256()
+            for bloco in arquivo.chunks():
+                conteudo.update(bloco)
+            arquivo.seek(0)
+            anexos.append((arquivo.name, arquivo.content_type, conteudo.hexdigest()))
+        carga = dumps({"campos": campos, "anexos": anexos}, sort_keys=True, ensure_ascii=False)
+        return sha256(carga.encode("utf-8")).hexdigest()
 
 
 class PrevisaoFinanceiraForm(ERPModelForm):

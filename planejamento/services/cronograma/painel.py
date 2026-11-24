@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from .agenda_semanal import obter_semana_anterior
-from .atividades import listar_atividades
+from collections import Counter
+
+from .agenda_semanal import obter_programacao_semana
+from .atividades import listar_atividades, obter_atividades_prioritarias, resumir_atividades
+from .checklists import obter_checklists
 from .consultas import (
     listar_projetos_ativos,
     listar_semanas_ativas,
@@ -11,6 +14,7 @@ from .consultas import (
     usar_importacao_ativa,
 )
 from .marcos import obter_marcos
+from .disciplinas import obter_disciplinas
 from .operacional import obter_operacional
 from .prazos import calcular_indicadores_prazo
 from .resumo_geral import (
@@ -20,6 +24,22 @@ from .resumo_geral import (
     obter_resumo_geral,
     obter_serie_resumo_geral,
 )
+
+
+def _formatar_intervalos_semanais(avancos, serie):
+    ocorrencias = Counter(item["inicio_semana"] for item in serie)
+    semana_anterior = None
+    for item in avancos:
+        inicio, fim = item["inicio_semana"], item["fim_semana"]
+        if inicio and fim and ocorrencias[inicio] == 1:
+            item["rotulo_intervalo"] = f"{inicio:%d/%m} – {fim:%d/%m}"
+            item["intervalo_completo"] = f"{inicio:%d/%m/%Y} – {fim:%d/%m/%Y}"
+        else:
+            item["rotulo_intervalo"] = ""
+            item["intervalo_completo"] = ""
+        item["base_acumulada"] = semana_anterior is None
+        item["intervalo_entre_medicoes"] = semana_anterior is not None and item["semana"] != semana_anterior + 1
+        semana_anterior = item["semana"]
 
 
 def _contexto_base(
@@ -66,9 +86,10 @@ def _montar_painel_com_importacao(
     projeto=None,
     semana=None,
     importacao,
+    aba=None,
 ):
     """
-    Monta todo o painel reutilizando a importação já resolvida.
+    Monta o contexto da aba reutilizando a importação já resolvida.
 
     Como esta função é chamada dentro de usar_importacao_ativa(), todas
     as funções que internamente usam queryset_ativo() deixam de consultar
@@ -107,6 +128,7 @@ def _montar_painel_com_importacao(
 
     contexto["semana_solicitada"] = semana_solicitada
     contexto["importacao_ativa"] = importacao
+    contexto["aba"] = aba
 
     if not contexto["possui_dados"]:
         return contexto
@@ -152,77 +174,50 @@ def _montar_painel_com_importacao(
         )
         return contexto
 
-    serie = obter_serie_resumo_geral(
-        projeto=projeto
-    )
-
-    avancos = calcular_avancos_semanais(serie)
-
-    avancos_ate_semana = [
-        item
-        for item in avancos
-        if item["semana"] <= semana
-    ]
-
-    medias = calcular_media_avancos(
-        avancos_ate_semana
-    )
-
-    prazos = calcular_indicadores_prazo(
-        resumo=resumo,
-        media_avanco_real=medias["media_real"],
-        avancos=avancos_ate_semana,
-    )
-
-    # Apenas duas consultas de atividades:
-    # 1. semana atual;
-    # 2. semana anterior.
-    atividades_atuais = listar_atividades(
-        projeto=projeto,
-        semana=semana,
-    )
-
-    semana_anterior = obter_semana_anterior(
-        projeto=projeto,
-        semana=semana,
-    )
-
-    atividades_anteriores = (
-        listar_atividades(
-            projeto=projeto,
-            semana=semana_anterior,
+    contexto["resumo"] = resumo
+    if aba in (None, "visao-geral", "semanal", "mensal", "indicadores", "importacao"):
+        serie = obter_serie_resumo_geral(projeto=projeto)
+        contexto["ultima_medicao"] = max(
+            (item["data_atualizacao"] for item in serie if item["data_atualizacao"]),
+            default=None,
         )
-        if semana_anterior is not None
-        else []
-    )
+        serie_ate_semana = [item for item in serie if item["semana"] <= semana]
+        if aba in (None, "visao-geral"):
+            contexto["serie"] = serie_ate_semana
+        if aba in (None, "mensal"):
+            contexto["avancos_mensais"] = calcular_avancos_mensais(serie_ate_semana)
+        if aba != "mensal":
+            avancos = calcular_avancos_semanais(serie_ate_semana)
+            if aba in (None, "semanal"):
+                contexto["avancos"] = avancos
+            if aba == "semanal":
+                _formatar_intervalos_semanais(avancos, serie)
+            if aba != "semanal":
+                medias = calcular_media_avancos(avancos)
+                contexto["medias"] = medias
+                contexto["prazos"] = calcular_indicadores_prazo(
+                    resumo=resumo, media_avanco_real=medias["media_real"], avancos=avancos
+                )
+        if aba is None:
+            contexto["periodo_semana"] = next((item for item in serie if item["semana"] == semana), None)
 
-    operacional = obter_operacional(
-        projeto=projeto,
-        semana=semana,
-        atividades_atuais=atividades_atuais,
-        atividades_anteriores=atividades_anteriores,
-        semana_anterior=semana_anterior,
-    )
-
-    contexto.update(
-        {
-            "resumo": resumo,
-            "serie": serie,
-            "avancos": avancos_ate_semana,
-            "avancos_mensais": calcular_avancos_mensais(
-                [item for item in serie if item["semana"] <= semana]
-            ),
-            "periodo_semana": next((item for item in serie if item["semana"] == semana), None),
-            "ultima_medicao": max((item["data_atualizacao"] for item in serie if item["data_atualizacao"]), default=None),
-            "medias": medias,
-            "prazos": prazos,
-            "marcos": obter_marcos(
-                projeto=projeto,
-                semana=semana,
-            ),
-            **operacional,
-        }
-    )
+    if aba in (None, "marcos"):
+        contexto["marcos"] = obter_marcos(projeto=projeto, semana=semana)
+    if aba is None:
+        contexto.update(obter_operacional(projeto=projeto, semana=semana))
+    elif aba == "programacao":
+        programacao = obter_programacao_semana(projeto=projeto, semana=semana)
+        contexto["programacao_semana"] = programacao
+        contexto["resumo_prioridades"] = programacao["resumo"]
+    elif aba in ("indicadores", "disciplinas", "checklists"):
+        atividades = listar_atividades(projeto=projeto, semana=semana)
+        if aba == "indicadores":
+            contexto["contadores_atividades"] = resumir_atividades(atividades)
+            contexto["atividades_prioritarias"] = obter_atividades_prioritarias(atividades=atividades)
+        elif aba == "disciplinas":
+            contexto["disciplinas"] = obter_disciplinas(atividades=atividades)
+        else:
+            contexto["checklists"] = obter_checklists(atividades=atividades)
 
     return contexto
 
@@ -231,6 +226,7 @@ def montar_painel_cronograma(
     *,
     projeto=None,
     semana=None,
+    aba=None,
 ):
     """
     Busca a importação ativa uma única vez e mantém esse snapshot lógico
@@ -243,4 +239,5 @@ def montar_painel_cronograma(
             projeto=projeto,
             semana=semana,
             importacao=importacao,
+            aba=aba,
         )

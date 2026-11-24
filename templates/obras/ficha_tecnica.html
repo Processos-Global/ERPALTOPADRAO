@@ -1,9 +1,10 @@
 {% extends "layouts/base.html" %}
-{% load l10n %}
+{% load l10n static %}
 {% block title %}Ficha Técnica | {{ obra.nome }}{% endblock %}
 {% block page_name %}Ficha Técnica{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/ficha-material.css' %}">
 {% include "obras/_styles.html" %}
 <style>
 .ft-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid #e7dccd;border-radius:12px;background:#faf8f5}
@@ -42,11 +43,11 @@
   </div>
 
   <nav class="ft-flow">
-    <a class="{% if etapa == '1' %}active{% endif %}" href="?etapa=1">1. Pavimentos</a>
-    <a class="{% if etapa == '2' %}active{% endif %}" href="?etapa=2">2. Ambientes</a>
-    <a class="{% if etapa == '3' %}active{% endif %}" href="?etapa=3">3. Categorias GF</a>
-    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">4. Detalhamento de Ambientes</a>
-    <a class="{% if etapa == '5' %}active{% endif %}" href="?etapa=5">5. Resumo</a>
+    <a class="{% if etapa == '1' %}active{% endif %}" href="?etapa=1">Pavimentos</a>
+    <a class="{% if etapa == '2' %}active{% endif %}" href="?etapa=2">Ambientes</a>
+    <a class="{% if etapa == '3' %}active{% endif %}" href="?etapa=3">Categorias GF</a>
+    <a class="{% if etapa == '4' %}active{% endif %}" href="?etapa=4">Detalhamento de Ambientes</a>
+    <a class="{% if etapa == '5' %}active{% endif %}" href="?etapa=5">Resumo</a>
   </nav>
 
   <div class="ft-layout">
@@ -76,7 +77,7 @@
             <tbody>
               {% for p in pavimentos %}
               <tr>
-                <td>{{ p.ordem }}</td><td><strong>{{ p.nome }}</strong></td><td>{{ p.ambientes.count }}</td>
+                <td>{{ p.ordem }}</td><td><strong>{{ p.nome }}</strong></td><td>{{ p.total_ambientes }}</td>
                 <td><form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">{% csrf_token %}<input type="hidden" name="acao" value="excluir_pavimento"><input type="hidden" name="etapa" value="1"><input type="hidden" name="pavimento_id" value="{{ p.pk|unlocalize }}"><button class="ft-icon-btn danger">Excluir</button></form></td>
               </tr>
               {% empty %}<tr><td colspan="4" class="ft-empty">Nenhum pavimento cadastrado.</td></tr>{% endfor %}
@@ -249,7 +250,7 @@
     </main>
 
     <aside class="ft-side">
-      <div class="ft-side-card">
+      {% if etapa != "5" %}<div class="ft-side-card">
         <h3>Resumo</h3>
         <div class="ft-kpis">
           <div class="ft-kpi"><span>Pavimentos</span><strong>{{ pavimentos|length }}</strong></div>
@@ -257,7 +258,7 @@
           <div class="ft-kpi"><span>Categorias</span><strong>{{ total_categorias }}</strong></div>
           <div class="ft-kpi"><span>Itens</span><strong>{{ total_itens }}</strong></div>
         </div>
-      </div>
+      </div>{% endif %}
 
       <a class="ft-btn secondary" href="{% url 'obras:fichas_tecnicas' %}">Voltar</a>
     </aside>
@@ -408,4 +409,4 @@
 })();
 </script>
 {% endblock %}
-{% block extra_js %}{{ block.super }}{% include 'financeiro/_dropdown_search.html' %}{% endblock %}
+{% block extra_js %}{{ block.super }}{% include 'financeiro/_dropdown_search.html' %}<script defer src="{% static 'js/ficha-material.js' %}"></script>{% endblock %}

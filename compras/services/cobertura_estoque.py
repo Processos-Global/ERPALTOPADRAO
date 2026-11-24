@@ -1,9 +1,10 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
-from django.db.models import Sum
+from django.db.models import F, Q, Sum
+from django.utils import timezone
 
-from compras.models import PedidoCompra, PedidoCompraItem, ReservaEstoqueCompra
+from compras.models import NecessidadeCompra, PedidoCompra, PedidoCompraItem, ReservaEstoqueCompra
 from obras.services.estoque import saldo_fisico_compativel
 from usuarios.models import AcaoCompra
 
@@ -48,6 +49,7 @@ def obter_cobertura(*, obra, material, unidade, especificacao, quantidade, proce
     return {
         "necessidade": necessidade,
         "saldo_fisico": fisico["saldo_fisico"],
+        "saldo_compativel": fisico["saldo_compativel"],
         "especificacao_ambigua": fisico["ambiguidade"],
         "reservado": reservado,
         "disponivel": disponivel,
@@ -78,6 +80,74 @@ def avaliar_solicitacao(*, processo, material, quantidade, usuario, excecao_esto
             "A necessidade está coberta pelo estoque disponível. Não é necessária outra compra."
         )
     return cobertura, cobertura["descoberta"], cobertura["reservavel"], ""
+
+
+def _quantidades_pedido(necessidade):
+    itens = PedidoCompraItem.objects.filter(
+        necessidade=necessidade, pedido__obra_id=necessidade.processo.obra_id,
+        pedido__processo_id=necessidade.processo_id,
+        unidade__iexact=necessidade.unidade, especificacao=necessidade.especificacao,
+    ).order_by().annotate(
+        recebido=Sum("recebimentos__quantidade", filter=Q(recebimentos__recebimento__pedido_id=F("pedido_id"))),
+    ).values_list("pedido__status", "quantidade", "recebido")
+    contratado = recebido = pendente = ZERO
+    for status, quantidade, quantidade_recebida in itens:
+        quantidade_recebida = quantidade_recebida or ZERO
+        recebido += quantidade_recebida
+        if status != PedidoCompra.Status.CANCELADO:
+            contratado += quantidade
+            pendente += max(quantidade - quantidade_recebida, ZERO)
+    return contratado, recebido, pendente
+
+
+def _quantidades_reserva(necessidade):
+    reserva = ReservaEstoqueCompra.objects.filter(
+        necessidade=necessidade, obra_id=necessidade.processo.obra_id,
+        material_id=necessidade.material_id, unidade__iexact=necessidade.unidade,
+        especificacao=necessidade.especificacao,
+    ).first()
+    if not reserva:
+        return ZERO, ZERO
+    if reserva.status == ReservaEstoqueCompra.Status.LIBERADA:
+        movimentos = reserva.movimentos.filter(obra_origem_id=reserva.obra_id).aggregate(total=Sum("quantidade"))
+        return ZERO, min(reserva.quantidade_original, movimentos["total"] or ZERO)
+    return reserva.quantidade_disponivel, max(reserva.quantidade_original - reserva.quantidade_disponivel, ZERO)
+
+
+def _estoque_para_atender(cobertura, reserva_propria, recebido):
+    outras_reservas = max(cobertura["reservado"] - reserva_propria, ZERO)
+    reserva_coberta = min(reserva_propria, max(cobertura["saldo_compativel"] - outras_reservas, ZERO))
+    # O saldo livre pode incluir as mesmas entradas já contadas no recebimento.
+    # Sem atribuição de lotes nas saídas, este é o limite sem dupla contagem.
+    livre_adicional = max(cobertura["disponivel"] - recebido, ZERO)
+    return reserva_coberta + livre_adicional
+
+
+def resumir_cobertura_necessidade(necessidade):
+    """Apura o atendimento histórico e a capacidade de cobertura ainda disponível."""
+    processo = necessidade.processo
+    cobertura = obter_cobertura(
+        obra=processo.obra, material=necessidade.material, unidade=necessidade.unidade,
+        especificacao=necessidade.especificacao, quantidade=necessidade.quantidade_necessaria,
+    )
+    contratado, recebido, pendente = _quantidades_pedido(necessidade)
+    reserva_propria, consumido = _quantidades_reserva(necessidade)
+    atendida = min(cobertura["necessidade"], consumido + recebido)
+    restante = max(cobertura["necessidade"] - atendida - pendente, ZERO)
+    descoberta = max(restante - _estoque_para_atender(cobertura, reserva_propria, recebido), ZERO)
+    return {
+        **cobertura, "reserva_propria": reserva_propria, "reserva_consumida": consumido,
+        "contratado": contratado, "recebido": recebido, "pendente_proprio": pendente,
+        "atendida": atendida, "descoberta": descoberta,
+    }
+
+
+def liberar_reservas_ativas(*, processo):
+    """Libera o que sobrou de um processo encerrado, mantendo movimentos e a origem."""
+    return ReservaEstoqueCompra.objects.filter(
+        necessidade__processo=processo, obra_id=processo.obra_id,
+        status=ReservaEstoqueCompra.Status.ATIVA,
+    ).update(status=ReservaEstoqueCompra.Status.LIBERADA, quantidade_disponivel=ZERO, atualizado_em=timezone.now())
 
 
 def registrar_cobertura(*, processo, necessidade, usuario, cobertura, quantidade_reservada,
@@ -117,30 +187,35 @@ def registrar_cobertura(*, processo, necessidade, usuario, cobertura, quantidade
                         f"Cobertura conferida para {necessidade.descricao}.", dados)
 
 
-def revalidar_necessidade(necessidade):
-    """Revalida solicitações cobertas, sem reinterpretar registros anteriores à regra."""
+def revalidar_necessidade(necessidade, *, quantidade_compra=None):
+    """Valida a quantidade a emitir, preservando os recebimentos sobre vínculos oficiais."""
     processo = necessidade.processo
-    if not processo.historico.filter(
+    if necessidade.situacao == NecessidadeCompra.Situacao.CANCELADA:
+        raise ValidationError(f"A necessidade {necessidade.descricao} está cancelada.")
+    quantidade_compra = necessidade.quantidade_incluida if quantidade_compra is None else quantidade_compra
+    _, recebido, pendente = _quantidades_pedido(necessidade)
+    reserva_propria, consumido = _quantidades_reserva(necessidade)
+    restante = max(necessidade.quantidade_necessaria - recebido - consumido - pendente, ZERO)
+    if quantidade_compra > restante:
+        raise ValidationError(
+            f"A quantidade a emitir para {necessidade.descricao} excede o saldo da necessidade. "
+            "Revise a contratação considerando o que já foi atendido e os pedidos em aberto."
+        )
+
+    ultima_avaliacao = processo.historico.filter(
         tipo__in=["COBERTURA_ESTOQUE_AVALIADA", "EXCECAO_ESTOQUE"],
         dados__necessidade_id=necessidade.pk,
-    ).exists():
+    ).values_list("tipo", flat=True).first()
+    if ultima_avaliacao != "COBERTURA_ESTOQUE_AVALIADA":
         return
-    if processo.historico.filter(tipo="EXCECAO_ESTOQUE", dados__necessidade_id=necessidade.pk).exists():
-        return
-    reserva = ReservaEstoqueCompra.objects.filter(necessidade=necessidade).first()
+
     cobertura = obter_cobertura(
         obra=processo.obra, material=necessidade.material,
         unidade=necessidade.unidade, especificacao=necessidade.especificacao,
-        quantidade=necessidade.quantidade_necessaria, processo=processo,
-        excluir_reserva=reserva.pk if reserva else None,
+        quantidade=necessidade.quantidade_necessaria,
     )
-    consumido_proprio = (
-        max(reserva.quantidade_original - reserva.quantidade_disponivel, ZERO)
-        if reserva and reserva.status != reserva.Status.LIBERADA else ZERO
-    )
-    quantidade_a_atender = max(necessidade.quantidade_necessaria - consumido_proprio, ZERO)
-    pendente_compra = max(quantidade_a_atender - cobertura["disponivel"], ZERO)
-    if necessidade.quantidade_incluida != pendente_compra:
+    pendente_compra = max(restante - _estoque_para_atender(cobertura, reserva_propria, recebido), ZERO)
+    if quantidade_compra != pendente_compra:
         raise ValidationError(
-            f"A cobertura de {necessidade.descricao} mudou. Revise o estoque e a quantidade solicitada antes da aprovação."
+            f"A cobertura de {necessidade.descricao} mudou. Revise o estoque e a quantidade antes de continuar."
         )

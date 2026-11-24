@@ -14,11 +14,15 @@ from usuarios.models import AcaoCompra
 COLUNAS = (
     ("obra", "Obra"), ("categoria", "Categoria GF"), ("fornecedor", "Fornecedor"),
     ("processo", "Processo"), ("etapa", "Etapa"), ("pedido", "Pedido"),
-    ("status_contratacao", "Contratação"), ("item", "Item"),
-    ("especificacao", "Especificação"), ("quantidade", "Contratada"),
+    ("status_contratacao", "Contratação"), ("responsavel", "Responsável"), ("item", "Item"),
+    ("especificacao", "Especificação"), ("solicitada", "Solicitada"),
+    ("unidade_solicitada", "Unidade solicitada"), ("contratada", "Contratada"),
     ("recebida", "Recebida"), ("pendente", "Pendente"), ("unidade", "Unidade"),
     ("valor_contratado", "Valor contratado"), ("previsao", "Previsão entrega"),
-    ("realizada", "Entrega concluída"), ("dias_atraso", "Dias atraso"),
+    ("realizada", "Entrega concluída"), ("ultimo_recebimento", "Último recebimento"),
+    ("desvio_comercial", "Desvio comercial (dias)"),
+    ("data_necessaria_obra", "Data necessária na obra (cronograma atual)"),
+    ("desvio_obra", "Desvio na obra (dias)"), ("situacao_obra", "Prazo na obra"),
     ("status_entrega", "Situação entrega"), ("pendencia", "Pendência"),
 )
 
@@ -62,15 +66,16 @@ def relatorio_grandes_fornecedores(request):
         estilos = getSampleStyleSheet()
         chaves = tuple(chave for chave, _ in COLUNAS)
         titulos = dict(COLUNAS)
-        tabela = [[titulos[chave] for chave in chaves]]
         celula = ParagraphStyle("celula_gf", parent=estilos["Normal"], fontSize=6, leading=8)
+        cabecalho = ParagraphStyle("cabecalho_gf", parent=celula, textColor=colors.white)
+        tabela = [[Paragraph(escape(titulos[chave]), cabecalho) for chave in chaves]]
         tabela.extend([
             [Paragraph(escape(str(linha[chave] if linha[chave] is not None else "")), celula)
              for chave in chaves] for linha in linhas
         ])
         largura = doc.width / len(chaves)
         elementos = [Paragraph("SAARI · Grandes Fornecedores", estilos["Title"]),
-                    Paragraph(f"Emissão: {timezone.localtime():%d/%m/%Y %H:%M} | Filtros: {filtros}", estilos["Normal"]),
+                    Paragraph(f"Emissão: {timezone.localtime():%d/%m/%Y %H:%M} | Filtros: {escape(str(filtros))}", estilos["Normal"]),
                     Spacer(1, 12)]
         grade = Table(tabela, colWidths=[largura] * len(chaves), repeatRows=1)
         grade.setStyle(TableStyle([

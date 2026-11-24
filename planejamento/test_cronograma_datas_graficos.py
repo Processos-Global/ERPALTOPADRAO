@@ -52,7 +52,7 @@ class GraficosCronogramaDatasTests(TestCase):
 
 
 class TemplateCronogramaDatasTests(SimpleTestCase):
-    def test_ambos_graficos_usam_data_da_medicao_e_nao_inicio_semana(self):
+    def test_graficos_preservam_medicao_quando_intervalo_nao_e_confiavel(self):
         request = RequestFactory().get("/planejamento/")
         request.user = AnonymousUser()
         contexto = {
@@ -70,7 +70,7 @@ class TemplateCronogramaDatasTests(SimpleTestCase):
         self.assertNotIn("Última medição: 18/11/2026", html)
         self.assertIn("const dataMedicao = item => item.data_referencia || item.data_atualizacao || null;", html)
         self.assertIn("labels: serie.map(rotuloSemana)", html)
-        self.assertIn("labels: avancos.map(rotuloSemana)", html)
+        self.assertIn("labels: avancos.map(item => item.rotulo_intervalo || rotuloSemana(item))", html)
         self.assertIn('" · Medição: " + dataCompleta(medicao)', html)
         self.assertNotIn("dataCurta(item.inicio_semana)", html)
 

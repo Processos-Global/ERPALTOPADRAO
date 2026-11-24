@@ -341,7 +341,7 @@ tr.is-filtered-out { display:none; }
 
 .pc-detail-card { overflow:hidden; }
 .pc-tabs { display:flex; gap:3px; overflow-x:auto; padding:7px; border-bottom:1px solid var(--pc-border); background:#f8f4ed; }
-.pc-tab-btn { flex:0 0 auto; border:0; border-radius:7px; padding:8px 11px; background:transparent; color:#85776f; font-size:11px; font-weight:750; cursor:pointer; }
+.pc-tab-btn { text-decoration:none; flex:0 0 auto; border:0; border-radius:7px; padding:8px 11px; background:transparent; color:#85776f; font-size:11px; font-weight:750; cursor:pointer; }
 .pc-tab-btn.is-active { background:#fff; color:var(--pc-primary); box-shadow:0 1px 4px rgba(45,32,28,.09); }
 .pc-tab-panel { padding:14px; }
 .pc-tab-panel[hidden] { display:none; }
@@ -1425,6 +1425,7 @@ body.pc-modal-open { overflow:hidden; }
     {% for alerta in alertas_painel %}<div class="pc-alert pc-alert-warning">{{ alerta }}</div>{% endfor %}
 
     <form method="get" class="pc-filterbar">
+        <input type="hidden" name="aba" value="{{ aba|default:'visao-geral' }}">
         <div class="pc-field">
             <label for="projeto">Obra</label>
             <select name="projeto" id="projeto" class="pc-control">
@@ -1446,16 +1447,19 @@ body.pc-modal-open { overflow:hidden; }
             </select>
         </div>
         <button type="submit" class="pc-btn pc-btn-primary">Aplicar</button>
-        {% if importacao_ativa %}
-            <div class="pc-import-pill" title="{{ importacao_ativa.nome_arquivo }}">
-                Base ativa
-                <strong>{{ importacao_ativa.nome_arquivo|default:"-" }}</strong>
-            </div>
-        {% endif %}
     </form>
 
     {% if possui_dados and resumo %}
-        <section class="pc-overview">
+        <nav class="pc-tabs pc-card" aria-label="Seções do cronograma">
+            {% for chave, titulo in abas.items %}
+                <a class="pc-tab-btn{% if aba == chave %} is-active{% endif %}"
+                   href="?aba={{ chave }}&amp;{{ filtros_aba }}"
+                   {% if aba == chave %}aria-current="page"{% endif %}>{{ titulo }}</a>
+            {% endfor %}
+        </nav>
+
+{% if not aba or aba == "visao-geral" %}
+        <section>
             <div class="pc-card pc-progress-card">
                 <div class="pc-progress-top">
                     <h2 class="pc-progress-title">Avanço físico acumulado</h2>
@@ -1487,16 +1491,7 @@ body.pc-modal-open { overflow:hidden; }
 
                 <div class="pc-kpi-strip">
                     <div class="pc-mini-kpi {% if resumo.desvio < 0 %}danger{% elif resumo.desvio > 0 %}success{% endif %}">
-                        <span>Desvio físico</span><strong>{{ resumo.desvio|percentual }}%</strong>
-                    </div>
-                    <div class="pc-mini-kpi">
-                        <span>Aderência</span><strong>{% if prazos.aderencia_fisica != None %}{{ prazos.aderencia_fisica|percentual }}%{% else %}-{% endif %}</strong>
-                    </div>
-                    <div class="pc-mini-kpi">
-                        <span>IDP</span><strong>{% if prazos.idp != None %}{{ prazos.idp|floatformat:2 }}{% else %}-{% endif %}</strong>
-                    </div>
-                    <div class="pc-mini-kpi">
-                        <span>Média semanal</span><strong>{{ medias.media_real|percentual }}%</strong>
+                        <span>Desvio físico</span><strong>{{ resumo.desvio|percentual }} p.p.</strong>
                     </div>
                     <div class="pc-mini-kpi">
                         <span>Previsão de término</span>
@@ -1520,6 +1515,53 @@ body.pc-modal-open { overflow:hidden; }
                 </div>
             </div>
 
+        </section>
+        <section class="pc-card">
+            <div class="pc-card-head"><h2>Curva S</h2></div>
+            <div class="pc-card-body">
+                    <div class="pc-chart-panel" data-chart-panel="curva"><div class="pc-chart-box"><canvas id="graficoCurvaS"></canvas></div></div>
+                    {% if prazos.data_base_projecao %}<p>Data-base da projeção: {{ prazos.data_base_projecao|date:"d/m/Y" }}. {{ prazos.criterio_projecao }}.{% if not prazos.projecao_confiavel and not prazos.obra_concluida %} Dados insuficientes para projetar término.{% endif %}{% if prazos.termino_real_inconsistente %} O campo "Término real" do arquivo foi desconsiderado porque o avanço físico ainda não atingiu 100%.{% endif %}</p>{% endif %}
+            </div>
+        </section>
+{% elif aba == "semanal" %}
+        <section class="pc-card">
+            <div class="pc-card-head"><h2>Avanço semanal</h2></div>
+            <div class="pc-card-body">
+                    <div class="pc-chart-panel" data-chart-panel="avanco"><div class="pc-chart-box"><canvas id="graficoAvancoSemanal"></canvas></div></div>
+                    <p class="pc-footer-meta">O primeiro retrato é a base acumulada. As diferenças cobrem o intervalo entre medições.</p>
+            </div>
+        </section>
+{% elif aba == "mensal" %}
+        <section class="pc-card">
+            <div class="pc-card-head"><h2>Avanço mensal</h2></div>
+            <div class="pc-card-body">
+                    <div class="pc-chart-panel" data-chart-panel="mensal">
+                        <div class="pc-chart-box"><canvas id="graficoAvancoMensal"></canvas></div>
+                        <div class="pc-table-wrap"><table class="pc-table">
+                            <thead><tr><th>Mês</th><th>Previsto acumulado</th><th>Realizado acumulado</th><th>Desvio de prazo (estimado)</th><th>Avanço no mês (prev./real)</th></tr></thead>
+                            <tbody>{% for mes in avancos_mensais %}<tr><td>{{ mes.periodo }}</td><td>{{ mes.previsto_acumulado|percentual }}%</td><td>{{ mes.executado_acumulado|percentual }}%</td><td>{% if mes.desvio_dias != None %}{{ mes.desvio_dias|desvio_prazo }}{% if mes.desvio_dias_estimado %} <small title="Extrapolado pelo ritmo planejado recente">(projetado)</small>{% endif %}{% else %}Sem referência{% endif %}</td><td>{{ mes.avanco_previsto|percentual }}% / {{ mes.avanco_real|percentual }}%</td></tr>{% empty %}<tr><td colspan="5">Sem datas de medição para comparação mensal.</td></tr>{% endfor %}</tbody>
+                        </table></div>
+                        <p class="pc-footer-meta">Desvio em dias: equivalência temporal entre o avanço realizado e a curva planejada, com interpolação das medições. Quando necessário, o adiantamento é projetado pelo ritmo previsto recente. Não representa a data contratual de término.</p>
+                    </div>
+            </div>
+        </section>
+{% elif aba == "indicadores" %}
+
+        <section class="pc-card">
+            <div class="pc-card-head"><h2>Indicadores</h2></div>
+            <div class="pc-card-body pc-kpi-strip">
+                    <div class="pc-mini-kpi">
+                        <span>Aderência</span><strong>{% if prazos.aderencia_fisica != None %}{{ prazos.aderencia_fisica|percentual }}%{% else %}-{% endif %}</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>IDP</span><strong>{% if prazos.idp != None %}{{ prazos.idp|floatformat:2 }}{% else %}-{% endif %}</strong>
+                    </div>
+                    <div class="pc-mini-kpi">
+                        <span>Média semanal</span><strong>{{ medias.media_real|percentual }}%</strong>
+                    </div>
+            </div>
+        </section>
+        <section class="pc-main-grid">
             <div class="pc-card pc-health-card">
                 <h3>Saúde das atividades</h3>
                 <div class="pc-health-grid">
@@ -1534,33 +1576,6 @@ body.pc-modal-open { overflow:hidden; }
                     <strong>{{ contadores_atividades.total|default:0 }}</strong> atividades no retrato atual.
                 </div>
             </div>
-        </section>
-
-        <section class="pc-main-grid">
-            <div class="pc-card">
-                <div class="pc-card-head">
-                    <div><h2>Evolução do cronograma</h2><p>Previsto x realizado e ritmo semanal.</p></div>
-                    <div class="pc-chart-switch">
-                        <button type="button" class="is-active" data-chart-tab="curva">Curva S</button>
-                        <button type="button" data-chart-tab="avanco">Avanço semanal</button>
-                        <button type="button" data-chart-tab="mensal">Avanço mensal</button>
-                    </div>
-                </div>
-                <div class="pc-card-body">
-                    <div class="pc-chart-panel" data-chart-panel="curva"><div class="pc-chart-box"><canvas id="graficoCurvaS"></canvas></div></div>
-                    <div class="pc-chart-panel" data-chart-panel="avanco" hidden><div class="pc-chart-box"><canvas id="graficoAvancoSemanal"></canvas></div></div>
-                    <div class="pc-chart-panel" data-chart-panel="mensal" hidden>
-                        <div class="pc-chart-box"><canvas id="graficoAvancoMensal"></canvas></div>
-                        <div class="pc-table-wrap"><table class="pc-table">
-                            <thead><tr><th>Mês</th><th>Previsto acumulado</th><th>Realizado acumulado</th><th>Desvio de prazo (estimado)</th><th>Avanço no mês (prev./real)</th></tr></thead>
-                            <tbody>{% for mes in avancos_mensais %}<tr><td>{{ mes.periodo }}</td><td>{{ mes.previsto_acumulado|percentual }}%</td><td>{{ mes.executado_acumulado|percentual }}%</td><td>{% if mes.desvio_dias != None %}{{ mes.desvio_dias|desvio_prazo }}{% if mes.desvio_dias_estimado %} <small title="Extrapolado pelo ritmo planejado recente">(projetado)</small>{% endif %}{% else %}Sem referência{% endif %}</td><td>{{ mes.avanco_previsto|percentual }}% / {{ mes.avanco_real|percentual }}%</td></tr>{% empty %}<tr><td colspan="5">Sem datas de medição para comparação mensal.</td></tr>{% endfor %}</tbody>
-                        </table></div>
-                        <p class="pc-footer-meta">Desvio em dias: equivalência temporal entre o avanço realizado e a curva planejada, com interpolação das medições. Quando necessário, o adiantamento é projetado pelo ritmo previsto recente. Não representa a data contratual de término.</p>
-                    </div>
-                    {% if prazos.data_base_projecao %}<p>Data-base da projeção: {{ prazos.data_base_projecao|date:"d/m/Y" }}. {{ prazos.criterio_projecao }}.{% if not prazos.projecao_confiavel and not prazos.obra_concluida %} Dados insuficientes para projetar término.{% endif %}{% if prazos.termino_real_inconsistente %} O campo "Término real" do arquivo foi desconsiderado porque o avanço físico ainda não atingiu 100%.{% endif %}</p>{% endif %}
-                </div>
-            </div>
-
             <div class="pc-card">
                 <div class="pc-card-head">
                     <div><h2>Atenção agora</h2><p>Prioridades que merecem ação da equipe.</p></div>
@@ -1584,7 +1599,7 @@ body.pc-modal-open { overflow:hidden; }
                 </div>
             </div>
         </section>
-
+{% elif aba == "programacao" %}
         <section class="pc-card pc-week-card" id="programacao-semana">
             <div class="pc-card-head">
                 <div>
@@ -1638,15 +1653,8 @@ body.pc-modal-open { overflow:hidden; }
                 <div class="pc-filter-empty">Nenhuma atividade corresponde à busca.</div>
             </div>
         </section>
-
+{% elif aba == "disciplinas" %}
         <section class="pc-card pc-detail-card">
-            <div class="pc-tabs" role="tablist" aria-label="Detalhes do cronograma">
-                <button type="button" class="pc-tab-btn is-active" data-detail-tab="disciplinas">Disciplinas</button>
-                <button type="button" class="pc-tab-btn" data-detail-tab="checklists">Checklists</button>
-                <button type="button" class="pc-tab-btn" data-detail-tab="marcos">Marcos</button>
-                <button type="button" class="pc-tab-btn" data-detail-tab="informacoes">Informações da obra</button>
-            </div>
-
             <div class="pc-tab-panel" data-detail-panel="disciplinas">
                 <div class="pc-panel-tools">
                     <div>
@@ -1706,8 +1714,10 @@ body.pc-modal-open { overflow:hidden; }
                     {% endfor %}
                 </div>
             </div>
-
-            <div class="pc-tab-panel" data-detail-panel="checklists" hidden>
+        </section>
+{% elif aba == "checklists" %}
+        <section class="pc-card pc-detail-card">
+            <div class="pc-tab-panel" data-detail-panel="checklists">
                 <div class="pc-panel-tools"><div><h3>Checklists</h3><p>Habite-se e Pós Habite-se ficam juntos nesta área, sem alongar o painel principal.</p></div></div>
                 <div class="pc-check-grid">
                     {% for chave, checklist in checklists.items %}
@@ -1749,36 +1759,36 @@ body.pc-modal-open { overflow:hidden; }
                     {% endfor %}
                 </div>
             </div>
-
-            <div class="pc-tab-panel" data-detail-panel="marcos" hidden>
-                <div class="pc-panel-tools"><div><h3>Marcos da semana</h3><p>Principais entregas e compromissos do período selecionado.</p></div></div>
-                <ol class="pc-milestone-timeline">
-                    {% for marco in marcos %}
-                    <li><strong>{{ marco.nome }}</strong> · {{ marco.termino_base|default:"Sem data prevista" }}{% if marco.termino_real_data %} → {{ marco.termino_real }}{% endif %} · {{ marco.situacao_rotulo }}{% if marco.variacao_dias != None %} · {{ marco.variacao_dias }} dias{% endif %}</li>
-                    {% endfor %}
-                </ol>
+        </section>
+{% elif aba == "marcos" %}
+        <section class="pc-card pc-detail-card">
+            <div class="pc-tab-panel" data-detail-panel="marcos">
+                <div class="pc-panel-tools"><h3>Marcos da semana</h3></div>
                 <div class="pc-table-wrap" style="max-height:440px">
                     <table class="pc-table">
-                        <thead><tr><th>Marco</th><th>Local</th><th>Responsável</th><th>Planejamento</th><th>Realizado</th><th>Situação</th></tr></thead>
+                        <thead><tr><th>Marco</th><th>Local</th><th>Responsável</th><th>Término previsto</th><th>Término realizado</th><th>Avanço</th><th>Situação</th></tr></thead>
                         <tbody>
                             {% for marco in marcos %}
                                 <tr>
                                     <td><span class="pc-main-cell">{{ marco.nome }}</span></td>
                                     <td>{{ marco.local }}</td>
                                     <td>{{ marco.responsavel }}</td>
-                                    <td><span class="pc-date">{{ marco.inicio_base|default:"-" }} → {{ marco.termino_base|default:"-" }}</span></td>
+                                    <td><span class="pc-date">{{ marco.termino_base|default:"—" }}</span>{% if marco.inicio_base %}<span class="pc-sub-cell">Início {{ marco.inicio_base }}</span>{% endif %}</td>
+                                    <td><span class="pc-date">{{ marco.termino_real|default:"—" }}</span>{% if marco.inicio_real %}<span class="pc-sub-cell">Início {{ marco.inicio_real }}</span>{% endif %}</td>
                                     <td>{{ marco.realizado|percentual }}%</td>
-                                    <td>{% if marco.situacao == "CONCLUIDO" %}<span class="pc-badge pc-badge-success">{{ marco.situacao_rotulo }}</span>{% elif marco.situacao == "ATRASADO" %}<span class="pc-badge pc-badge-danger">{{ marco.situacao_rotulo }}</span>{% else %}<span class="pc-badge pc-badge-info">{{ marco.situacao_rotulo }}</span>{% endif %}{% if marco.variacao_dias != None %}<small> {{ marco.variacao_dias }} dias (real)</small>{% elif marco.atraso_projetado_dias %}<small> +{{ marco.atraso_projetado_dias }} dias em aberto</small>{% endif %}</td>
+                                    <td><span class="pc-badge {% if marco.atrasado or marco.concluido_com_atraso %}pc-badge-danger{% elif marco.concluido %}pc-badge-success{% else %}pc-badge-info{% endif %}">{{ marco.situacao_rotulo }}</span>{% if marco.variacao_dias != None %}<small> {{ marco.variacao_dias }} dias (real)</small>{% elif marco.atraso_projetado_dias %}<small> +{{ marco.atraso_projetado_dias }} dias em aberto</small>{% endif %}</td>
                                 </tr>
                             {% empty %}
-                                <tr><td colspan="6" class="pc-empty">Nenhum marco encontrado para a semana.</td></tr>
+                                <tr><td colspan="7" class="pc-empty">Nenhum marco encontrado para a semana.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
-
-            <div class="pc-tab-panel" data-detail-panel="informacoes" hidden>
+        </section>
+{% elif aba == "importacao" %}
+        <section class="pc-card pc-detail-card">
+            <div class="pc-tab-panel" data-detail-panel="informacoes">
                 <div class="pc-panel-tools"><div><h3>Informações da obra e da base</h3><p>Dados de referência ficam disponíveis sem ocupar o topo do painel.</p></div></div>
                 <div class="pc-info-grid">
                     <div class="pc-info-item"><span>Obra</span><strong>{{ projeto_selecionado }}</strong></div>
@@ -1793,19 +1803,23 @@ body.pc-modal-open { overflow:hidden; }
                 {% if importacao_ativa %}<div class="pc-footer-meta">Arquivo ativo: {{ importacao_ativa.nome_arquivo|default:"-" }}{% if importacao_ativa.data_modificacao_drive %} • Drive: {{ importacao_ativa.data_modificacao_drive|date:"d/m/Y H:i" }}{% endif %}</div>{% endif %}
             </div>
         </section>
-
+    {% endif %}
     {% else %}
         <div class="pc-card"><div class="pc-empty"><h2 style="margin:0 0 6px;font-size:17px">Nenhum dado disponível</h2><p style="margin:0 0 14px">Não existe uma importação ativa ou não foram encontrados dados para os filtros selecionados.</p>{% if request.user.is_superuser %}<form method="post" action="{% url 'planejamento:atualizar_cronograma' %}">{% csrf_token %}<button type="submit" class="pc-btn pc-btn-primary">Executar primeira importação</button></form>{% endif %}</div></div>
     {% endif %}
 </div>
 
-{{ serie|json_script:"dados-serie-cronograma" }}
-{{ avancos|json_script:"dados-avancos-cronograma" }}
-{{ avancos_mensais|json_script:"dados-mensais-cronograma" }}
+{% if possui_dados %}
+    {% if not aba or aba == "visao-geral" %}{{ serie|json_script:"dados-serie-cronograma" }}{% endif %}
+    {% if aba == "semanal" %}{{ avancos|json_script:"dados-avancos-cronograma" }}{% endif %}
+    {% if aba == "mensal" %}{{ avancos_mensais|json_script:"dados-mensais-cronograma" }}{% endif %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% if possui_dados and aba == "visao-geral" or possui_dados and aba == "semanal" or possui_dados and aba == "mensal" %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endif %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     // Move os modais para o body. O layout base possui containers que podem
@@ -1836,21 +1850,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    document.querySelectorAll("[data-chart-tab]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            const alvo = btn.dataset.chartTab;
-            document.querySelectorAll("[data-chart-tab]").forEach(function (b) { b.classList.toggle("is-active", b === btn); });
-            document.querySelectorAll("[data-chart-panel]").forEach(function (p) { p.hidden = p.dataset.chartPanel !== alvo; });
-        });
-    });
-
-    document.querySelectorAll("[data-detail-tab]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            const alvo = btn.dataset.detailTab;
-            document.querySelectorAll("[data-detail-tab]").forEach(function (b) { b.classList.toggle("is-active", b === btn); });
-            document.querySelectorAll("[data-detail-panel]").forEach(function (p) { p.hidden = p.dataset.detailPanel !== alvo; });
-        });
-    });
 
     function normalizar(valor) {
         return (valor || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -1901,16 +1900,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const item = dados[pontos[0]?.dataIndex];
         if (!item) return "";
         const medicao = dataMedicao(item);
-        return "Semana " + item.semana + (medicao ? " · Medição: " + dataCompleta(medicao) : "");
+        const intervalo = item.intervalo_completo ? " · Período: " + item.intervalo_completo : "";
+        return "Semana " + item.semana + intervalo + (medicao ? " · Medição: " + dataCompleta(medicao) : "");
     };
 
     const curva = document.getElementById("graficoCurvaS");
     if (curva && serie.length) {
-        const ctxCurva = curva.getContext("2d");
-        const gradExecutado = ctxCurva.createLinearGradient(0, 0, 0, 320);
-        gradExecutado.addColorStop(0, "rgba(119,101,92,.22)");
-        gradExecutado.addColorStop(1, "rgba(119,101,92,.015)");
-
         new Chart(curva, {
             type: "line",
             data: {
@@ -1926,22 +1921,20 @@ document.addEventListener("DOMContentLoaded", function () {
                         pointRadius: 0,
                         pointHoverRadius: 4,
                         pointHoverBackgroundColor: "#b9aa72",
-                        tension: .34,
                         fill: false
                     },
                     {
                         label: "Realizado",
                         data: serie.map(i => Number(i.executado || 0) * 100),
                         borderColor: "#77655c",
-                        backgroundColor: gradExecutado,
-                        borderWidth: 3,
+                        backgroundColor: "transparent",
+                        borderWidth: 2,
                         pointRadius: 0,
-                        pointHoverRadius: 5,
+                        pointHoverRadius: 4,
                         pointHoverBackgroundColor: "#77655c",
                         pointHoverBorderColor: "#ffffff",
                         pointHoverBorderWidth: 2,
-                        tension: .34,
-                        fill: true
+                        fill: false
                     }
                 ]
             },
@@ -2008,11 +2001,11 @@ document.addEventListener("DOMContentLoaded", function () {
         new Chart(avanco, {
             type: "bar",
             data: {
-                labels: avancos.map(rotuloSemana),
+                labels: avancos.map(item => item.rotulo_intervalo || rotuloSemana(item)),
                 datasets: [
                     {
                         label: "Previsto",
-                        data: avancos.map(i => Number(i.avanco_previsto || 0) * 100),
+                        data: avancos.map(i => i.base_acumulada ? null : Number(i.avanco_previsto || 0) * 100),
                         backgroundColor: "rgba(185,170,114,.50)",
                         borderColor: "rgba(185,170,114,.85)",
                         borderWidth: 1,
@@ -2022,7 +2015,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     },
                     {
                         label: "Realizado",
-                        data: avancos.map(i => Number(i.avanco_real || 0) * 100),
+                        data: avancos.map(i => i.base_acumulada ? null : Number(i.avanco_real || 0) * 100),
                         backgroundColor: "rgba(119,101,92,.84)",
                         borderColor: "#b9aa72",
                         borderWidth: 1,
@@ -2058,7 +2051,13 @@ document.addEventListener("DOMContentLoaded", function () {
                         cornerRadius: 9,
                         callbacks: {
                             title: tituloSemana(avancos),
-                            label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%"
+                            label: ctx => " " + ctx.dataset.label + ": " + Number(ctx.parsed.y || 0).toFixed(1) + "%",
+                            footer: pontos => {
+                                const item = avancos[pontos[0]?.dataIndex];
+                                if (!item) return "";
+                                const rotulo = item.intervalo_entre_medicoes ? "Diferença entre medições" : "Diferença";
+                                return rotulo + ": " + (item.desvio_semanal * 100).toFixed(1) + " p.p.";
+                            }
                         }
                     }
                 },

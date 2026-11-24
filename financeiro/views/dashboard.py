@@ -1,12 +1,13 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from django.shortcuts import render
 from django.utils import timezone
 
-from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
-from financeiro.services.fluxo_caixa import STATUS_ABERTOS, resumo_por_obra, serie_desembolsos
+from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
+from financeiro.services.agenda import filtrar_por_vencimento, periodo_vencimento
+from financeiro.services.fluxo_caixa import STATUS_ABERTOS, serie_desembolsos
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 
 
@@ -20,11 +21,20 @@ def _resumo_titulos_abertos(abertos, hoje, em_7, em_30):
         "valor_7": Decimal("0"), "qtd_7": 0,
         "valor_aprovacao": Decimal("0"), "qtd_aprovacao": 0,
         "valor_30": Decimal("0"),
+        "valor_hoje": Decimal("0"), "qtd_hoje": 0,
+        "valor_disponivel": Decimal("0"), "qtd_disponivel": 0,
     }
     for titulo in abertos.select_related("pagamento").iterator(chunk_size=1000):
         saldo = titulo.saldo_aberto
         vencimento = titulo.vencimento
         if vencimento is not None:
+            if vencimento == hoje:
+                resumo["valor_hoje"] += saldo
+                resumo["qtd_hoje"] += 1
+            if (vencimento <= hoje and titulo.status == TituloPagar.Status.APROVADO
+                    and not titulo.esta_pago and saldo > 0):
+                resumo["valor_disponivel"] += saldo
+                resumo["qtd_disponivel"] += 1
             if vencimento < hoje:
                 resumo["valor_vencidos"] += saldo
                 resumo["qtd_vencidos"] += 1
@@ -51,7 +61,7 @@ def dashboard(request):
     em_30 = hoje + timedelta(days=30)
 
     abertos = TituloPagar.objects.filter(status__in=STATUS_ABERTOS)
-    resumo = _resumo_titulos_abertos(abertos, hoje, em_7, em_30)
+    resumo = _resumo_titulos_abertos(abertos.filter(vencimento__lte=hoje), hoje, em_7, em_30)
 
     pagos_mes = Pagamento.objects.filter(
         status=Pagamento.Status.EFETIVADO,
@@ -59,75 +69,39 @@ def dashboard(request):
         data_pagamento__month=hoje.month,
     ).aggregate(total=Sum("valor"))["total"] or Decimal("0")
 
-    previsoes_extras_30 = PrevisaoFinanceira.objects.filter(
-        ativa=True,
-        data_prevista__range=(hoje, em_30),
-    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA).aggregate(total=Sum("valor_previsto"))["total"] or Decimal("0")
-
-    desembolsos = serie_desembolsos(inicio=hoje, dias=84)
+    desembolsos = serie_desembolsos(inicio=hoje, dias=27)
     pontos = []
     acumulado_semana = Decimal("0")
     for idx, item in enumerate(desembolsos["serie"]):
         acumulado_semana += item["saida"]
         if (idx + 1) % 7 == 0 or idx == len(desembolsos["serie"]) - 1:
-            pontos.append({"rotulo": item["data"].strftime("%d/%m"), "saida": float(acumulado_semana)})
+            pontos.append({"fim": item["data"], "saida": acumulado_semana})
             acumulado_semana = Decimal("0")
 
-    pagos_qs = Pagamento.objects.filter(status=Pagamento.Status.EFETIVADO).select_related("titulo__plano_financeiro__pai", "titulo__obra", "titulo__fornecedor")
-    por_classe = list(
-        pagos_qs.exclude(titulo__plano_financeiro__pai__isnull=True)
-        .values("titulo__plano_financeiro__pai__nome")
-        .annotate(total=Sum("valor"), quantidade=Count("id"))
-        .order_by("-total")[:8]
-    )
-    por_apropriacao = list(
-        pagos_qs.exclude(titulo__plano_financeiro__isnull=True)
-        .values("titulo__plano_financeiro__nome")
-        .annotate(total=Sum("valor"), quantidade=Count("id"))
-        .order_by("-total")[:10]
-    )
-    por_obra_pago = list(
-        pagos_qs.exclude(titulo__obra__isnull=True)
-        .values("titulo__obra__nome")
-        .annotate(total=Sum("valor"))
-        .order_by("-total")[:8]
-    )
-    por_fornecedor = list(
-        pagos_qs.exclude(titulo__fornecedor__isnull=True)
-        .values("titulo__fornecedor__nome")
-        .annotate(total=Sum("valor"))
-        .order_by("-total")[:8]
-    )
-    por_mes = list(
-        pagos_qs.values("data_pagamento__year", "data_pagamento__month")
-        .annotate(total=Sum("valor"))
-        .order_by("-total")[:8]
-    )
-    nomes_meses = ("", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez")
-    for item in por_mes:
-        mes = item.get("data_pagamento__month") or 0
-        ano = item.get("data_pagamento__year") or ""
-        item["rotulo"] = f"{nomes_meses[mes]}/{ano}" if mes else str(ano)
+    periodo = request.GET.get("periodo", "hoje")
+    if periodo not in {"hoje", "vencidas", "7", "intervalo"}:
+        periodo = "hoje"
+    parametros = request.GET.copy()
+    parametros["periodo"] = periodo
+    _, inicio, fim = periodo_vencimento(parametros, hoje)
+    intervalo_invalido = periodo == "intervalo" and (not inicio or not fim or inicio > fim)
+    agenda = abertos.none() if intervalo_invalido else filtrar_por_vencimento(abertos, inicio, fim)
+    pode_aprovar = possui_acao_financeiro(request.user, "APROVAR")
+    pode_pagar = possui_acao_financeiro(request.user, "PAGAR")
 
     return render(request, "financeiro/dashboard.html", {
-        "valor_vencidos": resumo["valor_vencidos"],
+        "total_hoje": resumo["valor_hoje"],
+        "qtd_hoje": resumo["qtd_hoje"],
+        "total_disponivel": resumo["valor_disponivel"],
+        "qtd_disponivel": resumo["qtd_disponivel"],
+        "total_vencido": resumo["valor_vencidos"],
         "qtd_vencidos": resumo["qtd_vencidos"],
-        "valor_7": resumo["valor_7"],
-        "qtd_7": resumo["qtd_7"],
-        "valor_aprovacao": resumo["valor_aprovacao"],
-        "qtd_aprovacao": resumo["qtd_aprovacao"],
         "pagos_mes": pagos_mes,
-        "previsao_30": resumo["valor_30"] + previsoes_extras_30,
-        "previsoes_extras_30": previsoes_extras_30,
-        "pontos_desembolso": pontos,
-        "obras_resumo": resumo_por_obra()[:8],
-        "por_origem": resumo["por_origem"],
-        "por_classe": por_classe,
-        "por_apropriacao": por_apropriacao,
-        "por_obra_pago": por_obra_pago,
-        "por_fornecedor": por_fornecedor,
-        "por_mes": por_mes,
-        "proximos_titulos": abertos.filter(vencimento__isnull=False).select_related("fornecedor", "obra", "pagamento").order_by("vencimento", "id")[:10],
-        "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
-        "pode_administrar": possui_acao_financeiro(request.user, "ADMINISTRAR"),
+        "agenda": agenda.select_related("fornecedor", "obra", "pagamento").order_by("vencimento", "id")[:12],
+        "periodo": periodo, "inicio": inicio, "fim": fim, "intervalo_invalido": intervalo_invalido,
+        "desembolsos": pontos, "maior_desembolso": max(ponto["saida"] for ponto in pontos) or Decimal("1"),
+        "pode_aprovar": pode_aprovar, "pode_pagar": pode_pagar,
+        "liberacoes_pendentes": LiberacaoFinanceiraPedido.objects.filter(
+            status__in=[LiberacaoFinanceiraPedido.Status.PENDENTE, LiberacaoFinanceiraPedido.Status.DIVERGENTE],
+        ).count() if pode_aprovar else 0,
     })

@@ -1,14 +1,157 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
-{% block financeiro_title %}Previsão de gastos{% endblock %}
+{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras l10n static %}
+
+{% block financeiro_title %}Planejamento financeiro{% endblock %}
+{% block financeiro_extra_css %}
+<style>
+  .fin-planejamento-medida { display:block; inline-size:100%; min-inline-size:5rem; block-size:.5rem; }
+  .fin-planejamento-medida::-webkit-meter-optimum-value { background:var(--saari-primary, #00898a); }
+  .fin-planejamento-medida::-moz-meter-bar { background:var(--saari-primary, #00898a); }
+  .fin-planejamento-datas { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1rem; align-items:start; }
+  .fin-planejamento-datas .fin-section { min-width:0; }
+</style>
+{% endblock %}
+
 {% block financeiro_content %}
-<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Necessidade de caixa</div><h1 class="fin-title">Previsão de gastos</h1><div class="fin-sub">Contas vencidas, parcelas futuras e solicitações avulsas de previsão sem duplicar obrigações.</div></div><div class="fin-actions">{% if pode_lancar %}<a class="fin-btn" href="{% url 'financeiro:previsao_nova' %}">+ Solicitação avulsa</a>{% endif %}{% if pode_editar %}<form method="post" action="{% url 'financeiro:sincronizar_previsoes' %}">{% csrf_token %}<button class="fin-btn fin-btn--primary">Sincronizar origens</button></form>{% endif %}</div></header>
-<div class="fin-kpis">
-  <div class="fin-kpi fin-kpi--danger"><span>Vencidas</span><strong>{{ valor_vencidas|moeda_br }}</strong><small>{{ qtd_vencidas }} conta{{ qtd_vencidas|pluralize }} em atraso</small></div>
-  <div class="fin-kpi fin-kpi--warning"><span>A vencer · 7 dias</span><strong>{{ contas_7|moeda_br }}</strong></div>
-  <div class="fin-kpi"><span>A vencer · 30 dias</span><strong>{{ contas_30|moeda_br }}</strong><small>Contas já conhecidas</small></div>
-  <div class="fin-kpi"><span>Avulsas · 30 dias</span><strong>{{ extras_30|moeda_br }}</strong><small>Ainda não formalizadas</small></div>
-  <div class="fin-kpi fin-kpi--warning"><span>Necessidade de caixa · 30 dias</span><strong>{{ necessidade_caixa_30|moeda_br }}</strong><small>Vencidas + futuras + avulsas</small></div>
+<header class="fin-head">
+  <h1 class="fin-title">Planejamento financeiro</h1>
+  <div class="fin-actions">
+    {% if pode_lancar %}<a class="fin-btn fin-btn--primary" href="{% url 'financeiro:previsao_nova' %}">Nova previsão</a>{% endif %}
+    {% if pode_editar %}
+    <form method="post" action="{% url 'financeiro:sincronizar_previsoes' %}">
+      {% csrf_token %}<button class="fin-btn" type="submit">Sincronizar origens</button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+<form class="fin-toolbar fin-toolbar--compact" method="get" data-fin-catalogo-url="{% url 'financeiro:titulo_catalogo' %}">
+  <label class="fin-filter-field" for="plan-mes">Mês
+    <input id="plan-mes" class="fin-control" type="month" name="mes" value="{{ mes }}">
+  </label>
+  <label class="fin-filter-field" for="plan-obra">Obra
+    <select id="plan-obra" class="fin-control" name="obra">
+      <option value="">Todas</option>
+      {% for obra in obras %}<option value="{{ obra.pk|unlocalize }}" {% if filtros.obra == obra.pk %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="fin-filter-field" for="plan-fornecedor">Fornecedor
+    <select id="plan-fornecedor" class="fin-control" name="fornecedor" data-fin-catalogo="fornecedor_publico" data-no-search>
+      <option value="">Todos</option>
+      {% if fornecedor %}<option value="{{ fornecedor.pk|unlocalize }}" selected>{{ fornecedor.nome_exibicao }}</option>{% endif %}
+    </select>
+  </label>
+  <label class="fin-filter-field" for="plan-apropriacao">Apropriação
+    <select id="plan-apropriacao" class="fin-control" name="apropriacao">
+      <option value="">Todas</option>
+      {% for plano in planos %}<option value="{{ plano.pk|unlocalize }}" {% if filtros.apropriacao == plano.pk %}selected{% endif %}>{{ plano.codigo }} · {{ plano.nome }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="fin-filter-field" for="plan-origem">Origem
+    <select id="plan-origem" class="fin-control" name="origem">
+      <option value="">Todas</option>
+      {% for valor, rotulo in origem_choices %}<option value="{{ valor }}" {% if filtros.origem == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="fin-filter-field" for="plan-certeza">Certeza da previsão
+    <select id="plan-certeza" class="fin-control" name="certeza">
+      <option value="">Todos os registros</option>
+      {% for valor, rotulo in certeza_choices %}<option value="{{ valor }}" {% if filtros.certeza == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </label>
+  <div class="fin-toolbar__actions">
+    <button class="fin-btn fin-btn--primary" type="submit">Aplicar</button>
+    <button class="fin-btn" type="submit" name="sem_data" value="1" {% if sem_data %}aria-pressed="true"{% endif %}>Sem data</button>
+    <a class="fin-btn" href="{% url 'financeiro:previsoes' %}">Limpar</a>
+  </div>
+</form>
+
+<div class="fin-kpis" aria-label="Valores do recorte">
+  <div class="fin-kpi"><span>Previsto</span><strong>{{ totais.PREVISAO|moeda_br }}</strong><small>Previsões ainda sem título vigente</small></div>
+  <div class="fin-kpi"><span>Saldo em aberto</span><strong>{{ totais.SALDO|moeda_br }}</strong><small>Contas a pagar com saldo</small></div>
+  <div class="fin-kpi"><span>Programado</span><strong>{{ totais.PROGRAMADO|moeda_br }}</strong><small>Já incluído no saldo em aberto</small></div>
+  <div class="fin-kpi"><span>Pago</span><strong>{{ totais.PAGO|moeda_br }}</strong><small>Pagamentos efetivados</small></div>
 </div>
-<form class="fin-toolbar fin-toolbar--compact" method="get"><div class="fin-filter-field"><label>Origem</label><select class="fin-control" name="origem"><option value="">Todas as origens</option>{% for valor,rotulo in origem_choices %}<option value="{{ valor }}" {% if origem == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div><div class="fin-filter-field"><label>Obra</label><select class="fin-control" name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div><div></div><div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary">Aplicar</button><a class="fin-btn" href="{% url 'financeiro:previsoes' %}">Limpar</a></div></form>
-<section class="fin-section"><div class="fin-section__head"><div><h2>Necessidades financeiras</h2><p>O atraso fica separado visualmente, mas continua sendo uma Conta a Pagar.</p></div></div><div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Data</th><th>Descrição</th><th>Situação</th><th>Origem</th><th>Beneficiário</th><th>Obra</th><th style="text-align:right">Valor</th></tr></thead><tbody>{% for p in page_obj %}<tr class="{% if p.situacao_temporal == 'VENCIDA' %}fin-row-danger{% endif %}"><td class="fin-date">{{ p.data|date:"d/m/Y" }}</td><td class="fin-main-cell">{% if p.pk %}<a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' p.pk %}"><strong>{{ p.descricao }}</strong><small>{{ p.status }}</small></a>{% else %}<strong>{{ p.descricao }}</strong><small>{{ p.status }}</small>{% endif %}</td><td>{% if p.situacao_temporal == 'VENCIDA' %}<span class="fin-badge fin-badge--danger">Vencida há {{ p.dias_atraso }} dia{{ p.dias_atraso|pluralize }}</span>{% elif p.tipo == 'PREVISAO' %}<span class="fin-badge">Previsão avulsa</span>{% else %}<span class="fin-badge fin-badge--info">A vencer</span>{% endif %}</td><td>{{ p.origem }}</td><td>{{ p.beneficiario }}</td><td>{{ p.obra|default:"—" }}</td><td class="fin-money">{{ p.valor|moeda_br }}</td></tr>{% empty %}<tr><td colspan="7" class="fin-empty"><strong>Nenhuma necessidade encontrada</strong>Sincronize as origens ou ajuste os filtros.</td></tr>{% endfor %}</tbody></table></div></section>
+
+<div class="fin-planejamento-datas">
+  <section class="fin-section" aria-labelledby="plan-compromissos">
+    <div class="fin-section__head"><h2 id="plan-compromissos">Compromissos do recorte</h2></div>
+    <div class="fin-section__body--flush fin-table-wrap">
+      <table class="fin-table">
+        <tbody>
+          <tr><th scope="row">Contratado em pedidos</th><td class="fin-money">{{ totais.PEDIDO|moeda_br }}</td></tr>
+          <tr><th scope="row">Contratos assinados</th><td class="fin-money">{{ totais.CONTRATO|moeda_br }}</td></tr>
+          <tr><th scope="row">Liberado</th><td class="fin-money">{{ totais.LIBERACAO|moeda_br }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% if por_obra %}
+  <section class="fin-section" aria-labelledby="plan-obras">
+    <div class="fin-section__head"><h2 id="plan-obras">Maiores desembolsos por obra</h2></div>
+    <div class="fin-section__body--flush fin-table-wrap">
+      <table class="fin-table"><tbody>
+        {% for linha in por_obra %}<tr><th scope="row">{{ linha.titulo__obra__nome|default:"Sem obra" }}</th><td class="fin-money">{{ linha.total|moeda_br }}</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+
+{% if por_mes %}
+<section class="fin-section" aria-labelledby="plan-evolucao">
+  <div class="fin-section__head"><div><h2 id="plan-evolucao">Evolução mensal</h2><p>Janela de dois meses anteriores a três posteriores ao mês selecionado.</p></div></div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th scope="col">Mês</th><th scope="col">Previsão independente</th><th scope="col">Pago</th><th scope="col">Saldo em aberto</th></tr></thead>
+      <tbody>
+        {% for periodo, valores in por_mes.items %}
+        <tr>
+          <th scope="row">{{ periodo|date:"m/Y" }}</th>
+          <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.PREVISAO|unlocalize }}"></meter>{{ valores.PREVISAO|moeda_br }}</td>
+          <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.PAGO|unlocalize }}"></meter>{{ valores.PAGO|moeda_br }}</td>
+          <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.SALDO|unlocalize }}"></meter>{{ valores.SALDO|moeda_br }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="fin-section" aria-labelledby="plan-linhas">
+  <div class="fin-section__head"><h2 id="plan-linhas">{% if sem_data %}Registros sem data{% else %}Registros do mês{% endif %}</h2></div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th scope="col">Data</th><th scope="col">Descrição</th><th scope="col">Categoria</th><th scope="col">Origem</th><th scope="col">Beneficiário</th><th scope="col">Obra</th><th scope="col">Apropriação</th><th scope="col">Valor</th></tr></thead>
+      <tbody>
+        {% for linha in page_obj %}
+        <tr>
+          <td class="fin-date">{{ linha.data|date:"d/m/Y"|default:"—" }}</td>
+          <td class="fin-main-cell">
+            {% if linha.tipo == 'SALDO' or linha.tipo == 'PAGO' %}<a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' linha.referencia_id %}"><strong>{{ linha.descricao }}</strong></a>{% else %}<strong>{{ linha.descricao }}</strong>{% endif %}
+            {% if linha.previsao_origem %}<small>Previsão de origem · {{ linha.previsao_origem }}</small>{% endif %}
+          </td>
+          <td>{{ linha.tipo_rotulo }}{% if linha.certeza_rotulo %} · {{ linha.certeza_rotulo }}{% endif %}</td>
+          <td>{{ linha.origem_rotulo }}</td><td>{{ linha.beneficiario|default:"—" }}</td>
+          <td>{{ linha.obra|default:"—" }}</td><td>{{ linha.apropriacao|default:"—" }}</td>
+          <td class="fin-money">{{ linha.valor|moeda_br }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="fin-empty">Nenhum registro para os filtros informados.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "financeiro/_paginacao.html" %}
+</section>
+
+<details class="fin-section fin-section__body">
+  <summary>Datas e valores de cada categoria</summary>
+  <ul>
+    <li>Previsões usam a data prevista. Ao vincular uma previsão a uma conta vigente, o saldo passa a acompanhar o título.</li>
+    <li>Pedidos mostram o compromisso vigente no mês de emissão. Contratos assinados são apresentados separadamente e usam a data da assinatura.</li>
+    <li>Liberações reconhecem o valor autorizado na data da autorização. Pagamentos usam a data em que foram efetivados.</li>
+    <li>Contas em aberto usam a programação ativa do ciclo aprovado ou o vencimento.</li>
+  </ul>
+</details>
+<script defer src="{% static 'js/financeiro-catalogo.js' %}"></script>
 {% endblock %}

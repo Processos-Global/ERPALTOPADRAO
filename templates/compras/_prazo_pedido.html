@@ -1,0 +1,12 @@
+<div>
+  <p><strong>Prazo comercial</strong> · {{ prazo.rotulo_comercial }}{% if prazo.dias_desvio_comercial != None %} · Desvio: {{ prazo.dias_desvio_comercial }} dias{% endif %}</p>
+  {% if prazo.realizada %}
+    <p><strong>Entrega concluída</strong> · {{ prazo.realizada|date:"d/m/Y" }}</p>
+  {% elif pedido.ultimo_recebimento_em %}
+    <p><strong>Último recebimento</strong> · {{ pedido.ultimo_recebimento_em|date:"d/m/Y" }}</p>
+  {% endif %}
+  <p><strong>Data necessária na obra</strong> · {% if prazo.data_necessaria_obra %}{{ prazo.data_necessaria_obra|date:"d/m/Y" }} · Cronograma de Suprimentos atual{% else %}Não definida{% endif %}</p>
+  {% if prazo.data_necessaria_obra %}
+    <p>{{ prazo.situacao_obra }}{% if prazo.defasagem_necessidade != None %} · Desvio: {{ prazo.defasagem_necessidade }} dias{% endif %}</p>
+  {% endif %}
+</div>

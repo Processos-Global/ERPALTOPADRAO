@@ -2,15 +2,13 @@
 {% block cadastros_content %}
 <div class="cad-head">
   <div class="cad-head__copy">
-    <div class="cad-eyebrow">Central de Cadastros</div>
     <h1 class="cad-title">Materiais</h1>
-    <p class="cad-sub">Catálogo oficial utilizado pelos processos de suprimentos e compras.</p>
   </div>
   {% if cad_pode_criar %}<div class="cad-head__actions"><a class="cad-btn" href="{% url 'cadastros:material_novo' %}">+ Novo material</a></div>{% endif %}
 </div>
 
 <div class="cad-toolbar">
-  <form method="get">
+  <form method="get" data-local-submit-loading>
     <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar código, material ou especificação">
     <select name="unidade">
       <option value="">Todas as unidades</option>
@@ -42,4 +40,5 @@
     </tbody>
   </table>
 </div>
+{% include 'cadastros/_paginacao.html' with pagina=materiais %}
 {% endblock %}

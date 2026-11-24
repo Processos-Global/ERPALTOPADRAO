@@ -9,8 +9,9 @@ import tempfile
 import zipfile
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Exists, F, OuterRef, Q, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -20,11 +21,14 @@ from django.views.decorators.http import require_POST
 from financeiro.models import (
     AprovacaoTituloFinanceiro,
     ItemRelatorioPagamento,
+    Pagamento,
     RelatorioPagamento,
     TituloPagar,
 )
+from financeiro.services.agenda import _inteiro_positivo, titulos_disponiveis_pagamento
 from financeiro.services.numeracao import gerar_numero
 from financeiro.services.permissoes import financeiro_acao_required
+from financeiro.views.pagamentos import ABAS_PAGAMENTOS
 
 
 def _parse_data(valor):
@@ -42,12 +46,17 @@ def _intervalo_local(data_inicio, data_fim):
 
 
 def _aprovacoes_disponiveis(data_inicio=None, data_fim=None, obra_ids=None):
+    ja_emitidos = ItemRelatorioPagamento.objects.filter(titulo_id=OuterRef("titulo_id"))
+    elegiveis = titulos_disponiveis_pagamento(TituloPagar.objects.all()).order_by().values("pk")
     qs = (
         AprovacaoTituloFinanceiro.objects.filter(
             decisao=AprovacaoTituloFinanceiro.Decisao.APROVADO,
             titulo__status=TituloPagar.Status.APROVADO,
-            item_relatorio_pagamento__isnull=True,
+            titulo_id__in=elegiveis,
+            ciclo=F("titulo__ciclo_aprovacao"),
         )
+        .filter(~Exists(ja_emitidos))
+        .exclude(titulo__pagamento__status=Pagamento.Status.EFETIVADO)
         .select_related(
             "titulo",
             "titulo__fornecedor",
@@ -70,11 +79,7 @@ def _aprovacoes_disponiveis(data_inicio=None, data_fim=None, obra_ids=None):
 
 
 def _parse_obra_id(valor):
-    try:
-        numero = int(valor)
-        return numero if numero > 0 else None
-    except (TypeError, ValueError):
-        return None
+    return _inteiro_positivo(valor)
 
 
 def _parse_obras(valores):
@@ -172,7 +177,7 @@ def relatorios_pagamento(request):
     if data_inicio and data_fim and data_fim < data_inicio:
         data_inicio, data_fim = data_fim, data_inicio
 
-    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids))
+    aprovacoes = Paginator(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids), 40).get_page(request.GET.get("page"))
     itens_preview = [
         {"aprovacao": a, "titulo": a.titulo, "valor": a.titulo.saldo_aberto}
         for a in aprovacoes
@@ -182,11 +187,12 @@ def relatorios_pagamento(request):
     # Identidade composta: emissor + documento + parcela. Itens da mesma
     # aprovação continuam protegidos pelo OneToOne de ItemRelatorioPagamento.
     assinaturas_emitidas = set()
-    ja_emitidos = ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo")
-    for item in ja_emitidos.iterator():
-        assinatura = _assinatura_documento(item.titulo)
-        if assinatura:
-            assinaturas_emitidas.add(assinatura)
+    ja_emitidos = ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo__fornecedor")
+    if any(_assinatura_documento(item["titulo"]) for item in itens_preview):
+        for item in ja_emitidos.iterator():
+            assinatura = _assinatura_documento(item.titulo)
+            if assinatura:
+                assinaturas_emitidas.add(assinatura)
     vistas = set(assinaturas_emitidas)
     for preview in itens_preview:
         assinatura = _assinatura_documento(preview["titulo"])
@@ -245,6 +251,8 @@ def relatorios_pagamento(request):
             "meios_pagamento": meios,
             "total_preview": total_preview,
             "historico": historico,
+            "page_obj": aprovacoes,
+            "aba": "pacotes", "abas_pagamentos": ABAS_PAGAMENTOS,
         },
     )
 
@@ -262,18 +270,17 @@ def relatorio_pagamento_emitir(request):
         return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
 
     ids_raw = request.POST.getlist("aprovacoes")
-    ids = {int(v) for v in ids_raw if v.isdigit() and int(v) > 0}
+    ids = {identificador for v in ids_raw if (identificador := _inteiro_positivo(v))}
     if not ids or len(ids) != len(ids_raw):
         messages.error(request, "Selecione ao menos um pagamento válido.")
         return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
-    # Reconsulta aprovações e bloqueia os registros, evitando emissões repetidas.
-    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids).filter(pk__in=ids).select_for_update())
+    titulos_ids = AprovacaoTituloFinanceiro.objects.filter(pk__in=ids).values_list("titulo_id", flat=True)
+    # As mutações de aprovação e pagamento também bloqueiam primeiro o título.
+    list(TituloPagar.objects.filter(pk__in=list(titulos_ids)).select_for_update().order_by("pk").values_list("pk", flat=True))
+    aprovacoes = list(_aprovacoes_disponiveis(data_inicio, data_fim, obra_ids=obra_ids).filter(pk__in=ids))
     if len(aprovacoes) != len(ids):
         messages.error(request, "Um ou mais pagamentos já foram emitidos ou não estão disponíveis. Atualize a seleção.")
         return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
-    # Lock nas contas, além das aprovações, para serializar emissões concorrentes.
-    titulos_ids = sorted(a.titulo_id for a in aprovacoes)
-    list(TituloPagar.objects.select_for_update().filter(pk__in=titulos_ids).order_by("pk"))
     assinaturas = {}
     for aprovacao in aprovacoes:
         chave = _assinatura_documento(aprovacao.titulo)
@@ -282,10 +289,6 @@ def relatorio_pagamento_emitir(request):
                 messages.error(request, "Há duas contas para o mesmo fornecedor, documento e parcela na seleção. Revise antes de emitir.")
                 return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
             assinaturas[chave] = aprovacao.titulo_id
-    for item in ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo").iterator():
-        if _assinatura_documento(item.titulo) in assinaturas:
-            messages.error(request, "Documento/parcela já consta em outro malote. Emissão bloqueada; consulte o histórico.")
-            return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
     meios_validos = dict(TituloPagar._meta.get_field("meio_pagamento").choices)
     meios_escolhidos = {}
     for aprovacao in aprovacoes:
@@ -297,8 +300,17 @@ def relatorio_pagamento_emitir(request):
             messages.error(request, f"Conta {aprovacao.titulo.numero}: cadastre a chave PIX antes de emitir.")
             return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
         meios_escolhidos[aprovacao.pk] = meio
+    # A sequência serializa também checagens do mesmo documento em títulos distintos.
+    numero_relatorio = gerar_numero("RELATORIO_PAGAMENTO")
+    if assinaturas:
+        emitidos = ItemRelatorioPagamento.objects.exclude(documento_numero="").select_related("titulo__fornecedor")
+        for item in emitidos.iterator():
+            if _assinatura_documento(item.titulo) in assinaturas:
+                transaction.set_rollback(True)
+                messages.error(request, "Documento/parcela já consta em outro malote. Consulte o histórico.")
+                return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
     relatorio = RelatorioPagamento.objects.create(
-        numero=gerar_numero("RELATORIO_PAGAMENTO"),
+        numero=numero_relatorio,
         periodo_inicio=min(a.criado_em.date() for a in aprovacoes),
         periodo_fim=max(a.criado_em.date() for a in aprovacoes),
         emitido_por=request.user,
@@ -432,6 +444,8 @@ def relatorio_pagamento_excel(request, pk):
 
         for coluna, valor in enumerate(valores, 1):
             celula = ws.cell(row=linha, column=coluna, value=valor)
+            if isinstance(valor, str):
+                celula.data_type = "s"
             celula.alignment = Alignment(vertical="center", wrap_text=True)
             celula.border = Border(left=borda_fina, right=borda_fina, top=borda_fina, bottom=borda_fina)
 

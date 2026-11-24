@@ -2,9 +2,7 @@
 {% block cadastros_content %}
 <div class="cad-head">
   <div class="cad-head__copy">
-    <div class="cad-eyebrow">Dados mestres</div>
-    <h1 class="cad-title">Central de Cadastros</h1>
-    <p class="cad-sub">Base única de materiais, fornecedores, mão de obra e unidades de medida utilizada pelos módulos do ERP.</p>
+    <h1 class="cad-title">Cadastros</h1>
   </div>
 </div>
 
@@ -12,12 +10,12 @@
   <a class="cad-card" href="{% url 'cadastros:empresa' %}"><div class="cad-card__top"><span class="cad-card__icon">SA</span></div><h3>Informações da SAARI</h3><p>Razão social, CNPJ, endereço, contatos e logo institucional para os PDFs.</p><div class="cad-card__footer"><span>Gerenciar empresa</span><span>→</span></div></a>
   <a class="cad-card" href="{% url 'cadastros:materiais_lista' %}">
     <div class="cad-card__top"><span class="cad-card__icon">MA</span><strong class="cad-card__count">{{ total_materiais }}</strong></div>
-    <h3>Materiais</h3><p>Catálogo oficial de materiais com especificação e unidade de medida padronizada.</p>
+    <h3>Materiais</h3>
     <div class="cad-card__footer"><span>Acessar materiais</span><span>→</span></div>
   </a>
   <a class="cad-card" href="{% url 'cadastros:fornecedores_lista' %}">
     <div class="cad-card__top"><span class="cad-card__icon">FO</span><strong class="cad-card__count">{{ total_fornecedores }}</strong></div>
-    <h3>Fornecedores</h3><p>Base central para cotações, propostas, pedidos e futuras integrações.</p>
+    <h3>Fornecedores</h3>
     <div class="cad-card__footer"><span>Acessar fornecedores</span><span>→</span></div>
   </a>
   <a class="cad-card" href="{% url 'cadastros:mao_obra_lista' %}">
@@ -28,11 +26,11 @@
 
   <a class="cad-card" href="{% url 'cadastros:unidades_lista' %}">
     <div class="cad-card__top"><span class="cad-card__icon">UM</span><strong class="cad-card__count">{{ total_unidades }}</strong></div>
-    <h3>Unidades de medida</h3><p>Siglas padronizadas como UND, M2, M3, KG, L, VB e outras utilizadas em todo o ERP.</p>
+    <h3>Unidades de medida</h3>
     <div class="cad-card__footer"><span>Acessar unidades</span><span>→</span></div>
   </a>
   <a class="cad-card" href="{% url 'cadastros:ficha_tecnica_cadastros' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">FT</span><strong class="cad-card__count">→</strong></div>
+    <div class="cad-card__top"><span class="cad-card__icon">FT</span></div>
     <h3>Ficha Técnica</h3><p>Ambientes, pavimentos, categorias, itens e especificações usados pelas fichas das obras.</p>
     <div class="cad-card__footer"><span>Acessar cadastros</span><span>→</span></div>
   </a>

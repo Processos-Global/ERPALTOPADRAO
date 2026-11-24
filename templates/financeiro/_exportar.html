@@ -1,0 +1,6 @@
+{% url 'financeiro:exportar' tipo 'xlsx' as excel_url %}
+{% url 'financeiro:exportar' tipo 'pdf' as pdf_url %}
+<div class="fin-actions" aria-label="Exportar resultados">
+  <a class="fin-btn fin-btn--sm" data-download href="{{ excel_url }}{% querystring page=None %}">Excel</a>
+  <a class="fin-btn fin-btn--sm" data-download href="{{ pdf_url }}{% querystring page=None %}">PDF</a>
+</div>

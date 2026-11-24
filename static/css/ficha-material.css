@@ -1,0 +1,44 @@
+.ficha-material { min-width: 0; }
+.ft-edit-material { grid-column: span 2; min-width: 0; }
+.ficha-material__rotulo {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--saari-muted);
+    font-size: .75rem;
+    font-weight: 650;
+}
+.ficha-material summary, .ficha-material__menu {
+    padding: 8px 10px;
+    color: var(--saari-text);
+    background: var(--saari-surface);
+    border: 1px solid var(--saari-line);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+.ficha-material summary { cursor: pointer; }
+.ficha-material summary::marker { color: var(--saari-muted); }
+.ficha-material__menu { margin-top: 4px; }
+.ficha-material__menu input { width: 100%; }
+.ficha-material__menu ul {
+    max-height: 11rem;
+    overflow: auto;
+    list-style: none;
+    margin: 4px 0;
+    padding: 0;
+}
+.ficha-material__menu button {
+    width: 100%;
+    padding: 7px;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    border-radius: 5px;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+.ficha-material__menu button:hover, .ficha-material__menu button:focus-visible {
+    background: var(--saari-surface-soft);
+}
+.ficha-material__menu [role="status"] { font-size: .75rem; color: var(--saari-muted); }
+@media (max-width: 600px) { .ft-edit-material { grid-column: 1; } }

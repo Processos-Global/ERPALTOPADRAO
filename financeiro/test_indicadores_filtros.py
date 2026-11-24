@@ -2,9 +2,11 @@ from datetime import date, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
+from django.contrib.auth import get_user_model
 
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 
 from financeiro.models import Pagamento, PlanoFinanceiro, PrevisaoFinanceira, TituloPagar
 from financeiro.services.fluxo_caixa import serie_desembolsos
@@ -64,3 +66,24 @@ class IndicadoresFiltrosTests(TestCase):
 
         serie = serie_desembolsos(inicio=self.hoje, dias=1, apropriacao=str(self.plano.pk))
         self.assertEqual(serie["total"], Decimal("130.00"))
+
+    @patch("financeiro.views.indicadores.timezone.localdate")
+    def test_origens_legadas_reconciliam_e_aba_isola_agregacoes(self, localdate):
+        localdate.return_value = self.hoje
+        self.client.force_login(get_user_model().objects.create_superuser('fin-indicadores-abas'))
+        legado = self.titulo('LEGADO', self.hoje, '10.25', self.plano)
+        legado.origem = TituloPagar.Origem.MEDICAO
+        legado.save(update_fields=['origem'])
+        self.titulo('MANUAL', self.hoje, '80.07', self.plano)
+        pago = self.titulo('PAGO', self.hoje, '21.23', self.plano, TituloPagar.Status.PAGO)
+        Pagamento.objects.create(titulo=pago, data_pagamento=self.hoje, valor='21.23')
+        rota = reverse('financeiro:indicadores')
+        geral = self.client.get(rota)
+        self.assertEqual(geral.context['total_aberto'], Decimal('90.32'))
+        self.assertEqual(sum(linha['total'] for linha in geral.context['por_origem']), Decimal('90.32'))
+        self.assertNotIn('por_fornecedor', geral.context)
+        origens = self.client.get(rota, {'origem': TituloPagar.Origem.MEDICAO})
+        self.assertEqual(origens.context['total_aberto'], Decimal('10.25'))
+        fornecedores = self.client.get(rota, {'aba': 'fornecedores'})
+        self.assertNotIn('por_origem', fornecedores.context)
+        self.assertEqual(sum(linha['pago'] for linha in fornecedores.context['por_fornecedor']), Decimal('21.23'))

@@ -1,56 +1,122 @@
 {% extends "financeiro/base_financeiro.html" %}
 {% load financeiro_extras %}
-{% block financeiro_title %}Compromissos Contratados{% endblock %}
+{% block financeiro_title %}Compromissos{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Gestão financeira</div><h1 class="fin-title">Compromissos Contratados</h1><div class="fin-sub">Pedidos contratados, recebimentos identificados e pagamentos efetivados.</div></div></header>
-<section class="fin-section">
-  <div class="fin-section__head"><h2>Filtrar compromissos</h2></div>
-  <form method="get" class="fin-section__body" style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
-    <div class="fin-filter-field"><label for="comp-obra">Obra</label><select id="comp-obra" name="obra" class="fin-control"><option value="">Todas</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if obra.pk == obra_id %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
-    <div class="fin-filter-field"><label for="comp-fornecedor">Fornecedor</label><select id="comp-fornecedor" name="fornecedor" class="fin-control"><option value="">Todos</option>{% for fornecedor in fornecedores %}<option value="{{ fornecedor.pk }}" {% if fornecedor.pk == fornecedor_id %}selected{% endif %}>{{ fornecedor.nome_exibicao }}</option>{% endfor %}</select></div>
-    <div class="fin-filter-field"><label for="comp-status">Situação do pedido</label><select id="comp-status" name="status" class="fin-control"><option value="">Todas</option>{% for valor, rotulo in status_choices %}<option value="{{ valor }}" {% if valor == status_filtro %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
-    <div class="fin-filter-field"><label for="comp-q">Número</label><input id="comp-q" name="q" class="fin-control" value="{{ busca }}" placeholder="Pedido ou processo"></div>
-    <button class="fin-btn" type="submit">Filtrar</button>
-  </form>
-</section>
+<header class="fin-head"><h1 class="fin-title">Compromissos</h1>{% include 'financeiro/_exportar.html' with tipo='compromissos' %}</header>
+
+<nav class="fin-tabs" aria-label="Compromissos">
+  {% url 'financeiro:compromissos' as compromissos_url %}
+  {% url 'financeiro:liberacoes' as liberacoes_url %}
+  <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='pedidos' status=None page=None page_contratos=None %}" {% if aba == 'pedidos' %}aria-current="page"{% endif %}>Pedidos</a>
+  <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='contratos' status=None page=None page_contratos=None %}" {% if aba == 'contratos' %}aria-current="page"{% endif %}>Contratos</a>
+  <a class="fin-btn" href="{{ liberacoes_url }}{% querystring aba=None status=None page=None page_contratos=None %}">Liberações</a>
+</nav>
+
+<form method="get" data-local-submit-loading class="fin-toolbar fin-toolbar--compact">
+  <input type="hidden" name="aba" value="{{ aba }}">
+  <div class="fin-filter-field">
+    <label for="comp-obra">Obra</label>
+    <select id="comp-obra" name="obra" class="fin-control">
+      <option value="">Todas</option>
+      {% for obra in obras %}<option value="{{ obra.pk }}" {% if obra.pk == obra_id %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="comp-fornecedor">Fornecedor</label>
+    <select id="comp-fornecedor" name="fornecedor" class="fin-control">
+      <option value="">Todos</option>
+      {% for fornecedor in fornecedores %}<option value="{{ fornecedor.pk }}" {% if fornecedor.pk == fornecedor_id %}selected{% endif %}>{{ fornecedor.nome_exibicao }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="comp-q">Número</label>
+    <input id="comp-q" name="q" class="fin-control" value="{{ busca }}" placeholder="{% if aba == 'contratos' %}Contrato ou processo{% else %}Pedido ou processo{% endif %}">
+  </div>
+  {% if aba == 'pedidos' %}
+  <div class="fin-filter-field">
+    <label for="comp-status">Situação</label>
+    <select id="comp-status" name="status" class="fin-control">
+      <option value="">Todas</option>
+      {% for valor, rotulo in status_choices %}<option value="{{ valor }}" {% if valor == status_filtro %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="fin-toolbar__actions">
+    <button class="fin-btn fin-btn--primary" type="submit">Filtrar</button>
+    <a class="fin-btn" href="{{ compromissos_url }}?aba={{ aba }}">Limpar</a>
+  </div>
+</form>
+
+{% if aba == 'pedidos' %}
 <div class="fin-kpis">
-  <div class="fin-kpi"><span>Contratado em pedidos</span><strong>{{ totais.contratado|moeda_br }}</strong></div>
-  <div class="fin-kpi"><span>Recebido com valor informado</span><strong>{{ totais.recebido_identificado|moeda_br }}</strong><small>{% if totais.itens_recebidos_sem_valor %}{{ totais.itens_recebidos_sem_valor }} item(ns) recebido(s) sem valor; total parcial{% else %}Valores registrados nos itens recebidos{% endif %}</small></div>
-  <div class="fin-kpi"><span>Pago efetivamente</span><strong>{{ totais.pago_efetivado|moeda_br }}</strong></div>
-  <div class="fin-kpi"><span>Liberado financeiramente</span><strong>{{ totais.liberado_financeiramente|moeda_br }}</strong><small>Somente liberações autorizadas e rastreadas</small></div>
-  <div class="fin-kpi"><span>Saldo cancelado não entregue</span><strong>{{ totais.saldo_cancelado|moeda_br }}</strong><small>Somente pedidos cancelados em Compras, com recebimentos valorados. Não altera títulos ou pagamentos.</small></div>
-  <div class="fin-kpi"><span>Cancelamento pendente de conciliação</span><strong>{{ totais.saldo_cancelamento_pendente|moeda_br }}</strong><small>Revise recebimentos sem valor, títulos ainda ativos ou dados de cancelamento incompletos.</small></div>
-  <div class="fin-kpi"><span>Saldo financeiro não pago</span><strong>{{ totais.saldo_financeiro|moeda_br }}</strong><small>Contratado menos pago e saldo cancelado{% if totais.excedente_pago %}; {{ totais.excedente_pago|moeda_br }} pago acima do contratado{% endif %}{% if totais.pago_sem_recebimento %}; {{ totais.pago_sem_recebimento|moeda_br }} pago sem recebimento em pedidos cancelados{% endif %}{% if totais.liberado_sem_recebimento %}; {{ totais.liberado_sem_recebimento|moeda_br }} liberado sem recebimento em pedidos cancelados{% endif %}</small></div>
+  <div class="fin-kpi"><span>Contratado</span><strong>{{ totais.contratado|moeda_br }}</strong><small>{{ totais.valor_vigente|moeda_br }} vigente</small></div>
+  <div class="fin-kpi"><span>Materiais recebidos</span><strong>{{ totais.recebido_identificado|moeda_br }}</strong><small>{{ totais.valor_documentado|moeda_br }} em notas anexadas</small></div>
+  <div class="fin-kpi"><span>Liberado</span><strong>{{ totais.liberado_financeiramente|moeda_br }}</strong><small>{{ totais.saldo_liberar|moeda_br }} sem liberação ou pagamento</small></div>
+  <div class="fin-kpi"><span>Pago</span><strong>{{ totais.pago_efetivado|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Saldo a pagar</span><strong>{{ totais.saldo_financeiro|moeda_br }}</strong><small>{{ totais.saldo_cancelado|moeda_br }} de materiais cancelados</small></div>
 </div>
-<section class="fin-section">
-  <div class="fin-section__head"><div><h2>Pedidos</h2><p>Liberações autorizadas são distintas da aprovação e do pagamento do título.</p></div></div>
-  <div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Pedido</th><th>Obra</th><th>Fornecedor</th><th>Situação</th><th>Contratado</th><th>Recebido identificado</th><th>Pago</th><th>Cancelado não entregue</th><th>Saldo financeiro</th><th>Liberado financeiramente</th></tr></thead><tbody>
-  {% for pedido in pagina %}<tr>
-    <td class="fin-main-cell"><strong>{{ pedido.numero }}</strong><small>Processo {{ pedido.processo.numero }}</small></td>
-    <td>{{ pedido.obra.nome }}</td><td>{{ pedido.fornecedor.nome_exibicao }}</td><td>{{ pedido.get_status_display }}{% if pedido.status == 'CANCELADO' %}<small>{{ pedido.cancelado_em|date:'d/m/Y H:i' }} · {{ pedido.motivo_cancelamento|default:'Motivo não informado' }}</small>{% endif %}</td>
-    <td class="fin-money">{{ pedido.valor_total|moeda_br }}</td>
-    <td class="fin-money">{{ pedido.recebido_identificado|moeda_br }}{% if pedido.itens_recebidos_sem_valor %}<small>Parcial: {{ pedido.itens_recebidos_sem_valor }} item(ns) sem valor</small>{% endif %}</td>
-    <td class="fin-money">{{ pedido.pago_efetivado|moeda_br }}</td>
-    <td class="fin-money">{{ pedido.saldo_cancelado|moeda_br }}{% if pedido.saldo_cancelamento_pendente %}<small>Pendente de conciliação: {{ pedido.saldo_cancelamento_pendente|moeda_br }}</small>{% endif %}{% if pedido.status == 'CANCELADO' and pedido.itens_recebidos_sem_valor %}<small>Recebimento sem valor</small>{% endif %}</td>
-    <td class="fin-money">{{ pedido.saldo_financeiro|moeda_br }}{% if pedido.excedente_pago %}<small>Divergência: {{ pedido.excedente_pago|moeda_br }} acima do contrato</small>{% endif %}{% if pedido.pago_sem_recebimento %}<small>Pago sem recebimento: {{ pedido.pago_sem_recebimento|moeda_br }}</small>{% endif %}{% if pedido.liberado_sem_recebimento %}<small>Liberado sem recebimento: {{ pedido.liberado_sem_recebimento|moeda_br }}</small>{% endif %}</td>
-    <td class="fin-money">{{ pedido.liberado_financeiramente|moeda_br }}</td>
-  </tr>{% empty %}<tr><td colspan="10" class="fin-empty">Nenhum pedido encontrado.</td></tr>{% endfor %}
-  </tbody></table></div>
-  {% if pagina.has_other_pages %}<nav class="fin-section__body" aria-label="Páginas dos pedidos">
-    {% if pagina.has_previous %}<a class="fin-btn" href="?obra={{ obra_id|default:'' }}&fornecedor={{ fornecedor_id|default:'' }}&status={{ status_filtro|urlencode }}&q={{ busca|urlencode }}&page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
-    <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
-    {% if pagina.has_next %}<a class="fin-btn" href="?obra={{ obra_id|default:'' }}&fornecedor={{ fornecedor_id|default:'' }}&status={{ status_filtro|urlencode }}&q={{ busca|urlencode }}&page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
-  </nav>{% endif %}
+<section class="fin-section" aria-label="Pedidos contratados">
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th>Pedido</th><th>Fornecedor / obra</th><th>Situação</th><th>Contratado</th><th>Recebimento</th><th>Liberado</th><th>Pago</th><th>Saldo a pagar</th></tr></thead>
+      <tbody>
+      {% for pedido in pagina %}
+        <tr>
+          <td class="fin-main-cell"><strong>{{ pedido.numero }}</strong><small>{{ pedido.processo.numero }}</small></td>
+          <td>{{ pedido.fornecedor.nome_exibicao }}<small>{{ pedido.obra.nome }}</small></td>
+          <td>{{ pedido.get_status_display }}
+            {% if pedido.status == 'CANCELADO' %}
+              <small>{{ pedido.cancelado_em|date:'d/m/Y' }} {{ pedido.motivo_cancelamento|default:'Motivo não informado' }}</small>
+              {% if pedido.saldo_cancelado %}<small>{{ pedido.saldo_cancelado|moeda_br }} de materiais cancelados</small>{% endif %}
+              {% if pedido.saldo_cancelamento_pendente %}<small>{{ pedido.saldo_cancelamento_pendente|moeda_br }} a conciliar</small>{% endif %}
+            {% endif %}
+          </td>
+          <td class="fin-money">{{ pedido.valor_total|moeda_br }}
+            {% if pedido.saldo_cancelado %}<small>{{ pedido.valor_vigente|moeda_br }} vigente</small>{% endif %}
+            {% if pedido.frete %}<small>Frete {{ pedido.frete|moeda_br }}</small>{% endif %}
+            {% if pedido.descontos %}<small>Descontos {{ pedido.descontos|moeda_br }}</small>{% endif %}
+          </td>
+          <td class="fin-money">{{ pedido.recebido_identificado|moeda_br }}
+            {% if pedido.valor_documentado %}<small>{{ pedido.valor_documentado|moeda_br }} em notas anexadas</small>{% endif %}
+            {% if pedido.frete_documentado %}<small>{{ pedido.frete_documentado|moeda_br }} de frete conferido</small>{% endif %}
+            {% if pedido.itens_recebidos_sem_valor %}<small>{{ pedido.itens_recebidos_sem_valor }} item(ns) sem valor</small>{% endif %}
+            {% if pedido.saldo_receber %}<small>{{ pedido.saldo_receber|moeda_br }} em materiais a receber</small>{% endif %}
+          </td>
+          <td class="fin-money">
+            <a class="fin-table-link" href="{{ liberacoes_url }}?pedido={{ pedido.pk }}">{{ pedido.liberado_financeiramente|moeda_br }}</a>
+            {% if pedido.saldo_liberar %}<small>{{ pedido.saldo_liberar|moeda_br }} sem liberação ou pagamento</small>{% endif %}
+          </td>
+          <td class="fin-money">{{ pedido.pago_efetivado|moeda_br }}</td>
+          <td class="fin-money">{{ pedido.saldo_financeiro|moeda_br }}
+            {% if pedido.excedente_pago %}<small>{{ pedido.excedente_pago|moeda_br }} pago acima do contrato</small>{% endif %}
+            {% if pedido.pago_sem_recebimento %}<small>{{ pedido.pago_sem_recebimento|moeda_br }} pago sem recebimento</small>{% endif %}
+            {% if pedido.liberado_sem_recebimento %}<small>{{ pedido.liberado_sem_recebimento|moeda_br }} liberado sem recebimento</small>{% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="8" class="fin-empty">Nenhum pedido encontrado.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
-<section class="fin-section">
-  <div class="fin-section__head"><div><h2>Contratos de compra assinados</h2><p>Consulta separada: não há vínculo inequívoco com pedido para consolidar valores sem dupla contagem.</p></div></div>
-  <div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Contrato</th><th>Obra</th><th>Fornecedor</th><th>Processo</th><th>Assinado em</th><th>Valor</th></tr></thead><tbody>
-  {% for contrato in pagina_contratos %}<tr><td>{{ contrato.numero }}</td><td>{{ contrato.obra.nome }}</td><td>{{ contrato.fornecedor.nome_exibicao }}</td><td>{{ contrato.processo.numero|default:'—' }}</td><td>{{ contrato.assinado_em|date:'d/m/Y' }}</td><td class="fin-money">{{ contrato.valor_total|moeda_br }}</td></tr>{% empty %}<tr><td colspan="6" class="fin-empty">Nenhum contrato assinado encontrado.</td></tr>{% endfor %}
-  </tbody></table></div>
-  {% if pagina_contratos.has_other_pages %}<nav class="fin-section__body" aria-label="Páginas dos contratos">
-    {% if pagina_contratos.has_previous %}<a class="fin-btn" href="?obra={{ obra_id|default:'' }}&fornecedor={{ fornecedor_id|default:'' }}&status={{ status_filtro|urlencode }}&q={{ busca|urlencode }}&page={{ pagina.number }}&page_contratos={{ pagina_contratos.previous_page_number }}">Anterior</a>{% endif %}
-    <span>Página {{ pagina_contratos.number }} de {{ pagina_contratos.paginator.num_pages }}</span>
-    {% if pagina_contratos.has_next %}<a class="fin-btn" href="?obra={{ obra_id|default:'' }}&fornecedor={{ fornecedor_id|default:'' }}&status={{ status_filtro|urlencode }}&q={{ busca|urlencode }}&page={{ pagina.number }}&page_contratos={{ pagina_contratos.next_page_number }}">Próxima</a>{% endif %}
-  </nav>{% endif %}
+{% else %}
+<section class="fin-section" aria-label="Contratos assinados">
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr><th>Contrato</th><th>Obra</th><th>Fornecedor</th><th>Processo</th><th>Assinado em</th><th>Contratado</th></tr></thead>
+      <tbody>
+      {% for contrato in pagina %}
+        <tr><td>{{ contrato.numero }}</td><td>{{ contrato.obra.nome }}</td><td>{{ contrato.fornecedor.nome_exibicao }}</td><td>{{ contrato.processo.numero|default:'—' }}</td><td>{{ contrato.assinado_em|date:'d/m/Y'|default:'—' }}</td><td class="fin-money">{{ contrato.valor_total|moeda_br }}</td></tr>
+      {% empty %}<tr><td colspan="6" class="fin-empty">Nenhum contrato assinado encontrado.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
+{% endif %}
+{% if pagina.has_other_pages %}
+<nav aria-label="Paginação" class="fin-tabs">
+  {% if pagina.has_previous %}<a class="fin-btn" href="{% querystring page=pagina.previous_page_number page_contratos=None %}">Anterior</a>{% endif %}
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  {% if pagina.has_next %}<a class="fin-btn" href="{% querystring page=pagina.next_page_number page_contratos=None %}">Próxima</a>{% endif %}
+</nav>
+{% endif %}
 {% endblock %}

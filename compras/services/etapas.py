@@ -10,7 +10,7 @@ from compras.models import (
 )
 from .alcadas import resolver_alcada_aprovacao
 from .auditoria import registrar_evento
-from .cobertura_estoque import revalidar_necessidade
+from .cobertura_estoque import liberar_reservas_ativas, revalidar_necessidade
 from .comercial import (
     calcular_desconto_adjudicacao, cotacao_elegivel_para_negociacao,
     item_tecnicamente_aprovado, processo_exige_compatibilizacao,
@@ -378,6 +378,10 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
         return aprovacao
 
     if decisao == AprovacaoCompra.Decisao.REPROVADO:
+        from obras.models import Obra
+
+        Obra.objects.select_for_update().get(pk=p.obra_id)
+        reservas_liberadas = liberar_reservas_ativas(processo=p)
         aprovacao = AprovacaoCompra.objects.create(
             processo=p, ciclo=ciclo, alcada=None, usuario=usuario, decisao=decisao, observacao=observacao
         )
@@ -404,7 +408,7 @@ def decidir_aprovacao(processo, usuario, decisao, observacao="", selecoes=None):
             "PROCESSO_REPROVADO",
             usuario,
             "Compra reprovada pelo gestor e processo encerrado sem fornecedor aprovado.",
-            {"ciclo": ciclo, "observacao": observacao},
+            {"ciclo": ciclo, "observacao": observacao, "reservas_liberadas": reservas_liberadas},
         )
         notificar_processo_reprovado(p)
         return aprovacao

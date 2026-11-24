@@ -1,0 +1,17 @@
+<label class="fin-filter-field" for="fin-periodo">Vencimento
+  <select class="fin-control" name="periodo" id="fin-periodo">
+    {% for valor, rotulo in periodos %}<option value="{{ valor }}" {% if periodo == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+  </select>
+</label>
+<label class="fin-filter-field" data-periodo-campo="data" {% if periodo != 'data' %}hidden{% endif %}>Data
+  <input class="fin-control" type="date" name="data" value="{{ filtros.data }}" {% if periodo != 'data' %}disabled{% endif %}>
+</label>
+<label class="fin-filter-field" data-periodo-campo="intervalo" {% if periodo != 'intervalo' %}hidden{% endif %}>De
+  <input class="fin-control" type="date" name="inicio" value="{{ filtros.inicio }}" {% if periodo != 'intervalo' %}disabled{% endif %}>
+</label>
+<label class="fin-filter-field" data-periodo-campo="intervalo" {% if periodo != 'intervalo' %}hidden{% endif %}>Até
+  <input class="fin-control" type="date" name="fim" value="{{ filtros.fim }}" {% if periodo != 'intervalo' %}disabled{% endif %}>
+</label>
+<label class="fin-filter-field" data-periodo-campo="mes" {% if periodo != 'mes' %}hidden{% endif %}>Mês de vencimento
+  <input class="fin-control" type="month" name="mes" value="{{ mes_entrada }}" {% if periodo != 'mes' %}disabled{% endif %}>
+</label>

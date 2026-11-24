@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -44,6 +44,35 @@ class DiarioCronogramaTest(TestCase):
         return self.client.get(reverse("obras:diario_atividades_api"), {
             "obra": (obra or self.obra).pk, "data": data,
         })
+
+    def test_lista_pagina_historico_preservando_filtros(self):
+        inicio = date(2025, 1, 1)
+        DiarioObra.objects.bulk_create([
+            DiarioObra(obra=self.obra, data=inicio + timedelta(days=dia))
+            for dia in range(301)
+        ])
+        DiarioObra.objects.create(obra=self.outra, data=inicio, servicos_executados="Diário de outra obra")
+        url = reverse("obras:diario_lista")
+        filtros = {"obra": self.obra.pk, "inicio": inicio.isoformat()}
+        primeira = self.client.get(url, filtros)
+        ultima = self.client.get(url, {**filtros, "page": 11})
+
+        self.assertEqual(len(primeira.context["diarios"]), 30)
+        self.assertContains(primeira, f"obra={self.obra.pk}&amp;inicio=2025-01-01&amp;page=2")
+        self.assertEqual([diario.data for diario in ultima.context["diarios"]], [inicio])
+        self.assertNotContains(ultima, "Diário de outra obra")
+
+    def test_formulario_separa_checklists_sem_categoria_vazia(self):
+        diario = DiarioObra.objects.create(obra=self.obra, data=date(2026, 10, 14))
+        resposta = self.client.get(reverse("obras:diario_editar", args=[diario.pk]))
+        self.assertContains(resposta, '<summary>Pré Habite-se</summary>', html=True)
+        self.assertContains(resposta, '<summary>Pós Habite-se</summary>', html=True)
+        self.assertContains(resposta, '<summary>Outras atividades</summary>', html=True)
+
+        outro_diario = DiarioObra.objects.create(obra=self.outra, data=diario.data)
+        resposta = self.client.get(reverse("obras:diario_editar", args=[outro_diario.pk]))
+        self.assertNotContains(resposta, '<summary>Pré Habite-se</summary>', html=True)
+        self.assertContains(resposta, '<summary>Outras atividades</summary>', html=True)
 
     def test_api_usa_semana_importada_e_isola_obra(self):
         resposta = self._api("2026-10-14")

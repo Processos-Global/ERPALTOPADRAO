@@ -7,13 +7,41 @@ from obras.models import AmbienteFichaTecnica, FichaTecnicaObra, ItemFichaTecnic
 
 
 def _id(parametros, nome):
-    valor = str(parametros.get(nome) or "").strip()
-    return int(valor) if valor.isascii() and valor.isdecimal() and int(valor) > 0 else None
+    valor = str(parametros.get(nome) or "").strip().lstrip("0")
+    if not valor.isascii() or not valor.isdecimal() or len(valor) > 19:
+        return None
+    numero = int(valor)
+    return numero if numero <= 2**63 - 1 else None
 
 
-def consultar_ficha_tecnica(parametros):
+def buscar_materiais_consulta(termo, pagina):
+    por_pagina = 20
+    inicio = (pagina - 1) * por_pagina
+    materiais = Material.objects.filter(ativo=True)
+    if termo:
+        materiais = materiais.filter(
+            Q(codigo__icontains=termo) | Q(nome__icontains=termo) | Q(especificacao__icontains=termo)
+        )
+    encontrados = list(materiais.only("nome", "especificacao").order_by(
+        "nome", "especificacao", "pk",
+    )[inicio:inicio + por_pagina + 1])
+    return {
+        "resultados": [
+            {"id": material.pk, "texto": material.descricao_completa}
+            for material in encontrados[:por_pagina]
+        ],
+        "mais": len(encontrados) > por_pagina,
+    }
+
+
+def consultar_ficha_tecnica(parametros, *, navegacao=False):
     filtros = {nome: _id(parametros, nome) for nome in ("obra", "pavimento", "ambiente", "categoria", "tipo", "material")}
     filtros["busca"] = (parametros.get("busca") or "").strip()[:150]
+    apenas_gerais = (
+        parametros.get("gerais") == "1" and filtros["obra"]
+        and not (filtros["ambiente"] or filtros["pavimento"])
+    )
+    resumo = navegacao and not (filtros["ambiente"] or apenas_gerais)
     obras = Obra.objects.filter(ativa=True, ficha_tecnica__isnull=False).order_by("nome")
     pavimentos = PavimentoFichaTecnica.objects.filter(ficha__obra__ativa=True, ativo=True)
     ambientes = AmbienteFichaTecnica.objects.filter(pavimento__ficha__obra__ativa=True, pavimento__ativo=True, ativo=True)
@@ -43,6 +71,8 @@ def consultar_ficha_tecnica(parametros):
     )
     if filtros["obra"]:
         itens = itens.filter(aplicacao_categoria__ficha__obra_id=filtros["obra"])
+    if apenas_gerais:
+        itens = itens.filter(aplicacao_categoria__ambiente__isnull=True)
     if filtros["pavimento"]:
         itens = itens.filter(aplicacao_categoria__ambiente__pavimento_id=filtros["pavimento"])
     if filtros["ambiente"]:
@@ -60,42 +90,61 @@ def consultar_ficha_tecnica(parametros):
             Q(especificacao__icontains=termo) | Q(descricao_medidas__icontains=termo) |
             Q(opcao_especificacao__nome__icontains=termo) | Q(material__nome__icontains=termo)
         )
-    itens = list(itens.order_by(
-        "aplicacao_categoria__ficha__obra__nome",
-        "aplicacao_categoria__ambiente__pavimento__ordem",
-        "aplicacao_categoria__ambiente__pavimento_id",
-        "aplicacao_categoria__ambiente__ordem",
-        "aplicacao_categoria__categoria__ordem", "ordem", "id",
-    ))
-
+    contagens = {}
     por_ambiente = {}
     gerais = {}
+    if resumo:
+        contagens = {
+            (obra_id, ambiente_id): total
+            for obra_id, ambiente_id, total in itens.order_by().values_list(
+                "aplicacao_categoria__ficha__obra_id", "aplicacao_categoria__ambiente_id",
+            ).annotate(total=Count("pk"))
+        }
+        itens = []
+    else:
+        itens = list(itens.order_by(
+            "aplicacao_categoria__ficha__obra__nome",
+            "aplicacao_categoria__ambiente__pavimento__ordem",
+            "aplicacao_categoria__ambiente__pavimento_id",
+            "aplicacao_categoria__ambiente__ordem",
+            "aplicacao_categoria__categoria__ordem", "ordem", "id",
+        ))
     for item in itens:
-        ambiente_id = item.aplicacao_categoria.ambiente_id
+        aplicacao = item.aplicacao_categoria
+        obra_id, ambiente_id = aplicacao.ficha.obra_id, aplicacao.ambiente_id
+        chave = (obra_id, ambiente_id)
+        contagens[chave] = contagens.get(chave, 0) + 1
         if ambiente_id:
             por_ambiente.setdefault(ambiente_id, []).append(item)
         else:
-            gerais.setdefault(item.aplicacao_categoria.ficha.obra_id, []).append(item)
+            gerais.setdefault(obra_id, []).append(item)
+
+    def no_de_obra(obra):
+        return {
+            "obra": obra, "pavimentos": [], "gerais": gerais.get(obra.pk, []),
+            "total_gerais": contagens.get((obra.pk, None), 0),
+        }
+
     arvore = []
     por_obra = {}
-    for ambiente in ambientes:
+    for ambiente in ambientes if not apenas_gerais else []:
         if filtros["ambiente"] and ambiente.pk != filtros["ambiente"]:
             continue
         obra = ambiente.pavimento.ficha.obra
         no_obra = por_obra.get(obra.pk)
         if no_obra is None:
-            no_obra = {"obra": obra, "pavimentos": [], "gerais": gerais.get(obra.pk, [])}
+            no_obra = no_de_obra(obra)
             por_obra[obra.pk] = no_obra
             arvore.append(no_obra)
         if not no_obra["pavimentos"] or no_obra["pavimentos"][-1]["pavimento"].pk != ambiente.pavimento_id:
             no_obra["pavimentos"].append({"pavimento": ambiente.pavimento, "ambientes": []})
         no_obra["pavimentos"][-1]["ambientes"].append({
             "ambiente": ambiente, "itens": por_ambiente.get(ambiente.pk, []),
+            "total_filtrado": contagens.get((obra.pk, ambiente.pk), 0),
         })
-    for obra_id, itens_gerais in gerais.items():
-        if obra_id not in por_obra:
-            obra = itens_gerais[0].aplicacao_categoria.ficha.obra
-            arvore.append({"obra": obra, "pavimentos": [], "gerais": itens_gerais})
+    ids_obras_gerais = {obra_id for obra_id, ambiente_id in contagens if ambiente_id is None} - por_obra.keys()
+    if ids_obras_gerais:
+        arvore.extend(no_de_obra(obra) for obra in obras.filter(pk__in=ids_obras_gerais))
     arvore.sort(key=lambda no: no["obra"].nome.casefold())
 
     return {
@@ -104,6 +153,6 @@ def consultar_ficha_tecnica(parametros):
         "ambientes_filtro": ambientes,
         "categorias_filtro": CategoriaGrandeFornecedor.objects.filter(ativo=True).order_by("ordem", "nome"),
         "tipos_filtro": TipoItemGrandeFornecedor.objects.filter(ativo=True).select_related("categoria").order_by("categoria__nome", "nome"),
-        "materiais_filtro": Material.objects.filter(ativo=True).order_by("nome"),
-        "arvore": arvore, "itens": itens, "total": len(itens),
+        "arvore": arvore, "itens": itens, "total": sum(contagens.values()),
+        "apenas_gerais": bool(apenas_gerais), "resumo_navegacao": resumo,
     }

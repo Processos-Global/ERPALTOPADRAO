@@ -70,22 +70,13 @@
 <div class="dashboard-home module-menu">
   <section class="dashboard-heading">
     <div class="dashboard-heading__content">
-      <span class="dashboard-heading__eyebrow">Módulo</span>
       <h1>Projetos</h1>
-      <p>Compatibilização, documentação e alterações de projeto organizadas por obra.</p>
     </div>
   </section>
 
-  <section class="modules">
-    <div class="modules__header">
-      <div><span class="modules__eyebrow">Funcionalidades</span></div>
-    </div>
+  <section class="modules" aria-label="Áreas de projetos">
     <div class="module-cards">
       <a href="{% url 'projetos:checklist_compatibilizacao' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">01</span>
-          <span class="module-card__permission">Projetos</span>
-        </header>
         <div class="module-card__body">
           <span class="module-card__icon"><svg class="icon"><use href="#icon-check"></use></svg></span>
           <div class="module-card__content"><h3>Acompanhamento de Projetos</h3><p>Acompanhe itens, status, observações e histórico por obra.</p></div>
@@ -95,10 +86,6 @@
       </a>
 
       <a href="{% url 'projetos:checklist_documental' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">02</span>
-          <span class="module-card__permission">Projetos</span>
-        </header>
         <div class="module-card__body">
           <span class="module-card__icon"><svg class="icon"><use href="#icon-file"></use></svg></span>
           <div class="module-card__content"><h3>Checklist documental</h3><p>Controle de documentos, andamento, observações e histórico por obra.</p></div>
@@ -108,10 +95,6 @@
       </a>
 
       <a href="{% url 'projetos:alteracoes' %}" class="module-card" data-transition-link>
-        <header class="module-card__header">
-          <span class="module-card__number">03</span>
-          <span class="module-card__permission">Projetos</span>
-        </header>
         <div class="module-card__body">
           <span class="module-card__icon"><svg class="icon"><use href="#icon-edit"></use></svg></span>
           <div class="module-card__content"><h3>Alterações de projeto</h3><p>Registre alterações, arquivos e responsáveis em uma visão organizada.</p></div>

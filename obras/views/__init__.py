@@ -2,6 +2,7 @@ from .menu import menu
 from .ficha_tecnica import (
     ficha_tecnica, ficha_tecnica_acao, fichas_tecnicas,
     ficha_tecnica_consulta, ficha_tecnica_consulta_pdf, ficha_tecnica_consulta_excel,
+    ficha_tecnica_consulta_materiais,
 )
 from .estoque import (
     almoxarifado_dashboard,
@@ -16,6 +17,7 @@ __all__ = [
     "menu",
     "ficha_tecnica", "ficha_tecnica_acao", "fichas_tecnicas",
     "ficha_tecnica_consulta", "ficha_tecnica_consulta_pdf", "ficha_tecnica_consulta_excel",
+    "ficha_tecnica_consulta_materiais",
     "almoxarifado_dashboard", "almoxarifado_obra", "saida_estoque", "transferencia_estoque",
     "diario_lista", "diario_novo", "diario_editar", "diario_atividades_api",
 ]

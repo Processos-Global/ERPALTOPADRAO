@@ -2,7 +2,8 @@ from collections import defaultdict
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Case, DateField, Exists, F, OuterRef, Q, Sum, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
@@ -15,44 +16,65 @@ STATUS_ABERTOS = {
 }
 
 
+def previsoes_independentes():
+    """Mantém só previsões ativas cuja obrigação ainda não está em um título."""
+    titulos_cobertos = TituloPagar.objects.filter(
+        previsao_origem_id=OuterRef("pk"),
+        status__in=STATUS_ABERTOS | {TituloPagar.Status.PAGO},
+    )
+    return PrevisaoFinanceira.objects.filter(ativa=True).exclude(
+        origem=PrevisaoFinanceira.Origem.COMPRA,
+    ).filter(~Exists(titulos_cobertos))
+
+
+def titulos_com_data_desembolso(titulos):
+    """Uma programação perde efeito quando o título sai do ciclo aprovado."""
+    return titulos.annotate(
+        data_programada_vigente=Case(
+            When(
+                ~Q(pagamento__status=Pagamento.Status.EFETIVADO),
+                status=TituloPagar.Status.APROVADO,
+                programacao_pagamento__ativa=True,
+                programacao_pagamento__ciclo_aprovacao=F("ciclo_aprovacao"),
+                then=F("programacao_pagamento__data_programada"),
+            ),
+            output_field=DateField(),
+        ),
+    ).annotate(data_desembolso=Coalesce("data_programada_vigente", "vencimento"))
+
+
 def serie_desembolsos(*, inicio=None, dias=90, obra_id=None, obra_ids=None,
-                     classe=None, apropriacao=None, fornecedor=None):
+                     classe=None, apropriacao=None, fornecedor=None, origem=None):
     """Saídas futuras conhecidas + previsões ainda não formalizadas."""
     inicio = inicio or timezone.localdate()
     fim = inicio + timedelta(days=dias)
-    eventos = defaultdict(lambda: {"contas": Decimal("0"), "previsoes": Decimal("0")})
-
-    # saldo_aberto acessa a relação OneToOne pagamento. Sem select_related,
-    # cada título poderia gerar uma consulta adicional ao banco.
-    titulos = TituloPagar.objects.filter(
-        status__in=STATUS_ABERTOS,
-        vencimento__range=(inicio, fim),
-    ).select_related("pagamento")
+    from financeiro.services.agenda import saldo_titulo_sql
     from financeiro.services.indicadores_gerenciais import _filtros
 
+    titulos = titulos_com_data_desembolso(TituloPagar.objects.filter(status__in=STATUS_ABERTOS))
+    titulos = titulos.filter(data_desembolso__range=(inicio, fim))
+    previsoes = previsoes_independentes().filter(data_prevista__range=(inicio, fim))
     obras_filtro = list(obra_ids or [])
     if obra_id and obra_id not in obras_filtro:
         obras_filtro.append(obra_id)
+    if origem:
+        titulos = titulos.filter(origem=origem)
+        previsoes = previsoes.filter(origem=origem)
     titulos = _filtros(titulos, obra_ids=obras_filtro, classe=classe,
                        apropriacao=apropriacao, fornecedor=fornecedor)
-    for titulo in titulos:
-        eventos[titulo.vencimento]["contas"] += titulo.saldo_aberto
-
-    previsoes = PrevisaoFinanceira.objects.filter(
-        ativa=True,
-        data_prevista__range=(inicio, fim),
-    ).exclude(origem=PrevisaoFinanceira.Origem.COMPRA)
     previsoes = _filtros(previsoes, obra_ids=obras_filtro, classe=classe,
                          apropriacao=apropriacao, fornecedor=fornecedor)
-    for previsao in previsoes:
-        eventos[previsao.data_prevista]["previsoes"] += previsao.valor_previsto
+
+    valores_contas = dict(titulos.order_by().values_list("data_desembolso").annotate(total=Sum(saldo_titulo_sql())))
+    valores_previsoes = dict(previsoes.order_by().values_list("data_prevista").annotate(total=Sum("valor_previsto")))
 
     serie = []
     cursor = inicio
-    total = Decimal("0")
+    zero = Decimal("0.00")
+    total = zero
     while cursor <= fim:
-        contas = eventos[cursor]["contas"]
-        previsto = eventos[cursor]["previsoes"]
+        contas = (valores_contas.get(cursor) or zero).quantize(zero)
+        previsto = (valores_previsoes.get(cursor) or zero).quantize(zero)
         saida = contas + previsto
         total += saida
         serie.append({
@@ -104,9 +126,7 @@ def resumo_por_obra(*, inicio=None, fim=None):
     for titulo in titulos_abertos:
         abertos_por_obra[titulo.obra_id] += titulo.saldo_aberto
 
-    previsoes = PrevisaoFinanceira.objects.filter(ativa=True, obra_id__isnull=False).exclude(
-        origem=PrevisaoFinanceira.Origem.COMPRA
-    )
+    previsoes = previsoes_independentes().filter(obra_id__isnull=False)
     if inicio:
         previsoes = previsoes.filter(data_prevista__gte=inicio)
     if fim:

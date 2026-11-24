@@ -61,7 +61,9 @@ class DesempenhoViewsComprasTest(TestCase):
         ])
         url = reverse("compras:lista_processos")
         filtros = {"obra": self.obra.pk, "q": "Compra teste", "sla": "ATRASADO"}
-        primeira = self.client.get(url, filtros)
+        with CaptureQueriesContext(connection) as consultas:
+            primeira = self.client.get(url, filtros)
+            consultas_pagina = [q["sql"] for q in consultas if "qtd_itens" in q["sql"]]
         segunda = self.client.get(url, {**filtros, "page": 2})
         self.assertEqual(primeira.status_code, 200)
         self.assertEqual(segunda.status_code, 200)
@@ -75,6 +77,27 @@ class DesempenhoViewsComprasTest(TestCase):
         self.assertContains(primeira, "sla=ATRASADO")
         self.assertContains(primeira, 'value="2345" selected')
         self.assertContains(primeira, "obra=2345")
+        self.assertTrue(any("LIMIT 30" in sql for sql in consultas_pagina))
+        self.assertNotIn("indicadores", primeira.context["sla_resumo"])
+
+    def test_historico_de_processo_e_consultado_somente_ao_abrir(self):
+        processo = ProcessoCompra.objects.create(
+            obra=self.obra, numero="PC-HIST-DEMANDA", titulo="Histórico sob demanda",
+        )
+        HistoricoProcessoCompra.objects.create(
+            processo=processo, tipo="TESTE", descricao="Evento exclusivo do histórico",
+        )
+        with CaptureQueriesContext(connection) as consultas:
+            resumo = self.client.get(reverse("compras:detalhe_processo", args=[processo.pk]))
+            consulta_historico = any(("FROM " + connection.ops.quote_name("compras_historicoprocessocompra")) in q["sql"] for q in consultas)
+        self.assertNotContains(resumo, "Evento exclusivo do histórico")
+        self.assertFalse(consulta_historico)
+        url = reverse("compras:historico_processo", args=[processo.pk])
+        fragmento = self.client.get(url, {"fragmento": "1"})
+        self.assertContains(fragmento, "Evento exclusivo do histórico")
+        self.assertContains(self.client.get(url), "Evento exclusivo do histórico")
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
 
     def test_pedidos_filtram_antes_da_paginacao(self):
         processo = ProcessoCompra.objects.create(
@@ -161,17 +184,28 @@ class DesempenhoViewsComprasTest(TestCase):
         )
         with CaptureQueriesContext(connection) as consultas:
             resposta = self.client.get(reverse("compras:detalhe_processo", args=[processo.pk]))
+            tabela_anexo = connection.ops.quote_name(PedidoCompraAnexo._meta.db_table)
+            consultou_anexos = any(tabela_anexo in q["sql"] for q in consultas)
+            tabela = connection.ops.quote_name(AdjudicacaoCompra._meta.db_table)
+            consultas_adjudicacao = [consulta for consulta in consultas if f"FROM {tabela}" in consulta["sql"]]
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.context["quantidade_adjudicada"], Decimal("2"))
         self.assertEqual(resposta.context["necessidades"][0].saldo, Decimal("3"))
         self.assertEqual(resposta.context["valor_total_selecionado"], Decimal("16"))
+        self.assertFalse(consultou_anexos)
+        self.assertNotIn("sintetico.pdf", resposta.content.decode())
+        url_pedidos = reverse("compras:pedidos_processo", args=[processo.pk])
+        pedidos = self.client.get(url_pedidos, {"fragmento": "1"})
+        self.assertContains(pedidos, "sintetico.pdf")
+        self.assertContains(pedidos, reverse("compras:anexar_arquivo_pedido", args=[pedido.pk]))
+        self.assertContains(pedidos, reverse("compras:baixar_anexo_pedido", args=[anexo.pk]))
+        self.assertContains(self.client.get(url_pedidos), "sintetico.pdf")
         self.assertEqual(
-            [(doc["pk"], doc["nome"], doc["responsavel"]) for doc in resposta.context["documentos_processo"]],
+            [(doc["pk"], doc["nome"], doc["responsavel"]) for doc in pedidos.context["documentos_processo"]],
             [(anexo.pk, "sintetico.pdf", self.usuario)],
         )
-        self.assertIn(evento, resposta.context["historico"])
-        tabela = connection.ops.quote_name(AdjudicacaoCompra._meta.db_table)
-        consultas_adjudicacao = [consulta for consulta in consultas if f"FROM {tabela}" in consulta["sql"]]
+        historico = self.client.get(reverse("compras:historico_processo", args=[processo.pk]), {"fragmento": "1"})
+        self.assertIn(evento, historico.context["historico"])
         self.assertLessEqual(len(consultas_adjudicacao), 2)
 
     def test_aprovacao_reusa_ultima_analise_tecnica_e_respeita_revisao_da_oferta(self):
@@ -248,20 +282,47 @@ class DesempenhoViewsComprasTest(TestCase):
             obra=self.outra_obra, numero="PC-BOARD-OUTRA", titulo="Outra obra",
         )
         url = reverse("compras:dashboard")
-        resposta = self.client.get(url, {"obra": self.obra.pk, "q": "Painel"})
+        with CaptureQueriesContext(connection) as consultas:
+            resposta = self.client.get(url, {"obra": self.obra.pk, "q": "Painel"})
         self.assertEqual(resposta.status_code, 200)
         coluna = next(c for c in resposta.context["colunas"] if c["chave"] == "RASCUNHO")
         self.assertEqual(coluna["quantidade_total"], 75)
         self.assertEqual(len(coluna["processos"]), 30)
         self.assertEqual(
             [p.pk for p in coluna["processos"]],
-            [p.pk for p in reversed(processos[-30:])],
+            [ProcessoCompra.objects.get(numero=p.numero, obra=self.obra).pk for p in reversed(processos[-30:])],
         )
         self.assertEqual(resposta.context["ativos"], 75)
+        self.assertNotIn("indicadores", resposta.context["sla_resumo"])
+        self.assertTrue(any("LIMIT 30" in consulta["sql"] for consulta in consultas))
         self.assertContains(resposta, "Exibindo 30 de 75 processos")
         self.assertContains(resposta, "Ver lista completa")
         self.assertContains(resposta, "obra=2345")
         self.assertNotContains(resposta, "PC-BOARD-OUTRA")
+
+    def test_dashboard_preserva_prioridade_de_status_dentro_da_coluna(self):
+        status = ProcessoCompra.Status
+        primeiros = ProcessoCompra.objects.bulk_create([
+            ProcessoCompra(
+                obra=self.obra, numero=f"PC-ENV-{i}", titulo="Compra enviada",
+                status=status.PEDIDO_ENVIADO,
+            )
+            for i in range(27)
+        ])
+        segundos = ProcessoCompra.objects.bulk_create([
+            ProcessoCompra(
+                obra=self.obra, numero=f"PC-COT-{i}", titulo="Compra em cotação",
+                status=status.EM_COTACAO,
+            )
+            for i in range(10)
+        ])
+        resposta = self.client.get(reverse("compras:dashboard"), {"obra": self.obra.pk})
+        cotacao = next(coluna for coluna in resposta.context["colunas"] if coluna["chave"] == "COTACAO")
+        self.assertEqual(cotacao["quantidade_total"], 37)
+        self.assertEqual(
+            [processo.pk for processo in cotacao["processos"]],
+            [ProcessoCompra.objects.get(numero=p.numero, obra=self.obra).pk for p in reversed(primeiros)] + [ProcessoCompra.objects.get(numero=p.numero, obra=self.obra).pk for p in reversed(segundos[-3:])],
+        )
 
     def test_detalhe_mantem_formularios_das_propostas_conforme_a_fase_da_oferta(self):
         processo = ProcessoCompra.objects.create(

@@ -1,21 +1,48 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+﻿{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras %}
 {% block financeiro_title %}Pagamentos{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><div class="fin-head__copy"><div class="fin-eyebrow">Realizado</div><h1 class="fin-title">Pagamentos</h1><div class="fin-sub">Histórico do que foi efetivamente pago, mantendo origem, beneficiário, obra e comprovante.</div></div><div class="fin-actions"><a class="fin-btn" href="{% url 'financeiro:gastos' %}">Analisar gastos</a></div></header>
+<header class="fin-head"><h1 class="fin-title">Pagamentos</h1>{% include 'financeiro/_exportar.html' with tipo='pagamentos' %}</header>
+{% include 'financeiro/_abas_pagamentos.html' %}
 <section class="fin-section">
-  <div class="fin-section__head"><div><h2>Histórico de pagamentos</h2><p>Clique na conta para consultar o detalhe e o histórico completo.</p></div></div>
-  <form method="get" class="fin-section__body" aria-label="Filtrar pagamentos por mês">
-    <label for="mes-pagamento">Mês do pagamento</label>
-    <input id="mes-pagamento" name="mes" type="month" value="{{ mes_filtro }}">
-    <button class="fin-btn" type="submit">Filtrar</button>
-    {% if mes_filtro %}<a class="fin-btn" href="{% url 'financeiro:pagamentos' %}">Limpar</a>{% endif %}
-    <strong>Total efetivamente pago: {{ total_pago|moeda_br }}</strong>
-  </form>
-  <div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Data</th><th>Beneficiário / conta</th><th>Origem</th><th>Obra</th><th>Forma</th><th>Status</th><th style="text-align:right">Valor</th></tr></thead><tbody>{% for p in page_obj %}<tr><td class="fin-date">{{ p.data_pagamento|date:"d/m/Y" }}</td><td class="fin-main-cell"><a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' p.titulo.pk %}"><strong>{{ p.titulo.beneficiario_exibicao }}</strong><small>{{ p.titulo.numero }} · {{ p.titulo.descricao }}</small></a></td><td>{{ p.titulo.get_origem_display }}</td><td>{{ p.titulo.obra|default:"—" }}</td><td>{{ p.get_forma_display }}{% if p.comprovante %}<small style="display:block;margin-top:3px"><a href="{% url 'financeiro:baixar_comprovante_pagamento' p.pk %}" target="_blank" rel="noopener">Abrir comprovante</a></small>{% endif %}</td><td><span class="fin-badge fin-badge--{{ p.status|status_fin_classe }}">{{ p.get_status_display }}</span></td><td class="fin-money">{{ p.valor|moeda_br }}</td></tr>{% empty %}<tr><td colspan="7" class="fin-empty"><strong>Nenhum pagamento registrado</strong>Os pagamentos aparecerão aqui após a confirmação.</td></tr>{% endfor %}</tbody></table></div>
-  {% if page_obj.has_other_pages %}<nav class="fin-section__body" aria-label="Páginas dos pagamentos">
-    {% if page_obj.has_previous %}<a class="fin-btn" href="?mes={{ mes_filtro|urlencode }}&page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %}
-    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-    {% if page_obj.has_next %}<a class="fin-btn" href="?mes={{ mes_filtro|urlencode }}&page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}
-  </nav>{% endif %}
+  {% if not por_titulo %}
+    <form method="get" class="fin-toolbar" data-local-submit-loading>
+      <input type="hidden" name="aba" value="{{ aba }}">
+      <label>Mês {% if aba == 'estornos' %}do estorno{% else %}do pagamento{% endif %}<input class="fin-control" name="mes" type="month" value="{{ mes_filtro }}"></label>
+      <button class="fin-btn" type="submit">Filtrar</button>
+      {% if aba == 'estornos' %}<strong>Estornado {{ total_estornado|moeda_br }}</strong>{% else %}<strong>Efetivado {{ total_pago|moeda_br }}</strong>{% endif %}
+    </form>
+  {% endif %}
+  <div class="fin-table-wrap">
+    <table class="fin-table">
+      {% if por_titulo %}
+        <thead><tr><th>Código FIN</th><th>Beneficiário</th><th>Obra</th><th>Vencimento</th>{% if aba == 'programados' %}<th>Data programada</th>{% endif %}<th>Valor</th><th>Ações</th></tr></thead>
+        <tbody>{% for titulo in page_obj %}
+          <tr><td><a href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+            <td>{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>{% if aba == 'programados' %}<td>{{ titulo.programacao_pagamento.data_programada|date:"d/m/Y" }}</td>{% endif %}
+            <td>{{ titulo.saldo_aberto|moeda_br }}</td><td>{% if pode_pagar %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Programar ou pagar</a>{% else %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar</a>{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td colspan="{% if aba == 'programados' %}7{% else %}6{% endif %}" class="fin-empty">Nenhuma conta nesta etapa.</td></tr>{% endfor %}</tbody>
+      {% else %}
+        <thead><tr><th>Data efetiva</th>{% if aba == 'estornos' %}<th>Data do estorno</th>{% endif %}<th>Beneficiário</th><th>Obra</th><th>Forma</th><th>Valor</th><th>Ações</th></tr></thead>
+        <tbody>{% for pagamento in page_obj %}
+          <tr><td>{{ pagamento.data_pagamento|date:"d/m/Y" }}</td>{% if aba == 'estornos' %}<td>{{ pagamento.estornado_em|date:"d/m/Y H:i"|default:"—" }}</td>{% endif %}
+            <td><a href="{% url 'financeiro:titulo_detalhe' pagamento.titulo_id %}">{{ pagamento.titulo.numero }}</a> · {{ pagamento.titulo.beneficiario_exibicao }}</td>
+            <td>{{ pagamento.titulo.obra.nome|default:"—" }}</td><td>{{ pagamento.get_forma_display }}{% if aba == 'historico' %} · {{ pagamento.get_status_display }}{% endif %}</td>
+            <td>{{ pagamento.valor|moeda_br }}</td><td>
+              {% if pagamento.comprovante %}<a class="fin-btn fin-btn--sm" data-download href="{% url 'financeiro:baixar_comprovante_pagamento' pagamento.pk %}">Comprovante</a>{% endif %}
+              {% if pode_pagar and pagamento.status == 'EFETIVADO' %}<details><summary>Estornar</summary>
+                <form method="post" action="{% url 'financeiro:pagamento_estornar' pagamento.pk %}">{% csrf_token %}
+                  <label>Motivo <input class="fin-control" name="motivo" maxlength="400" required></label>
+                  <button type="submit" class="fin-btn fin-btn--danger">Confirmar estorno</button>
+                </form>
+              </details>{% endif %}
+            </td>
+          </tr>
+        {% empty %}<tr><td colspan="{% if aba == 'estornos' %}7{% else %}6{% endif %}" class="fin-empty">Nenhum pagamento nesse recorte.</td></tr>{% endfor %}</tbody>
+      {% endif %}
+    </table>
+  </div>
+  {% include 'financeiro/_paginacao.html' %}
 </section>
 {% endblock %}

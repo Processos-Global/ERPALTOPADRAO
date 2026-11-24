@@ -46,7 +46,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap" rel="stylesheet">
     <link
         rel="stylesheet"
-        href="{% static 'css/base.css' %}"
+        href="{% static 'css/base.css' %}?v=20261124-2"
     >
 
     <style>
@@ -979,6 +979,7 @@
                         type="button"
                         class="topbar__toggle"
                         data-sidebar-toggle
+                        aria-controls="appSidebar"
                         aria-label="Recolher ou expandir menu"
                         title="Recolher ou expandir menu"
                     >
@@ -1139,54 +1140,10 @@
     </script>
 
     {% url 'financeiro:relatorio_pagamento_emitir' as emissao_pacote_pagamento %}
-    <script defer src="{% static 'js/app.js' %}?v=20261123"
+    <script defer src="{% static 'js/app.js' %}?v=20261124-2"
             data-native-download-action="{{ emissao_pacote_pagamento }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const sidebar = document.getElementById('appSidebar');
-            const toggle = document.querySelector('[data-sidebar-toggle]');
-
-            if (!sidebar) {
-                return;
-            }
-
-            const updateSidebarState = () => {
-                const collapsedByClass = (
-                    sidebar.classList.contains('is-collapsed') ||
-                    sidebar.classList.contains('sidebar--collapsed') ||
-                    document.body.classList.contains('sidebar-collapsed') ||
-                    document.documentElement.classList.contains('sidebar-collapsed')
-                );
-
-                const width = sidebar.getBoundingClientRect().width;
-                const collapsedByWidth = width > 0 && width <= 120;
-                const collapsed = collapsedByClass || collapsedByWidth;
-
-                document.body.classList.toggle('sidebar-is-collapsed', collapsed);
-            };
-
-            updateSidebarState();
-
-            if (toggle) {
-                toggle.addEventListener('click', function () {
-                    window.requestAnimationFrame(function () {
-                        window.setTimeout(updateSidebarState, 80);
-                    });
-                });
-            }
-
-            window.addEventListener('resize', updateSidebarState);
-
-            new MutationObserver(updateSidebarState).observe(sidebar, {
-                attributes: true,
-                attributeFilter: ['class', 'style']
-            });
-
-            new MutationObserver(updateSidebarState).observe(document.body, {
-                attributes: true,
-                attributeFilter: ['class']
-            });
-
             /* Submenus dos módulos da sidebar. */
             const submenuToggles = document.querySelectorAll('[data-sidebar-submenu-toggle]');
 

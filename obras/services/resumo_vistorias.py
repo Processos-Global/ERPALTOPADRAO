@@ -30,10 +30,16 @@ def _data(valor):
         return None
 
 
-def montar_resumo_vistorias(parametros):
+def montar_resumo_vistorias(parametros, *, detalhar_todas_obras=True):
     """Resumo do estado atual; período restringe snapshots por data_atualizacao."""
-    obra_texto = (parametros.get("obra") or "").strip()
-    obra_id = int(obra_texto) if obra_texto.isdigit() else None
+    obra_texto = (parametros.get("obra") or "").strip().lstrip("0")
+    obra_id = (
+        int(obra_texto)
+        if obra_texto.isascii() and obra_texto.isdecimal() and len(obra_texto) <= 19
+        else None
+    )
+    if obra_id is not None and obra_id > 2**63 - 1:
+        obra_id = None
     tipo = (parametros.get("tipo") or "").strip().upper()
     if tipo not in {"PRE", "POS"}:
         tipo = ""
@@ -120,13 +126,14 @@ def montar_resumo_vistorias(parametros):
             if estado is None:
                 obra["sem_avaliacao"] += 1
                 resultado["resumo"]["sem_avaliacao"] += 1
-            resultado["pendencias"].append({
-                "obra_nome": registro["obra__nome"],
-                "atividade": registro["nome_tarefa"] or registro["atividade_planejamento__nome_tarefa"],
-                "local": registro["local_tarefa"] or "Sem local informado",
-                "tipo": "Pré Habite-se" if registro["disciplina"] in DISCIPLINAS_PRE else "Pós Habite-se",
-                "situacao": "Sem avaliação" if estado is None else "Não feito",
-            })
+            if detalhar_todas_obras or obra_id:
+                resultado["pendencias"].append({
+                    "obra_nome": registro["obra__nome"],
+                    "atividade": registro["nome_tarefa"] or registro["atividade_planejamento__nome_tarefa"],
+                    "local": registro["local_tarefa"] or "Sem local informado",
+                    "tipo": "Pré Habite-se" if registro["disciplina"] in DISCIPLINAS_PRE else "Pós Habite-se",
+                    "situacao": "Sem avaliação" if estado is None else "Não feito",
+                })
         data_registro = registro["data_atualizacao"]
         atualizacao = estado.atualizado_em if estado else None
         if data_registro:

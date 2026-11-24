@@ -1,26 +1,62 @@
 from datetime import date
 
+from django import forms
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Sum
+from django.db.models import F, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from financeiro.forms import PagamentoForm
+from core.validators import validar_documento_upload
 from financeiro.models import Pagamento, TituloPagar
-from financeiro.services.pagamentos import estornar_pagamento, registrar_pagamento
-from financeiro.services.permissoes import financeiro_acao_required
+from financeiro.services.agenda import titulos_disponiveis_pagamento
+from financeiro.services.pagamentos import estornar_pagamento, programar_pagamento, registrar_pagamento
+from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 
 
-@financeiro_acao_required("VISUALIZAR")
-def pagamentos_lista(request):
-    mes_filtro = (request.GET.get("mes") or "").strip()
+ABAS_PAGAMENTOS = (
+    ("disponiveis", "Disponíveis"), ("programados", "Programados"), ("pacotes", "Pacotes"),
+    ("efetivados", "Efetivados"), ("estornos", "Estornos"),
+)
+
+
+class ConfirmacaoPagamentoForm(forms.Form):
+    pago = forms.BooleanField(required=False, label="Confirmar pagamento integral")
+    data_pagamento = forms.DateField(required=False, label="Data efetiva", widget=forms.DateInput(attrs={"type": "date"}))
+    forma = forms.ChoiceField(required=False, choices=Pagamento.Forma.choices, label="Forma")
+    comprovante = forms.FileField(required=False, validators=[validar_documento_upload])
+
+
+class ProgramacaoPagamentoForm(forms.Form):
+    data_programada = forms.DateField(label="Data programada", widget=forms.DateInput(attrs={"type": "date"}))
+    motivo = forms.CharField(required=False, max_length=400, label="Motivo")
+
+
+def titulos_central_pagamentos(parametros, aba):
+    programacao_valida = Q(programacao_pagamento__ativa=True, programacao_pagamento__ciclo_aprovacao=F("ciclo_aprovacao"))
+    titulos = titulos_disponiveis_pagamento(TituloPagar.objects.all()).select_related(
+        "obra", "fornecedor", "pagamento", "programacao_pagamento",
+    )
+    if aba == "programados":
+        return titulos.filter(programacao_valida).order_by("programacao_pagamento__data_programada", "numero")
+    if parametros.get("periodo") == "vencidas_e_hoje":
+        return titulos.filter(vencimento__lte=timezone.localdate())
+    return titulos.exclude(programacao_valida)
+
+
+def recorte_pagamentos(parametros, aba):
+    mes_filtro = (parametros.get("mes") or "").strip()
     qs = Pagamento.objects.select_related(
         "titulo", "titulo__fornecedor", "titulo__obra", "titulo__plano_financeiro", "registrado_por"
     ).order_by("-data_pagamento", "-id")
+    if aba == "efetivados":
+        qs = qs.filter(status=Pagamento.Status.EFETIVADO)
+    elif aba == "estornos":
+        qs = qs.filter(status=Pagamento.Status.ESTORNADO).order_by("-estornado_em", "-id")
     try:
         ano, mes = (int(parte) for parte in mes_filtro.split("-"))
         inicio = date(ano, mes, 1)
@@ -28,13 +64,37 @@ def pagamentos_lista(request):
     except (ValueError, TypeError):
         mes_filtro = ""
     else:
-        qs = qs.filter(data_pagamento__gte=inicio, data_pagamento__lt=fim)
+        if aba == "estornos":
+            qs = qs.filter(estornado_em__date__gte=inicio, estornado_em__date__lt=fim)
+        else:
+            qs = qs.filter(data_pagamento__gte=inicio, data_pagamento__lt=fim)
+    return qs, mes_filtro
+
+
+@financeiro_acao_required("VISUALIZAR")
+def pagamentos_lista(request):
+    aba = request.GET.get("aba")
+    if aba == "pacotes":
+        return redirect("financeiro:relatorios_pagamento")
+    if aba not in dict(ABAS_PAGAMENTOS):
+        aba = "historico" if request.GET.get("mes") else "disponiveis"
+    pode_pagar = possui_acao_financeiro(request.user, "PAGAR")
+    if aba in {"disponiveis", "programados"}:
+        titulos = titulos_central_pagamentos(request.GET, aba)
+        return render(request, "financeiro/pagamentos.html", {
+            "aba": aba, "abas_pagamentos": ABAS_PAGAMENTOS, "por_titulo": True,
+            "page_obj": Paginator(titulos, 30).get_page(request.GET.get("page")), "pode_pagar": pode_pagar,
+        })
+
+    qs, mes_filtro = recorte_pagamentos(request.GET, aba)
     total_pago = qs.filter(status=Pagamento.Status.EFETIVADO).aggregate(total=Sum("valor"))["total"] or 0
     page_obj = Paginator(qs, 30).get_page(request.GET.get("page"))
     return render(request, "financeiro/pagamentos.html", {
         "page_obj": page_obj,
         "mes_filtro": mes_filtro,
         "total_pago": total_pago,
+        "total_estornado": qs.aggregate(total=Sum("valor"))["total"] or 0 if aba == "estornos" else 0,
+        "aba": aba, "abas_pagamentos": ABAS_PAGAMENTOS, "pode_pagar": pode_pagar,
     })
 
 
@@ -55,7 +115,7 @@ def pagamento_novo(request, titulo_id):
         return redirect("financeiro:titulos")
 
     if request.method == "POST":
-        form = PagamentoForm(request.POST, request.FILES)
+        form = ConfirmacaoPagamentoForm(request.POST, request.FILES)
         if form.is_valid():
             if not form.cleaned_data.get("pago"):
                 messages.info(request, "A conta permanece aprovada e não foi marcada como paga.")
@@ -63,18 +123,39 @@ def pagamento_novo(request, titulo_id):
             try:
                 pagamento = registrar_pagamento(
                     titulo=titulo,
-                    data_pagamento=timezone.localdate(),
-                    forma=Pagamento.Forma.OUTRO,
+                    data_pagamento=form.cleaned_data["data_pagamento"],
+                    forma=form.cleaned_data["forma"],
+                    comprovante=form.cleaned_data["comprovante"],
                     usuario=request.user,
                 )
                 messages.success(request, f"Pagamento de R$ {pagamento.valor:,.2f} marcado como pago.")
-                return redirect("financeiro:titulos")
+                return redirect("financeiro:pagamentos")
             except ValidationError as exc:
                 form.add_error(None, "; ".join(exc.messages))
     else:
-        form = PagamentoForm()
+        form = ConfirmacaoPagamentoForm(initial={"data_pagamento": timezone.localdate(), "forma": Pagamento.Forma.OUTRO})
 
-    return render(request, "financeiro/pagamento_form.html", {"form": form, "titulo": titulo})
+    return render(request, "financeiro/pagamento_form.html", {
+        "form": form, "titulo": titulo, "form_programacao": ProgramacaoPagamentoForm(),
+    })
+
+
+@financeiro_acao_required("PAGAR")
+@require_POST
+def pagamento_programar(request, titulo_id):
+    titulo = get_object_or_404(TituloPagar, pk=titulo_id)
+    form = ProgramacaoPagamentoForm(request.POST)
+    if form.is_valid():
+        try:
+            programar_pagamento(titulo, usuario=request.user, **form.cleaned_data)
+        except ValidationError as erro:
+            messages.error(request, "; ".join(erro.messages))
+        else:
+            messages.success(request, "Programação registrada.")
+            return redirect(f"{reverse('financeiro:pagamentos')}?aba=programados")
+    else:
+        messages.error(request, "Informe uma data e um motivo válido para a programação.")
+    return redirect("financeiro:pagamento_novo", titulo_id=titulo.pk)
 
 
 @financeiro_acao_required("PAGAR")

@@ -1,0 +1,15 @@
+{% load l10n %}
+<div class="ficha-material" data-material-url="{% url 'obras:ficha_tecnica_consulta_materiais' %}">
+  <input type="hidden" name="material" value="{{ material_id|default_if_none:''|unlocalize }}">
+  <details>
+    <summary><span class="ficha-material__rotulo">Material do cadastro</span><span data-material-label>{% if material %}{{ material.descricao_completa }}{% elif material_id %}Material indisponível{% else %}{{ vazio }}{% endif %}</span></summary>
+    <div class="ficha-material__menu">
+      <input type="search" aria-label="Buscar material" placeholder="Nome, código ou especificação" autocomplete="off" maxlength="150">
+      <button type="button" data-material-limpar>{{ vazio }}</button>
+      <ul aria-label="Materiais encontrados"></ul>
+      <div role="status"></div>
+      <button type="button" data-material-mais hidden>Carregar mais</button>
+      <noscript>Ative o JavaScript para pesquisar materiais.</noscript>
+    </div>
+  </details>
+</div>

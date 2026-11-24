@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from financeiro.models import SequenciaFinanceira
+from financeiro.models import SequenciaFinanceira, TituloPagar
 
 
 PREFIXOS = {
@@ -19,6 +19,12 @@ def gerar_numero(tipo):
         ano=ano,
         defaults={"ultimo_numero": 0},
     )
-    sequencia.ultimo_numero += 1
+    ultimo = sequencia.ultimo_numero + 1
+    numero = f"{PREFIXOS[tipo]}-{ano}-{ultimo:05d}"
+    # Importações antigas podem ter gravado números sem avançar a sequência.
+    while tipo == "TITULO" and TituloPagar.objects.filter(numero=numero).exists():
+        ultimo += 1
+        numero = f"{PREFIXOS[tipo]}-{ano}-{ultimo:05d}"
+    sequencia.ultimo_numero = ultimo
     sequencia.save(update_fields=["ultimo_numero"])
-    return f"{PREFIXOS[tipo]}-{ano}-{sequencia.ultimo_numero:05d}"
+    return numero

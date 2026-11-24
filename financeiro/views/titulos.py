@@ -2,23 +2,30 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
-from django.core.exceptions import ValidationError
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
 from django.core.paginator import Paginator
 from django.db.models import Q, Sum
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_POST, require_http_methods
 
-from cadastros.models import Fornecedor
+from cadastros.models import Fornecedor, Material
 from financeiro.forms import TituloPagarForm
+from financeiro.forms.titulos import SolicitacaoAvulsaForm
 from financeiro.models import AnexoTituloPagar
 from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
 from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
 from financeiro.services.agenda import _inteiro_positivo
-from financeiro.services.notificacoes import notificar_aprovadores
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
-from financeiro.services.titulos import atualizar_titulo, cancelar_titulo, criar_titulos_manuais
+from financeiro.services.solicitacoes_avulsas import (
+    SolicitacaoAvulsaDivergente, SolicitacaoAvulsaInvalida, registrar_solicitacao_avulsa,
+)
+from financeiro.services.titulos import atualizar_titulo, cancelar_titulo
 from obras.models import Obra
 
 
@@ -84,136 +91,107 @@ def _documentos_pedido(titulo):
     ]
     return anexos, notas_fiscais
 
-def _fornecedores_bancarios():
-    return {
-        str(fornecedor["id"]): {
-            "documento": fornecedor["documento"] or "",
-            "banco": fornecedor["banco"] or "",
-            "agencia": fornecedor["agencia"] or "",
-            "conta_corrente": fornecedor["conta_corrente"] or "",
-            "operacao": fornecedor["operacao_bancaria"] or "",
-            "pix": fornecedor["pix"] or "",
-            "titular": fornecedor["titular_conta"] or "",
-        }
-        for fornecedor in Fornecedor.objects.filter(ativo=True).values(
-            "id", "documento", "banco", "agencia", "conta_corrente",
-            "operacao_bancaria", "pix", "titular_conta"
-        )
-    }
+@login_required
+@never_cache
+@require_http_methods(["GET"])
+def titulo_catalogo(request):
+    tipo = request.GET.get("tipo")
+    if tipo == "fornecedor_publico":
+        permitido = possui_acao_financeiro(request.user, "VISUALIZAR")
+    else:
+        permitido = any(possui_acao_financeiro(request.user, acao) for acao in ("LANCAR_TITULOS", "EDITAR_TITULOS"))
+    if not permitido:
+        raise PermissionDenied
+
+    if tipo == "dados_bancarios":
+        fornecedor = get_object_or_404(Fornecedor.objects.only(
+            "documento", "banco", "agencia", "conta_corrente", "operacao_bancaria", "pix", "titular_conta",
+        ), ativo=True, pk=_inteiro_positivo(request.GET.get("id")))
+        return JsonResponse({
+            "documento": fornecedor.documento or "", "banco": fornecedor.banco or "",
+            "agencia": fornecedor.agencia or "", "conta_corrente": fornecedor.conta_corrente or "",
+            "operacao": fornecedor.operacao_bancaria or "", "pix": fornecedor.pix or "", "titular": fornecedor.titular_conta or "",
+        })
+
+    busca = (request.GET.get("q") or "").strip()[:100]
+    if tipo in {"fornecedor", "fornecedor_publico"}:
+        itens = Fornecedor.objects.only("codigo", "nome", "nome_fantasia").filter(
+            Q(nome__icontains=busca) | Q(nome_fantasia__icontains=busca) | Q(codigo__icontains=busca),
+        ).order_by("nome", "pk")
+    elif tipo == "obra":
+        itens = Obra.objects.only("codigo", "nome").filter(Q(nome__icontains=busca) | Q(codigo__icontains=busca)).order_by("nome", "pk")
+    elif tipo == "material":
+        itens = Material.objects.select_related("unidade").only("codigo", "nome", "especificacao", "unidade__sigla").filter(
+            Q(nome__icontains=busca) | Q(especificacao__icontains=busca) | Q(codigo__icontains=busca),
+        ).order_by("nome", "especificacao", "pk")
+    elif tipo == "apropriacao":
+        itens = PlanoFinanceiro.objects.only("codigo", "nome").filter(ativo=True, pai__isnull=False).filter(
+            Q(codigo__icontains=busca) | Q(nome__icontains=busca) | Q(pai__nome__icontains=busca),
+        ).order_by("pai__codigo", "codigo", "nome", "pk")
+    else:
+        raise Http404
+    return JsonResponse({"resultados": [
+        {"id": item.pk, "texto": item.nome_exibicao if tipo == "fornecedor_publico" else str(item)} for item in itens[:25]
+    ]})
 
 
 @financeiro_acao_required("VISUALIZAR")
 def titulos_lista(request):
-    hoje = timezone.localdate()
-    qs = TituloPagar.objects.select_related("fornecedor", "obra", "plano_financeiro", "pedido", "pagamento").all()
-    busca = (request.GET.get("q") or "").strip()
-    status = (request.GET.get("status") or "").strip()
-    origem = (request.GET.get("origem") or "").strip()
-    obra = (request.GET.get("obra") or "").strip()
-    fornecedor = (request.GET.get("fornecedor") or "").strip()
-    apropriacao = (request.GET.get("apropriacao") or "").strip()
-    classe = (request.GET.get("classe") or "").strip()
-    periodo = (request.GET.get("periodo") or "").strip()
-    atalho = (request.GET.get("atalho") or "").strip()
+    from financeiro.views.agenda import contexto_contas_a_pagar
 
-    if busca:
-        qs = qs.filter(
-            Q(numero__icontains=busca)
-            | Q(documento_numero__icontains=busca)
-            | Q(descricao__icontains=busca)
-            | Q(beneficiario_nome__icontains=busca)
-            | Q(fornecedor__nome__icontains=busca)
-            | Q(fornecedor__nome_fantasia__icontains=busca)
-            | Q(origem_detalhe__icontains=busca)
-        )
-    if status:
-        qs = qs.filter(status=status)
-    if origem:
-        qs = qs.filter(origem=origem)
-    for valor, campo in ((obra, "obra_id"), (fornecedor, "fornecedor_id"),
-                         (apropriacao, "plano_financeiro_id"), (classe, "plano_financeiro__pai_id")):
-        if identificador := _inteiro_positivo(valor):
-            qs = qs.filter(**{campo: identificador})
-
-    if atalho == "vencidos":
-        qs = qs.filter(vencimento__lt=hoje).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
-    elif atalho == "aprovacao":
-        qs = qs.filter(status=TituloPagar.Status.AGUARDANDO_APROVACAO)
-    elif atalho == "sem_data":
-        qs = qs.filter(vencimento__isnull=True).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
-    elif atalho in {"7", "30", "90"}:
-        dias = int(atalho)
-        qs = qs.filter(vencimento__range=(hoje, hoje + timedelta(days=dias))).exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
-    elif periodo.isdigit() and int(periodo) > 0:
-        qs = qs.filter(Q(vencimento__lte=hoje + timedelta(days=int(periodo))) | Q(vencimento__isnull=True))
-
-    # Cards e tabela compartilham busca, dimensões e recorte temporal.
-    indicadores = {chave: Decimal("0") for chave in ("vencidos", "sete", "aprovacao", "sem_data")}
-    base_abertos = qs.exclude(status__in=[TituloPagar.Status.PAGO, TituloPagar.Status.CANCELADO])
-    for titulo in base_abertos.select_related("pagamento").iterator(chunk_size=1000):
-        saldo = titulo.saldo_aberto
-        if titulo.vencimento is None:
-            indicadores["sem_data"] += saldo
-        elif titulo.vencimento < hoje:
-            indicadores["vencidos"] += saldo
-        elif titulo.vencimento <= hoje + timedelta(days=7):
-            indicadores["sete"] += saldo
-        if titulo.status == TituloPagar.Status.AGUARDANDO_APROVACAO:
-            indicadores["aprovacao"] += saldo
-
-    page_obj = Paginator(qs.order_by("vencimento", "numero"), 40).get_page(request.GET.get("page"))
-    parametros_paginacao = request.GET.copy()
-    parametros_paginacao.pop("page", None)
-
-    return render(request, "financeiro/titulos_lista.html", {
-        "page_obj": page_obj,
-        "parametros_paginacao": parametros_paginacao.urlencode(),
-        "status_choices": TituloPagar.Status.choices,
-        "origem_choices": TituloPagar.Origem.choices[:4],
-        "obras": Obra.objects.all().order_by("id"),
-        "fornecedores": Fornecedor.objects.filter(ativo=True).order_by("nome"),
-        "classes_financeiras": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=True).order_by("codigo", "nome"),
-        "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False).select_related("pai").order_by("pai__codigo", "codigo", "nome"),
-        "filtros": {"q": busca, "status": status, "origem": origem, "obra": obra, "fornecedor": fornecedor, "apropriacao": apropriacao, "classe": classe, "periodo": periodo, "atalho": atalho},
-        "kpi_vencidos": indicadores["vencidos"],
-        "kpi_7": indicadores["sete"],
-        "kpi_aprovacao": indicadores["aprovacao"],
-        "kpi_sem_data": indicadores["sem_data"],
-        "pode_lancar": possui_acao_financeiro(request.user, "LANCAR_TITULOS"),
-        "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
-    })
+    return render(request, "financeiro/titulos_lista.html", contexto_contas_a_pagar(request, timezone.localdate()))
 
 
 @financeiro_acao_required("LANCAR_TITULOS")
+@never_cache
+@require_http_methods(["GET", "POST"])
 def titulo_novo(request):
+    status = 200
     if request.method == "POST":
-        form = TituloPagarForm(request.POST, request.FILES)
-        if form.is_valid():
-            dados = dict(form.cleaned_data)
-            anexos = dados.pop("anexos", [])
-            quantidade = dados.pop("quantidade_parcelas", 1) or 1
-            intervalo = dados.pop("intervalo_dias", 30) or 30
-            titulos = criar_titulos_manuais(
+        form = SolicitacaoAvulsaForm(request.POST, request.FILES, usuario=request.user)
+
+        def validar_dados():
+            nonlocal form
+            # Uma tentativa de validação interrompida pelo banco não deixa cache parcial.
+            form = SolicitacaoAvulsaForm(request.POST, request.FILES, usuario=request.user)
+            if not form.is_valid():
+                raise SolicitacaoAvulsaInvalida
+            return {nome: valor for nome, valor in form.cleaned_data.items() if nome != "chave_idempotencia"}
+
+        try:
+            chave = form.chave_da_tentativa()
+            titulos, criados = registrar_solicitacao_avulsa(
                 usuario=request.user,
-                quantidade_parcelas=quantidade,
-                intervalo_dias=intervalo,
-                **dados,
+                chave=chave,
+                impressao=form.impressao_da_tentativa(),
+                validar_dados=validar_dados,
             )
-            _salvar_anexos(titulos, anexos, request.user)
-            for titulo in titulos:
-                notificar_aprovadores(titulo)
+        except ValidationError as exc:
+            form.add_error(None if hasattr(exc, "error_dict") else "chave_idempotencia", exc)
+            status = 400
+        except SolicitacaoAvulsaInvalida:
+            pass
+        except SolicitacaoAvulsaDivergente:
+            form.add_error("chave_idempotencia", "Esta tentativa já foi enviada com dados diferentes. Abra uma nova solicitação para criar outra conta.")
+            status = 409
+        else:
+            if not criados:
+                messages.info(request, "Esta solicitação já foi registrada.")
             if len(titulos) == 1:
-                messages.success(request, f"Conta {titulos[0].numero} criada e enviada para aprovação.")
+                if criados:
+                    messages.success(request, f"Conta {titulos[0].numero} criada e enviada para aprovação.")
                 return redirect("financeiro:titulo_detalhe", pk=titulos[0].pk)
-            messages.success(request, f"{len(titulos)} parcelas criadas e enviadas para aprovação.")
+            if criados:
+                messages.success(request, f"{len(titulos)} parcelas criadas e enviadas para aprovação.")
+            if titulos:
+                return redirect(f"{reverse('financeiro:titulos')}?solicitacao={titulos[0].solicitacao_avulsa_id}")
             return redirect("financeiro:titulos")
     else:
-        form = TituloPagarForm()
+        form = SolicitacaoAvulsaForm(usuario=request.user)
     return render(request, "financeiro/titulo_form.html", {
         "form": form,
         "modo": "novo",
-        "fornecedores_bancarios": _fornecedores_bancarios(),
-    })
+    }, status=status)
 
 
 @financeiro_acao_required("VISUALIZAR")
@@ -259,7 +237,11 @@ def titulo_editar(request, pk):
         if form.is_valid():
             dados = dict(form.cleaned_data)
             anexos = dados.pop("anexos", [])
-            atualizar_titulo(titulo, usuario=request.user, dados=dados)
+            try:
+                titulo = atualizar_titulo(titulo, usuario=request.user, dados=dados)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect("financeiro:titulo_detalhe", pk=pk)
             _salvar_anexos([titulo], anexos, request.user)
             messages.success(request, "Conta a Pagar atualizada.")
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
@@ -272,7 +254,6 @@ def titulo_editar(request, pk):
         "titulo": titulo,
         "anexos_pedido": anexos_pedido,
         "notas_fiscais_pedido": notas_fiscais_pedido,
-        "fornecedores_bancarios": _fornecedores_bancarios(),
     })
 
 
@@ -323,9 +304,11 @@ def titulo_excluir_documento_legacy(request, pk):
 def titulo_enviar_aprovacao(request, pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
     try:
-        enviar_para_aprovacao(titulo, usuario=request.user)
-        notificar_aprovadores(titulo)
-        messages.success(request, "Conta enviada para aprovação.")
+        titulo = enviar_para_aprovacao(titulo, usuario=request.user)
+        if titulo.status == TituloPagar.Status.APROVADO:
+            messages.info(request, "A conta já está aprovada.")
+        else:
+            messages.success(request, "Conta aguardando aprovação.")
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -382,7 +365,11 @@ def titulo_configurar(request, pk):
         messages.warning(request, "Nenhuma alteração informada.")
         return redirect("financeiro:titulos")
 
-    atualizar_titulo(titulo, usuario=request.user, dados=dados, motivo="Vencimento/apropriação ajustados na lista de Contas a Pagar.")
+    try:
+        titulo = atualizar_titulo(titulo, usuario=request.user, dados=dados, motivo="Vencimento/apropriação ajustados na lista de Contas a Pagar.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+        return redirect("financeiro:titulos")
 
     # Na operação diária, salvar o vencimento já conclui a preparação da conta.
     # Se todos os requisitos estiverem preenchidos, ela segue automaticamente
@@ -394,9 +381,11 @@ def titulo_configurar(request, pk):
         TituloPagar.Status.CANCELADO,
     }:
         try:
-            enviar_para_aprovacao(titulo, usuario=request.user)
-            notificar_aprovadores(titulo)
-            messages.success(request, f"Conta {titulo.numero} atualizada e enviada para aprovação.")
+            titulo = enviar_para_aprovacao(titulo, usuario=request.user)
+            if titulo.status == TituloPagar.Status.APROVADO:
+                messages.success(request, f"Conta {titulo.numero} atualizada.")
+            else:
+                messages.success(request, f"Conta {titulo.numero} atualizada e enviada para aprovação.")
         except ValidationError as exc:
             messages.warning(request, f"Conta {titulo.numero} salva, mas ainda não foi enviada: {'; '.join(exc.messages)}")
     else:

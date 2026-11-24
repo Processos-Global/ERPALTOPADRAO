@@ -161,6 +161,7 @@ def sincronizar_contas_pedido(pedido):
     Uma parcela = uma conta. Pedido sem parcelas = uma conta única. Nenhuma NF
     cria uma segunda obrigação; as NFs continuam vinculadas ao próprio pedido.
     """
+    pedido = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
     # Após uma liberação autorizada, a obrigação integral provisória não pode
     # reaparecer em saves, alterações de parcelas ou sincronizações em lote.
     if LiberacaoFinanceiraPedido.objects.filter(pedido=pedido).filter(

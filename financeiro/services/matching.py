@@ -19,13 +19,13 @@ def avaliar_conferencia(titulo):
 
     recebimento = titulo.recebimento
     nota = recebimento.valor_total_nota or titulo.valor_original
-    recebido = recebimento.valor_itens_recebidos
+    recebido = recebimento.valor_itens_recebidos + (recebimento.valor_frete_nota or Decimal("0"))
     pedido = recebimento.pedido.valor_total if recebimento.pedido_id else None
 
     if recebido and abs(nota - recebido) > TOLERANCIA:
         return {
             "status": TituloPagar.Conferencia.DIVERGENCIA,
-            "motivo": "O valor da nota fiscal diverge do valor informado nos itens recebidos.",
+            "motivo": "O valor da nota fiscal diverge da soma dos itens e do frete discriminado.",
             "pedido": pedido,
             "nota": nota,
             "recebido": recebido,

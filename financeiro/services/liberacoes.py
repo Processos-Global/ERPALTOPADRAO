@@ -15,6 +15,7 @@ from financeiro.services.permissoes import possui_acao_financeiro
 
 
 CENTAVO = Decimal("0.01")
+ZERO = Decimal("0")
 
 
 def _valor_monetario(valor):
@@ -27,14 +28,7 @@ def _valor_monetario(valor):
     return numero
 
 
-@transaction.atomic
-def registrar_recebimento_para_liberacao(recebimento, *, usuario=None):
-    """Cria uma candidata por recebimento. Divergência exige correção na origem."""
-    recebimento = RecebimentoPedido.objects.select_for_update().get(pk=recebimento.pk)
-    referencia = f"RECEBIMENTO:{recebimento.pk}"
-    existente = LiberacaoFinanceiraPedido.objects.filter(referencia=referencia).first()
-    if existente:
-        return existente
+def _conferir_valor_recebimento(recebimento, pedido):
     itens = list(RecebimentoPedidoItem.objects.filter(recebimento=recebimento).select_related("item_pedido"))
     motivos = []
     if not itens:
@@ -43,13 +37,34 @@ def registrar_recebimento_para_liberacao(recebimento, *, usuario=None):
         motivos.append("Item de outro pedido.")
     if any(item.valor_recebido is None for item in itens):
         motivos.append("Itens sem valor recebido.")
-    valor = sum((item.valor_recebido or Decimal("0") for item in itens), Decimal("0"))
-    if valor <= 0:
+    valor_itens = sum((item.valor_recebido or ZERO for item in itens), ZERO)
+    if valor_itens <= ZERO:
         motivos.append("Valor recebido não positivo.")
+    frete = recebimento.valor_frete_nota or ZERO
+    if frete < ZERO or frete > (pedido.frete or ZERO):
+        motivos.append("Frete da nota fiscal fora do valor contratado no pedido.")
+    if frete > ZERO and not (
+        recebimento.numero_nota_fiscal and recebimento.arquivo_nota_fiscal and recebimento.valor_total_nota is not None
+    ):
+        motivos.append("Frete discriminado exige identificação, arquivo e total da nota fiscal.")
+    valor = valor_itens + frete
     if recebimento.valor_total_nota is not None and valor != recebimento.valor_total_nota:
-        motivos.append("Total da nota fiscal difere da soma dos itens.")
+        motivos.append("Total da nota fiscal difere da soma dos itens e do frete discriminado.")
+    return valor, motivos
+
+
+@transaction.atomic
+def registrar_recebimento_para_liberacao(recebimento, *, usuario=None):
+    """Cria uma candidata por recebimento. Divergência exige correção na origem."""
+    recebimento = RecebimentoPedido.objects.select_for_update().get(pk=recebimento.pk)
+    referencia = f"RECEBIMENTO:{recebimento.pk}"
+    existente = LiberacaoFinanceiraPedido.objects.filter(referencia=referencia).first()
+    if existente:
+        return existente
+    pedido = recebimento.pedido
+    valor, motivos = _conferir_valor_recebimento(recebimento, pedido)
     return LiberacaoFinanceiraPedido.objects.create(
-        pedido=recebimento.pedido, recebimento=recebimento, referencia=referencia,
+        pedido=pedido, recebimento=recebimento, referencia=referencia,
         tipo=LiberacaoFinanceiraPedido.Tipo.RECEBIMENTO,
         status=(LiberacaoFinanceiraPedido.Status.DIVERGENTE if motivos else LiberacaoFinanceiraPedido.Status.PENDENTE),
         valor=valor, valor_origem=valor, divergencia=" ".join(motivos), criado_por=usuario,
@@ -103,13 +118,23 @@ def autorizar_liberacao(liberacao, *, usuario):
         raise ValidationError("Pedido cancelado não admite liberação.")
     valor_origem = _valor_monetario(liberacao.valor_origem)
     valor = valor_origem
+    frete_recebido = None
     if liberacao.recebimento_id:
-        itens = list(liberacao.recebimento.itens.all())
-        soma_atual = sum((item.valor_recebido or Decimal("0") for item in itens), Decimal("0"))
-        if not itens or any(item.valor_recebido is None for item in itens) or soma_atual != valor_origem:
+        recebimento = liberacao.recebimento
+        valor_atual, motivos = _conferir_valor_recebimento(recebimento, pedido)
+        if motivos:
+            raise ValidationError(motivos)
+        if valor_atual != valor_origem:
             raise ValidationError("O recebimento mudou desde a conferência da liberação.")
-        if liberacao.recebimento.valor_total_nota is not None and liberacao.recebimento.valor_total_nota != valor_origem:
-            raise ValidationError("A nota fiscal diverge do valor liberado.")
+        frete_recebido = recebimento.valor_frete_nota
+        if frete_recebido:
+            frete_anterior = LiberacaoFinanceiraPedido.objects.filter(
+                pedido=pedido,
+                tipo=LiberacaoFinanceiraPedido.Tipo.RECEBIMENTO,
+                status__in=[LiberacaoFinanceiraPedido.Status.AUTORIZADA, LiberacaoFinanceiraPedido.Status.COMPENSADA],
+            ).aggregate(total=Sum("recebimento__valor_frete_nota"))["total"] or ZERO
+            if frete_anterior + frete_recebido > pedido.frete:
+                raise ValidationError("O frete das notas liberadas excede o frete contratado.")
         antecipado = LiberacaoFinanceiraPedido.objects.filter(
             pedido=pedido, tipo=LiberacaoFinanceiraPedido.Tipo.ANTECIPACAO,
             status=LiberacaoFinanceiraPedido.Status.AUTORIZADA,
@@ -172,8 +197,10 @@ def autorizar_liberacao(liberacao, *, usuario):
         vencimento=liberacao.parcela.data_prevista if liberacao.parcela_id else None,
         valor_original=valor, status=TituloPagar.Status.PREVISTA, criado_por=usuario,
     )
-    registrar_evento(titulo, "LIBERACAO_COMPRA", "Título criado por liberação financeira do pedido.", usuario,
-                    {"liberacao_id": liberacao.pk, "pedido_id": pedido.pk})
+    dados = {"liberacao_id": liberacao.pk, "pedido_id": pedido.pk}
+    if frete_recebido is not None:
+        dados["valor_frete_nota"] = str(frete_recebido)
+    registrar_evento(titulo, "LIBERACAO_COMPRA", "Título criado por liberação financeira do pedido.", usuario, dados)
     liberacao.titulo = titulo
     liberacao.valor = valor
     liberacao.valor_compensado = compensacao

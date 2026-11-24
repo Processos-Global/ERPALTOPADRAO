@@ -1,89 +1,73 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
-{% block financeiro_title %}Resumo geral{% endblock %}
+﻿{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras l10n %}
+{% block financeiro_title %}Visão geral{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head">
-  <div class="fin-head__copy">
-    <div class="fin-eyebrow">Visão operacional</div>
-    <h1 class="fin-title">Resumo geral</h1>
-    <div class="fin-sub">Cards de valores e próximas saídas do financeiro.</div>
-  </div>
-  <div class="fin-actions">
-    {% if pode_lancar %}
-    <a class="fin-btn fin-btn--primary" href="{% url 'financeiro:titulo_novo' %}">+ Solicitação avulsa</a>
-    {% endif %}
-  </div>
-</header>
+<header class="fin-head"><h1 class="fin-title">Visão geral</h1></header>
 
 <div class="fin-kpis">
-  <a class="fin-kpi fin-kpi--danger" href="{% url 'financeiro:titulos' %}?atalho=vencidos">
-    <span>Vencidos</span>
-    <strong>{{ valor_vencidos|moeda_br }}</strong>
-    <small>{{ qtd_vencidos }} conta{{ qtd_vencidos|pluralize }}</small>
+  <a class="fin-kpi" href="{% url 'financeiro:titulos' %}?periodo=hoje&amp;abertas=1">
+    <span>Vence hoje</span><strong>{{ total_hoje|moeda_br }}</strong><small>{{ qtd_hoje }} conta{{ qtd_hoje|pluralize }}</small>
   </a>
-  <a class="fin-kpi fin-kpi--warning" href="{% url 'financeiro:titulos' %}?atalho=7">
-    <span>Próximos 7 dias</span>
-    <strong>{{ valor_7|moeda_br }}</strong>
-    <small>{{ qtd_7 }} conta{{ qtd_7|pluralize }}</small>
+  <a class="fin-kpi fin-kpi--success" href="{% url 'financeiro:pagamentos' %}?aba=disponiveis&amp;periodo=vencidas_e_hoje">
+    <span>Disponível para pagar até hoje</span><strong>{{ total_disponivel|moeda_br }}</strong><small>{{ qtd_disponivel }} conta{{ qtd_disponivel|pluralize }} aprovada{{ qtd_disponivel|pluralize }}</small>
   </a>
-  <a class="fin-kpi" href="{% url 'financeiro:titulos' %}?atalho=aprovacao">
-    <span>Aguardando aprovação</span>
-    <strong>{{ valor_aprovacao|moeda_br }}</strong>
-    <small>{{ qtd_aprovacao }} pendência{{ qtd_aprovacao|pluralize }}</small>
+  <a class="fin-kpi fin-kpi--danger" href="{% url 'financeiro:titulos' %}?periodo=vencidas&amp;abertas=1">
+    <span>Vencido</span><strong>{{ total_vencido|moeda_br }}</strong><small>{{ qtd_vencidos }} conta{{ qtd_vencidos|pluralize }}</small>
   </a>
-  <div class="fin-kpi fin-kpi--success">
-    <span>Pago no mês</span>
-    <strong>{{ pagos_mes|moeda_br }}</strong>
-    <small>Pagamentos efetivados</small>
-  </div>
-  <div class="fin-kpi">
-    <span>Previsão 30 dias</span>
-    <strong>{{ previsao_30|moeda_br }}</strong>
-    <small>inclui {{ previsoes_extras_30|moeda_br }} em previsões extras</small>
-  </div>
+  <a class="fin-kpi" href="{% url 'financeiro:pagamentos' %}?aba=efetivados&amp;mes={% now 'Y-m' %}">
+    <span>Pago no mês</span><strong>{{ pagos_mes|moeda_br }}</strong>
+  </a>
 </div>
 
 <section class="fin-section">
-  <div class="fin-section__head">
-    <div>
-      <h2>Próximas saídas</h2>
-    </div>
-    <a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulos' %}">Ver todas</a>
+  <div class="fin-section__head"><h2>Agenda financeira</h2><a class="fin-btn" href="{% url 'financeiro:titulos' %}?periodo={{ periodo }}&amp;abertas=1{% if inicio %}&amp;inicio={{ inicio|date:'Y-m-d' }}{% endif %}{% if fim %}&amp;fim={{ fim|date:'Y-m-d' }}{% endif %}">Ver contas</a></div>
+  <div class="fin-section__body">
+    <nav class="fin-tabs" aria-label="Período da agenda">
+      <a class="fin-btn" href="?periodo=hoje" {% if periodo == 'hoje' %}aria-current="page"{% endif %}>Hoje</a>
+      <a class="fin-btn" href="?periodo=vencidas" {% if periodo == 'vencidas' %}aria-current="page"{% endif %}>Vencidos</a>
+      <a class="fin-btn" href="?periodo=7" {% if periodo == '7' %}aria-current="page"{% endif %}>Próximos dias</a>
+    </nav>
+    <details {% if periodo == 'intervalo' %}open{% endif %}>
+      <summary>Período personalizado</summary>
+      <form method="get" class="fin-actions" data-local-submit-loading>
+        <input type="hidden" name="periodo" value="intervalo">
+        <label>Início <input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}" required></label>
+        <label>Fim <input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}" required></label>
+        <button type="submit" class="fin-btn">Aplicar</button>
+      </form>
+    </details>
+    {% if intervalo_invalido %}<p role="alert">Informe um período válido.</p>{% endif %}
   </div>
-  <div class="fin-section__body--flush fin-table-wrap">
+  <div class="fin-table-wrap">
     <table class="fin-table">
-      <thead>
-        <tr>
-          <th>Vencimento</th>
-          <th>Beneficiário / conta</th>
-          <th>Origem</th>
-          <th>Obra</th>
-          <th>Parcela</th>
-          <th style="text-align:right">Valor</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Beneficiário</th><th>Obra</th><th>Vencimento</th><th>Saldo</th><th>Status</th><th>Ação</th></tr></thead>
       <tbody>
-        {% for t in proximos_titulos %}
-        <tr>
-          <td class="fin-date">{{ t.vencimento|date:"d/m/Y" }}</td>
-          <td class="fin-main-cell">
-            <strong>{{ t.beneficiario_exibicao }}</strong>
-            <small>{{ t.numero }} · {{ t.descricao }}</small>
-          </td>
-          <td>{{ t.get_origem_display }}</td>
-          <td>{{ t.obra|default:"—" }}</td>
-          <td>{{ t.rotulo_parcela }}</td>
-          <td class="fin-money">{{ t.saldo_aberto|moeda_br }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="6" class="fin-empty">
-            <strong>Sem saídas programadas</strong>
-            Nenhuma conta futura com vencimento definido.
-          </td>
-        </tr>
-        {% endfor %}
+        {% for titulo in agenda %}
+          <tr><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+            <td>{{ titulo.vencimento|date:"d/m/Y" }}</td><td>{{ titulo.saldo_aberto|moeda_br }}</td>
+            <td>{{ titulo.get_status_display }}</td><td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar</a></td></tr>
+        {% empty %}<tr><td colspan="6">Nenhuma obrigação neste período.</td></tr>{% endfor %}
       </tbody>
     </table>
+  </div>
+</section>
+
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Pendências operacionais</h2></div>
+  <div class="fin-section__body fin-tabs">
+    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Aprovações pendentes</a>{% endif %}
+    <a class="fin-btn" href="{% url 'financeiro:titulos' %}?conferencia=DIVERGENCIA">Divergências documentais</a>
+    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:liberacoes' %}?pendencias=1">Liberações para revisar ({{ liberacoes_pendentes }})</a>{% endif %}
+    {% if pode_pagar %}<a class="fin-btn" href="{% url 'financeiro:pagamentos' %}?aba=programados">Pagamentos a confirmar</a>{% endif %}
+  </div>
+</section>
+
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Desembolsos nas próximas quatro semanas</h2><a class="fin-btn" href="{% url 'financeiro:previsoes' %}">Planejamento</a></div>
+  <div class="fin-section__body fin-desembolsos">
+    {% for ponto in desembolsos %}
+      <div><span>Até {{ ponto.fim|date:"d/m" }}</span><meter aria-label="Até {{ ponto.fim|date:'d/m' }}" min="0" max="{{ maior_desembolso|unlocalize }}" value="{{ ponto.saida|unlocalize }}"></meter><strong>{{ ponto.saida|moeda_br }}</strong></div>
+    {% endfor %}
   </div>
 </section>
 {% endblock %}

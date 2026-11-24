@@ -3,16 +3,18 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.http import JsonResponse
 from django.db.models import Avg, Count, Max, Min, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from planejamento.models import ImportacaoCronogramaSuprimentos, ItemCronogramaSuprimento
-from usuarios.decorators import algum_modulo_required, modulo_required, possui_permissao_acao
+from planejamento.models.cronograma_suprimentos import HistoricoDataNecessariaSuprimento
+from usuarios.decorators import algum_modulo_required, modulo_required, possui_permissao_acao, possui_permissao_modulo
 from django.core.exceptions import PermissionDenied
 from usuarios.models import ModuloSistema, NivelPermissao
 from planejamento.services.cronograma_suprimentos import (
@@ -21,6 +23,7 @@ from planejamento.services.cronograma_suprimentos import (
     montar_painel_cronograma_suprimentos,
     montar_kanban_cronograma_suprimentos,
 )
+from planejamento.services.cronograma_suprimentos.painel import carregar_detalhe_comercial
 
 
 @algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
@@ -31,6 +34,11 @@ def painel_cronograma_suprimentos(request):
         etapa=(request.GET.get("etapa") or request.GET.get("situacao") or "").strip(),
         busca=(request.GET.get("busca") or "").strip(),
         suprimento=(request.GET.get("suprimento") or "").strip(),
+        incluir_acompanhamento=False,
+    )
+    contexto["pode_editar_datas"] = (
+        possui_permissao_modulo(request.user, ModuloSistema.SUPRIMENTOS, NivelPermissao.EDICAO)
+        and possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, "editar_planejamento")
     )
 
     return render(
@@ -96,60 +104,53 @@ def _data_post(request, campo):
     valor = (request.POST.get(campo) or "").strip()
     if not valor:
         return None
-    data = parse_date(valor)
+    try:
+        data = parse_date(valor)
+    except ValueError:
+        data = None
     if data is None:
-        raise ValueError(f"Data inválida no campo {campo}.")
+        rotulo = ItemCronogramaSuprimento._meta.get_field(campo).verbose_name
+        raise ValueError(f"Data inválida no campo {rotulo}.")
     return data
 
 
 @modulo_required(ModuloSistema.SUPRIMENTOS, NivelPermissao.EDICAO)
 @require_POST
+@transaction.atomic
 def salvar_datas_item_cronograma_suprimentos(request, item_id):
-    """
-    Edita somente datas realizadas.
-
-    As datas planejadas/base são importadas da planilha e ficam congeladas na
-    interface. No futuro esta mesma camada poderá ser atualizada pelo módulo de
-    Compras sem alterar a regra de cálculo do cronograma.
-    """
+    """Edita os marcos realizados e a data operacional necessária na obra."""
     if not possui_permissao_acao(request.user, ModuloSistema.SUPRIMENTOS, 'editar_planejamento'):
         raise PermissionDenied('Você não pode alterar o planejamento de suprimentos.')
     item = get_object_or_404(
-        ItemCronogramaSuprimento.objects.select_related(
-            "cronograma_obra",
-            "cronograma_obra__importacao",
-        ),
+        ItemCronogramaSuprimento.objects.select_for_update(),
         pk=item_id,
         cronograma_obra__importacao__ativa=True,
         cronograma_obra__importacao__status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
     )
 
     try:
-        novas_datas = {
-            campo: _data_post(request, campo)
-            for campo in DATAS_REALIZADAS_SUPRIMENTOS
-        }
+        campos_editaveis = (*DATAS_REALIZADAS_SUPRIMENTOS, "data_necessaria_obra")
+        novas_datas = {campo: _data_post(request, campo) for campo in campos_editaveis if campo in request.POST}
     except ValueError as exc:
         messages.error(request, str(exc))
     else:
-        for campo, valor in novas_datas.items():
-            setattr(item, campo, valor)
-
-        item.datas_editadas_manualmente = True
-        item.datas_editadas_por = request.user
-        item.datas_editadas_em = timezone.now()
-        item.save(
-            update_fields=[
-                *DATAS_REALIZADAS_SUPRIMENTOS,
-                "datas_editadas_manualmente",
-                "datas_editadas_por",
-                "datas_editadas_em",
-            ]
-        )
-        messages.success(
-            request,
-            f"Andamento de '{item.item}' atualizado para {item.percentual_andamento}%.",
-        )
+        alteracoes = {campo: valor for campo, valor in novas_datas.items() if valor != getattr(item, campo)}
+        campos_atualizados = list(alteracoes)
+        if "data_necessaria_obra" in alteracoes:
+            HistoricoDataNecessariaSuprimento.objects.create(
+                item=item, data_anterior=item.data_necessaria_obra,
+                data_nova=alteracoes["data_necessaria_obra"], alterado_por=request.user,
+            )
+        if any(campo in alteracoes for campo in DATAS_REALIZADAS_SUPRIMENTOS):
+            item.datas_editadas_manualmente = True
+            item.datas_editadas_por = request.user
+            item.datas_editadas_em = timezone.now()
+            campos_atualizados.extend(("datas_editadas_manualmente", "datas_editadas_por", "datas_editadas_em"))
+        if campos_atualizados:
+            for campo, valor in alteracoes.items():
+                setattr(item, campo, valor)
+            item.save(update_fields=campos_atualizados)
+            messages.success(request, f"Datas de '{item.item}' atualizadas.")
 
     parametros = {}
     for nome in ("obra", "categoria", "etapa", "busca", "suprimento"):
@@ -171,9 +172,8 @@ def _formatar_moeda(valor):
     return f"R$ {texto}"
 
 
-@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
-def historico_item_cronograma_suprimentos(request, item_id):
-    item = get_object_or_404(
+def _obter_item_suprimento_ativo(item_id):
+    return get_object_or_404(
         ItemCronogramaSuprimento.objects.select_related(
             "cronograma_obra",
             "cronograma_obra__importacao",
@@ -183,6 +183,22 @@ def historico_item_cronograma_suprimentos(request, item_id):
         cronograma_obra__importacao__ativa=True,
         cronograma_obra__importacao__status=ImportacaoCronogramaSuprimentos.Status.CONCLUIDA,
     )
+
+
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
+@require_GET
+def detalhe_item_cronograma_suprimentos(request, item_id):
+    item = _obter_item_suprimento_ativo(item_id)
+    carregar_detalhe_comercial(item)
+    return render(request, "planejamento/_detalhe_comercial_suprimento.html", {
+        "item": item,
+        "historico_data_necessaria": item.historico_data_necessaria.select_related("alterado_por"),
+    })
+
+
+@algum_modulo_required(ModuloSistema.PLANEJAMENTO, ModuloSistema.SUPRIMENTOS)
+def historico_item_cronograma_suprimentos(request, item_id):
+    item = _obter_item_suprimento_ativo(item_id)
 
     from compras.models import HistoricoCompraSuprimento
     from compras.services.historico_suprimentos import normalizar_suprimento

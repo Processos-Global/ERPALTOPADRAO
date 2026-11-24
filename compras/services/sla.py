@@ -1,10 +1,14 @@
 """Prazos de Compras baseados em regras versionadas e transições efetivas."""
 
 from datetime import timedelta
+from itertools import groupby
+from operator import itemgetter
+from types import SimpleNamespace
 
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import Prefetch, prefetch_related_objects
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from compras.models.pedido import PedidoCompra
@@ -12,8 +16,19 @@ from compras.models.sla import PrazoEntregaPedido, RegraPrazoCompra, TransicaoEt
 from compras.services.permissoes import possui_acao_compras
 from usuarios.models import AcaoCompra
 
+from .integracao_planejamento import data_necessaria_processo
+
 
 TERMINAIS = {"CONTRATADO", "CANCELADO", "REPROVADO"}
+ROTULOS_PRAZO_PEDIDO = {
+    "CANCELADO": "Cancelado",
+    "SEM_DATA_ENTREGA": "Entrega sem data registrada",
+    "SEM_PRAZO": "Prazo indefinido",
+    "NO_PRAZO": "Em aberto, dentro do prazo",
+    "ATRASADO": "Em aberto, em atraso",
+    "ENTREGUE_PRAZO": "Entregue no prazo",
+    "ENTREGUE_ATRASADO": "Entregue com atraso",
+}
 
 
 def _data_referencia(valor):
@@ -154,13 +169,15 @@ def registrar_mudanca_processo(processo, *, criado=False, etapa_anterior="", sta
 def _indicador_passagem(passagem, referencia):
     if not passagem:
         return {"situacao": "SEM_HISTORICO", "rotulo": "Prazo indisponível", "limite": None,
-                "decorridos": None, "permitidos": None, "restantes": None, "atraso": None}
+                "decorridos": None, "permitidos": None, "restantes": None, "atraso": None,
+                "iniciada_em": None, "encerrada_em": None}
     fim = _data_referencia(passagem.encerrada_em or referencia)
     inicio = _data_referencia(passagem.iniciada_em)
     decorridos = _dias_decorridos(inicio, fim, passagem.contagem or RegraPrazoCompra.Contagem.CORRIDOS)
     if not passagem.limite_em:
         return {"situacao": "SEM_REGRA", "rotulo": "Sem prazo configurado", "limite": None,
-                "decorridos": decorridos, "permitidos": None, "restantes": None, "atraso": None}
+                "decorridos": decorridos, "permitidos": None, "restantes": None, "atraso": None,
+                "iniciada_em": passagem.iniciada_em, "encerrada_em": passagem.encerrada_em}
     restantes = passagem.prazo_dias - decorridos
     atraso = max(-restantes, 0)
     if passagem.encerrada_em:
@@ -174,24 +191,116 @@ def _indicador_passagem(passagem, referencia):
         situacao, rotulo = "NO_PRAZO", "Dentro do prazo"
     return {"situacao": situacao, "rotulo": rotulo, "limite": passagem.limite_em,
             "decorridos": decorridos, "permitidos": passagem.prazo_dias,
-            "restantes": max(restantes, 0), "atraso": atraso, "contagem": passagem.contagem}
+            "restantes": max(restantes, 0), "atraso": atraso, "contagem": passagem.contagem,
+            "iniciada_em": passagem.iniciada_em, "encerrada_em": passagem.encerrada_em}
+
+
+def _indicador_processo_passagem(passagem, status, referencia):
+    indicador = _indicador_passagem(passagem, referencia)
+    if status in {"CANCELADO", "REPROVADO"} and indicador["situacao"] in {
+        "CONCLUIDO_PRAZO", "CONCLUIDO_ATRASADO",
+    }:
+        indicador["situacao"] = "ENCERRADO"
+        indicador["rotulo"] = "Encerrado sem contratação"
+    return indicador
+
+
+def _passagem_etapa(ultimas_passagens, etapa_atual, status):
+    etapa = ultimas_passagens.get(etapa_atual)
+    if etapa is None and status in TERMINAIS:
+        return max(
+            (p for nome, p in ultimas_passagens.items() if nome != "PROCESSO"),
+            key=lambda p: (p.iniciada_em, p.pk),
+            default=None,
+        )
+    return etapa
 
 
 def indicador_processo(processo, referencia=None):
     referencia = referencia or timezone.now()
     passagens = list(processo.transicoes_sla.all())
-    etapa = next((p for p in reversed(passagens) if p.etapa == processo.etapa_atual), None)
-    if etapa is None and processo.status in TERMINAIS:
-        etapa = next((p for p in reversed(passagens) if p.etapa != "PROCESSO"), None)
-    geral = next((p for p in reversed(passagens) if p.etapa == "PROCESSO"), None)
-    etapa_indicador = _indicador_passagem(etapa, referencia)
-    geral_indicador = _indicador_passagem(geral, referencia)
-    if processo.status in {processo.Status.CANCELADO, processo.Status.REPROVADO}:
-        for indicador in (etapa_indicador, geral_indicador):
-            if indicador["situacao"] in {"CONCLUIDO_PRAZO", "CONCLUIDO_ATRASADO"}:
-                indicador["situacao"] = "ENCERRADO"
-                indicador["rotulo"] = "Encerrado sem contratação"
+    ultimas = {p.etapa: p for p in passagens}
+    etapa = _passagem_etapa(ultimas, processo.etapa_atual, processo.status)
+    etapa_indicador = _indicador_processo_passagem(etapa, processo.status, referencia)
+    geral_indicador = _indicador_processo_passagem(ultimas.get("PROCESSO"), processo.status, referencia)
     return {"etapa": etapa_indicador, "geral": geral_indicador, "passagens": passagens}
+
+
+def resumir_sla_listagem(queryset, referencia, *, situacao_etapa=""):
+    """Consome os campos de SLA em ordem de processo, sem instanciar os modelos."""
+    campos = ("pk", "etapa", "iniciada_em", "encerrada_em", "contagem", "limite_em", "prazo_dias", "dias_alerta")
+    linhas = queryset.order_by("pk", "transicoes_sla__iniciada_em", "transicoes_sla__pk").values_list(
+        "pk", "status", "etapa_atual", *(f"transicoes_sla__{campo}" for campo in campos),
+    ).iterator()
+    ids_filtrados = [] if situacao_etapa else None
+    totais_etapas = {}
+    total_geral = qtd_geral = atrasados = proximos = maior_atraso = 0
+    for (pk, status, etapa_atual), grupo in groupby(linhas, key=itemgetter(0, 1, 2)):
+        ultimas = {}
+        concluidas = []
+        for _, _, _, *dados in grupo:
+            if dados[0] is None:
+                continue
+            passagem = SimpleNamespace(**dict(zip(campos, dados)))
+            ultimas[passagem.etapa] = passagem
+            if passagem.encerrada_em:
+                concluidas.append(passagem)
+        etapa = _passagem_etapa(ultimas, etapa_atual, status)
+        indicador = _indicador_processo_passagem(etapa, status, referencia)
+        situacao = indicador["situacao"]
+        if situacao_etapa:
+            if situacao != situacao_etapa:
+                continue
+            ids_filtrados.append(pk)
+        if situacao == "ATRASADO":
+            atrasados += 1
+            maior_atraso = max(maior_atraso, indicador["atraso"])
+        proximos += situacao == "PROXIMO"
+        for passagem in concluidas:
+            if passagem.etapa != "PROCESSO" or status == "CONTRATADO":
+                dias = _indicador_passagem(passagem, referencia)["decorridos"]
+                if passagem.etapa == "PROCESSO":
+                    total_geral += dias
+                    qtd_geral += 1
+                else:
+                    total, qtd = totais_etapas.get(passagem.etapa, (0, 0))
+                    totais_etapas[passagem.etapa] = total + dias, qtd + 1
+
+    if ids_filtrados is not None:
+        queryset = queryset.filter(pk__in=ids_filtrados)
+    pedidos_atrasados = (
+        PedidoCompra.objects.filter(processo_id__in=queryset.order_by().values("pk"), recebido_em__isnull=True)
+        .exclude(status__in=(PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE))
+        .alias(previsao_sla=Coalesce("previsao_entrega_atual", "previsao_entrega_original", "prazo_sla__limite_em"))
+        .filter(previsao_sla__lt=_data_referencia(referencia))
+        .count()
+    )
+    return queryset, {
+        "processos_atrasados": atrasados,
+        "processos_proximos": proximos,
+        "pedidos_atrasados": pedidos_atrasados,
+        "maior_atraso": maior_atraso,
+        "media_contratacao": round(total_geral / qtd_geral, 1) if qtd_geral else None,
+        "medias_etapas": {etapa: round(total / qtd, 1) for etapa, (total, qtd) in sorted(totais_etapas.items())},
+    }
+
+
+def impacto_na_obra(*, necessaria, previsao, realizada, referencia, cancelado=False, entregue=False):
+    if cancelado:
+        return None, "Cancelado"
+    if not necessaria:
+        return None, "Data necessária indefinida"
+    if realizada:
+        desvio = (realizada - necessaria).days
+        return desvio, "Entregue após a data necessária" if desvio > 0 else "Entregue até a data necessária"
+    if entregue:
+        return None, "Entrega sem data registrada"
+    if referencia > necessaria:
+        return (referencia - necessaria).days, "Entrega pendente após a data necessária"
+    if previsao:
+        desvio = (previsao - necessaria).days
+        return desvio, "Previsão após a data necessária" if desvio > 0 else "Previsão até a data necessária"
+    return None, "Entrega pendente sem previsão"
 
 
 def indicador_pedido(pedido, referencia=None):
@@ -203,14 +312,31 @@ def indicador_pedido(pedido, referencia=None):
         prazo_regra = None
     prevista = prevista_contratual or (prazo_regra.limite_em if prazo_regra else None)
     realizada = _data_referencia(pedido.recebido_em) if pedido.recebido_em else None
-    if pedido.status == pedido.Status.CANCELADO or not prevista:
-        situacao, atraso = ("CANCELADO" if pedido.status == pedido.Status.CANCELADO else "SEM_PRAZO"), None
+    cancelado = pedido.status == pedido.Status.CANCELADO
+    entregue = pedido.status == pedido.Status.ENTREGUE
+    atraso = desvio_comercial = None
+    if cancelado:
+        situacao = "CANCELADO"
+    elif entregue and not realizada:
+        situacao = "SEM_DATA_ENTREGA"
+    elif not prevista:
+        situacao = "SEM_PRAZO"
     else:
-        atraso = max(((realizada or referencia) - prevista).days, 0)
+        desvio = ((realizada or referencia) - prevista).days
+        atraso = max(desvio, 0)
+        desvio_comercial = desvio if realizada else (atraso or None)
         situacao = ("ENTREGUE_ATRASADO" if atraso else "ENTREGUE_PRAZO") if realizada else ("ATRASADO" if atraso else "NO_PRAZO")
-    return {"situacao": situacao, "previsao": prevista, "realizada": realizada,
-            "dias_atraso_comercial": atraso, "data_necessaria_obra": None,
-            "defasagem_necessidade": None,
+    processo = pedido.processo
+    necessaria = data_necessaria_processo(processo) if processo.obra_id == pedido.obra_id else None
+    defasagem, situacao_obra = impacto_na_obra(
+        necessaria=necessaria, previsao=prevista_contratual, realizada=realizada,
+        referencia=referencia, cancelado=cancelado, entregue=entregue,
+    )
+    return {"situacao": situacao, "rotulo_comercial": ROTULOS_PRAZO_PEDIDO[situacao],
+            "previsao": prevista, "realizada": realizada,
+            "dias_atraso_comercial": atraso, "dias_desvio_comercial": desvio_comercial,
+            "data_necessaria_obra": necessaria, "defasagem_necessidade": defasagem,
+            "situacao_obra": situacao_obra,
             "origem_previsao": "CONTRATUAL" if prevista_contratual else ("REGRA" if prevista else "INDEFINIDA"),
             "limite_regra_comercial": prazo_regra.limite_em if prazo_regra else None,
             "prazo_regra_dias": prazo_regra.prazo_dias if prazo_regra else None}
@@ -229,7 +355,9 @@ def resumo_sla_processos(queryset, referencia=None, *, situacao_etapa=""):
         indicadores = {p.pk: indicadores[p.pk] for p in processos}
     prefetch_related_objects(
         processos,
-        Prefetch("pedidos", queryset=PedidoCompra.objects.select_related("prazo_sla")),
+        Prefetch("pedidos", queryset=PedidoCompra.objects.select_related(
+            "prazo_sla", "processo__item_cronograma__cronograma_obra",
+        )),
     )
     etapas = [passagem for p in processos for passagem in indicadores[p.pk]["passagens"] if passagem.etapa != "PROCESSO"]
     atrasos = [indicadores[p.pk]["etapa"]["atraso"] or 0 for p in processos

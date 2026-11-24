@@ -26,7 +26,7 @@ def _filtros(qs, prefixo='', obra_ids=None, classe=None, apropriacao=None, forne
         qs = qs.filter(**{f'{prefixo}fornecedor_id': fornecedor})
     if apropriacao:
         qs = qs.filter(**{f'{prefixo}plano_financeiro_id': apropriacao})
-    elif classe:
+    if classe:
         # Inclui todos os descendentes de uma classe, não só filhos diretos.
         from financeiro.models import PlanoFinanceiro
         ids = {int(classe)}

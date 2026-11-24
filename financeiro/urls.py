@@ -1,6 +1,8 @@
 from django.urls import path
 
 from financeiro import views
+from financeiro.views.exportacoes import exportar
+from financeiro.views.titulos import titulo_catalogo
 
 app_name = "financeiro"
 
@@ -12,12 +14,14 @@ urlpatterns = [
     path("arquivos/pagamentos/<int:pk>/", views.baixar_comprovante_pagamento, name="baixar_comprovante_pagamento"),
     path("", views.dashboard, name="dashboard"),
     path("indicadores/", views.indicadores, name="indicadores"),
+    path("relatorios/exportar/<str:tipo>/<str:formato>/", exportar, name="exportar"),
     path("agenda/", views.agenda_pagamentos, name="agenda"),
     path("compromissos/", views.compromissos_contratados, name="compromissos"),
     path("liberacoes/", views.liberacoes_lista, name="liberacoes"),
     path("liberacoes/<int:pk>/autorizar/", views.liberacao_autorizar, name="liberacao_autorizar"),
     path("contas-a-pagar/", views.titulos_lista, name="titulos"),
     path("contas-a-pagar/novo/", views.titulo_novo, name="titulo_novo"),
+    path("contas-a-pagar/catalogo/", titulo_catalogo, name="titulo_catalogo"),
     path("contas-a-pagar/<int:pk>/", views.titulo_detalhe, name="titulo_detalhe"),
     path("contas-a-pagar/<int:pk>/editar/", views.titulo_editar, name="titulo_editar"),
     path("contas-a-pagar/<int:pk>/anexos/<int:anexo_pk>/excluir/", views.titulo_excluir_anexo, name="titulo_excluir_anexo"),
@@ -36,6 +40,7 @@ urlpatterns = [
     path("relatorios-pagamento/emitir/", views.relatorio_pagamento_emitir, name="relatorio_pagamento_emitir"),
     path("relatorios-pagamento/<int:pk>/excel/", views.relatorio_pagamento_excel, name="relatorio_pagamento_excel"),
     path("pagamentos/titulo/<int:titulo_id>/novo/", views.pagamento_novo, name="pagamento_novo"),
+    path("pagamentos/titulo/<int:titulo_id>/programar/", views.pagamento_programar, name="pagamento_programar"),
     path("pagamentos/titulo/<int:titulo_id>/confirmar/", views.pagamento_confirmar_direto, name="pagamento_confirmar_direto"),
     path("pagamentos/<int:pk>/estornar/", views.pagamento_estornar, name="pagamento_estornar"),
     path("gastos/", views.gastos, name="gastos"),

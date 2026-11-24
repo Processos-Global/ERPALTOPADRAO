@@ -1,0 +1,9 @@
+<div class="pc-timeline">
+  {% for evento in historico %}
+  <div class="pc-event">
+    <strong>{{ evento.tipo|default:"Evento" }}{% if evento.usuario %} · {{ evento.usuario }}{% endif %}</strong>
+    <p>{{ evento.descricao|default:"—" }}</p>
+    <time>{{ evento.criado_em|date:"d/m/Y H:i" }}</time>
+  </div>
+  {% empty %}<p class="pc-empty">Nenhum evento registrado.</p>{% endfor %}
+</div>

@@ -175,18 +175,23 @@ def frete_final_fornecedor(processo, fornecedor_id):
         processo.adjudicacoes
         .filter(cancelada=False, cotacao__fornecedor_id=fornecedor_id)
         .select_related("item_cotado__negociacao", "cotacao")
-        .order_by("-item_cotado__negociacao__atualizado_em", "-id")
     )
-    primeira = itens.first()
-    if not primeira:
-        return ZERO
+    return frete_das_adjudicacoes(itens)
 
-    for adjudicacao in itens:
+
+def frete_das_adjudicacoes(adjudicacoes):
+    """Calcula o frete das adjudicações ativas de um único fornecedor."""
+    cotacoes = []
+    fretes_negociados = []
+    for adjudicacao in adjudicacoes:
         negociacao = getattr(adjudicacao.item_cotado, "negociacao", None)
-        if negociacao and negociacao.frete_negociado is not None:
-            return quantizar_moeda(negociacao.frete_negociado)
+        cotacoes.append((negociacao is not None, getattr(negociacao, "atualizado_em", None), adjudicacao.pk, adjudicacao.cotacao.frete))
+        if negociacao is not None and negociacao.frete_negociado is not None:
+            fretes_negociados.append((negociacao.atualizado_em, adjudicacao.pk, negociacao.frete_negociado))
 
-    return quantizar_moeda(primeira.cotacao.frete)
+    if fretes_negociados:
+        return quantizar_moeda(max(fretes_negociados)[2])
+    return quantizar_moeda(max(cotacoes)[3]) if cotacoes else ZERO
 
 
 def desconto_proposta_final_fornecedor(processo, fornecedor_id):
@@ -229,21 +234,19 @@ def prazo_final_fornecedor(processo, fornecedor_id):
     return max(adjudicacoes) if adjudicacoes else None
 
 
+def valores_adjudicados_fornecedor(adjudicacoes):
+    """Apura os componentes congelados no pedido de um fornecedor."""
+    subtotal = quantizar_moeda(sum((item.valor_bruto for item in adjudicacoes), ZERO))
+    desconto_itens = quantizar_moeda(sum((item.desconto_final for item in adjudicacoes), ZERO))
+    primeira = min(adjudicacoes, key=lambda item: item.pk)
+    descontos = desconto_itens + quantizar_moeda(primeira.cotacao.desconto_proposta)
+    frete = frete_das_adjudicacoes(adjudicacoes)
+    return subtotal, descontos, frete, calcular_total_proposta(subtotal=subtotal, desconto=descontos, frete=frete)
+
+
 def total_aprovacao_processo(processo):
-    adjudicacoes = list(
-        processo.adjudicacoes
-        .filter(cancelada=False)
-        .select_related("cotacao__fornecedor")
-    )
-    subtotal_liquido = sum((a.valor_total for a in adjudicacoes), ZERO)
-    fornecedores = {a.cotacao.fornecedor_id for a in adjudicacoes}
-    fretes = sum((frete_final_fornecedor(processo, fornecedor_id) for fornecedor_id in fornecedores), ZERO)
-    descontos_proposta = sum(
-        (desconto_proposta_final_fornecedor(processo, fornecedor_id) for fornecedor_id in fornecedores),
-        ZERO,
-    )
-    return calcular_total_proposta(
-        subtotal=subtotal_liquido,
-        desconto=descontos_proposta,
-        frete=fretes,
-    )
+    por_fornecedor = {}
+    adjudicacoes = processo.adjudicacoes.filter(cancelada=False).select_related("cotacao", "item_cotado__negociacao")
+    for item in adjudicacoes:
+        por_fornecedor.setdefault(item.cotacao.fornecedor_id, []).append(item)
+    return sum((valores_adjudicados_fornecedor(grupo)[3] for grupo in por_fornecedor.values()), ZERO)

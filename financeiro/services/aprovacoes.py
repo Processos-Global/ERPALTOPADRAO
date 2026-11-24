@@ -3,10 +3,14 @@ from django.db import transaction
 
 from financeiro.models import AprovacaoTituloFinanceiro, TituloPagar
 from financeiro.services.auditoria import registrar_evento
+from financeiro.services.notificacoes import notificar_aprovadores
 
 
 @transaction.atomic
 def enviar_para_aprovacao(titulo, *, usuario):
+    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+    if titulo.status in {TituloPagar.Status.AGUARDANDO_APROVACAO, TituloPagar.Status.APROVADO}:
+        return titulo
     if not titulo.vencimento:
         raise ValidationError("Informe o vencimento antes de enviar para aprovação.")
     if not (titulo.especificacao_pagamento or "").strip():
@@ -22,11 +26,13 @@ def enviar_para_aprovacao(titulo, *, usuario):
     titulo.status = TituloPagar.Status.AGUARDANDO_APROVACAO
     titulo.save(update_fields=["ciclo_aprovacao", "status", "atualizado_em"])
     registrar_evento(titulo, "ENVIADO_APROVACAO", "Conta a Pagar enviada para aprovação.", usuario)
+    notificar_aprovadores(titulo)
     return titulo
 
 
 @transaction.atomic
 def decidir_titulo(titulo, *, usuario, decisao, observacao=""):
+    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
     if titulo.status != TituloPagar.Status.AGUARDANDO_APROVACAO:
         raise ValidationError("A Conta a Pagar não está aguardando aprovação.")
 

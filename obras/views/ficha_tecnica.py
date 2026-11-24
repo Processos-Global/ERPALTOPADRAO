@@ -4,13 +4,13 @@ from io import BytesIO
 from xml.sax.saxutils import escape
 
 from django.contrib import messages
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from cadastros.models import (
     CaracteristicaAmbiente,
@@ -33,7 +33,7 @@ from obras.models import (
     Obra,
     PavimentoFichaTecnica,
 )
-from obras.services.consulta_ficha_tecnica import consultar_ficha_tecnica
+from obras.services.consulta_ficha_tecnica import buscar_materiais_consulta, consultar_ficha_tecnica
 
 
 # Regras de escopo específicas da ficha técnica.
@@ -167,11 +167,16 @@ def ficha_tecnica(request, obra_id):
     etapa = request.GET.get("etapa", "1")
     ambiente_id = request.GET.get("ambiente")
 
-    pavimentos = list(ficha.pavimentos.prefetch_related("ambientes__tipo_ambiente", "ambientes__caracteristica"))
-    ambientes = list(
+    pavimentos = ficha.pavimentos.all()
+    if etapa == "1":
+        pavimentos = pavimentos.annotate(total_ambientes=Count("ambientes"))
+    ambientes = (
         AmbienteFichaTecnica.objects.filter(pavimento__ficha=ficha, ativo=True)
         .select_related("pavimento", "tipo_ambiente", "caracteristica")
-        .annotate(
+        .order_by("pavimento__ordem", "ordem", "identificacao")
+    )
+    if etapa in {"3", "4"}:
+        ambientes = ambientes.annotate(
             total_categorias_ativas=Count(
                 "categorias_gf",
                 filter=Q(categorias_gf__ativo=True),
@@ -186,42 +191,34 @@ def ficha_tecnica(request, obra_id):
                 distinct=True,
             ),
         )
-        .order_by("pavimento__ordem", "ordem", "identificacao")
-    )
     ambiente_selecionado = None
-    if ambiente_id and str(ambiente_id).isdigit():
-        ambiente_selecionado = next((a for a in ambientes if a.pk == int(ambiente_id)), None)
-    if not ambiente_selecionado and ambientes and str(etapa) == "3":
-        ambiente_selecionado = ambientes[0]
+    if etapa in {"3", "4"}:
+        ambientes = list(ambientes)
+        if ambiente_id and ambiente_id.isascii() and ambiente_id.isdecimal() and len(ambiente_id) <= 19:
+            ambiente_selecionado = next((a for a in ambientes if a.pk == int(ambiente_id)), None)
+        if ambiente_selecionado is None and ambientes and etapa == "3":
+            ambiente_selecionado = ambientes[0]
 
     categorias_obra, categorias_ambiente = _categorias_por_escopo()
-
-    aplicacoes_obra = list(
-        ficha.categorias_aplicadas.filter(ambiente__isnull=True, ativo=True)
-        .select_related("categoria")
-        .prefetch_related(
-            "itens__tipo_item",
-            "itens__unidade",
-            "itens__opcao_especificacao",
-            "itens__material",
-        "itens__itens_compatibilizacao_gf",
-        )
-    )
+    aplicacoes_obra = []
     aplicacoes_ambiente = []
-    if ambiente_selecionado:
-        aplicacoes_ambiente = list(
-            ficha.categorias_aplicadas.filter(ambiente=ambiente_selecionado, ativo=True)
-            .select_related("categoria")
-            .prefetch_related(
-                "itens__tipo_item",
-                "itens__unidade",
-                "itens__opcao_especificacao",
-                "itens__material",
-                "itens__itens_compatibilizacao_gf",
+    if etapa in {"3", "4"}:
+        aplicacoes = ficha.categorias_aplicadas.filter(ativo=True).select_related("categoria")
+        if etapa == "4":
+            aplicacoes = aplicacoes.prefetch_related(
+                Prefetch("itens", queryset=ItemFichaTecnica.objects.select_related(
+                    "tipo_item", "unidade", "opcao_especificacao", "material",
+                ).prefetch_related("itens_compatibilizacao_gf")),
+                "categoria__tipos_itens",
+                "categoria__opcoes_especificacao",
             )
-        )
+        if etapa == "3" or ambiente_selecionado is None:
+            aplicacoes_obra = list(aplicacoes.filter(ambiente__isnull=True))
+        if ambiente_selecionado:
+            aplicacoes_ambiente = list(aplicacoes.filter(ambiente=ambiente_selecionado))
+
     sugestoes_por_aplicacao = {}
-    if ambiente_selecionado:
+    if etapa == "4" and ambiente_selecionado and aplicacoes_ambiente:
         tipos = TipoItemGrandeFornecedor.objects.filter(
             ativo=True, categoria_id__in=[ap.categoria_id for ap in aplicacoes_ambiente],
             tipos_ambiente_sugeridos=ambiente_selecionado.tipo_ambiente,
@@ -255,12 +252,12 @@ def ficha_tecnica(request, obra_id):
         "aplicacoes_ambiente_ids": {a.categoria_id for a in aplicacoes_ambiente},
         "ar_sistema_categoria_id": aplicacao_ar_sistema.categoria_id if aplicacao_ar_sistema else (
             categorias_obra.filter(nome__iexact=NOME_CAT_AR_SISTEMA).values_list("pk", flat=True).first()
+            if etapa == "3" else None
         ),
         "ar_sistema_tipo_atual": ar_sistema_tipo_atual,
         "tipos_sistema_ar": TIPOS_SISTEMA_AR,
         "unidades": UnidadeMedida.objects.filter(ativo=True).order_by("sigla"),
-        "materiais": Material.objects.filter(ativo=True).select_related("unidade").order_by("nome", "especificacao"),
-        "total_ambientes": len(ambientes),
+        "total_ambientes": len(ambientes) if isinstance(ambientes, list) else ambientes.count(),
         "total_categorias": ficha.categorias_aplicadas.filter(ativo=True).count(),
         "total_itens": ItemFichaTecnica.objects.filter(aplicacao_categoria__ficha=ficha, ativo=True).count(),
     })
@@ -440,7 +437,8 @@ def ficha_tecnica_acao(request, obra_id):
         item.especificacao = (request.POST.get("especificacao") or "").strip()
         item.descricao_medidas = (request.POST.get("descricao_medidas", item.descricao_medidas) or "").strip()
         material_id = _pk_post(request, "material")
-        item.material = get_object_or_404(Material, pk=material_id, ativo=True) if material_id else None
+        if material_id != item.material_id:
+            item.material = get_object_or_404(Material, pk=material_id, ativo=True) if material_id else None
         item.observacao = (request.POST.get("observacao") or "").strip()
         item.save(update_fields=["tipo_item", "descricao_item", "quantidade", "unidade", "opcao_especificacao", "especificacao", "descricao_medidas", "material", "observacao", "atualizado_em"])
         messages.success(request, "Item atualizado.")
@@ -506,8 +504,8 @@ def ficha_tecnica_acao(request, obra_id):
     return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa={etapa}")
 
 
-def _consulta_contexto(request):
-    contexto = consultar_ficha_tecnica(request.GET)
+def _consulta_contexto(request, *, navegacao=False):
+    contexto = consultar_ficha_tecnica(request.GET, navegacao=navegacao)
     contexto["pode_editar"] = (
         possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO)
         and possui_permissao_acao(request.user, ModuloSistema.OBRAS, "gerenciar_ficha_tecnica")
@@ -517,7 +515,23 @@ def _consulta_contexto(request):
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
 def ficha_tecnica_consulta(request):
-    return render(request, "obras/ficha_tecnica_consulta.html", _consulta_contexto(request))
+    contexto = _consulta_contexto(request, navegacao=True)
+    material_id = contexto["filtros"]["material"]
+    contexto["material_selecionado"] = (
+        Material.objects.filter(pk=material_id, ativo=True).only("nome", "especificacao").first()
+        if material_id else None
+    )
+    return render(request, "obras/ficha_tecnica_consulta.html", contexto)
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+@require_GET
+def ficha_tecnica_consulta_materiais(request):
+    pagina = request.GET.get("pagina", "1")
+    if not (pagina.isascii() and pagina.isdecimal() and len(pagina) <= 4 and int(pagina) > 0):
+        return JsonResponse({"erro": "Página inválida."}, status=400)
+    termo = request.GET.get("q", "").strip()[:150]
+    return JsonResponse(buscar_materiais_consulta(termo, int(pagina)))
 
 
 def _linhas_exportacao(contexto):

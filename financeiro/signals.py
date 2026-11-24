@@ -8,7 +8,8 @@ from compras.models import (
     PedidoCompra,
     RateioParcelaGrandeFornecedor,
 )
-from financeiro.services.previsoes import (
+from financeiro.services.integracoes import (
+    sinais_financeiros_pedido_adiados,
     sincronizar_contas_grande_fornecedor,
     sincronizar_contas_pedido,
 )
@@ -16,17 +17,19 @@ from financeiro.services.previsoes import (
 
 @receiver(post_save, sender=PedidoCompra)
 def pedido_financeiro_atualizado(sender, instance, **kwargs):
-    sincronizar_contas_pedido(instance)
+    if not sinais_financeiros_pedido_adiados():
+        sincronizar_contas_pedido(instance)
 
 
 @receiver(post_save, sender=ParcelaPrevistaPedido)
 def parcela_financeira_atualizada(sender, instance, **kwargs):
-    sincronizar_contas_pedido(instance.pedido)
+    if not sinais_financeiros_pedido_adiados():
+        sincronizar_contas_pedido(instance.pedido)
 
 
 @receiver(post_delete, sender=ParcelaPrevistaPedido)
 def parcela_financeira_excluida(sender, instance, **kwargs):
-    if PedidoCompra.objects.filter(pk=instance.pedido_id).exists():
+    if not sinais_financeiros_pedido_adiados() and PedidoCompra.objects.filter(pk=instance.pedido_id).exists():
         sincronizar_contas_pedido(instance.pedido)
 
 

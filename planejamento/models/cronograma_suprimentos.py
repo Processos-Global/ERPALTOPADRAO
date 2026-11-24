@@ -163,6 +163,7 @@ class ItemCronogramaSuprimento(models.Model):
     duracao_negociacao = models.PositiveIntegerField(null=True, blank=True)
 
     prazo_limite_contratacao = models.DateField(null=True, blank=True, db_index=True)
+    data_necessaria_obra = models.DateField("data necessária na obra", null=True, blank=True)
 
     # Datas realizadas - acompanhamento do processo.
     data_real_cotacao = models.DateField(null=True, blank=True, db_index=True)
@@ -328,3 +329,16 @@ class ItemCronogramaSuprimento(models.Model):
     @property
     def etapa_atual_atrasada(self) -> bool:
         return self.dias_atraso_etapa_atual > 0
+
+
+class HistoricoDataNecessariaSuprimento(models.Model):
+    item = models.ForeignKey(
+        ItemCronogramaSuprimento, on_delete=models.PROTECT, related_name="historico_data_necessaria",
+    )
+    data_anterior = models.DateField(null=True, blank=True)
+    data_nova = models.DateField(null=True, blank=True)
+    alterado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-criado_em", "-id")
