@@ -80,8 +80,9 @@
       <table class="fin-table">
         <tbody>
           <tr><th scope="row">Contratado em pedidos</th><td class="fin-money">{{ totais.PEDIDO|moeda_br }}</td></tr>
+          <tr><th scope="row">Saldo de pedidos com desembolso previsto</th><td class="fin-money">{{ totais.COMPROMISSO_FUTURO|moeda_br }}</td></tr>
           <tr><th scope="row">Contratos assinados</th><td class="fin-money">{{ totais.CONTRATO|moeda_br }}</td></tr>
-          <tr><th scope="row">Liberado</th><td class="fin-money">{{ totais.LIBERACAO|moeda_br }}</td></tr>
+          <tr><th scope="row">Registros financeiros de compras</th><td class="fin-money">{{ totais.LIBERACAO|moeda_br }}</td></tr>
         </tbody>
       </table>
     </div>
@@ -103,12 +104,13 @@
   <div class="fin-section__head"><div><h2 id="plan-evolucao">Evolução mensal</h2><p>Janela de dois meses anteriores a três posteriores ao mês selecionado.</p></div></div>
   <div class="fin-section__body--flush fin-table-wrap">
     <table class="fin-table">
-      <thead><tr><th scope="col">Mês</th><th scope="col">Previsão independente</th><th scope="col">Pago</th><th scope="col">Saldo em aberto</th></tr></thead>
+      <thead><tr><th scope="col">Mês</th><th scope="col">Previsão independente</th><th scope="col">Saldo de pedidos com desembolso previsto</th><th scope="col">Pago</th><th scope="col">Saldo em aberto</th></tr></thead>
       <tbody>
         {% for periodo, valores in por_mes.items %}
         <tr>
           <th scope="row">{{ periodo|date:"m/Y" }}</th>
           <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.PREVISAO|unlocalize }}"></meter>{{ valores.PREVISAO|moeda_br }}</td>
+          <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.COMPROMISSO_FUTURO|unlocalize }}"></meter>{{ valores.COMPROMISSO_FUTURO|moeda_br }}</td>
           <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.PAGO|unlocalize }}"></meter>{{ valores.PAGO|moeda_br }}</td>
           <td class="fin-money"><meter class="fin-planejamento-medida" aria-hidden="true" max="{{ limite_grafico|unlocalize }}" value="{{ valores.SALDO|unlocalize }}"></meter>{{ valores.SALDO|moeda_br }}</td>
         </tr>
@@ -132,7 +134,7 @@
             {% if linha.tipo == 'SALDO' or linha.tipo == 'PAGO' %}<a class="fin-table-link" href="{% url 'financeiro:titulo_detalhe' linha.referencia_id %}"><strong>{{ linha.descricao }}</strong></a>{% else %}<strong>{{ linha.descricao }}</strong>{% endif %}
             {% if linha.previsao_origem %}<small>Previsão de origem · {{ linha.previsao_origem }}</small>{% endif %}
           </td>
-          <td>{{ linha.tipo_rotulo }}{% if linha.certeza_rotulo %} · {{ linha.certeza_rotulo }}{% endif %}</td>
+          <td>{% if linha.tipo == 'LIBERACAO' %}Registro financeiro de compra{% else %}{{ linha.tipo_rotulo }}{% endif %}{% if linha.certeza_rotulo %} · {{ linha.certeza_rotulo }}{% endif %}</td>
           <td>{{ linha.origem_rotulo }}</td><td>{{ linha.beneficiario|default:"—" }}</td>
           <td>{{ linha.obra|default:"—" }}</td><td>{{ linha.apropriacao|default:"—" }}</td>
           <td class="fin-money">{{ linha.valor|moeda_br }}</td>
@@ -149,7 +151,8 @@
   <ul>
     <li>Previsões usam a data prevista. Ao vincular uma previsão a uma conta vigente, o saldo passa a acompanhar o título.</li>
     <li>Pedidos mostram o compromisso vigente no mês de emissão. Contratos assinados são apresentados separadamente e usam a data da assinatura.</li>
-    <li>Liberações reconhecem o valor autorizado na data da autorização. Pagamentos usam a data em que foram efetivados.</li>
+    <li>O saldo de pedidos com desembolso previsto acompanha as datas comerciais das parcelas.</li>
+    <li>Registros financeiros de compras usam o valor e a data de registro financeiro. Pagamentos usam a data em que foram efetivados.</li>
     <li>Contas em aberto usam a programação ativa do ciclo aprovado ou o vencimento.</li>
   </ul>
 </details>

@@ -2,14 +2,24 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from financeiro.models import Pagamento, ProgramacaoPagamento, TituloPagar
+from financeiro.models import AprovacaoTituloFinanceiro, Pagamento, ProgramacaoPagamento, TituloPagar
 from financeiro.services.auditoria import registrar_evento
+
+
+def _validar_aprovacao_vigente(titulo):
+    if titulo.status != TituloPagar.Status.APROVADO or (
+        titulo.ciclo_aprovacao and not titulo.aprovacoes.filter(
+            ciclo=titulo.ciclo_aprovacao, decisao=AprovacaoTituloFinanceiro.Decisao.APROVADO,
+        ).exists()
+    ):
+        raise ValidationError("O título precisa ter aprovação financeira vigente.")
 
 
 @transaction.atomic
 def programar_pagamento(titulo, *, data_programada, usuario, motivo=""):
     titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
-    if titulo.status != TituloPagar.Status.APROVADO or titulo.esta_pago or titulo.valor_liquido <= 0:
+    _validar_aprovacao_vigente(titulo)
+    if titulo.esta_pago or titulo.valor_liquido <= 0:
         raise ValidationError("A programação exige uma conta aprovada e disponível para pagamento.")
     programacao = ProgramacaoPagamento.objects.filter(titulo=titulo).first()
     anterior = programacao.data_programada if programacao else None
@@ -34,8 +44,7 @@ def registrar_pagamento(*, titulo, data_pagamento=None, forma=None, usuario, com
     """Confirma o pagamento integral de um título exatamente uma vez."""
     titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
 
-    if titulo.status != TituloPagar.Status.APROVADO:
-        raise ValidationError("O título precisa estar aprovado antes do pagamento.")
+    _validar_aprovacao_vigente(titulo)
 
     pagamento_existente = Pagamento.objects.filter(titulo=titulo).first()
     if (pagamento_existente and pagamento_existente.status == Pagamento.Status.EFETIVADO) or titulo.status == TituloPagar.Status.PAGO:

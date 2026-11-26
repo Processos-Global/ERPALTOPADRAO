@@ -1,13 +1,12 @@
-from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.files.base import ContentFile
-from django.core.paginator import Paginator
-from django.db.models import Q, Sum
-from django.http import Http404, JsonResponse
+from django.db import transaction
+from django.db.models import Q
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -15,17 +14,22 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST, require_http_methods
 
 from cadastros.models import Fornecedor, Material
+from compras.models import RecebimentoPedido
+from compras.services.valores import quantizar_moeda
 from financeiro.forms import TituloPagarForm
 from financeiro.forms.titulos import SolicitacaoAvulsaForm
 from financeiro.models import AnexoTituloPagar
-from financeiro.models import AprovacaoTituloFinanceiro, PlanoFinanceiro, TituloPagar
-from financeiro.services.aprovacoes import decidir_titulo, enviar_para_aprovacao
+from financeiro.models import PlanoFinanceiro, TituloPagar
+from financeiro.services.aprovacoes import (
+    CicloAprovacaoDesatualizado, decidir_titulo, enviar_para_aprovacao, interpretar_ciclo,
+    previsao_aguarda_recebimento, titulo_tem_divergencia,
+)
 from financeiro.services.agenda import _inteiro_positivo
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 from financeiro.services.solicitacoes_avulsas import (
     SolicitacaoAvulsaDivergente, SolicitacaoAvulsaInvalida, registrar_solicitacao_avulsa,
 )
-from financeiro.services.titulos import atualizar_titulo, cancelar_titulo
+from financeiro.services.titulos import atualizar_titulo, bloquear_titulo, cancelar_titulo, reabrir_aprovacao
 from obras.models import Obra
 
 
@@ -87,9 +91,39 @@ def _documentos_pedido(titulo):
     notas_fiscais = [
         recebimento
         for recebimento in titulo.pedido.recebimentos.all()
-        if recebimento.arquivo_nota_fiscal and recebimento.arquivo_nota_fiscal.name
+        if (titulo.recebimento_id is None or recebimento.pk == titulo.recebimento_id)
+        and recebimento.arquivo_nota_fiscal
     ]
     return anexos, notas_fiscais
+
+
+def _contexto_recebimento(titulo):
+    if not (titulo.recebimento_id and titulo.pedido_id and titulo.recebimento.pedido_id == titulo.pedido_id):
+        return None, None
+    recebimento = titulo.recebimento
+    liberacao = getattr(recebimento, "liberacao_financeira", None)
+    if liberacao and liberacao.pedido_id != titulo.pedido_id:
+        liberacao = None
+    esperado = liberacao.valor_esperado if liberacao else None
+    documentado = liberacao.valor_origem if esperado is not None else recebimento.valor_total_nota
+    diferenca = documentado - esperado if esperado is not None and documentado is not None else None
+    percentual = quantizar_moeda(diferenca * 100 / esperado) if esperado and diferenca is not None else None
+    historico = titulo.pedido.processo.historico.filter(
+        Q(tipo__in=("APROVACAO", "CONTRATACAO_CONCLUIDA", "GF_CONTRATACAO_CONCLUIDA"))
+        | Q(dados__pedido_id=titulo.pedido_id, tipo__in=(
+            "PEDIDO_CRIADO", "PEDIDO_ATUALIZADO", "STATUS_PEDIDO", "CORRECAO_FISCAL_RECEBIMENTO",
+        )),
+    ).select_related("usuario")[:12]
+    return {
+        "recebimento": recebimento,
+        "esperado": esperado,
+        "documentado": documentado,
+        "diferenca": diferenca,
+        "percentual": percentual,
+        "motivos_divergencia": liberacao.divergencias_comerciais if liberacao else [],
+        "itens": recebimento.itens.select_related("item_pedido").filter(item_pedido__pedido_id=titulo.pedido_id),
+        "historico": historico,
+    }, liberacao
 
 @login_required
 @never_cache
@@ -196,16 +230,23 @@ def titulo_novo(request):
 
 @financeiro_acao_required("VISUALIZAR")
 def titulo_detalhe(request, pk):
+    return _render_titulo_detalhe(request, pk)
+
+
+def _render_titulo_detalhe(request, pk, *, status=200, erro_decisao=""):
     titulo = get_object_or_404(
         TituloPagar.objects.select_related(
-            "fornecedor", "obra", "plano_financeiro", "pedido", "recebimento", "previsao_origem", "pagamento"
+            "fornecedor", "obra", "plano_financeiro__pai", "pedido__processo", "previsao_origem", "pagamento",
+            "recebimento__liberacao_financeira", "recebimento__usuario",
         ).prefetch_related("aprovacoes__usuario", "historico__usuario", "materiais", "anexos", "pedido__anexos", "pedido__recebimentos"),
         pk=pk,
     )
+    contexto_recebimento, liberacao = _contexto_recebimento(titulo)
+    aguarda_recebimento = previsao_aguarda_recebimento(titulo)
     recebimentos = []
     valor_documentado = Decimal("0")
-    if titulo.pedido_id:
-        recebimentos = list(titulo.pedido.recebimentos.prefetch_related("itens").all())
+    if titulo.pedido_id and not titulo.recebimento_id:
+        recebimentos = list(titulo.pedido.recebimentos.all())
         valor_documentado = sum((r.valor_total_nota or Decimal("0") for r in recebimentos), Decimal("0"))
 
     anexos_pedido, notas_fiscais_pedido = _documentos_pedido(titulo)
@@ -216,10 +257,17 @@ def titulo_detalhe(request, pk):
         "anexos_pedido": anexos_pedido,
         "notas_fiscais_pedido": notas_fiscais_pedido,
         "valor_documentado_pedido": valor_documentado,
+        "origem_recebimento": contexto_recebimento,
+        "divergente": titulo_tem_divergencia(titulo, liberacao),
+        "erro_decisao": erro_decisao,
+        "aguarda_recebimento": aguarda_recebimento,
+        "pode_reenviar": not aguarda_recebimento and titulo.status in {
+            TituloPagar.Status.PREVISTA, TituloPagar.Status.REJEITADO, TituloPagar.Status.CORRECAO_SOLICITADA,
+        },
         "pode_editar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
         "pode_aprovar": possui_acao_financeiro(request.user, "APROVAR"),
         "pode_pagar": possui_acao_financeiro(request.user, "PAGAR"),
-    })
+    }, status=status)
 
 
 @financeiro_acao_required("EDITAR_TITULOS")
@@ -238,11 +286,20 @@ def titulo_editar(request, pk):
             dados = dict(form.cleaned_data)
             anexos = dados.pop("anexos", [])
             try:
-                titulo = atualizar_titulo(titulo, usuario=request.user, dados=dados)
+                with transaction.atomic():
+                    if anexos:
+                        operacao, _ = bloquear_titulo(titulo)
+                        if operacao.esta_pago:
+                            raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento primeiro.")
+                        anexos_criados = _salvar_anexos([operacao], anexos, request.user)
+                    else:
+                        anexos_criados = 0
+                    titulo = atualizar_titulo(
+                        titulo, usuario=request.user, dados=dados, documentos_alterados=bool(anexos_criados),
+                    )
             except ValueError as exc:
                 messages.error(request, str(exc))
                 return redirect("financeiro:titulo_detalhe", pk=pk)
-            _salvar_anexos([titulo], anexos, request.user)
             messages.success(request, "Conta a Pagar atualizada.")
             return redirect("financeiro:titulo_detalhe", pk=titulo.pk)
     else:
@@ -259,8 +316,10 @@ def titulo_editar(request, pk):
 
 @financeiro_acao_required("EDITAR_TITULOS")
 @require_POST
+@transaction.atomic
 def titulo_excluir_anexo(request, pk, anexo_pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
+    titulo, _ = bloquear_titulo(titulo)
     if titulo.esta_pago:
         messages.error(request, "Conta paga não pode ter anexos excluídos. Estorne o pagamento primeiro.")
         return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -269,18 +328,18 @@ def titulo_excluir_anexo(request, pk, anexo_pk):
     nome = anexo.nome_original or anexo.arquivo.name.rsplit("/", 1)[-1]
     arquivo = anexo.arquivo
     anexo.delete()
-    try:
-        arquivo.delete(save=False)
-    except (FileNotFoundError, OSError):
-        pass
+    transaction.on_commit(lambda: _excluir_arquivo(arquivo))
+    reabrir_aprovacao(titulo, usuario=request.user, motivo="Anexo da Conta a Pagar excluído.")
     messages.success(request, f"Anexo {nome} excluído.")
     return redirect("financeiro:titulo_editar", pk=pk)
 
 
 @financeiro_acao_required("EDITAR_TITULOS")
 @require_POST
+@transaction.atomic
 def titulo_excluir_documento_legacy(request, pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
+    titulo, _ = bloquear_titulo(titulo)
     if titulo.esta_pago:
         messages.error(request, "Conta paga não pode ter documentos excluídos. Estorne o pagamento primeiro.")
         return redirect("financeiro:titulo_detalhe", pk=pk)
@@ -289,14 +348,23 @@ def titulo_excluir_documento_legacy(request, pk):
         return redirect("financeiro:titulo_editar", pk=pk)
 
     arquivo = titulo.arquivo_documento
-    titulo.arquivo_documento = None
+    titulo.arquivo_documento = ""
     titulo.save(update_fields=["arquivo_documento", "atualizado_em"])
+    if not (
+        RecebimentoPedido.objects.filter(arquivo_nota_fiscal=arquivo.name).exists()
+        or TituloPagar.objects.filter(arquivo_documento=arquivo.name).exists()
+    ):
+        transaction.on_commit(lambda: _excluir_arquivo(arquivo))
+    reabrir_aprovacao(titulo, usuario=request.user, motivo="Documento anterior da Conta a Pagar excluído.")
+    messages.success(request, "Documento anterior excluído.")
+    return redirect("financeiro:titulo_editar", pk=pk)
+
+
+def _excluir_arquivo(arquivo):
     try:
         arquivo.delete(save=False)
     except (FileNotFoundError, OSError):
         pass
-    messages.success(request, "Documento anterior excluído.")
-    return redirect("financeiro:titulo_editar", pk=pk)
 
 
 @financeiro_acao_required("EDITAR_TITULOS")
@@ -319,13 +387,16 @@ def titulo_enviar_aprovacao(request, pk):
 def titulo_decidir(request, pk):
     titulo = get_object_or_404(TituloPagar, pk=pk)
     decisao = request.POST.get("decisao")
-    observacao = (request.POST.get("observacao") or "").strip()
-    if decisao not in {AprovacaoTituloFinanceiro.Decisao.APROVADO, AprovacaoTituloFinanceiro.Decisao.REJEITADO}:
-        messages.error(request, "Decisão inválida.")
-        return redirect("financeiro:titulo_detalhe", pk=pk)
     try:
-        decidir_titulo(titulo, usuario=request.user, decisao=decisao, observacao=observacao)
+        decidir_titulo(
+            titulo, usuario=request.user, decisao=decisao, ciclo_esperado=interpretar_ciclo(request.POST.get("ciclo")),
+            observacao=request.POST.get("observacao", ""), ciencia_divergencia=request.POST.get("ciencia_divergencia") == "1",
+        )
         messages.success(request, "Decisão registrada.")
+    except CicloAprovacaoDesatualizado as exc:
+        if not possui_acao_financeiro(request.user, "VISUALIZAR"):
+            return HttpResponse(exc.messages[0], status=409, content_type="text/plain; charset=utf-8")
+        return _render_titulo_detalhe(request, pk, status=409, erro_decisao=exc.messages[0])
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:titulo_detalhe", pk=pk)

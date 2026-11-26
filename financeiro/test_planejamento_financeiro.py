@@ -129,7 +129,7 @@ class PlanejamentoFinanceiroTests(TestCase):
         self.assertEqual(resposta.context["totais"], {
             "PREVISAO": Decimal("0.00"), "PEDIDO": Decimal("107.07"), "CONTRATO": Decimal("107.07"),
             "LIBERACAO": Decimal("30.12"), "PAGO": Decimal("0.00"), "SALDO": Decimal("30.12"),
-            "PROGRAMADO": Decimal("0.00"),
+            "PROGRAMADO": Decimal("0.00"), "COMPROMISSO_FUTURO": Decimal("0.00"),
         })
         exportacao = recorte_planejamento(filtros)["linhas"].iterator()
         self.assertEqual({linha["tipo"]: linha["valor"] for linha in exportacao}, {

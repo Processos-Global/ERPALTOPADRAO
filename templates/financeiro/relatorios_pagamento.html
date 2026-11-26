@@ -84,7 +84,7 @@
 
 <div class="fin-filter-field"><label>De</label><input class="fin-control" type="date" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}"></div><div class="fin-filter-field"><label>Até</label><input class="fin-control" type="date" name="fim" value="{{ data_fim|date:'Y-m-d' }}"></div><div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Filtrar</button><a class="fin-btn" href="{% url 'financeiro:relatorios_pagamento' %}">Limpar</a></div></form></div></section>
 
-<section class="fin-section saari-payment-section"><form method="post" action="{% url 'financeiro:relatorio_pagamento_emitir' %}" id="pacote-form" data-download>{% csrf_token %}{% for id in obra_ids %}<input type="hidden" name="obra" value="{{ id }}">{% endfor %}<input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}"><input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}"><div class="fin-section__head"><div><h2>Pagamentos aprovados</h2><p>{{ itens_preview|length }} pagamentos disponíveis</p></div>{% if pode_emitir_relatorio %}<button type="submit" class="fin-btn fin-btn--primary" id="btn-pacote" disabled>Gerar pacote de pagamento</button>{% endif %}</div><div class="fin-section__body--flush fin-table-wrap saari-payment-table-wrap"><table class="fin-table saari-payment-table"><thead><tr><th style="width:42px"><input type="checkbox" id="selecionar-todos" aria-label="Selecionar toda a página"></th><th>Pagamento / Beneficiário</th><th>Obra</th><th>Aprovação</th><th>Vencimento</th><th>Documento / parcela</th><th>Meio de pagamento</th><th style="text-align:right">Valor</th></tr></thead><tbody>{% for item in itens_preview %}<tr><td><input class="pagamento-check" type="checkbox" name="aprovacoes" value="{{ item.aprovacao.pk }}" data-valor="{{ item.valor|unlocalize }}" {% if not pode_emitir_relatorio or item.duplicado %}disabled{% endif %}></td><td class="fin-main-cell"><strong>{{ item.titulo.beneficiario_exibicao }}</strong><small>{{ item.titulo.numero }} · {{ item.titulo.descricao }}</small></td><td>{{ item.titulo.obra|default:"—" }}</td><td>{{ item.aprovacao.criado_em|date:'d/m/Y' }}</td><td>{{ item.titulo.vencimento|date:'d/m/Y'|default:'—' }}</td><td>{{ item.titulo.documento_numero|default:"Sem número" }} · {{ item.titulo.rotulo_parcela }}{% if item.duplicado %}<small class="saari-duplicado">Duplicidade: emissão bloqueada</small>{% endif %}</td><td><select class="fin-control" name="meio_{{ item.aprovacao.pk }}" aria-label="Meio de pagamento {{ item.titulo.numero }}"><option value="">Selecione...</option>{% for codigo, rotulo in meios_pagamento %}<option value="{{ codigo }}" {% if codigo == item.meio %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></td><td class="fin-money">{{ item.valor|moeda_br }}</td></tr>{% empty %}<tr><td colspan="8" class="fin-empty">Nenhum pagamento aprovado disponível para esses filtros.</td></tr>{% endfor %}</tbody></table></div><div class="fin-section__body saari-selection-summary"><div><span class="saari-selection-label">Pagamentos selecionados</span><strong id="qtd-selecionados">0 selecionados</strong></div><div><span class="saari-selection-label">Valor total selecionado</span><strong id="total-selecionado">R$ 0,00</strong></div></div></form>{% include 'financeiro/_paginacao.html' %}</section>
+<section class="fin-section saari-payment-section"><form method="post" action="{% url 'financeiro:relatorio_pagamento_emitir' %}" id="pacote-form" data-download>{% csrf_token %}{% for id in obra_ids %}<input type="hidden" name="obra" value="{{ id }}">{% endfor %}<input type="hidden" name="inicio" value="{{ data_inicio|date:'Y-m-d' }}"><input type="hidden" name="fim" value="{{ data_fim|date:'Y-m-d' }}"><div class="fin-section__head"><div><h2>Pagamentos aprovados</h2><p>{{ itens_preview|length }} pagamentos disponíveis</p></div>{% if pode_emitir_relatorio %}<button type="submit" class="fin-btn fin-btn--primary" id="btn-pacote" disabled>Gerar pacote de pagamento</button>{% endif %}</div><div class="fin-section__body--flush fin-table-wrap saari-payment-table-wrap"><table class="fin-table saari-payment-table"><thead><tr><th style="width:42px"><input type="checkbox" id="selecionar-todos" aria-label="Selecionar toda a página"></th><th>Pagamento / Beneficiário</th><th>Obra</th><th>Aprovação</th><th>Vencimento</th><th>Documento / parcela</th><th>Meio de pagamento</th><th style="text-align:right">Valor</th></tr></thead><tbody>{% for item in itens_preview %}<tr><td><input class="pagamento-check" type="checkbox" name="aprovacoes" value="{{ item.aprovacao.pk }}" data-valor="{{ item.valor|unlocalize }}" data-obra="{{ item.titulo.obra_id|default_if_none:'administrativo'|unlocalize }}" {% if not pode_emitir_relatorio or item.duplicado %}disabled{% endif %}></td><td class="fin-main-cell"><strong>{{ item.titulo.beneficiario_exibicao }}</strong><small>{{ item.titulo.numero }} · {{ item.titulo.descricao }}</small></td><td>{{ item.titulo.obra|default:"—" }}</td><td>{{ item.aprovacao.criado_em|date:'d/m/Y' }}</td><td>{{ item.titulo.vencimento|date:'d/m/Y'|default:'—' }}</td><td>{{ item.titulo.documento_numero|default:"Sem número" }} · {{ item.titulo.rotulo_parcela }}{% if item.duplicado %}<small class="saari-duplicado">Duplicidade: emissão bloqueada</small>{% endif %}</td><td><select class="fin-control" name="meio_{{ item.aprovacao.pk }}" aria-label="Meio de pagamento {{ item.titulo.numero }}"><option value="">Selecione...</option>{% for codigo, rotulo in meios_pagamento %}<option value="{{ codigo }}" {% if codigo == item.meio %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></td><td class="fin-money">{{ item.valor|moeda_br }}</td></tr>{% empty %}<tr><td colspan="8" class="fin-empty">Nenhum pagamento aprovado disponível para esses filtros.</td></tr>{% endfor %}</tbody></table></div><div class="fin-section__body saari-selection-summary"><div><span class="saari-selection-label">Pagamentos selecionados</span><strong id="qtd-selecionados">0 selecionados</strong></div><div><span class="saari-selection-label">Valor total selecionado</span><strong id="total-selecionado">R$ 0,00</strong></div><p id="malote-obra-aviso" role="status" hidden></p></div></form>{% include 'financeiro/_paginacao.html' %}</section>
 
 <section class="fin-section saari-history" id="historico-emissoes">
   <div class="fin-section__head">
@@ -212,10 +212,47 @@
 
  const boxes=[...document.querySelectorAll('.pagamento-check')], all=document.getElementById('selecionar-todos'),qtd=document.getElementById('qtd-selecionados'),total=document.getElementById('total-selecionado'),botao=document.getElementById('btn-pacote'),form=document.getElementById('pacote-form');
 
- function calc(){const marcados=boxes.filter(b=>b.checked&&!b.disabled),soma=marcados.reduce((n,b)=>n+Number(String(b.dataset.valor).replace(',','.')),0);qtd.textContent=marcados.length+' selecionado(s)';total.textContent=soma.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});all.checked=marcados.length>0&&marcados.length===boxes.filter(b=>!b.disabled).length;all.indeterminate=marcados.length>0&&!all.checked;if(botao)botao.disabled=!marcados.length;}
+  const avisoObra = document.getElementById('malote-obra-aviso');
+  const elegiveis = boxes.filter(box => !box.disabled);
+  const selecionados = () => elegiveis.filter(box => box.checked);
+  const obrasDosTitulos = titulos => new Set(titulos.map(box => box.dataset.obra));
 
- all.addEventListener('change',()=>{boxes.forEach(b=>{if(!b.disabled)b.checked=all.checked});calc()});boxes.forEach(b=>b.addEventListener('change',calc));form.addEventListener('submit',e=>{if(!boxes.some(b=>b.checked&&!b.disabled)||boxes.some(b=>b.checked&&!b.disabled&&!form.querySelector('[name="meio_'+b.value+'"]').value)||!confirm('Gerar o pacote apenas com os pagamentos selecionados?')){e.preventDefault();if(boxes.some(b=>b.checked&&!b.disabled&&!form.querySelector('[name="meio_'+b.value+'"]').value))alert('Informe o meio de pagamento de todos os itens selecionados.');}});calc();
-  window.addEventListener('pageshow',()=>{if(botao)botao.disabled=!boxes.some(b=>b.checked&&!b.disabled);});
+  function calc() {
+    const marcados = selecionados();
+    const soma = marcados.reduce((centavos, box) => {
+      const [inteiro, decimal = ''] = box.dataset.valor.split('.');
+      return centavos + BigInt(inteiro) * 100n + BigInt(decimal.padEnd(2, '0'));
+    }, 0n);
+    qtd.textContent = `${marcados.length} selecionado(s)`;
+    total.textContent = `R$ ${(soma / 100n).toLocaleString('pt-BR')},${String(soma % 100n).padStart(2, '0')}`;
+    all.checked = marcados.length > 0 && marcados.length === elegiveis.length;
+    all.indeterminate = marcados.length > 0 && !all.checked;
+    const misturadas = obrasDosTitulos(marcados).size > 1;
+    avisoObra.hidden = !misturadas;
+    avisoObra.textContent = misturadas ? 'Selecione títulos de uma única obra por malote.' : '';
+    if (botao) botao.disabled = !marcados.length || misturadas;
+  }
+
+  all.addEventListener('change', () => {
+    elegiveis.forEach(box => { box.checked = all.checked; });
+    calc();
+  });
+  elegiveis.forEach(box => box.addEventListener('change', calc));
+  form.addEventListener('submit', event => {
+    const marcados = selecionados();
+    if (!marcados.length || obrasDosTitulos(marcados).size > 1) {
+      event.preventDefault();
+      return;
+    }
+    if (marcados.some(box => !form.elements.namedItem(`meio_${box.value}`).value)) {
+      event.preventDefault();
+      alert('Informe o meio de pagamento de todos os itens selecionados.');
+      return;
+    }
+    if (!confirm('Gerar o malote com os pagamentos selecionados?')) event.preventDefault();
+  });
+  calc();
+  window.addEventListener('pageshow', calc);
 })();
 
 </script>

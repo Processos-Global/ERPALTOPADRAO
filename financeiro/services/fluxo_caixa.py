@@ -12,6 +12,7 @@ from financeiro.models import Pagamento, PrevisaoFinanceira, TituloPagar
 STATUS_ABERTOS = {
     TituloPagar.Status.PREVISTA,
     TituloPagar.Status.AGUARDANDO_APROVACAO,
+    TituloPagar.Status.CORRECAO_SOLICITADA,
     TituloPagar.Status.APROVADO,
 }
 
@@ -49,6 +50,7 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None, obra_ids=None,
     inicio = inicio or timezone.localdate()
     fim = inicio + timedelta(days=dias)
     from financeiro.services.agenda import saldo_titulo_sql
+    from financeiro.services.compromissos import compromissos_datados
     from financeiro.services.indicadores_gerenciais import _filtros
 
     titulos = titulos_com_data_desembolso(TituloPagar.objects.filter(status__in=STATUS_ABERTOS))
@@ -67,6 +69,11 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None, obra_ids=None,
 
     valores_contas = dict(titulos.order_by().values_list("data_desembolso").annotate(total=Sum(saldo_titulo_sql())))
     valores_previsoes = dict(previsoes.order_by().values_list("data_prevista").annotate(total=Sum("valor_previsto")))
+    valores_compromissos = (
+        compromissos_datados(inicio, fim, obra_ids=obras_filtro, classe=classe,
+                            apropriacao=apropriacao, fornecedor=fornecedor)
+        if not origem or origem == TituloPagar.Origem.COMPRA else {}
+    )
 
     serie = []
     cursor = inicio
@@ -74,7 +81,7 @@ def serie_desembolsos(*, inicio=None, dias=90, obra_id=None, obra_ids=None,
     total = zero
     while cursor <= fim:
         contas = (valores_contas.get(cursor) or zero).quantize(zero)
-        previsto = (valores_previsoes.get(cursor) or zero).quantize(zero)
+        previsto = ((valores_previsoes.get(cursor) or zero) + valores_compromissos.get(cursor, zero)).quantize(zero)
         saida = contas + previsto
         total += saida
         serie.append({

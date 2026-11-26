@@ -1,17 +1,20 @@
 from collections import defaultdict
 import re
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.validators import DecimalValidator
 from django.db import models, transaction
 from django.utils import timezone
+
+from core.validators import validar_documento_upload
 
 from financeiro.services.integracoes import adiar_sinais_financeiros_pedido, sincronizar_contas_pedido
 
 from compras.models import (
     HistoricoPrevisaoPedido,
+    NecessidadeCompra,
     PedidoCompra,
     PedidoCompraItem,
     ParcelaPrevistaPedido,
@@ -21,7 +24,6 @@ from compras.models import (
 )
 
 from .auditoria import registrar_evento
-from .cobertura_estoque import revalidar_necessidade
 from .comercial import (
     condicao_pagamento_final_fornecedor,
     prazo_final_fornecedor,
@@ -274,6 +276,37 @@ def _sincronizar_status_contratacao_processo(*, processo, usuario):
     return p
 
 
+def _validar_quantidades_para_emissao(processo, quantidades_novas, necessidades_novas):
+    if not quantidades_novas:
+        return
+    itens_emitidos = (
+        PedidoCompraItem.objects
+        .filter(pedido__processo=processo, pedido__obra_id=processo.obra_id, necessidade_id__in=quantidades_novas)
+        .order_by()
+        .annotate(recebido=models.Sum(
+            "recebimentos__quantidade",
+            filter=models.Q(recebimentos__recebimento__pedido_id=models.F("pedido_id")),
+        ))
+        .values_list("necessidade_id", "pedido__status", "quantidade", "recebido")
+    )
+    comprometido = defaultdict(lambda: ZERO)
+    for necessidade_id, status, contratada, recebida in itens_emitidos:
+        recebida = recebida or ZERO
+        # No cancelamento só permanece comprometida a entrega física registrada.
+        comprometido[necessidade_id] += recebida if status == PedidoCompra.Status.CANCELADO else max(contratada, recebida)
+
+    for necessidade_id, quantidade in quantidades_novas.items():
+        necessidade = necessidades_novas[necessidade_id]
+        if necessidade.situacao == NecessidadeCompra.Situacao.CANCELADA:
+            raise ValidationError(f"A necessidade {necessidade.descricao} está cancelada.")
+        limite = min(necessidade.quantidade_incluida, necessidade.quantidade_necessaria)
+        if quantidade + comprometido[necessidade_id] > limite:
+            raise ValidationError(
+                f"A quantidade a emitir para {necessidade.descricao} excede o saldo comercial. "
+                "Revise a contratação considerando os recebimentos e os pedidos em aberto."
+            )
+
+
 @transaction.atomic
 @adiar_sinais_financeiros_pedido()
 def gerar_pedidos(processo, usuario, local_entrega=""):
@@ -323,10 +356,11 @@ def gerar_pedidos(processo, usuario, local_entrega=""):
         faltantes = [a for a in grupo if a.necessidade_id not in existentes]
         faltantes_por_fornecedor[fornecedor_id] = faltantes
         for adjudicacao in faltantes:
+            if adjudicacao.quantidade <= ZERO:
+                raise ValidationError(f"A necessidade {adjudicacao.necessidade.descricao} possui quantidade inválida.")
             quantidades_novas[adjudicacao.necessidade_id] += adjudicacao.quantidade
             necessidades_novas[adjudicacao.necessidade_id] = adjudicacao.necessidade
-    for necessidade_id, quantidade in quantidades_novas.items():
-        revalidar_necessidade(necessidades_novas[necessidade_id], quantidade_compra=quantidade)
+    _validar_quantidades_para_emissao(p, quantidades_novas, necessidades_novas)
 
     pedidos_resultado = []
     for fornecedor_id, grupo in grupos.items():
@@ -572,6 +606,7 @@ def registrar_recebimento(
     valor_total_nota,
     arquivo_nota_fiscal,
     valor_frete_nota=None,
+    vencimento_nota=None,
     observacao="",
     dados_fiscais_opcionais=False,
 ):
@@ -586,6 +621,10 @@ def registrar_recebimento(
         raise ValidationError("Este pedido não aceita novos recebimentos.")
 
     numero_nota_fiscal = (numero_nota_fiscal or "").strip() or None
+    if numero_nota_fiscal and len(numero_nota_fiscal) > 80:
+        raise ValidationError("O número da Nota Fiscal deve ter no máximo 80 caracteres.")
+    if vencimento_nota is not None and not isinstance(vencimento_nota, date):
+        raise ValidationError("Informe um vencimento da Nota Fiscal válido.")
     if not dados_fiscais_opcionais:
         if not numero_nota_fiscal:
             raise ValidationError("Informe o número da Nota Fiscal.")
@@ -602,8 +641,9 @@ def registrar_recebimento(
             total_nota = Decimal(str(valor_total_nota).replace(",", "."))
         except Exception as exc:
             raise ValidationError("Informe um valor total válido para a Nota Fiscal.") from exc
-        if total_nota <= ZERO:
+        if not total_nota.is_finite() or total_nota <= ZERO:
             raise ValidationError("O valor total da Nota Fiscal deve ser maior que zero.")
+        DecimalValidator(18, 2)(total_nota)
     elif not dados_fiscais_opcionais:
         raise ValidationError("Informe um valor total válido para a Nota Fiscal.")
 
@@ -627,10 +667,11 @@ def registrar_recebimento(
         except Exception as exc:
             raise ValidationError(f"Quantidade inválida para {item.descricao}.") from exc
 
-        if quantidade < ZERO:
+        if not quantidade.is_finite() or quantidade < ZERO:
             raise ValidationError("Quantidade recebida não pode ser negativa.")
         if quantidade == ZERO:
             continue
+        DecimalValidator(18, 4)(quantidade)
         # O recebimento físico pode ultrapassar a quantidade originalmente
         # pedida. O pedido continua preservando a quantidade contratada e o
         # excedente fica registrado no recebimento/NF para conferência e
@@ -643,8 +684,9 @@ def registrar_recebimento(
                 valor_recebido = Decimal(str(valor_informado).replace(",", "."))
             except Exception as exc:
                 raise ValidationError(f"Valor recebido inválido para {item.descricao}.") from exc
-            if valor_recebido <= ZERO:
+            if not valor_recebido.is_finite() or valor_recebido <= ZERO:
                 raise ValidationError(f"O valor recebido de {item.descricao} deve ser maior que zero.")
+            DecimalValidator(18, 2)(valor_recebido)
             valor_recebido = quantizar_moeda(valor_recebido)
         elif not dados_fiscais_opcionais:
             raise ValidationError(f"Informe o valor recebido do item {item.descricao}.")
@@ -657,6 +699,7 @@ def registrar_recebimento(
     recebimento = RecebimentoPedido.objects.create(
         pedido=p,
         numero_nota_fiscal=numero_nota_fiscal,
+        vencimento_nota=vencimento_nota,
         arquivo_nota_fiscal=arquivo_nota_fiscal,
         valor_total_nota=quantizar_moeda(total_nota) if total_nota is not None else None,
         valor_frete_nota=frete_nota,
@@ -708,6 +751,7 @@ def registrar_recebimento(
             "pedido_id": p.pk,
             "recebimento_id": recebimento.pk,
             "numero_nota_fiscal": numero_nota_fiscal,
+            "vencimento_nota": vencimento_nota.isoformat() if vencimento_nota else None,
             "valor_total_nota": str(recebimento.valor_total_nota),
             "valor_frete_nota": str(frete_nota) if frete_nota is not None else None,
             "excedentes": excedentes,
@@ -719,12 +763,89 @@ def registrar_recebimento(
     # ENTREGA_PARCIAL e ENTREGUE já contam como status confirmados na regra
     # de contratação; por isso o processo precisa ser recalculado aqui.
     _sincronizar_status_contratacao_processo(processo=p.processo, usuario=usuario)
-    from financeiro.services.liberacoes import registrar_recebimento_para_liberacao
+    from financeiro.services.solicitacoes_recebimentos import registrar_solicitacao_recebimento
 
-    # O recebimento gera apenas uma candidata rastreável; a aprovação financeira
-    # continua sendo uma ação separada, com permissões próprias.
-    registrar_recebimento_para_liberacao(recebimento, usuario=usuario)
+    registrar_solicitacao_recebimento(recebimento, usuario=usuario)
     return recebimento
+
+
+def _valor_corrigido_nota(valor, rotulo, *, zero_permitido=False):
+    try:
+        valor = Decimal(str(valor).replace(",", "."))
+    except (InvalidOperation, ValueError, TypeError) as exc:
+        raise ValidationError(f"Informe um valor válido para {rotulo}.") from exc
+    if not valor.is_finite() or valor < ZERO or (valor == ZERO and not zero_permitido):
+        raise ValidationError(f"Informe um valor válido para {rotulo}.")
+    DecimalValidator(18, 2)(valor)
+    return quantizar_moeda(valor)
+
+
+@transaction.atomic
+def corrigir_documentacao_recebimento(
+    *, recebimento, numero_nota_fiscal, valor_total_nota, valores_itens, usuario,
+    arquivo_nota_fiscal=None, valor_frete_nota=None, vencimento_nota=None,
+):
+    """Corrige o documento de uma nova entrega ainda em conferência fiscal."""
+    from compras.services.permissoes import AcaoCompra, possui_acao_compras
+    from financeiro.services.solicitacoes_recebimentos import (
+        bloquear_pendencia_recebimento, gerar_solicitacao_pendente,
+    )
+
+    if not possui_acao_compras(usuario, AcaoCompra.RECEBER_PEDIDOS):
+        raise PermissionDenied("Permissão de recebimento necessária.")
+    pedido = _bloquear_pedido_no_fluxo(recebimento.pedido)
+    recebimento = RecebimentoPedido.objects.select_for_update().get(pk=recebimento.pk, pedido=pedido)
+    liberacao = bloquear_pendencia_recebimento(recebimento)
+    if not liberacao:
+        raise ValidationError("O recebimento não possui pendência fiscal reprocessável.")
+
+    numero = (numero_nota_fiscal or "").strip()
+    if not numero or len(numero) > 80:
+        raise ValidationError("Informe o número da Nota Fiscal com até 80 caracteres.")
+    if RecebimentoPedido.objects.filter(pedido=pedido, numero_nota_fiscal=numero).exclude(pk=recebimento.pk).exists():
+        raise ValidationError(f"A Nota Fiscal {numero} já foi registrada neste pedido.")
+    if arquivo_nota_fiscal:
+        validar_documento_upload(arquivo_nota_fiscal)
+    elif not recebimento.arquivo_nota_fiscal:
+        raise ValidationError("Anexe o arquivo da Nota Fiscal.")
+    if vencimento_nota is not None and not isinstance(vencimento_nota, date):
+        raise ValidationError("Informe um vencimento da Nota Fiscal válido.")
+    total = _valor_corrigido_nota(valor_total_nota, "o total da Nota Fiscal")
+    frete = recebimento.valor_frete_nota
+    if valor_frete_nota not in (None, ""):
+        frete = _valor_corrigido_nota(valor_frete_nota, "o frete da Nota Fiscal", zero_permitido=True)
+
+    itens = list(recebimento.itens.select_for_update().order_by("pk"))
+    if set(valores_itens) - {item.item_pedido_id for item in itens}:
+        raise ValidationError("A Nota Fiscal possui valores para itens que não fazem parte do recebimento.")
+    valores_anteriores = {str(item.item_pedido_id): str(item.valor_recebido) for item in itens}
+    for item in itens:
+        valor = valores_itens.get(item.item_pedido_id, item.valor_recebido)
+        item.valor_recebido = _valor_corrigido_nota(valor, f"o item {item.item_pedido_id}")
+    if sum((item.valor_recebido for item in itens), ZERO) + (frete or ZERO) != total:
+        raise ValidationError("O total da Nota Fiscal deve corresponder aos itens recebidos e ao frete discriminado.")
+
+    anterior = {
+        "numero_nota_fiscal": recebimento.numero_nota_fiscal,
+        "arquivo_nota_fiscal": recebimento.arquivo_nota_fiscal.name,
+        "valor_total_nota": str(recebimento.valor_total_nota),
+        "valor_frete_nota": str(recebimento.valor_frete_nota),
+        "valores_itens": valores_anteriores,
+    }
+    recebimento.numero_nota_fiscal = numero
+    recebimento.valor_total_nota = total
+    recebimento.valor_frete_nota = frete
+    if arquivo_nota_fiscal:
+        recebimento.arquivo_nota_fiscal = arquivo_nota_fiscal
+    if vencimento_nota:
+        recebimento.vencimento_nota = vencimento_nota
+    recebimento.save(update_fields=["numero_nota_fiscal", "valor_total_nota", "valor_frete_nota", "arquivo_nota_fiscal", "vencimento_nota"])
+    RecebimentoPedidoItem.objects.bulk_update(itens, ["valor_recebido"])
+    registrar_evento(
+        pedido.processo, "CORRECAO_FISCAL_RECEBIMENTO", usuario, f"Nota {numero} revisada no pedido {pedido.numero}.",
+        {"recebimento_id": recebimento.pk, "anterior": anterior, "numero_nota_fiscal": numero, "valor_total_nota": str(total)},
+    )
+    return gerar_solicitacao_pendente(liberacao, recebimento, pedido, usuario)
 
 
 @transaction.atomic

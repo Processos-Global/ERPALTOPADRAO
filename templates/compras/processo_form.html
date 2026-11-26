@@ -1,4 +1,5 @@
 {% extends "layouts/base.html" %}
+{% load static l10n %}
 {% block extra_css %}
 <style>
 /* ==========================================================
@@ -82,8 +83,11 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 .purchase-items-card{padding:15px 16px 14px;margin-bottom:14px}
 .purchase-section-title{margin:0 0 13px;color:var(--saari-text);font-size:14px;font-weight:800}
 .purchase-items{display:grid;gap:9px}
-.purchase-item{display:grid;grid-template-columns:21px 24px minmax(210px,1.55fr) 125px 110px minmax(170px,1.1fr) minmax(230px,1.35fr) 34px;gap:12px;align-items:end}
-.purchase-item__exception{grid-column:3/-2;display:flex;flex-wrap:wrap;gap:12px;align-items:start}.purchase-item__exception .purchase-field{flex:1 1 260px}
+.purchase-items-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.purchase-items-head .purchase-section-title,.purchase-items-head .purchase-add{margin:0}
+.purchase-item{display:grid;grid-template-columns:21px 24px minmax(0,1.5fr) minmax(195px,1fr) minmax(0,1fr) 34px;gap:12px;align-items:start}
+.purchase-quantidades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.purchase-item__remover{grid-column:-2;grid-row:1;margin-top:18px}
 .purchase-item__drag{height:38px;display:grid;place-items:center;color:var(--saari-text);cursor:grab}
 .purchase-item__number{height:38px;display:grid;place-items:center;color:var(--saari-text);font-size:11px}
 .purchase-field{min-width:0}
@@ -189,26 +193,25 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
 .purchase-existing__list{display:flex;gap:6px;flex-wrap:wrap}.purchase-existing__item{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--saari-border);border-radius:999px;background:var(--saari-surface);color:var(--saari-text);font-size:9px;font-weight:700}
 
 @media(max-width:1200px){
-  .purchase-item{grid-template-columns:21px 24px minmax(190px,1.4fr) 110px 100px minmax(150px,1fr) minmax(190px,1.2fr) 34px;gap:8px}
+  .purchase-item{gap:8px}
   .purchase-body-grid{grid-template-columns:minmax(0,1fr) 340px}
   .purchase-hero{grid-template-columns:1.4fr .9fr .9fr .85fr}
 }
 @media(max-width:980px){
   .purchase-main{padding:0 14px 20px}
   .purchase-body-grid{grid-template-columns:1fr}.purchase-hero{grid-template-columns:1fr 1fr}.purchase-hero__block:nth-child(3){border-left:0}.purchase-hero__block{padding:12px 14px}.purchase-hero__block:first-child{padding-left:14px}
-  .purchase-item{grid-template-columns:20px 24px 1fr 110px 100px 34px}.purchase-item>.purchase-field:nth-of-type(4),.purchase-item>.purchase-field:nth-of-type(5){grid-column:3/6}.purchase-item>.purchase-field:nth-of-type(4){grid-row:2}.purchase-item>.purchase-field:nth-of-type(5){grid-row:3}
+  .purchase-item{grid-template-columns:20px 24px minmax(0,1fr) 34px}
+  .purchase-quantidades,.purchase-field--observacao{grid-column:3/-1}
 }
 @media(max-width:680px){
   .purchase-main{padding:0 9px 16px}.purchase-topbar{height:58px}.purchase-profile__copy{display:none}.purchase-heading h1{font-size:23px}
   .purchase-hero{grid-template-columns:1fr}.purchase-hero__block,.purchase-hero__block:nth-child(3){border-left:0;border-top:1px solid var(--saari-border)}.purchase-hero__block:first-child{border-top:0}
-  .purchase-item{display:grid;grid-template-columns:20px 24px 1fr 34px;align-items:end}.purchase-item>.purchase-field{grid-column:3/4!important;grid-row:auto!important}.purchase-delete{grid-column:4;grid-row:1;margin-bottom:4px}
   .purchase-side-grid{grid-template-columns:1fr}.purchase-side-grid .purchase-field--full{grid-column:auto}.purchase-actionbar{flex-direction:column;align-items:stretch}.purchase-actionbar__spacer{display:none}.purchase-action{width:100%}.purchase-action--primary{min-width:0}
 }
 
-  .purchase-item{grid-template-columns:28px 34px minmax(360px,1fr) 150px minmax(220px,.55fr) 36px!important}
   .purchase-field--material select{width:100%}
   .purchase-field-help{display:block;margin-top:5px;color:var(--saari-text-muted);font-size:11px;line-height:1.35}
-  @media(max-width:1100px){.purchase-item{grid-template-columns:28px 34px 1fr 140px 36px!important}.purchase-field--material{grid-column:3/5}.purchase-item .purchase-field:nth-of-type(3){grid-column:3/5}}
+  .purchase-field-help:empty{margin-top:0}
 
   .purchase-material-combobox{position:relative}
   .purchase-material-search{margin-bottom:0;padding-right:34px!important}
@@ -248,7 +251,7 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         <div class="purchase-hero__block"><div><span class="purchase-kicker">Status da compra</span><span class="purchase-status"><span class="purchase-status__dot"></span>RASCUNHO</span><div class="purchase-status-meta">Última atualização: {% now "d/m/Y H:i" %}</div></div></div>
       </section>
 
-      <form method="post" id="purchase-form" novalidate>
+      <form method="post" id="purchase-form" novalidate{% if item_inicial and not eh_grande_fornecedor %} data-estoque-url="{% url 'compras:estoque_materiais_obra' %}" data-estoque-obra="{{ item_inicial.cronograma_obra.obra_id|unlocalize }}"{% endif %}>
         {% csrf_token %}{{ form.item_cronograma }}{{ form.titulo }}{{ formset.management_form }}
         {% if processos_ativos_existentes %}
         <div class="purchase-existing">
@@ -267,19 +270,16 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         {% if formset.non_form_errors %}{% for error in formset.non_form_errors %}<div class="purchase-form-error">{{ error }}</div>{% endfor %}{% endif %}
 
         <section class="purchase-card purchase-items-card{% if eh_grande_fornecedor %} purchase-row-hidden{% endif %}">
-          <h2 class="purchase-section-title">Itens da compra</h2>
+          <div class="purchase-items-head">
+            <div>
+              <h2 class="purchase-section-title">Itens da compra</h2>
+              <small class="purchase-field-help">A quantidade a cotar usa a solicitada quando o campo fica em branco. O estoque é apenas informativo.</small>
+            </div>
+            {% if item_inicial %}<button type="button" class="purchase-add" data-estoque-atualizar>Atualizar estoque</button>{% endif %}
+          </div>
           <div class="purchase-items" id="items-container">
             {% for item_form in formset %}
-            <div class="purchase-item" data-form-row>
-              {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
-              <div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div>
-              <div class="purchase-item__number" data-row-number>{{ forloop.counter }}</div>
-              <div class="purchase-field purchase-field--material"><label>{{ item_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ item_form.material }}</div><div class="purchase-material-results" data-material-results></div></div>{% for error in item_form.material.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}<small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div>
-              <div class="purchase-field"><label>{{ item_form.quantidade.label }} <span class="req">*</span></label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
-              <div class="purchase-field"><label>Observações (opcional)</label>{{ item_form.observacao }}{% for error in item_form.observacao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div>
-              {% if pode_excecao_estoque %}<div class="purchase-item__exception"><label>{{ item_form.excecao_estoque }} Exceção de estoque</label><div class="purchase-field"><label>Justificativa</label>{{ item_form.justificativa_excecao }}{% for error in item_form.justificativa_excecao.errors %}<div class="purchase-error">{{ error }}</div>{% endfor %}</div></div>{% endif %}
-              <div>{% if item_form.DELETE %}<div style="display:none">{{ item_form.DELETE }}</div>{% endif %}<button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div>
-            </div>
+              {% include "compras/_processo_item_form.html" with item_form=item_form numero=forloop.counter only %}
             {% endfor %}
           </div>
           <button type="button" class="purchase-add" id="add-item"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Adicionar item</button>
@@ -309,7 +309,9 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
         <div class="purchase-card purchase-actionbar"><a class="purchase-action" href="{% url 'compras:dashboard' %}" data-transition-link><svg viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12"/></svg>Cancelar</a><div class="purchase-actionbar__spacer"></div>{% if not eh_grande_fornecedor %}<button class="purchase-action" name="acao" value="rascunho" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h14l2 2v16H3V3h2Z"/><path d="M7 3v6h10V3M7 21v-7h10v7"/></svg>Salvar rascunho</button>{% endif %}<button class="purchase-action purchase-action--primary" name="acao" value="iniciar" type="submit"><svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>{% if eh_grande_fornecedor %}Criar processo e abrir matriz{% else %}Enviar para Suprimentos{% endif %}</button></div>
       </form>
 
-      <template id="empty-form-template"><div class="purchase-item" data-form-row>{% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}<div class="purchase-item__drag" aria-hidden="true"><svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" stroke="none"><circle cx="4" cy="4" r="1.2"/><circle cx="10" cy="4" r="1.2"/><circle cx="4" cy="10" r="1.2"/><circle cx="10" cy="10" r="1.2"/><circle cx="4" cy="16" r="1.2"/><circle cx="10" cy="16" r="1.2"/></svg></div><div class="purchase-item__number" data-row-number></div><div class="purchase-field purchase-field--material"><label>{{ formset.empty_form.material.label }} <span class="req">*</span></label><div class="purchase-material-combobox" data-material-combobox><input type="text" class="cp-input purchase-material-search" placeholder="Pesquisar material..." data-material-search autocomplete="off"><div class="purchase-material-hidden-select">{{ formset.empty_form.material }}</div><div class="purchase-material-results" data-material-results></div></div><small class="purchase-field-help">Digite para pesquisar e selecione o material nos resultados.</small></div><div class="purchase-field"><label>{{ formset.empty_form.quantidade.label }} <span class="req">*</span></label>{{ formset.empty_form.quantidade }}</div><div class="purchase-field"><label>Observações (opcional)</label>{{ formset.empty_form.observacao }}</div>{% if pode_excecao_estoque %}<div class="purchase-item__exception"><label>{{ formset.empty_form.excecao_estoque }} Exceção de estoque</label><div class="purchase-field"><label>Justificativa</label>{{ formset.empty_form.justificativa_excecao }}</div></div>{% endif %}<div><div style="display:none">{{ formset.empty_form.DELETE }}</div><button class="purchase-delete" type="button" data-remove aria-label="Remover item"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button></div></div></template>
+      <template id="empty-form-template">
+        {% include "compras/_processo_item_form.html" with item_form=formset.empty_form only %}
+      </template>
     </main>
   </div>
 </div>
@@ -426,10 +428,28 @@ body > .app-shell > .app-content > .messages{position:fixed;right:24px;top:20px;
       if(e.key==='Escape')closeMaterialResults();
     });
   }
-  function bindRow(row){bindMaterialSearch(row);qs('[data-remove]',row)?.addEventListener('click',()=>{const d=qs('input[type="checkbox"][name$="-DELETE"]',row),active=qsa('[data-form-row]',items).filter(r=>!rowDeleted(r));if(active.length<=1){qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');return}if(d){d.checked=true;row.classList.add('purchase-row-hidden')}else row.remove();updateRows()})}
+  function bindRow(row){
+    bindMaterialSearch(row);
+    qs('[data-remove]',row)?.addEventListener('click',()=>{
+      const deleted=qs('input[type="checkbox"][name$="-DELETE"]',row);
+      const active=qsa('[data-form-row]',items).filter(item=>!rowDeleted(item));
+      if(active.length<=1){
+        qsa('input,textarea,select',row).filter(el=>!el.matches('[type="hidden"],[type="checkbox"]')).forEach(el=>el.value='');
+      }else if(deleted){
+        deleted.checked=true;
+        row.classList.add('purchase-row-hidden');
+      }else{
+        row.remove();
+      }
+      updateRows();
+      items.dispatchEvent(new Event('compras:itens-alterados',{bubbles:true}));
+    });
+  }
   qsa('[data-form-row]',items).forEach(bindRow);addItem?.addEventListener('click',()=>{if(!template||!totalForms)return;const i=Number(totalForms.value||0),markup=template.innerHTML.replace(/__prefix__/g,String(i)),holder=document.createElement('div');holder.innerHTML=markup.trim();const row=holder.firstElementChild;items.appendChild(row);totalForms.value=String(i+1);bindRow(row);updateRows();qs('input,select,textarea',row)?.focus()});
 
   updateRows();
 })();
 </script>
 {% endblock %}
+
+{% block extra_js %}<script defer src="{% static 'js/compras-estoque.js' %}"></script>{% endblock %}

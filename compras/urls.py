@@ -23,6 +23,7 @@ urlpatterns = [
     path("painel/", views.dashboard, name="dashboard"),
     path("prazos/regras/", views.regras_prazo_compra, name="regras_prazo"),
     path("processos/", views.lista_processos, name="lista_processos"),
+    path("estoque/materiais/", views.estoque_materiais_obra, name="estoque_materiais_obra"),
     path("grandes-fornecedores/", views.grandes_fornecedores, name="grandes_fornecedores"),
     path("grandes-fornecedores/relatorio/", views.relatorio_grandes_fornecedores, name="relatorio_grandes_fornecedores"),
     path("grandes-fornecedores/itens/<int:item_id>/status/", views.gf_atualizar_status_item, name="gf_atualizar_status_item"),
@@ -88,5 +89,6 @@ urlpatterns = [
     path("pedidos/<int:pedido_id>/status/", views.acao_atualizar_status_pedido, name="atualizar_status_pedido"),
     path("pedidos/<int:pedido_id>/previsao/", views.acao_atualizar_previsao_pedido, name="atualizar_previsao_pedido"),
     path("pedidos/<int:pedido_id>/receber/", views.acao_receber_pedido, name="receber_pedido"),
+    path("pedidos/<int:pedido_id>/recebimentos/<int:recebimento_id>/documentacao/", views.acao_corrigir_documentacao_recebimento, name="corrigir_documentacao_recebimento"),
     path("pedidos/<int:pedido_id>/cancelar/", views.acao_cancelar_pedido, name="cancelar_pedido"),
 ]

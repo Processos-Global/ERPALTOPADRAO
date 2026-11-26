@@ -1,4 +1,5 @@
 from .menu import menu_suprimentos
+from .estoque import estoque_materiais_obra
 from .processos import (
     cobertura_necessidade,
     dashboard,
@@ -42,6 +43,7 @@ from .acoes import (
     acao_atualizar_status_pedido,
     acao_atualizar_previsao_pedido,
     acao_receber_pedido,
+    acao_corrigir_documentacao_recebimento,
     acao_cancelar_pedido,
 )
 

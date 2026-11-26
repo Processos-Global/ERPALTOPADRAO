@@ -40,6 +40,7 @@ from compras.models import (
     PedidoCompraAnexo,
     ProcessoCompra,
     RecebimentoPedido,
+    ReservaEstoqueCompra,
     SolicitacaoCotacaoFornecedor,
 )
 from compras.services.permissoes import (
@@ -906,8 +907,9 @@ def lista_processos(request):
 def cobertura_necessidade(request, pk, necessidade_id):
     necessidade = get_object_or_404(
         NecessidadeCompra.objects.select_related("processo__obra", "material").filter(
+            Q(reserva_estoque__isnull=False) | ~Q(situacao=NecessidadeCompra.Situacao.CANCELADA),
             processo_id=pk, material_id__isnull=False,
-        ).exclude(situacao=NecessidadeCompra.Situacao.CANCELADA),
+        ),
         pk=necessidade_id,
     )
     return render(request, "compras/necessidade_cobertura.html", {
@@ -922,6 +924,8 @@ def historico_processo(request, pk):
     processo = get_object_or_404(ProcessoCompra.objects.only("pk", "numero", "titulo"), pk=pk)
     return _render_secao_processo(request, processo, "Histórico do processo", "compras/_processo_historico.html", {
         "historico": processo.historico.select_related("usuario")[:100],
+        "reservas_legadas": ReservaEstoqueCompra.objects.filter(necessidade__processo=processo)
+        .select_related("material").order_by("pk"),
     })
 
 
@@ -1098,9 +1102,6 @@ def detalhe_processo(
         "pode_cancelar_pedidos": possui_acao_compras(
             request.user, AcaoCompra.CANCELAR_PEDIDOS
         ),
-        "pode_excecao_estoque": possui_acao_compras(
-            request.user, AcaoCompra.EXCECAO_ESTOQUE
-        ),
         "pode_administrar": possui_acao_compras(
             request.user, AcaoCompra.ADMINISTRAR
         ),
@@ -1154,13 +1155,23 @@ def detalhe_processo(
         for necessidade in necessidades:
             necessidade.form_edicao = NecessidadeCompraForm(
                 processo=processo,
+                edicao=True,
+                material_atual_id=necessidade.material_id,
+                auto_id=f"id_necessidade_{necessidade.pk}_%s",
                 initial={
                     "material": necessidade.material_id,
-                    "quantidade": necessidade.quantidade_incluida,
+                    "quantidade_comercial": necessidade.quantidade_incluida,
                     "observacao": necessidade.observacao,
                 },
             )
-            necessidade.form_edicao.fields["material"].choices = material_choices
+            campo_material = necessidade.form_edicao.fields["material"]
+            if necessidade.material_id and not necessidade.material.ativo:
+                campo_material.choices = [
+                    *material_choices,
+                    (necessidade.material_id, campo_material.label_from_instance(necessidade.material)),
+                ]
+            else:
+                campo_material.choices = material_choices
 
     itens_prefetch = Prefetch(
         "itens",
@@ -1389,8 +1400,7 @@ def nova_compra_avulsa(request):
             return redirect("compras:detalhe_processo", pk=processo.pk)
         except ValidationError as exc:
             form.add_error(None, exc)
-    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset,
-        "pode_excecao_estoque": possui_acao_compras(request.user, AcaoCompra.EXCECAO_ESTOQUE)})
+    return render(request, "compras/compra_avulsa_form.html", {"form": form, "formset": formset})
 
 # ============================================================
 # NOVO PROCESSO
@@ -1583,7 +1593,6 @@ def novo_processo(request):
             "permite_sem_atividade": getattr(form, "permite_sem_atividade", False),
             "processos_existentes": processos_existentes,
             "processos_ativos_existentes": processos_ativos_existentes,
-            "pode_excecao_estoque": possui_acao_compras(request.user, AcaoCompra.EXCECAO_ESTOQUE),
         },
     )
 
@@ -1617,7 +1626,7 @@ def pdf_solicitacao_cotacao(request, pk):
         fornecedor = None
         fornecedor_id = (request.GET.get("fornecedor") or "").strip()
         if fornecedor_id:
-            if not fornecedor_id.isdigit():
+            if not fornecedor_id.isascii() or not fornecedor_id.isdecimal() or len(fornecedor_id) > 19:
                 raise ValidationError("Fornecedor inválido.")
             from cadastros.models import Fornecedor
             fornecedor = Fornecedor.objects.filter(
@@ -1658,8 +1667,11 @@ def lista_pedidos(request):
         .prefetch_related(
             "itens",
             Prefetch("anexos", queryset=PedidoCompraAnexo.objects.select_related("enviado_por")),
-            "recebimentos__usuario",
-            "recebimentos__itens__item_pedido",
+            Prefetch(
+                "recebimentos",
+                queryset=RecebimentoPedido.objects.select_related("usuario", "liberacao_financeira")
+                .prefetch_related("itens__item_pedido"),
+            ),
         )
         .filter(processo__fluxo_grande_fornecedor=False)
         .order_by(
@@ -1718,6 +1730,7 @@ def lista_pedidos(request):
         {
             "pedidos": pagina.object_list,
             "pagina": pagina,
+            "pode_receber_pedidos": possui_acao_compras(request.user, AcaoCompra.RECEBER_PEDIDOS),
 
             "obras": (
                 Obra.objects

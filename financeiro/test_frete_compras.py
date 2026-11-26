@@ -77,8 +77,9 @@ class FreteComprasTests(TestCase):
         esperado = [Decimal("383.33"), Decimal("383.33"), Decimal("383.34")]
 
         self.assertEqual(pedido.valor_total, Decimal("1150.00"))
-        self.assertEqual(titulos.count(), 3)
+        self.assertFalse(titulos.exists())
         self.assertEqual(list(pedido.parcelas_previstas.order_by("ordem").values_list("valor", flat=True)), esperado)
+        self.receber(pedido, numero="NF-PARCELAS", quantidade="1", valor_items="1000", valor_nf="1150", valor_frete_nota="150")
         self.assertEqual(list(titulos.values_list("valor_original", flat=True)), esperado)
         ids = list(titulos.values_list("pk", flat=True))
         self.assertEqual(gerar_pedidos(self.processo, self.usuario), [pedido])
@@ -97,7 +98,7 @@ class FreteComprasTests(TestCase):
             pedido = pedidos[cotacao.fornecedor_id]
             self.assertEqual(pedido.frete, Decimal(frete))
             self.assertEqual(pedido.valor_total, Decimal(total))
-            self.assertEqual(pedido.titulos_financeiros.get().valor_original, Decimal(total))
+            self.assertFalse(pedido.titulos_financeiros.exists())
 
     def test_frete_zero_na_negociacao_preserva_preco_com_frete_embutido(self):
         item = self.adjudicar(self.cotacao(), "1150.00")
@@ -105,18 +106,18 @@ class FreteComprasTests(TestCase):
         pedido, = gerar_pedidos(self.processo, self.usuario)
         self.assertEqual(pedido.frete, Decimal("0.00"))
         self.assertEqual(pedido.valor_total, Decimal("1150.00"))
-        self.assertEqual(pedido.titulos_financeiros.get().valor_original, Decimal("1150.00"))
+        self.assertFalse(pedido.titulos_financeiros.exists())
 
     def test_nf_parcial_com_frete_explicitado_reconcilia_sem_inferir_frete_na_primeira_entrega(self):
         self.adjudicar(self.cotacao(frete="100.00"), "100.00", quantidade="10")
         pedido, = gerar_pedidos(self.processo, self.usuario)
         primeira = self.receber(pedido, numero="NF-1", quantidade="8", valor_items="800", valor_nf="800")
-        primeiro_titulo = autorizar_liberacao(primeira, usuario=self.usuario)
+        primeiro_titulo = primeira.titulo
         self.assertEqual(primeiro_titulo.valor_original, Decimal("800.00"))
         segunda = self.receber(
             pedido, numero="NF-2", quantidade="2", valor_items="200", valor_nf="300", valor_frete_nota="100",
         )
-        segundo_titulo = autorizar_liberacao(segunda, usuario=self.usuario)
+        segundo_titulo = segunda.titulo
 
         pedido.refresh_from_db()
         self.assertEqual(segunda.recebimento.valor_frete_nota, Decimal("100.00"))
@@ -135,7 +136,7 @@ class FreteComprasTests(TestCase):
         with self.assertRaises(ValidationError):
             autorizar_liberacao(candidata, usuario=self.usuario)
 
-    def test_frete_documentado_respeita_teto_acumulado_do_pedido(self):
+    def test_frete_documentado_acima_do_saldo_exige_analise(self):
         self.adjudicar(self.cotacao(frete="100.00"), "100.00", quantidade="10")
         pedido, = gerar_pedidos(self.processo, self.usuario)
         primeira = self.receber(
@@ -144,9 +145,10 @@ class FreteComprasTests(TestCase):
         segunda = self.receber(
             pedido, numero="NF-5", quantidade="2", valor_items="200", valor_nf="250", valor_frete_nota="50",
         )
-        autorizar_liberacao(primeira, usuario=self.usuario)
-        with self.assertRaisesMessage(ValidationError, "frete contratado"):
-            autorizar_liberacao(segunda, usuario=self.usuario)
+        self.assertFalse(primeira.divergencias_comerciais)
+        self.assertEqual(segunda.valor_esperado, Decimal("230.00"))
+        self.assertEqual(segunda.titulo.valor_original, Decimal("250.00"))
+        self.assertIn("frete contratado", " ".join(segunda.divergencias_comerciais))
 
     def test_rota_de_grande_fornecedor_registra_frete_da_nf(self):
         self.processo.fluxo_grande_fornecedor = True
@@ -173,7 +175,7 @@ class FreteComprasTests(TestCase):
         candidata = self.receber(
             pedido, numero="NF-CANCEL", quantidade="2", valor_items="200", valor_nf="300", valor_frete_nota="100",
         )
-        titulo = autorizar_liberacao(candidata, usuario=self.usuario)
+        titulo = candidata.titulo
         TituloPagar.objects.filter(pk=titulo.pk).update(status=TituloPagar.Status.PAGO)
         pagamento = Pagamento.objects.create(titulo=titulo, valor=Decimal("300"), data_pagamento=pedido.data)
 
@@ -190,8 +192,10 @@ class FreteComprasTests(TestCase):
     def test_diagnostico_encontra_divergencia_historica_e_preserva_titulos_e_pagamentos(self):
         self.adjudicar(self.cotacao(frete="100.00", desconto="50.00"), "1000.00")
         pedido, = gerar_pedidos(self.processo, self.usuario)
-        titulo = pedido.titulos_financeiros.get()
-        TituloPagar.objects.filter(pk=titulo.pk).update(valor_original=Decimal("950"), status=TituloPagar.Status.PAGO)
+        titulo = TituloPagar.objects.create(
+            numero="FIN-FRETE-LEGADO", pedido=pedido, origem=TituloPagar.Origem.COMPRA,
+            referencia_externa=f"COMPRA_PEDIDO:{pedido.pk}", valor_original=Decimal("950"), status=TituloPagar.Status.PAGO,
+        )
         Pagamento.objects.create(titulo=titulo, valor=Decimal("950"), data_pagamento=pedido.data)
 
         saida = StringIO()

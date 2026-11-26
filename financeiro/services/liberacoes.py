@@ -112,6 +112,8 @@ def autorizar_liberacao(liberacao, *, usuario):
         return liberacao.titulo
     if liberacao.status == LiberacaoFinanceiraPedido.Status.COMPENSADA:
         return None
+    if liberacao.valor_esperado is not None:
+        raise ValidationError("Trate a pendência da nota fiscal para encaminhar a solicitação à aprovação.")
     if liberacao.status != LiberacaoFinanceiraPedido.Status.PENDENTE:
         raise ValidationError("Esta liberação não está pendente e conciliada.")
     if pedido.status == PedidoCompra.Status.CANCELADO:

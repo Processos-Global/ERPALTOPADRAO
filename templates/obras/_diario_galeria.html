@@ -1,0 +1,49 @@
+{% with fotos=diario.fotos.all %}
+<section class="op-panel" id="diario-midias" aria-labelledby="diario-midias-titulo" data-diario-galeria>
+  <div class="op-panel-head">
+    <h2 id="diario-midias-titulo">Mídias e evidências</h2>
+    {% if fotos %}<span class="op-muted">{{ fotos|length }} foto{{ fotos|length|pluralize }}</span>{% endif %}
+  </div>
+  {% if fotos %}
+    <div class="diario-secao">
+      <ul class="diario-galeria">
+        {% for foto in fotos|slice:":12" %}
+          {% include "obras/_diario_foto.html" with diario_id=diario.pk foto=foto only %}
+        {% endfor %}
+      </ul>
+      {% if fotos|length > 12 %}
+        <details class="diario-galeria-mais">
+          <summary>Mais fotos ({{ fotos|length|add:"-12" }})</summary>
+          <ul class="diario-galeria">
+            {% for foto in fotos|slice:"12:" %}
+              {% include "obras/_diario_foto.html" with diario_id=diario.pk foto=foto only %}
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+    </div>
+    <dialog class="diario-ampliacao" aria-labelledby="diario-ampliacao-titulo" data-diario-dialogo>
+      <header class="diario-ampliacao-topo">
+        <h2 id="diario-ampliacao-titulo">Fotografia do diário</h2>
+        <form method="dialog"><button class="op-btn secondary" type="submit" autofocus>Fechar</button></form>
+      </header>
+      <div class="diario-ampliacao-foto" data-diario-ampliacao-foto>
+        <p class="diario-ampliacao-estado" role="status" data-diario-ampliacao-estado></p>
+      </div>
+      <footer class="diario-ampliacao-rodape">
+        <div class="diario-ampliacao-legenda">
+          <strong data-diario-ampliacao-nome></strong>
+          <span class="op-muted" aria-live="polite" data-diario-ampliacao-posicao></span>
+        </div>
+        <div class="diario-ampliacao-acoes">
+          <button class="op-btn secondary" type="button" data-diario-ampliacao-anterior>Anterior</button>
+          <button class="op-btn secondary" type="button" data-diario-ampliacao-proxima>Próxima</button>
+          <a class="op-btn" data-diario-ampliacao-baixar download>Baixar original</a>
+        </div>
+      </footer>
+    </dialog>
+  {% else %}
+    <div class="op-empty">Nenhuma fotografia anexada a este diário.</div>
+  {% endif %}
+</section>
+{% endwith %}

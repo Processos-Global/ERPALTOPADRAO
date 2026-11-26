@@ -1,12 +1,15 @@
 """Leitura gerencial de compromissos, sem criar ou alterar obrigações."""
 
+from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Case, Count, DecimalField, F, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models import Case, Count, DecimalField, Exists, F, OuterRef, Prefetch, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce, Greatest
 
-from compras.models import ContratoCompra, PedidoCompra, RecebimentoPedido, RecebimentoPedidoItem
+from compras.models import ContratoCompra, ParcelaPrevistaPedido, PedidoCompra, RecebimentoPedido, RecebimentoPedidoItem
+from compras.services.comercial import quantizar_moeda
 from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
+from financeiro.services.agenda import saldo_titulo_sql, titulos_disponiveis_pagamento
 
 
 MOEDA = DecimalField(max_digits=18, decimal_places=2)
@@ -47,16 +50,18 @@ def pedidos_comprometidos(*, obra_id=None, fornecedor_id=None, busca="", status=
         .filter(pedido_id=OuterRef("pk"), status=LiberacaoFinanceiraPedido.Status.AUTORIZADA)
         .order_by().values("pedido_id").annotate(valor=Sum("valor"))
     )
-    titulos_ativos = (
-        TituloPagar.objects
-        .filter(pedido_id=OuterRef("pk"))
-        .exclude(status=TituloPagar.Status.CANCELADO)
-        .order_by().values("pedido_id")
-        .annotate(valor=Sum(Greatest(
-            F("valor_original") + F("juros") + F("multa")
-            + F("outros_acrescimos") - F("desconto"), ZERO,
-        )))
+    registros_financeiros = LiberacaoFinanceiraPedido.objects.filter(pedido_id=OuterRef("pk"))
+    titulos = TituloPagar.objects.filter(pedido_id=OuterRef("pk")).order_by()
+    valor_liquido = Greatest(
+        F("valor_original") + F("juros") + F("multa") + F("outros_acrescimos") - F("desconto"), ZERO,
     )
+    titulos_ativos = titulos.exclude(status=TituloPagar.Status.CANCELADO).values("pedido_id").annotate(
+        valor=Sum(valor_liquido),
+    )
+    aguardando = titulos.filter(
+        recebimento__isnull=False, status=TituloPagar.Status.AGUARDANDO_APROVACAO,
+    ).values("pedido_id").annotate(valor=Sum(valor_liquido))
+    aprovado_a_pagar = titulos_disponiveis_pagamento(titulos).values("pedido_id").annotate(valor=Sum(saldo_titulo_sql()))
     # O cancelamento integral em Compras preserva pedido, recebimentos e títulos.
     # Excluí-lo ocultaria pagamentos já efetivados e o saldo não entregue.
     qs = PedidoCompra.objects.all()
@@ -77,7 +82,10 @@ def pedidos_comprometidos(*, obra_id=None, fornecedor_id=None, busca="", status=
             itens_recebidos_sem_valor=Coalesce(Subquery(recebimentos.values("sem_valor")[:1]), Value(0)),
             pago_efetivado=Coalesce(Subquery(pagamentos.values("valor")[:1], output_field=MOEDA), ZERO),
             liberado_financeiramente=Coalesce(Subquery(liberacoes.values("valor")[:1], output_field=MOEDA), ZERO),
+            tem_registros_financeiros=Exists(registros_financeiros),
             obrigacao_em_titulos=Coalesce(Subquery(titulos_ativos.values("valor")[:1], output_field=MOEDA), ZERO),
+            recebido_aguardando_aprovacao=Coalesce(Subquery(aguardando.values("valor")[:1], output_field=MOEDA), ZERO),
+            aprovado_a_pagar=Coalesce(Subquery(aprovado_a_pagar.values("valor")[:1], output_field=MOEDA), ZERO),
         )
         .alias(recebido_com_frete=F("recebido_identificado") + F("frete_documentado"))
         .annotate(
@@ -136,7 +144,7 @@ def totais_pedidos(qs):
         "saldo_financeiro", "saldo_cancelado", "excedente_pago",
         "saldo_cancelamento_pendente",
         "pago_sem_recebimento", "liberado_sem_recebimento",
-        "liberado_financeiramente",
+        "liberado_financeiramente", "recebido_aguardando_aprovacao", "aprovado_a_pagar",
     )
     totais = {campo if campo != "valor_total" else "contratado": Decimal("0") for campo in monetarios}
     totais["itens_recebidos_sem_valor"] = 0
@@ -145,6 +153,51 @@ def totais_pedidos(qs):
             totais["contratado" if campo == "valor_total" else campo] += valor or Decimal("0")
         totais["itens_recebidos_sem_valor"] += linha[-1] or 0
     return totais
+
+
+def compromissos_datados(inicio, fim, *, obra_ids=None, classe=None, apropriacao=None, fornecedor=None):
+    """Projeta o saldo de pedidos normais em parcelas com data comercial conhecida."""
+    from financeiro.services.indicadores_gerenciais import _filtros
+    from financeiro.services.previsoes import _data_parcela_pedido, _valor_parcela_pedido
+
+    parcelas = ParcelaPrevistaPedido.objects.filter(pedido_id=OuterRef("pk"))
+    datas = parcelas.filter(
+        Q(data_prevista__range=(inicio, fim))
+        | Q(data_prevista__isnull=True, dias__isnull=False)
+        | Q(data_prevista__isnull=True, evento_gatilho=ParcelaPrevistaPedido.Gatilho.ENTREGA),
+    )
+    pedidos = pedidos_comprometidos().filter(
+        Exists(datas), processo__fluxo_grande_fornecedor=False,
+    ).exclude(status__in=[PedidoCompra.Status.CANCELADO, PedidoCompra.Status.ENTREGUE]).annotate(
+        plano_financeiro_id=F("processo__apropriacao_id"),
+    )
+    pedidos = _filtros(pedidos, obra_ids=obra_ids, classe=classe, apropriacao=apropriacao, fornecedor=fornecedor)
+    pedidos = pedidos.select_related(None).only(
+        "valor_total", "data", "previsao_entrega_atual", "previsao_entrega_original",
+    ).prefetch_related(Prefetch(
+        "parcelas_previstas", queryset=ParcelaPrevistaPedido.objects.order_by("ordem", "pk"),
+    ))
+    por_data = defaultdict(Decimal)
+    for pedido in pedidos.iterator(chunk_size=200):
+        comprometido = max(
+            pedido.obrigacao_em_titulos, pedido.pago_efetivado, pedido.recebido_identificado + pedido.frete_documentado,
+        )
+        saldo = pedido.valor_total - comprometido
+        if saldo <= 0:
+            continue
+        pesos = [(parcela, _valor_parcela_pedido(pedido, parcela)) for parcela in pedido.parcelas_previstas.all()]
+        total_pesos = sum(peso for _, peso in pesos if peso > 0)
+        acumulado = anterior = Decimal("0.00")
+        for parcela, peso in pesos:
+            if peso <= 0:
+                continue
+            acumulado += peso
+            atual = quantizar_moeda(saldo * acumulado / total_pesos)
+            data = _data_parcela_pedido(pedido, parcela)
+            if data and inicio <= data <= fim:
+                por_data[data] += atual - anterior
+            anterior = atual
+    return por_data
 
 
 def contratos_assinados_separados(*, obra_id=None, fornecedor_id=None, busca=""):

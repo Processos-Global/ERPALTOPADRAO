@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from cadastros.models import Fornecedor
@@ -11,7 +12,7 @@ from obras.models import Obra
 
 
 class IntegracaoRecebimentoFinanceiroTests(TestCase):
-    def test_recebimento_parcial_cria_candidata_sem_alterar_valor_contratado(self):
+    def test_recebimento_parcial_cria_solicitacao_sem_alterar_valor_contratado(self):
         usuario = get_user_model().objects.create_superuser(
             username="recebimento_integrado", email="recebimento@example.test", password="teste"
         )
@@ -35,15 +36,17 @@ class IntegracaoRecebimentoFinanceiroTests(TestCase):
             pedido=pedido, quantidades={item.pk: Decimal("8")},
             valores_itens={item.pk: Decimal("800")}, usuario=usuario,
             numero_nota_fiscal="NF-REC-800", valor_total_nota=Decimal("800"),
-            arquivo_nota_fiscal=None, dados_fiscais_opcionais=True,
+            arquivo_nota_fiscal=SimpleUploadedFile("nf.xml", b"<NF-SINTETICA/>"),
         )
 
         pedido.refresh_from_db()
         item.refresh_from_db()
-        candidata = LiberacaoFinanceiraPedido.objects.get(recebimento=recebimento)
+        liberacao = LiberacaoFinanceiraPedido.objects.get(recebimento=recebimento)
         self.assertEqual(pedido.valor_total, Decimal("1000.00"))
         self.assertEqual(item.quantidade_recebida, Decimal("8"))
-        self.assertEqual(candidata.valor, Decimal("800.00"))
-        self.assertEqual(candidata.status, LiberacaoFinanceiraPedido.Status.PENDENTE)
-        self.assertIsNone(candidata.titulo_id)
-        self.assertFalse(TituloPagar.objects.filter(pedido=pedido, valor_original=Decimal("800.00")).exists())
+        self.assertEqual(liberacao.valor, Decimal("800.00"))
+        self.assertEqual(liberacao.status, LiberacaoFinanceiraPedido.Status.AUTORIZADA)
+        titulo = TituloPagar.objects.get(pedido=pedido, recebimento=recebimento)
+        self.assertEqual(liberacao.titulo_id, titulo.pk)
+        self.assertEqual(titulo.valor_original, Decimal("800.00"))
+        self.assertEqual(titulo.status, TituloPagar.Status.PREVISTA)

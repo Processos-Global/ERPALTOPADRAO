@@ -156,12 +156,12 @@ def _upsert_conta_integrada(*, referencia, defaults, cancelado=False, liberado=F
 
 @transaction.atomic
 def sincronizar_contas_pedido(pedido):
-    """Transforma a condição de pagamento de Compras em Contas a Pagar.
-
-    Uma parcela = uma conta. Pedido sem parcelas = uma conta única. Nenhuma NF
-    cria uma segunda obrigação; as NFs continuam vinculadas ao próprio pedido.
-    """
+    """Os pedidos normais são compromissos até o registro fiscal da entrega."""
     pedido = PedidoCompra.objects.select_for_update().get(pk=pedido.pk)
+    if not pedido.processo.fluxo_grande_fornecedor:
+        return TituloPagar.objects.filter(pedido=pedido, origem=TituloPagar.Origem.COMPRA)
+
+    # Grandes Fornecedores mantém as condições e vínculos já formalizados.
     # Após uma liberação autorizada, a obrigação integral provisória não pode
     # reaparecer em saves, alterações de parcelas ou sincronizações em lote.
     if LiberacaoFinanceiraPedido.objects.filter(pedido=pedido).filter(

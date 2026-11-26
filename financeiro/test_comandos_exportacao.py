@@ -29,8 +29,10 @@ class ComandosExportacaoFinanceiraTests(TestCase):
             numero="=1+1", processo=processo, obra=obra, fornecedor=fornecedor,
             subtotal=Decimal("100.00"), frete=Decimal("5.10"), valor_total=Decimal("105.10"),
         )
-        titulo = pedido.titulos_financeiros.get()
-        TituloPagar.objects.filter(pk=titulo.pk).update(numero="  +2+2", valor_original=Decimal("100.00"))
+        TituloPagar.objects.create(
+            numero="  +2+2", pedido=pedido, origem=TituloPagar.Origem.COMPRA,
+            referencia_externa=f"COMPRA_PEDIDO:{pedido.pk}", valor_original=Decimal("100.00"),
+        )
 
         saida = StringIO()
         with CaptureQueriesContext(connection) as consultas:

@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
+from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_POST
 
 from usuarios.models import AcaoCompra
 
@@ -32,6 +34,7 @@ from compras.models import (
     PedidoCompraAnexo,
     ProcessoCompra,
     NecessidadeCompra,
+    RecebimentoPedido,
     SolicitacaoCotacaoFornecedor,
 )
 from compras.services.adjudicacoes import adjudicar, cancelar_adjudicacao
@@ -86,10 +89,9 @@ def acao_incluir_necessidade(request, pk):
                     processo=processo,
                     material=form.cleaned_data["material"],
                     quantidade=form.cleaned_data["quantidade"],
+                    quantidade_compra=form.cleaned_data["quantidade_compra"],
                     observacao=form.cleaned_data["observacao"],
                     usuario=request.user,
-                    excecao_estoque=request.POST.get("excecao_estoque") == "1",
-                    justificativa_excecao=request.POST.get("justificativa_excecao", ""),
                 )
                 messages.success(request, "Item incluído na compra.")
             except ValidationError as exc:
@@ -105,15 +107,19 @@ def acao_editar_necessidade(request, pk, necessidade_id):
     processo = _processo(pk)
     necessidade = get_object_or_404(NecessidadeCompra, pk=necessidade_id, processo=processo)
     if request.method == "POST":
-        form = NecessidadeCompraForm(request.POST, processo=processo)
+        dados = request.POST
+        if "quantidade_comercial" not in dados and "quantidade" in dados:
+            dados = dados.copy()
+            dados["quantidade_comercial"] = dados["quantidade"]
+        form = NecessidadeCompraForm(
+            dados, processo=processo, edicao=True, material_atual_id=necessidade.material_id,
+        )
         if form.is_valid():
             try:
                 editar_necessidade(
                     processo=processo, necessidade=necessidade,
-                    material=form.cleaned_data["material"], quantidade=form.cleaned_data["quantidade"],
+                    material=form.cleaned_data["material"], quantidade=form.cleaned_data["quantidade_comercial"],
                     observacao=form.cleaned_data["observacao"], usuario=request.user,
-                    excecao_estoque=request.POST.get("excecao_estoque") == "1",
-                    justificativa_excecao=request.POST.get("justificativa_excecao", ""),
                 )
                 messages.success(request, "Item atualizado com sucesso.")
             except ValidationError as exc:
@@ -934,6 +940,19 @@ def acao_atualizar_previsao_pedido(request, pedido_id):
     return redirect("compras:lista_pedidos")
 
 
+def _vencimento_da_nota(request):
+    valor = request.POST.get("vencimento_nota", "").strip()
+    if not valor:
+        return None
+    try:
+        vencimento = parse_date(valor)
+    except ValueError:
+        vencimento = None
+    if vencimento is None:
+        raise ValidationError("Informe uma data válida para o vencimento da nota.")
+    return vencimento
+
+
 @compras_acao_required(AcaoCompra.RECEBER_PEDIDOS)
 def acao_receber_pedido(request, pedido_id):
     pedido = get_object_or_404(PedidoCompra, pk=pedido_id)
@@ -950,6 +969,7 @@ def acao_receber_pedido(request, pedido_id):
         try:
             arquivo_nota_fiscal = request.FILES.get("arquivo_nota_fiscal")
             validar_documento_upload(arquivo_nota_fiscal)
+            vencimento = _vencimento_da_nota(request)
             recebimento = registrar_recebimento(
                 pedido=pedido,
                 quantidades=quantidades,
@@ -960,6 +980,7 @@ def acao_receber_pedido(request, pedido_id):
                 valor_frete_nota=request.POST.get("valor_frete_nota", ""),
                 arquivo_nota_fiscal=arquivo_nota_fiscal,
                 observacao=request.POST.get("observacao", ""),
+                vencimento_nota=vencimento,
             )
             messages.success(
                 request,
@@ -967,6 +988,33 @@ def acao_receber_pedido(request, pedido_id):
             )
         except ValidationError as exc:
             _erro(request, exc)
+    return redirect("compras:lista_pedidos")
+
+
+@compras_acao_required(AcaoCompra.RECEBER_PEDIDOS)
+@require_POST
+def acao_corrigir_documentacao_recebimento(request, pedido_id, recebimento_id):
+    from compras.services.pedidos import corrigir_documentacao_recebimento
+
+    recebimento = get_object_or_404(RecebimentoPedido, pk=recebimento_id, pedido_id=pedido_id)
+    try:
+        arquivo = request.FILES.get("arquivo_nota_fiscal")
+        if arquivo:
+            validar_documento_upload(arquivo)
+        valores = {
+            item_id: request.POST.get(f"valor_item_{item_id}")
+            for item_id in recebimento.itens.values_list("item_pedido_id", flat=True)
+        }
+        corrigir_documentacao_recebimento(
+            recebimento=recebimento, usuario=request.user, valores_itens=valores,
+            numero_nota_fiscal=request.POST.get("numero_nota_fiscal", ""),
+            valor_total_nota=request.POST.get("valor_total_nota", ""),
+            arquivo_nota_fiscal=arquivo, valor_frete_nota=request.POST.get("valor_frete_nota") or None,
+            vencimento_nota=_vencimento_da_nota(request),
+        )
+        messages.success(request, "Documentação do recebimento atualizada.")
+    except ValidationError as exc:
+        _erro(request, exc)
     return redirect("compras:lista_pedidos")
 
 

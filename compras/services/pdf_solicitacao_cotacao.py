@@ -20,7 +20,9 @@ def _nome_usuario(usuario):
 def _quantidade(valor):
     if valor is None:
         return "—"
-    texto = f"{valor:f}".rstrip("0").rstrip(".")
+    texto = f"{valor:f}"
+    if "." in texto:
+        texto = texto.rstrip("0").rstrip(".")
     return texto.replace(".", ",") or "0"
 
 
@@ -60,12 +62,12 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
     )
 
     styles = getSampleStyleSheet()
-    brand = colors.HexColor("#087F83")
-    ink = colors.HexColor("#173946")
-    muted = colors.HexColor("#64748B")
-    line = colors.HexColor("#CBDDE2")
-    soft = colors.HexColor("#EEF8F8")
-    light = colors.HexColor("#F8FAFC")
+    brand = colors.HexColor("#453330")
+    ink = colors.HexColor("#2D201C")
+    muted = colors.HexColor("#66534C")
+    line = colors.HexColor("#DED7C8")
+    soft = colors.HexColor("#EEE8D6")
+    light = colors.HexColor("#F8F4ED")
 
     title = ParagraphStyle(
         "CotacaoTitle",
@@ -90,7 +92,7 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
         parent=styles["Normal"],
         fontSize=8.2,
         leading=11,
-        textColor=colors.HexColor("#334155"),
+        textColor=ink,
     )
     small = ParagraphStyle(
         "CotacaoSmall",
@@ -116,7 +118,7 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
     )
 
     from compras.services.pdf_empresa import cabecalho_empresa
-    story = cabecalho_empresa(184)
+    story = cabecalho_empresa(181)
 
     cabecalho = Table(
         [[
@@ -135,7 +137,7 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
                 right,
             ),
         ]],
-        colWidths=[132 * mm, 50 * mm],
+        colWidths=[131 * mm, 50 * mm],
     )
     cabecalho.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.8, ink),
@@ -161,7 +163,7 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
         [Paragraph("SOLICITANTE", label), Paragraph("COMPRADOR RESPONSÁVEL", label), Paragraph("ITENS", label)],
         [Paragraph(_nome_usuario(processo.criado_por), body), Paragraph(_nome_usuario(processo.comprador), body), Paragraph(str(len(necessidades)), body)],
     ]
-    dados_table = Table(dados, colWidths=[66 * mm, 83 * mm, 33 * mm])
+    dados_table = Table(dados, colWidths=[66 * mm, 82 * mm, 33 * mm])
     dados_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), soft),
         ("BACKGROUND", (0, 2), (-1, 2), soft),
@@ -189,10 +191,10 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
             Paragraph("<b>E-mail:</b> _______________________________________________", body),
             Paragraph("<b>Validade:</b> ___________________________", body),
         ],
-    ], colWidths=[112 * mm, 70 * mm])
+    ], colWidths=[111 * mm, 70 * mm])
     fornecedor.setStyle(TableStyle([
         ("SPAN", (0, 0), (1, 0)),
-        ("BACKGROUND", (0, 0), (1, 0), colors.HexColor("#E2E8F0")),
+        ("BACKGROUND", (0, 0), (1, 0), soft),
         ("BOX", (0, 0), (-1, -1), 0.5, line),
         ("INNERGRID", (0, 1), (-1, -1), 0.3, line),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -216,9 +218,9 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
         especificacao = item.especificacao or ""
         descricao_html = f"<b>{_texto(item.descricao)}</b>"
         if especificacao:
-            descricao_html += f"<br/><font color='#64748B'>{_texto(especificacao)}</font>"
+            descricao_html += f"<br/><font color='#66534C'>{_texto(especificacao)}</font>"
         if item.observacao:
-            descricao_html += f"<br/><font color='#64748B'><b>Obs.:</b> {_texto(item.observacao)}</font>"
+            descricao_html += f"<br/><font color='#66534C'><b>Obs.:</b> {_texto(item.observacao)}</font>"
         item_rows.append([
             Paragraph(str(indice), body),
             Paragraph(_texto(codigo), small),
@@ -229,11 +231,12 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
 
     itens_table = Table(
         item_rows,
-        colWidths=[11 * mm, 24 * mm, 112 * mm, 16 * mm, 19 * mm],
+        colWidths=[11 * mm, 24 * mm, 111 * mm, 16 * mm, 19 * mm],
         repeatRows=1,
+        splitInRow=1,
     )
     itens_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DCEDEF")),
+        ("BACKGROUND", (0, 0), (-1, 0), soft),
         ("GRID", (0, 0), (-1, -1), 0.4, line),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("ALIGN", (0, 1), (0, -1), "CENTER"),
@@ -257,10 +260,10 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
             Paragraph("<b>Frete:</b> ___________________________________________________________", body),
             Paragraph("<b>Validade:</b> ____________________________", body),
         ],
-    ], colWidths=[112 * mm, 70 * mm])
+    ], colWidths=[111 * mm, 70 * mm])
     comerciais.setStyle(TableStyle([
         ("SPAN", (0, 0), (1, 0)),
-        ("BACKGROUND", (0, 0), (1, 0), colors.HexColor("#E2E8F0")),
+        ("BACKGROUND", (0, 0), (1, 0), soft),
         ("BOX", (0, 0), (-1, -1), 0.5, line),
         ("INNERGRID", (0, 1), (-1, -1), 0.3, line),
         ("LEFTPADDING", (0, 0), (-1, -1), 5),
@@ -283,7 +286,7 @@ def gerar_pdf_solicitacao_cotacao(processo, fornecedor=None):
     instrucoes_table = Table([
         [Paragraph("ORIENTAÇÕES AO FORNECEDOR", section)],
         [Paragraph("<br/>".join(f"• {texto}" for texto in instrucoes), body)],
-    ], colWidths=[182 * mm])
+    ], colWidths=[181 * mm], repeatRows=1, splitInRow=1)
     instrucoes_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), soft),
         ("BOX", (0, 0), (-1, -1), 0.55, brand),

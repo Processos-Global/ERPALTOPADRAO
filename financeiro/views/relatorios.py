@@ -281,6 +281,9 @@ def relatorio_pagamento_emitir(request):
     if len(aprovacoes) != len(ids):
         messages.error(request, "Um ou mais pagamentos já foram emitidos ou não estão disponíveis. Atualize a seleção.")
         return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
+    if len({aprovacao.titulo.obra_id for aprovacao in aprovacoes}) != 1:
+        messages.error(request, "Selecione pagamentos da mesma obra. Emita as obrigações sem obra em um malote próprio.")
+        return redirect(_url_relatorios(data_inicio, data_fim, obra_ids))
     assinaturas = {}
     for aprovacao in aprovacoes:
         chave = _assinatura_documento(aprovacao.titulo)
@@ -348,7 +351,7 @@ def relatorio_pagamento_excel(request, pk):
     obra_id = _parse_obra_id(request.GET.get("obra"))
     somente_excel = request.GET.get("formato") == "xlsx"
     itens_qs = (
-        relatorio.itens.select_related("titulo", "titulo__pedido", "titulo__obra")
+        relatorio.itens.select_related("titulo", "titulo__pedido", "titulo__obra", "titulo__recebimento")
         .prefetch_related("titulo__anexos", "titulo__pedido__anexos", "titulo__pedido__recebimentos")
         .order_by("data_aprovacao", "id")
     )
@@ -542,9 +545,10 @@ def relatorio_pagamento_excel(request, pk):
                     for anexo in titulo.pedido.anexos.all()
                     if anexo.arquivo and anexo.arquivo.name
                 )
+                recebimentos = [titulo.recebimento] if titulo.recebimento_id else titulo.pedido.recebimentos.all()
                 campos.extend(
                     (recebimento.arquivo_nota_fiscal, f"NF_{recebimento.nome_arquivo_nota_fiscal}")
-                    for recebimento in titulo.pedido.recebimentos.all()
+                    for recebimento in recebimentos
                     if recebimento.arquivo_nota_fiscal and recebimento.arquivo_nota_fiscal.name
                 )
 

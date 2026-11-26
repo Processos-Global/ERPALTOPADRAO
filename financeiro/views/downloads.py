@@ -4,6 +4,7 @@ from pathlib import Path
 
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
+from django.views.decorators.http import require_safe
 
 from compras.models import PedidoCompraAnexo, RecebimentoPedido
 from financeiro.models import AnexoTituloPagar, Pagamento, TituloPagar
@@ -56,9 +57,10 @@ def baixar_anexo_pedido_titulo(request, titulo_pk, anexo_pk):
 
 
 @financeiro_acao_required("VISUALIZAR")
+@require_safe
 def baixar_nota_fiscal_pedido_titulo(request, titulo_pk, recebimento_pk):
-    titulo = get_object_or_404(TituloPagar.objects.select_related("pedido"), pk=titulo_pk)
-    if not titulo.pedido_id:
+    titulo = get_object_or_404(TituloPagar.objects.only("pedido_id", "recebimento_id"), pk=titulo_pk)
+    if not titulo.pedido_id or (titulo.recebimento_id is not None and titulo.recebimento_id != recebimento_pk):
         raise Http404("Conta sem pedido de compra vinculado.")
     recebimento = get_object_or_404(RecebimentoPedido, pk=recebimento_pk, pedido_id=titulo.pedido_id)
     return _responder_arquivo(recebimento.arquivo_nota_fiscal)

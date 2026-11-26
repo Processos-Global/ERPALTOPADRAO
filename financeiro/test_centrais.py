@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from re import findall
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -7,21 +8,30 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cadastros.models import Fornecedor
-from financeiro.models import Pagamento, TituloPagar
+from compras.models import PedidoCompra, ProcessoCompra, RecebimentoPedido
+from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
 from obras.models import Obra
-from usuarios.models import ModuloSistema, NivelPermissao, PermissaoModulo
+from usuarios.models import ModuloSistema, NivelPermissao, PermissaoFinanceiro, PermissaoModulo
 
 
 class NavegacaoFinanceiraTests(TestCase):
-    def test_seis_areas_principais_e_acao_separada(self):
+    def test_sete_areas_principais_e_acao_separada(self):
         self.client.force_login(get_user_model().objects.create_superuser('financeiro-nav-admin'))
         resposta = self.client.get(reverse('financeiro:dashboard'))
         navegacao = resposta.content.decode().split('id="fin-subnav"', 1)[1].split('</nav>', 1)[0]
-        for rota in ('dashboard', 'titulos', 'pagamentos', 'compromissos', 'previsoes', 'indicadores'):
-            self.assertIn(reverse(f'financeiro:{rota}'), navegacao)
-        self.assertNotIn(reverse('financeiro:titulo_novo'), navegacao)
+        rotas = ('dashboard', 'titulos', 'aprovacoes', 'pagamentos', 'previsoes', 'indicadores', 'plano_financeiro')
+        self.assertEqual(findall(r'href="([^"]+)"', navegacao), [reverse(f'financeiro:{rota}') for rota in rotas])
         self.assertContains(resposta, 'Nova solicitação')
-        self.assertContains(resposta, reverse('financeiro:plano_financeiro'))
+        self.assertNotContains(resposta, reverse('financeiro:liberacoes'))
+
+    def test_aprovador_granular_recebe_apenas_a_area_permitida(self):
+        usuario = get_user_model().objects.create_user('financeiro-nav-aprovacao')
+        PermissaoModulo.objects.create(usuario=usuario, modulo=ModuloSistema.FINANCEIRO, nivel=NivelPermissao.APROVACAO)
+        PermissaoFinanceiro.objects.create(usuario=usuario, visualizar=False, aprovar_pagamentos=True)
+        self.client.force_login(usuario)
+        resposta = self.client.get(reverse('financeiro:aprovacoes'))
+        navegacao = resposta.content.decode().split('id="fin-subnav"', 1)[1].split('</nav>', 1)[0]
+        self.assertEqual(findall(r'href="([^"]+)"', navegacao), [reverse('financeiro:aprovacoes')])
 
     def test_leitura_nao_expoe_configuracao_e_acao_de_criacao(self):
         usuario = get_user_model().objects.create_user('financeiro-nav-leitura')
@@ -30,6 +40,43 @@ class NavegacaoFinanceiraTests(TestCase):
         resposta = self.client.get(reverse('financeiro:dashboard'))
         self.assertNotContains(resposta, reverse('financeiro:titulo_novo'))
         self.assertNotContains(resposta, reverse('financeiro:plano_financeiro'))
+        self.assertNotContains(resposta, reverse('financeiro:aprovacoes'))
+
+    def test_solicitacao_de_compra_exibe_origem_divergencia_e_preparacao(self):
+        self.client.force_login(get_user_model().objects.create_superuser('financeiro-nav-solicitacao'))
+        titulo = TituloPagar.objects.create(
+            numero='FIN-ORIGEM', descricao='Materiais recebidos para a fachada',
+            origem=TituloPagar.Origem.COMPRA, conferencia=TituloPagar.Conferencia.DIVERGENCIA,
+            status=TituloPagar.Status.PREVISTA, valor_original='42.16',
+        )
+        resposta = self.client.get(reverse('financeiro:titulos'))
+        self.assertContains(resposta, '<td>Compras</td>', html=True)
+        self.assertContains(resposta, 'Materiais recebidos para a fachada')
+        self.assertContains(resposta, '<span class="fin-badge fin-badge--danger">Divergência</span>', html=True)
+        self.assertContains(resposta, reverse('financeiro:titulo_editar', args=[titulo.pk]))
+
+    def test_historico_reavalia_somente_pendencia_automatica_e_preserva_acao_legada(self):
+        self.client.force_login(get_user_model().objects.create_superuser('financeiro-nav-historico'))
+        obra = Obra.objects.create(nome='Obra sintética do histórico', codigo='FIN-HIST')
+        fornecedor = Fornecedor.objects.create(nome='Fornecedor sintético do histórico')
+        processo = ProcessoCompra.objects.create(numero='PROC-FIN-HIST', obra=obra, titulo='Processo sintético')
+        pedido = PedidoCompra.objects.create(numero='PC-FIN-HIST', obra=obra, fornecedor=fornecedor, processo=processo)
+        recebimento = RecebimentoPedido.objects.create(pedido=pedido, numero_nota_fiscal='321')
+        registro = LiberacaoFinanceiraPedido.objects.create(
+            referencia='UI-HIST-RECEBIMENTO', pedido=pedido, recebimento=recebimento,
+            valor_esperado=0, tipo=LiberacaoFinanceiraPedido.Tipo.RECEBIMENTO,
+            status=LiberacaoFinanceiraPedido.Status.DIVERGENTE,
+        )
+        legado = LiberacaoFinanceiraPedido.objects.create(
+            referencia='UI-HIST-ANTECIPACAO', pedido=pedido,
+            tipo=LiberacaoFinanceiraPedido.Tipo.ANTECIPACAO,
+        )
+        resposta = self.client.get(reverse('financeiro:liberacoes'))
+        self.assertContains(resposta, 'Histórico financeiro de compras')
+        self.assertContains(resposta, reverse('financeiro:liberacao_reprocessar', args=[registro.pk]))
+        self.assertNotContains(resposta, reverse('financeiro:liberacao_autorizar', args=[registro.pk]))
+        self.assertContains(resposta, reverse('financeiro:liberacao_autorizar', args=[legado.pk]))
+        self.assertNotContains(resposta, reverse('financeiro:liberacao_reprocessar', args=[legado.pk]))
 
     def test_visao_geral_separa_dia_atraso_pagamento_e_agenda(self):
         self.client.force_login(get_user_model().objects.create_superuser('financeiro-dashboard'))

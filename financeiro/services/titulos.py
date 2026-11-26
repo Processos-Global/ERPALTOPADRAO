@@ -2,13 +2,43 @@ from datetime import timedelta
 from uuid import uuid4
 
 from django.db import transaction
+from django.db.models import Q, Sum
 from django.utils import timezone
 
+from compras.models import PedidoCompra
 from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
-from django.db.models import Sum
 from financeiro.services.auditoria import registrar_evento
 from financeiro.services.numeracao import gerar_numero
+from financeiro.services.notificacoes import notificar_aprovadores
 from financeiro.services.regras import distribuir_valor_parcelas
+
+
+def bloquear_titulo(titulo):
+    """Dentro de uma transação, usa a ordem de bloqueios da integração de Compras."""
+    origem = TituloPagar.objects.values("pedido_id", "recebimento_id").get(pk=titulo.pk)
+    vinculo = Q(titulo_id=titulo.pk)
+    if origem["recebimento_id"]:
+        vinculo |= Q(recebimento_id=origem["recebimento_id"])
+    liberacoes = LiberacaoFinanceiraPedido.objects.filter(vinculo)
+    pedido_id = origem["pedido_id"] or liberacoes.values_list("pedido_id", flat=True).first()
+    liberacao = None
+    if pedido_id:
+        PedidoCompra.objects.select_for_update().get(pk=pedido_id)
+        liberacao = liberacoes.filter(pedido_id=pedido_id).order_by("pk").select_for_update().first()
+    return TituloPagar.objects.select_for_update().get(pk=titulo.pk), liberacao
+
+
+def reabrir_aprovacao(titulo, *, usuario, motivo):
+    """Invalida o ciclo de um título bloqueado e mantém as decisões anteriores."""
+    if titulo.status not in {
+        TituloPagar.Status.AGUARDANDO_APROVACAO, TituloPagar.Status.APROVADO, TituloPagar.Status.REJEITADO,
+    }:
+        return
+    titulo.ciclo_aprovacao += 1
+    titulo.status = TituloPagar.Status.AGUARDANDO_APROVACAO
+    titulo.save(update_fields=["ciclo_aprovacao", "status", "atualizado_em"])
+    registrar_evento(titulo, "APROVACAO_REABERTA", motivo, usuario, {"ciclo": titulo.ciclo_aprovacao})
+    notificar_aprovadores(titulo)
 
 
 @transaction.atomic
@@ -79,10 +109,13 @@ def criar_titulo_manual(*, usuario=None, **dados):
 
 
 @transaction.atomic
-def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar atualizados."):
-    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar atualizados.", documentos_alterados=False):
+    titulo, liberacao = bloquear_titulo(titulo)
     if titulo.esta_pago:
         raise ValueError("Conta paga não pode ser alterada. Estorne o pagamento antes de qualquer ajuste financeiro.")
+    dados = dados.copy()
+    if liberacao and liberacao.valor_esperado is not None and "obra" in dados and dados["obra"] != titulo.obra:
+        raise ValueError("A obra desta conta deve corresponder ao recebimento que a originou.")
     valor_anterior = titulo.valor_liquido
     materiais = dados.pop("materiais", None)
     classificacao = dados.pop("tipo_pagamento", None)
@@ -107,7 +140,8 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
         "valor_original", "desconto", "juros", "multa", "outros_acrescimos",
         "vencimento", "competencia", "condicao_pagamento", "fornecedor", "plano_financeiro", "beneficiario_nome", "beneficiario_documento",
         "beneficiario_banco", "beneficiario_agencia", "beneficiario_conta_corrente",
-        "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular", "obra",
+        "beneficiario_operacao", "beneficiario_pix", "beneficiario_titular", "obra", "classificacao",
+        "descricao", "especificacao_pagamento", "documento_numero", "data_emissao", "meio_pagamento", "arquivo_documento",
     }
     campos_criticos_alterados = []
     for campo, valor in dados.items():
@@ -121,14 +155,16 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
     if titulo.fornecedor_id and not titulo.beneficiario_nome:
         titulo.beneficiario_nome = getattr(titulo.fornecedor, "nome_exibicao", None) or str(titulo.fornecedor)
 
-    if campos_criticos_alterados and titulo.status in {TituloPagar.Status.APROVADO, TituloPagar.Status.REJEITADO}:
-        titulo.ciclo_aprovacao += 1
-        titulo.status = TituloPagar.Status.AGUARDANDO_APROVACAO
-        registrar_evento(titulo, "APROVACAO_REABERTA", "A Conta a Pagar voltou para aprovação porque dados financeiros foram alterados.", usuario)
-
     titulo.save()
     if materiais is not None:
-        titulo.materiais.set(materiais)
+        novos_materiais = list(materiais)
+        if set(titulo.materiais.values_list("pk", flat=True)) != {material.pk for material in novos_materiais}:
+            campos_criticos_alterados.append("materiais")
+            titulo.materiais.set(novos_materiais)
+    if documentos_alterados:
+        campos_criticos_alterados.append("anexos")
+    if campos_criticos_alterados:
+        reabrir_aprovacao(titulo, usuario=usuario, motivo="Dados relevantes da Conta a Pagar foram alterados.")
     registrar_evento(titulo, "ATUALIZADO", motivo, usuario, {
         "valor_liquido_anterior": format(valor_anterior, ".2f"),
         "valor_liquido_posterior": format(titulo.valor_liquido, ".2f"),
@@ -139,13 +175,7 @@ def atualizar_titulo(titulo, *, usuario, dados, motivo="Dados da Conta a Pagar a
 
 @transaction.atomic
 def cancelar_titulo(titulo, *, usuario, motivo):
-    liberacao = LiberacaoFinanceiraPedido.objects.filter(titulo_id=titulo.pk).first()
-    if liberacao:
-        # Mesma ordem de bloqueio da autorização: pedido, liberação, título.
-        from compras.models import PedidoCompra
-        PedidoCompra.objects.select_for_update().get(pk=liberacao.pedido_id)
-        liberacao = LiberacaoFinanceiraPedido.objects.select_for_update().get(pk=liberacao.pk)
-    titulo = TituloPagar.objects.select_for_update().get(pk=titulo.pk)
+    titulo, liberacao = bloquear_titulo(titulo)
     if titulo.status == TituloPagar.Status.PAGO or Pagamento.objects.filter(
         titulo=titulo, status=Pagamento.Status.EFETIVADO,
     ).exists():
@@ -170,6 +200,18 @@ def cancelar_titulo(titulo, *, usuario, motivo):
     titulo.save(update_fields=["status", "cancelado_em", "atualizado_em"])
     registrar_evento(titulo, "CANCELADO", motivo or "Conta a Pagar cancelada.", usuario)
     if liberacao:
+        if liberacao.valor_esperado is not None and liberacao.recebimento_id:
+            referencia = f"COMPRA_LIBERACAO:{liberacao.pk}"
+            vigentes = (
+                TituloPagar.objects.filter(pedido_id=liberacao.pedido_id, recebimento_id=liberacao.recebimento_id)
+                .filter(Q(referencia_externa=referencia) | Q(referencia_externa__startswith=f"{referencia}:"))
+                .exclude(status=TituloPagar.Status.CANCELADO)
+            )
+            total = vigentes.aggregate(total=Sum("valor_original"))["total"]
+            if total is not None:
+                liberacao.valor = total
+                liberacao.save(update_fields=["valor"])
+                return titulo
         liberacao.status = LiberacaoFinanceiraPedido.Status.CANCELADA
         liberacao.motivo_cancelamento = motivo or "Título da liberação cancelado."
         liberacao.cancelado_por = usuario

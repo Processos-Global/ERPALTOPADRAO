@@ -1,0 +1,6 @@
+{% load l10n %}
+<div class="pc-help">Solicitada: {{ necessidade.quantidade_necessaria|floatformat:"-4" }} {{ necessidade.unidade }}</div>
+<div class="pc-help">A cotar: {{ necessidade.quantidade_incluida|floatformat:"-4" }} {{ necessidade.unidade }}</div>
+{% if necessidade.material_id %}
+  <div class="pc-help" data-estoque-saldo data-estoque-material="{{ necessidade.material_id|unlocalize }}"></div>
+{% endif %}

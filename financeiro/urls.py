@@ -19,6 +19,7 @@ urlpatterns = [
     path("compromissos/", views.compromissos_contratados, name="compromissos"),
     path("liberacoes/", views.liberacoes_lista, name="liberacoes"),
     path("liberacoes/<int:pk>/autorizar/", views.liberacao_autorizar, name="liberacao_autorizar"),
+    path("liberacoes/<int:pk>/reprocessar/", views.liberacao_reprocessar, name="liberacao_reprocessar"),
     path("contas-a-pagar/", views.titulos_lista, name="titulos"),
     path("contas-a-pagar/novo/", views.titulo_novo, name="titulo_novo"),
     path("contas-a-pagar/catalogo/", titulo_catalogo, name="titulo_catalogo"),

@@ -1,5 +1,5 @@
 {% extends "financeiro/base_financeiro.html" %}
-{% load financeiro_extras %}
+{% load financeiro_extras l10n %}
 {% block financeiro_title %}Compromissos{% endblock %}
 {% block financeiro_content %}
 <header class="fin-head"><h1 class="fin-title">Compromissos</h1>{% include 'financeiro/_exportar.html' with tipo='compromissos' %}</header>
@@ -9,7 +9,6 @@
   {% url 'financeiro:liberacoes' as liberacoes_url %}
   <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='pedidos' status=None page=None page_contratos=None %}" {% if aba == 'pedidos' %}aria-current="page"{% endif %}>Pedidos</a>
   <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='contratos' status=None page=None page_contratos=None %}" {% if aba == 'contratos' %}aria-current="page"{% endif %}>Contratos</a>
-  <a class="fin-btn" href="{{ liberacoes_url }}{% querystring aba=None status=None page=None page_contratos=None %}">Liberações</a>
 </nav>
 
 <form method="get" data-local-submit-loading class="fin-toolbar fin-toolbar--compact">
@@ -51,18 +50,21 @@
 <div class="fin-kpis">
   <div class="fin-kpi"><span>Contratado</span><strong>{{ totais.contratado|moeda_br }}</strong><small>{{ totais.valor_vigente|moeda_br }} vigente</small></div>
   <div class="fin-kpi"><span>Materiais recebidos</span><strong>{{ totais.recebido_identificado|moeda_br }}</strong><small>{{ totais.valor_documentado|moeda_br }} em notas anexadas</small></div>
-  <div class="fin-kpi"><span>Liberado</span><strong>{{ totais.liberado_financeiramente|moeda_br }}</strong><small>{{ totais.saldo_liberar|moeda_br }} sem liberação ou pagamento</small></div>
+  <div class="fin-kpi"><span>Recebido aguardando aprovação</span><strong>{{ totais.recebido_aguardando_aprovacao|moeda_br }}</strong></div>
+  <div class="fin-kpi"><span>Aprovado a pagar</span><strong>{{ totais.aprovado_a_pagar|moeda_br }}</strong></div>
   <div class="fin-kpi"><span>Pago</span><strong>{{ totais.pago_efetivado|moeda_br }}</strong></div>
   <div class="fin-kpi"><span>Saldo a pagar</span><strong>{{ totais.saldo_financeiro|moeda_br }}</strong><small>{{ totais.saldo_cancelado|moeda_br }} de materiais cancelados</small></div>
 </div>
 <section class="fin-section" aria-label="Pedidos contratados">
   <div class="fin-section__body--flush fin-table-wrap">
     <table class="fin-table">
-      <thead><tr><th>Pedido</th><th>Fornecedor / obra</th><th>Situação</th><th>Contratado</th><th>Recebimento</th><th>Liberado</th><th>Pago</th><th>Saldo a pagar</th></tr></thead>
+      <thead><tr><th>Pedido</th><th>Fornecedor / obra</th><th>Situação</th><th>Contratado</th><th>Recebimento</th><th>Aguardando aprovação</th><th>Aprovado a pagar</th><th>Pago</th><th>Saldo a pagar</th></tr></thead>
       <tbody>
       {% for pedido in pagina %}
         <tr>
-          <td class="fin-main-cell"><strong>{{ pedido.numero }}</strong><small>{{ pedido.processo.numero }}</small></td>
+          <td class="fin-main-cell"><strong>{{ pedido.numero }}</strong><small>{{ pedido.processo.numero }}</small>
+            {% if pedido.tem_registros_financeiros %}<a class="fin-table-link" href="{{ liberacoes_url }}?pedido={{ pedido.pk|unlocalize }}">Registros financeiros</a>{% endif %}
+          </td>
           <td>{{ pedido.fornecedor.nome_exibicao }}<small>{{ pedido.obra.nome }}</small></td>
           <td>{{ pedido.get_status_display }}
             {% if pedido.status == 'CANCELADO' %}
@@ -82,10 +84,8 @@
             {% if pedido.itens_recebidos_sem_valor %}<small>{{ pedido.itens_recebidos_sem_valor }} item(ns) sem valor</small>{% endif %}
             {% if pedido.saldo_receber %}<small>{{ pedido.saldo_receber|moeda_br }} em materiais a receber</small>{% endif %}
           </td>
-          <td class="fin-money">
-            <a class="fin-table-link" href="{{ liberacoes_url }}?pedido={{ pedido.pk }}">{{ pedido.liberado_financeiramente|moeda_br }}</a>
-            {% if pedido.saldo_liberar %}<small>{{ pedido.saldo_liberar|moeda_br }} sem liberação ou pagamento</small>{% endif %}
-          </td>
+          <td class="fin-money">{{ pedido.recebido_aguardando_aprovacao|moeda_br }}</td>
+          <td class="fin-money">{{ pedido.aprovado_a_pagar|moeda_br }}</td>
           <td class="fin-money">{{ pedido.pago_efetivado|moeda_br }}</td>
           <td class="fin-money">{{ pedido.saldo_financeiro|moeda_br }}
             {% if pedido.excedente_pago %}<small>{{ pedido.excedente_pago|moeda_br }} pago acima do contrato</small>{% endif %}
@@ -93,7 +93,7 @@
             {% if pedido.liberado_sem_recebimento %}<small>{{ pedido.liberado_sem_recebimento|moeda_br }} liberado sem recebimento</small>{% endif %}
           </td>
         </tr>
-      {% empty %}<tr><td colspan="8" class="fin-empty">Nenhum pedido encontrado.</td></tr>{% endfor %}
+      {% empty %}<tr><td colspan="9" class="fin-empty">Nenhum pedido encontrado.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

@@ -54,6 +54,7 @@ class TituloPagar(models.Model):
         APROVADO = "APROVADO", "Aprovado"
         PAGO = "PAGO", "Pago"
         REJEITADO = "REJEITADO", "Rejeitado"
+        CORRECAO_SOLICITADA = "CORRECAO_SOLICITADA", "Correção solicitada"
         CANCELADO = "CANCELADO", "Cancelado"
 
     class Conferencia(models.TextChoices):
@@ -117,13 +118,12 @@ class TituloPagar(models.Model):
         on_delete=models.PROTECT,
         related_name="titulos_financeiros",
     )
-    # Campos legados preservados para não quebrar dados/migrações anteriores.
-    recebimento = models.OneToOneField(
+    recebimento = models.ForeignKey(
         "compras.RecebimentoPedido",
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name="titulo_financeiro",
+        related_name="titulos_financeiros",
     )
     previsao_origem = models.ForeignKey(
         PrevisaoFinanceira,
@@ -195,6 +195,9 @@ class TituloPagar(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=("solicitacao_avulsa", "parcela_ordem"), name="fin_avulsa_ordem_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=("recebimento", "parcela_ordem"), name="fin_recebimento_ordem_uniq",
             ),
         ]
         indexes = [
@@ -300,6 +303,7 @@ class AprovacaoTituloFinanceiro(models.Model):
     class Decisao(models.TextChoices):
         APROVADO = "APROVADO", "Aprovado"
         REJEITADO = "REJEITADO", "Rejeitado"
+        CORRECAO_SOLICITADA = "CORRECAO_SOLICITADA", "Correção solicitada"
 
     titulo = models.ForeignKey(TituloPagar, on_delete=models.PROTECT, related_name="aprovacoes")
     ciclo = models.PositiveIntegerField(default=1)

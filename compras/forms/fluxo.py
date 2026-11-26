@@ -2,6 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 
 from django import forms
+from django.db.models import Q
 
 from core.validators import validar_documento_upload
 
@@ -98,14 +99,29 @@ class NecessidadeCompraForm(forms.Form):
         label="Material",
         empty_label="Selecione um material",
     )
-    quantidade = forms.DecimalField(min_value=0.0001, decimal_places=4, max_digits=18)
+    quantidade = forms.DecimalField(
+        min_value=Decimal("0.0001"), decimal_places=4, max_digits=18, label="Quantidade solicitada",
+    )
+    quantidade_compra = forms.DecimalField(
+        required=False, min_value=Decimal("0.0001"), decimal_places=4, max_digits=18, label="Quantidade a cotar",
+    )
+    quantidade_comercial = forms.DecimalField(
+        min_value=Decimal("0.0001"), decimal_places=4, max_digits=18, label="Quantidade a cotar",
+    )
     observacao = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
 
-    def __init__(self, *args, processo=None, **kwargs):
+    def __init__(self, *args, processo=None, edicao=False, material_atual_id=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.processo = processo
+        filtro_material = Q(ativo=True)
+        if edicao:
+            del self.fields["quantidade"], self.fields["quantidade_compra"]
+            if material_atual_id:
+                filtro_material |= Q(pk=material_atual_id)
+        else:
+            del self.fields["quantidade_comercial"]
         self.fields["material"].queryset = (
-            Material.objects.filter(ativo=True)
+            Material.objects.filter(filtro_material)
             .select_related("unidade")
             .order_by("nome", "especificacao", "codigo")
         )
@@ -203,7 +219,7 @@ class CotacaoItemForm(forms.Form):
     marca = forms.CharField(required=True, max_length=120)
     modelo = forms.CharField(required=False, max_length=120)
     especificacao_ofertada = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
-    quantidade = forms.DecimalField(min_value=0.0001, decimal_places=4, max_digits=18)
+    quantidade = forms.DecimalField(min_value=Decimal("0.0001"), decimal_places=4, max_digits=18)
     valor_unitario_cotado = forms.DecimalField(min_value=0, decimal_places=4, max_digits=18)
     desconto_cotado = forms.DecimalField(required=False, min_value=0, decimal_places=2, initial=0)
     observacoes = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))

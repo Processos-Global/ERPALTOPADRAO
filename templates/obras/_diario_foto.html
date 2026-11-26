@@ -1,0 +1,17 @@
+{% url 'obras:diario_foto' diario_id foto.pk 'visualizar' as visualizar_url %}
+{% url 'obras:diario_foto' diario_id foto.pk 'original' as original_url %}
+{% with nome=foto.nome_arquivo|default:"Fotografia do diário" %}
+<li>
+  <figure class="diario-foto">
+    <a class="diario-foto-miniatura" href="{{ visualizar_url }}" aria-label="Ampliar {{ nome }}"
+       data-diario-foto data-diario-nome="{{ nome }}" data-diario-original="{{ original_url }}">
+      <img src="{% url 'obras:diario_foto' diario_id foto.pk 'miniatura' %}" alt="" width="320" height="240" loading="lazy" decoding="async">
+      <span class="diario-foto-estado" data-diario-foto-estado hidden></span>
+    </a>
+    <figcaption>
+      <span>{{ nome }}</span>
+      <a href="{{ original_url }}" aria-label="Baixar original de {{ nome }}" download>Baixar</a>
+    </figcaption>
+  </figure>
+</li>
+{% endwith %}

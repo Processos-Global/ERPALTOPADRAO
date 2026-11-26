@@ -1,0 +1,213 @@
+.diario-detalhe > .op-panel {
+  margin-block: 16px;
+}
+
+.diario-secao {
+  padding: clamp(12px, 2vw, 20px);
+}
+
+.diario-secao h3 {
+  margin: 16px 0 6px;
+  color: var(--saari-text);
+  font-size: .95rem;
+}
+
+.diario-secao h3:first-child {
+  margin-block-start: 0;
+}
+
+.diario-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.diario-info > div {
+  padding: 12px;
+  border: 1px solid var(--saari-border);
+  border-radius: 8px;
+  background: var(--saari-hover);
+}
+
+.diario-info dt {
+  color: var(--saari-text-muted);
+  font-size: .8rem;
+}
+
+.diario-info dd {
+  margin: 3px 0 0;
+  color: var(--saari-text);
+  font-weight: 700;
+}
+
+.diario-texto {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.diario-registros,
+.diario-galeria {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.diario-registros li {
+  padding-block: 8px;
+  border-block-end: 1px solid var(--saari-border);
+  overflow-wrap: anywhere;
+}
+
+.diario-registros li:last-child {
+  border-block-end: 0;
+}
+
+.diario-registros small {
+  display: block;
+}
+
+.diario-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 145px), 1fr));
+  gap: 12px;
+}
+
+.diario-foto {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--saari-border);
+  border-radius: 8px;
+  background: var(--saari-surface);
+}
+
+.diario-foto-miniatura {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: 7px 7px 0 0;
+  background: var(--saari-hover);
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.diario-foto-miniatura img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.diario-foto-estado {
+  padding: 8px;
+  color: var(--saari-text-muted);
+  font-size: .8rem;
+  text-align: center;
+}
+
+.diario-foto figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 8px;
+  color: var(--saari-text);
+  font-size: .8rem;
+  overflow-wrap: anywhere;
+}
+
+.diario-galeria-mais {
+  margin-block-start: 12px;
+}
+
+.diario-galeria-mais summary {
+  padding: 8px;
+  color: var(--saari-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diario-galeria-mais .diario-galeria {
+  margin-block-start: 8px;
+}
+
+.diario-foto-miniatura:focus-visible,
+.diario-galeria-mais summary:focus-visible {
+  outline: 2px solid var(--saari-accent);
+  outline-offset: 2px;
+}
+
+.diario-ampliacao {
+  width: min(54rem, calc(100% - 1.5rem));
+  max-width: none;
+  max-height: calc(100dvh - 1.5rem);
+  padding: 0;
+  border: 1px solid var(--saari-border);
+  border-radius: 12px;
+  background: var(--saari-surface);
+  color: var(--saari-text);
+}
+
+.diario-ampliacao::backdrop {
+  background: rgb(21 16 14 / 76%);
+}
+
+.diario-ampliacao-topo,
+.diario-ampliacao-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 12px;
+}
+
+.diario-ampliacao-topo h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.diario-ampliacao-topo form {
+  margin: 0;
+}
+
+.diario-ampliacao-foto {
+  display: grid;
+  min-height: 9rem;
+  place-items: center;
+  background: var(--saari-hover);
+}
+
+.diario-ampliacao-foto img {
+  width: 100%;
+  max-height: 58dvh;
+  object-fit: contain;
+}
+
+.diario-ampliacao-estado {
+  margin: 0;
+  padding: 12px;
+  color: var(--saari-text-muted);
+  text-align: center;
+}
+
+.diario-ampliacao-legenda {
+  display: grid;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+
+.diario-ampliacao-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.diario-foto-miniatura [hidden],
+.diario-ampliacao [hidden] {
+  display: none;
+}

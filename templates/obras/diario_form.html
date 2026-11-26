@@ -16,14 +16,14 @@
   <form method="post" enctype="multipart/form-data" class="op-form">{% csrf_token %}<div class="op-grid">
     <div class="op-field c6"><label for="diario-obra">Obra *</label><select id="diario-obra" name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk|unlocalize }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
     <div class="op-field c3"><label for="diario-data">Data *</label><input id="diario-data" type="date" name="data" required value="{{ data_exibida }}"></div>
-    <div class="op-field c3"><label for="diario-clima">Clima</label><select id="diario-clima" name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
-    <div class="op-field c4"><label for="diario-efetivo">Efetivo no dia</label><input id="diario-efetivo" type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo|unlocalize }}{% endif %}" placeholder="Quantidade de pessoas"></div>
+    <div class="op-field c3"><label for="diario-clima">Clima</label><select id="diario-clima" name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if dados_formulario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+    <div class="op-field c4"><label for="diario-efetivo">Efetivo no dia</label><input id="diario-efetivo" type="number" min="0" name="efetivo" value="{{ dados_formulario.efetivo|default_if_none:""|unlocalize }}" placeholder="Quantidade de pessoas"></div>
     <div class="c12 op-stock-preview" data-conc-dia data-url="{% url 'obras:concretagem_api_dia' %}" hidden>
       <strong>Concretagens desta obra no dia</strong> <span class="op-muted">(somente leitura)</span>
       <div data-conc-dia-lista style="margin-top:8px"></div>
     </div>
-    <div class="op-field c12"><label for="diario-equipe">Equipe / terceiros presentes</label><textarea id="diario-equipe" name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
-    <div class="op-field c12"><label for="diario-ocorrencias">Ocorrências / impedimentos</label><textarea id="diario-ocorrencias" name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label for="diario-equipe">Equipe / terceiros presentes</label><textarea id="diario-equipe" name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{{ dados_formulario.equipe_presente }}</textarea></div>
+    <div class="op-field c12"><label for="diario-ocorrencias">Ocorrências / impedimentos</label><textarea id="diario-ocorrencias" name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{{ dados_formulario.ocorrencias }}</textarea></div>
     <div class="c12 op-stock-preview" data-diario-atividades data-url="{% url 'obras:diario_atividades_api' %}">
       <strong>Atividades da semana</strong> <span class="op-muted" data-diario-semana aria-live="polite">{% if semana %}Semana {{ semana.semana }} · início {{ semana.inicio_semana|date:'d/m/Y' }}{% else %}Sem semana importada para a obra e data.{% endif %}</span>
       {% regroup atividades by grupo as grupos %}
@@ -38,10 +38,17 @@
         {% empty %}<p class="op-muted">Nenhuma atividade disponível para a semana selecionada.</p>{% endfor %}
       </div>
     </div>
-    {% if vinculos_historicos %}<div class="c12 op-stock-preview"><strong>Atividades de cronogramas anteriores</strong><p class="op-muted">Estes vínculos permanecem registrados neste diário. Marque apenas os que deseja remover.</p>{% for vinculo in vinculos_historicos %}<label class="op-diario-opcao"><input type="checkbox" name="remover_atividade_historica" value="{{ vinculo.pk|unlocalize }}" data-diario-vinculo-historico="{{ vinculo.atividade_id|unlocalize }}"><span><strong>{{ vinculo.atividade.nome_tarefa }}</strong><small>{{ vinculo.get_origem_display }} · Semana {{ vinculo.semana }} · início {{ vinculo.inicio_semana|date:'d/m/Y' }}</small></span></label>{% endfor %}</div>{% endif %}
-    <div class="op-field c12"><label>Fotos do dia (até 12 por envio, 10 MB cada)</label><input type="file" name="fotos" accept="image/*" multiple></div>
-    {% if diario and diario.fotos.all %}<div class="c12"><strong>Fotos já anexadas</strong><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">{% for foto in diario.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Foto do diário" loading="lazy" style="height:110px;width:145px;object-fit:cover;border-radius:8px"></a>{% endfor %}</div></div>{% endif %}
-    <div class="c12 op-actions"><button class="op-btn" type="submit" data-diario-salvar>Salvar diário</button><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Cancelar</a></div>
+    {% if vinculos_historicos %}<div class="c12 op-stock-preview"><strong>Atividades de cronogramas anteriores</strong><p class="op-muted">Estes vínculos permanecem registrados neste diário. Marque apenas os que deseja remover.</p>{% for vinculo in vinculos_historicos %}<label class="op-diario-opcao"><input type="checkbox" name="remover_atividade_historica" value="{{ vinculo.pk|unlocalize }}" data-diario-vinculo-historico="{{ vinculo.atividade_id|unlocalize }}"{% if vinculo.pk in vinculos_a_remover %} checked{% endif %}><span><strong>{{ vinculo.atividade.nome_tarefa }}</strong><small>{{ vinculo.get_origem_display }} · Semana {{ vinculo.semana }} · início {{ vinculo.inicio_semana|date:'d/m/Y' }}</small></span></label>{% endfor %}</div>{% endif %}
+    <div class="op-field c12"><label for="diario-fotos">Fotos do dia (até 12 por envio, 10 MB cada)</label><input id="diario-fotos" type="file" name="fotos" accept="image/*" multiple></div>
+    {% if diario %}
+      {% with total=diario.fotos.count %}
+        {% if total %}<div class="c12 op-stock-preview">
+          <strong>{{ total }} foto{{ total|pluralize }} já anexada{{ total|pluralize }}</strong>
+          <a class="op-btn secondary" href="{% url 'obras:diario_detalhe' diario.pk %}#diario-midias" target="_blank" rel="noopener">Ver galeria</a>
+        </div>{% endif %}
+      {% endwith %}
+    {% endif %}
+    <div class="c12 op-actions"><button class="op-btn" type="submit" data-diario-salvar>Salvar diário</button><a class="op-btn secondary" href="{{ voltar_url }}">Cancelar</a></div>
   </div></form>
 </div>
 <script>

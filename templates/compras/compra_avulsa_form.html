@@ -10,16 +10,17 @@
 .av-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--saari-text)}
 .av-field--full{grid-column:1/-1}
 .av-items{display:grid;gap:10px}
-.av-item{display:grid;grid-template-columns:minmax(320px,1fr) 150px minmax(260px,.9fr) 44px;gap:10px;align-items:end;padding:14px;border:1px solid var(--saari-border);border-radius:10px;background:var(--saari-hover)}
+.av-item{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,1fr) minmax(0,.9fr) 44px;gap:10px;align-items:start;padding:14px;border:1px solid var(--saari-border);border-radius:10px;background:var(--saari-hover)}
 .av-item__meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
 .av-item__meta strong{font-size:12px;color:var(--saari-text)}
 .av-item__meta small{font-size:10px;color:var(--saari-text-muted)}
-.av-exception{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;align-items:start}.av-exception .av-field{flex:1 1 280px}
+.av-quantidades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .av-remove{height:42px;border:1px solid var(--saari-border);background:var(--saari-surface);border-radius:8px;cursor:pointer;color:var(--saari-text);font-size:20px;line-height:1}
 .av-remove:hover{background:var(--saari-hover)}
 .av-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .av-hidden-delete{display:none!important}
-.av-note{margin-top:6px;color:var(--saari-text-muted);font-size:11px}
+.av-note{display:block;margin-top:6px;color:var(--saari-text-muted);font-size:11px}
+.av-note:empty{margin-top:0}
 @media(max-width:900px){.av-grid,.av-item{grid-template-columns:1fr}.av-field--full{grid-column:auto}.av-head{flex-direction:column}.av-actions{justify-content:stretch}.av-actions .cp-btn{width:100%}}
 </style>
 {% endblock %}
@@ -34,7 +35,7 @@
     <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Voltar</a>
   </div>
 
-  <form method="post" id="avulsa-form">
+  <form method="post" id="avulsa-form" data-estoque-url="{% url 'compras:estoque_materiais_obra' %}">
     {% csrf_token %}
     {{ formset.management_form }}
     {% if form.non_field_errors %}<div class="cp-alert cp-alert--danger">{{ form.non_field_errors }}</div>{% endif %}
@@ -42,7 +43,7 @@
     <section class="av-card">
       <div class="av-grid">
         <div class="av-field">
-          <label>{{ form.obra.label }}</label>
+          {{ form.obra.label_tag }}
           {{ form.obra }}{{ form.obra.errors }}
         </div>
         <div class="av-field">
@@ -73,34 +74,41 @@
       <div class="cp-head" style="margin-bottom:12px">
         <div>
           <h2 style="margin:0">Itens da compra</h2>
-          <div class="cp-muted">Selecione os materiais do cadastro e informe as quantidades.</div>
+          <div class="cp-muted">A quantidade a cotar usa a solicitada quando o campo fica em branco. O estoque é apenas informativo.</div>
         </div>
-        <button type="button" class="cp-btn" id="add-item">+ Adicionar item</button>
+        <div class="cp-actions">
+          <button type="button" class="cp-btn" data-estoque-atualizar>Atualizar estoque</button>
+          <button type="button" class="cp-btn" id="add-item">+ Adicionar item</button>
+        </div>
       </div>
 
       <div class="av-items" id="items"></div>
 
       <template id="empty-form">
-        <div class="av-item" data-row>
+        <div class="av-item" data-row data-estoque-item>
           <div class="av-item__meta"><strong>Item da compra</strong><small>Selecione o material e informe os dados</small></div>
-          <div class="av-field"><label>Material</label>{{ formset.empty_form.material }}</div>
-          <div class="av-field"><label>Quantidade</label>{{ formset.empty_form.quantidade }}</div>
-          <div class="av-field"><label>Observação</label>{{ formset.empty_form.observacao }}</div>
-          {% if pode_excecao_estoque %}<div class="av-exception"><label>{{ formset.empty_form.excecao_estoque }} Exceção de estoque</label><div class="av-field"><label>Justificativa</label>{{ formset.empty_form.justificativa_excecao }}</div></div>{% endif %}
-          <button type="button" class="av-remove" data-remove title="Remover item">×</button>
+          <div class="av-field">{{ formset.empty_form.material.label_tag }}{{ formset.empty_form.material }}<small class="av-note" data-estoque-saldo role="status"></small></div>
+          <div class="av-quantidades">
+            <div class="av-field"><label for="{{ formset.empty_form.quantidade.id_for_label }}">Qtd. solicitada</label>{{ formset.empty_form.quantidade }}</div>
+            <div class="av-field"><label for="{{ formset.empty_form.quantidade_compra.id_for_label }}">Qtd. a cotar</label>{{ formset.empty_form.quantidade_compra }}</div>
+          </div>
+          <div class="av-field">{{ formset.empty_form.observacao.label_tag }}{{ formset.empty_form.observacao }}</div>
+          <button type="button" class="av-remove" data-remove aria-label="Remover item">×</button>
           <div class="av-hidden-delete">{{ formset.empty_form.DELETE }}</div>
         </div>
       </template>
 
       <div id="initial-forms" hidden>
         {% for f in formset %}
-        <div class="av-item" data-row>
+        <div class="av-item" data-row data-estoque-item>
           <div class="av-item__meta"><strong>Item da compra</strong><small>Selecione o material e informe os dados</small></div>
-          <div class="av-field"><label>Material</label>{{ f.material }}{{ f.material.errors }}</div>
-          <div class="av-field"><label>Quantidade</label>{{ f.quantidade }}{{ f.quantidade.errors }}</div>
-          <div class="av-field"><label>Observação</label>{{ f.observacao }}{{ f.observacao.errors }}</div>
-          {% if pode_excecao_estoque %}<div class="av-exception"><label>{{ f.excecao_estoque }} Exceção de estoque</label><div class="av-field"><label>Justificativa</label>{{ f.justificativa_excecao }}{{ f.justificativa_excecao.errors }}</div></div>{% endif %}
-          <button type="button" class="av-remove" data-remove title="Remover item">×</button>
+          <div class="av-field">{{ f.material.label_tag }}{{ f.material }}{{ f.material.errors }}<small class="av-note" data-estoque-saldo role="status"></small></div>
+          <div class="av-quantidades">
+            <div class="av-field"><label for="{{ f.quantidade.id_for_label }}">Qtd. solicitada</label>{{ f.quantidade }}{{ f.quantidade.errors }}</div>
+            <div class="av-field"><label for="{{ f.quantidade_compra.id_for_label }}">Qtd. a cotar</label>{{ f.quantidade_compra }}{{ f.quantidade_compra.errors }}</div>
+          </div>
+          <div class="av-field">{{ f.observacao.label_tag }}{{ f.observacao }}{{ f.observacao.errors }}</div>
+          <button type="button" class="av-remove" data-remove aria-label="Remover item">×</button>
           <div class="av-hidden-delete">{{ f.DELETE }}</div>
         </div>
         {% endfor %}
@@ -130,6 +138,7 @@
       }else{
         row.remove();
       }
+      box.dispatchEvent(new Event('compras:itens-alterados', {bubbles:true}));
     };
   }
 
@@ -150,3 +159,5 @@
 })();
 </script>
 {% endblock %}
+
+{% block extra_js %}<script defer src="{% static 'js/compras-estoque.js' %}"></script>{% endblock %}

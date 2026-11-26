@@ -1,0 +1,39 @@
+{% load l10n %}
+{% if pode_aprovar and titulo.status == 'AGUARDANDO_APROVACAO' %}
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Aprovação financeira</h2></div>
+  <div class="fin-section__body">
+    <form method="post" action="{% url 'financeiro:titulo_decidir' titulo.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="ciclo" value="{{ titulo.ciclo_aprovacao|unlocalize }}">
+      {% if divergente %}
+        <p class="fin-note" id="decisao-divergencia">Para aprovar, confirme a ciência da divergência e registre a justificativa.</p>
+        <p><label><input type="checkbox" name="ciencia_divergencia" value="1" aria-describedby="decisao-divergencia"> Estou ciente da divergência registrada.</label></p>
+      {% endif %}
+      <div class="fin-filter-field">
+        <label for="decisao-observacao">Justificativa</label>
+        <textarea class="fin-control" id="decisao-observacao" name="observacao" rows="3" maxlength="500" aria-describedby="decisao-orientacao"></textarea>
+        <small class="fin-muted" id="decisao-orientacao">Para solicitar correção, indique o que precisa ser ajustado.</small>
+      </div>
+      <div class="fin-form-footer__actions">
+        <button class="fin-btn" name="decisao" value="CORRECAO_SOLICITADA">Solicitar correção</button>
+        <button class="fin-btn fin-btn--danger" name="decisao" value="REJEITADO">Reprovar</button>
+        <button class="fin-btn fin-btn--primary" name="decisao" value="APROVADO">Aprovar</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endif %}
+{% if titulo.aprovacoes.all %}
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Decisões financeiras</h2></div>
+  <div class="fin-section__body fin-timeline">
+    {% for decisao in titulo.aprovacoes.all %}
+      <div class="fin-timeline__item"><strong>{{ decisao.get_decisao_display }} · ciclo {{ decisao.ciclo }}</strong>
+        <small>{{ decisao.criado_em|date:"d/m/Y H:i" }}{% if decisao.usuario %} · {{ decisao.usuario }}{% endif %}</small>
+        {% if decisao.observacao %}<p>{{ decisao.observacao|linebreaksbr }}</p>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}

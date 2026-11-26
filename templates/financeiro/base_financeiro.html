@@ -4,33 +4,35 @@
 {% block page_name %}Financeiro{% endblock %}
 {% block extra_css %}{% include "financeiro/_styles.html" %}{% block financeiro_extra_css %}{% endblock %}{% endblock %}
 {% block content %}
-{% pode_financeiro "APROVAR" as fin_pode_aprovar %}
-{% pode_financeiro "LANCAR_TITULOS" as fin_pode_lancar %}
-{% pode_financeiro "ADMINISTRAR" as fin_pode_admin %}
+{% navegacao_financeiro as fin_menu %}
 <div class="fin-page">
   {% with rota=request.resolver_match.url_name %}
     <div class="fin-module-toolbar">
       <nav class="fin-subnav" id="fin-subnav" aria-label="Navegação do Financeiro">
-        <a href="{% url 'financeiro:dashboard' %}" {% if rota == 'dashboard' %}class="is-active" aria-current="page"{% endif %}>Visão geral</a>
-        <a href="{% url 'financeiro:titulos' %}" {% if 'titulo' in rota or rota == 'agenda' or rota == 'aprovacoes' %}class="is-active" aria-current="page"{% endif %}>Contas a pagar</a>
-        <a href="{% url 'financeiro:pagamentos' %}" {% if 'pagamento' in rota %}class="is-active" aria-current="page"{% endif %}>Pagamentos</a>
-        <a href="{% url 'financeiro:compromissos' %}" {% if rota == 'compromissos' or rota == 'liberacoes' %}class="is-active" aria-current="page"{% endif %}>Compromissos</a>
-        <a href="{% url 'financeiro:previsoes' %}" {% if 'previso' in rota %}class="is-active" aria-current="page"{% endif %}>Planejamento financeiro</a>
-        <a href="{% url 'financeiro:indicadores' %}" {% if rota == 'indicadores' or rota == 'gastos' or rota == 'analises' %}class="is-active" aria-current="page"{% endif %}>Relatórios e indicadores</a>
+        {% for entrada in fin_menu.entries %}
+          <a href="{{ entrada.url }}" {% if entrada.route == fin_menu.branch.route %}class="is-active" aria-current="{% if entrada.current %}page{% else %}location{% endif %}"{% endif %}>{{ entrada.label }}</a>
+        {% endfor %}
       </nav>
-      <div class="fin-actions">
-        {% if fin_pode_admin %}
-          <details class="fin-config">
-            <summary class="fin-btn">Configurações</summary>
-            <div class="fin-config__links">
-              <a href="{% url 'financeiro:plano_financeiro' %}">Apropriações</a>
-              <a href="{% url 'financeiro:despesas_recorrentes' %}">Despesas recorrentes</a>
-            </div>
-          </details>
-        {% endif %}
-        {% if fin_pode_lancar and rota != 'titulo_novo' %}<a class="fin-btn fin-btn--primary" href="{% url 'financeiro:titulo_novo' %}">Nova solicitação</a>{% endif %}
-      </div>
+      {% if fin_menu.pode_lancar and rota != 'titulo_novo' %}
+        <a class="fin-btn fin-btn--primary" href="{% url 'financeiro:titulo_novo' %}">Nova solicitação</a>
+      {% endif %}
     </div>
+    {% if fin_menu.branch.route == 'financeiro:previsoes' %}
+      <div class="fin-module-toolbar">
+        <nav class="fin-tabs" aria-label="Planejamento financeiro">
+          <a class="fin-btn" href="{% url 'financeiro:previsoes' %}" {% if rota == 'previsoes' %}aria-current="page"{% endif %}>Previsões</a>
+          <a class="fin-btn" href="{% url 'financeiro:compromissos' %}" {% if rota == 'compromissos' %}aria-current="page"{% endif %}>Compromissos</a>
+          {% if fin_menu.pode_administrar %}<a class="fin-btn" href="{% url 'financeiro:despesas_recorrentes' %}">Despesas recorrentes</a>{% endif %}
+        </nav>
+      </div>
+    {% elif fin_menu.branch.route == 'financeiro:plano_financeiro' %}
+      <div class="fin-module-toolbar">
+        <nav class="fin-tabs" aria-label="Configurações financeiras">
+          <a class="fin-btn" href="{% url 'financeiro:plano_financeiro' %}" {% if rota == 'plano_financeiro' %}aria-current="page"{% endif %}>Apropriações</a>
+          <a class="fin-btn" href="{% url 'financeiro:despesas_recorrentes' %}" {% if rota == 'despesas_recorrentes' %}aria-current="page"{% endif %}>Despesas recorrentes</a>
+        </nav>
+      </div>
+    {% endif %}
   {% endwith %}
   {% block financeiro_content %}{% endblock %}
 

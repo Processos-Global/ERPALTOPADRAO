@@ -51,7 +51,6 @@ def _carregar_compras(usuario: User) -> dict:
         "gerenciar_pedidos": permissao.gerenciar_pedidos,
         "receber_pedidos": permissao.receber_pedidos,
         "cancelar_pedidos": permissao.cancelar_pedidos,
-        "excecao_estoque": permissao.excecao_estoque,
         "administrar": permissao.administrar,
         "receber_emails": permissao.receber_emails,
         "email_visualizar": permissao.email_visualizar,
@@ -148,7 +147,6 @@ def _resolver_nivel_compras(valores: dict) -> str:
             "gerenciar_pedidos",
             "receber_pedidos",
             "cancelar_pedidos",
-            "excecao_estoque",
         )
     ):
         return NivelPermissao.EDICAO
@@ -168,7 +166,6 @@ def _salvar_compras(usuario: User, valores: dict, modulo_ativo: bool) -> None:
         "gerenciar_pedidos",
         "receber_pedidos",
         "cancelar_pedidos",
-        "excecao_estoque",
         "administrar",
     ):
         setattr(permissao, campo, bool(valores.get(campo, False)))
@@ -341,7 +338,6 @@ MODULOS_REGISTRY: tuple[ModuloDef, ...] = (
             PermissaoEspecificaDef("gerenciar_pedidos", "Gerenciar pedidos", "Pode anexar documentos e atualizar status e previsão."),
             PermissaoEspecificaDef("receber_pedidos", "Registrar recebimentos", "Pode registrar recebimentos, valores e nota fiscal."),
             PermissaoEspecificaDef("cancelar_pedidos", "Cancelar pedidos", "Pode cancelar pedidos quando a regra de negócio permitir.", "danger"),
-            PermissaoEspecificaDef("excecao_estoque", "Exceção de estoque", "Pode justificar uma compra apesar da cobertura por estoque ou pedidos pendentes.", "danger"),
             PermissaoEspecificaDef("administrar", "Administrar Compras", "Concede acesso total às ações de Compras.", "admin"),
         ),
         preferencias_email=(

@@ -1,46 +1,164 @@
-{% extends "financeiro/base_financeiro.html" %}{% load financeiro_extras %}
+{% extends "financeiro/base_financeiro.html" %}
+{% load financeiro_extras l10n %}
 {% block financeiro_title %}Aprovações{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><h1 class="fin-title">Aprova??es</h1>
-  <span>{{ page_obj.paginator.count }} pendências · {{ total|moeda_br }}</span>
+<header class="fin-head">
+  <div class="fin-head__copy">
+    <h1 class="fin-title">Aprovações</h1>
+    <p class="fin-sub">{{ page_obj.paginator.count }} conta{{ page_obj.paginator.count|pluralize }} · {{ total|moeda_br }}</p>
+  </div>
   {% include 'financeiro/_exportar.html' with tipo='aprovacoes' %}
 </header>
-<nav class="fin-tabs" aria-label="Contas a pagar">
-  <a class="fin-btn" href="{% url 'financeiro:titulos' %}">Títulos</a>
-  <a class="fin-btn" href="{% url 'financeiro:agenda' %}">Agenda</a>
-  <a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}" aria-current="page">Aprova??es</a>
-</nav>
 
-<form class="fin-toolbar" method="get" data-local-submit-loading><div class="fin-filter-field"><label>Buscar</label><input class="fin-control" name="q" value="{{ filtros.q }}" placeholder="Conta, fornecedor ou descrição"></div><div class="fin-filter-field"><label>Obra</label><select class="fin-control" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if filtros.obra == o.pk|stringformat:'s' %}selected{% endif %}>{{ o }}</option>{% endfor %}</select></div><div class="fin-filter-field"><label>Origem</label><select class="fin-control" name="origem"><option value="">Todas</option>{% for v,r in origem_choices %}<option value="{{ v }}" {% if filtros.origem == v %}selected{% endif %}>{{ r }}</option>{% endfor %}</select></div><div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary">Filtrar</button><a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Limpar</a></div></form>
+<form class="fin-toolbar" method="get" data-local-submit-loading>
+  <div class="fin-filter-field">
+    <label for="aprovacao-busca">Buscar</label>
+    <input class="fin-control" id="aprovacao-busca" name="q" value="{{ filtros.q }}" placeholder="Conta, fornecedor ou descrição">
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-obra">Obra</label>
+    <select class="fin-control" id="aprovacao-obra" name="obra">
+      <option value="">Todas</option>
+      {% for obra in obras %}<option value="{{ obra.pk|unlocalize }}" {% if filtros.obra == obra.pk|stringformat:'s' %}selected{% endif %}>{{ obra }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-origem">Origem</label>
+    <select class="fin-control" id="aprovacao-origem" name="origem">
+      <option value="">Todas</option>
+      {% for valor, rotulo in origem_choices %}<option value="{{ valor }}" {% if filtros.origem == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-fornecedor">Fornecedor</label>
+    <select class="fin-control" id="aprovacao-fornecedor" name="fornecedor">
+      <option value="">Todos</option>
+      {% for fornecedor in fornecedores %}<option value="{{ fornecedor.pk|unlocalize }}" {% if filtros.fornecedor == fornecedor.pk|stringformat:'s' %}selected{% endif %}>{{ fornecedor.nome_exibicao }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-status">Status</label>
+    <select class="fin-control" id="aprovacao-status" name="status">
+      <option value="fila" {% if filtros.status == 'fila' %}selected{% endif %}>Fila de análise</option>
+      <option value="todos" {% if filtros.status == 'todos' %}selected{% endif %}>Todos</option>
+      {% for valor, rotulo in status_choices %}<option value="{{ valor }}" {% if filtros.status == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-divergencia">Divergência</label>
+    <select class="fin-control" id="aprovacao-divergencia" name="divergencia">
+      <option value="">Todas</option>
+      <option value="sim" {% if filtros.divergencia == 'sim' %}selected{% endif %}>Com divergência</option>
+      <option value="nao" {% if filtros.divergencia == 'nao' %}selected{% endif %}>Sem divergência</option>
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-conferencia">Conferência documental</label>
+    <select class="fin-control" id="aprovacao-conferencia" name="conferencia">
+      <option value="">Todas</option>
+      {% for valor, rotulo in conferencia_choices %}<option value="{{ valor }}" {% if filtros.conferencia == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-apropriacao">Apropriação</label>
+    <select class="fin-control" id="aprovacao-apropriacao" name="apropriacao">
+      <option value="">Todas</option>
+      {% for conta in apropriacoes %}<option value="{{ conta.pk|unlocalize }}" {% if filtros.apropriacao == conta.pk|stringformat:'s' %}selected{% endif %}>{{ conta.caminho }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-classificacao">Classificação</label>
+    <select class="fin-control" id="aprovacao-classificacao" name="classificacao">
+      <option value="">Todas</option>
+      {% for valor, rotulo in classificacao_choices %}<option value="{{ valor }}" {% if filtros.classificacao == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-solicitada-de">Solicitada de</label>
+    <input class="fin-control" type="date" id="aprovacao-solicitada-de" name="solicitada_de" value="{{ filtros.solicitada_de }}">
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-solicitada-ate">Solicitada até</label>
+    <input class="fin-control" type="date" id="aprovacao-solicitada-ate" name="solicitada_ate" value="{{ filtros.solicitada_ate }}">
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-vencimento-de">Vencimento de</label>
+    <input class="fin-control" type="date" id="aprovacao-vencimento-de" name="vencimento_de" value="{{ filtros.vencimento_de }}">
+  </div>
+  <div class="fin-filter-field">
+    <label for="aprovacao-vencimento-ate">Vencimento até</label>
+    <input class="fin-control" type="date" id="aprovacao-vencimento-ate" name="vencimento_ate" value="{{ filtros.vencimento_ate }}">
+  </div>
+  <div class="fin-toolbar__actions">
+    <button class="fin-btn fin-btn--primary">Filtrar</button>
+    <a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Limpar</a>
+  </div>
+</form>
 
 {% if titulos %}
 <section class="fin-section">
-  <div class="fin-section__head"><div><h2>Contas aguardando decisão</h2><p>Selecione várias linhas para aprovar em lote ou decida individualmente à direita.</p></div><form id="bulk-approval" method="post" action="{% url 'financeiro:aprovacoes_lote' %}">{% csrf_token %}<button class="fin-btn fin-btn--primary">Aprovar selecionados</button></form></div>
+  <div class="fin-section__head">
+    <h2>Solicitações financeiras</h2>
+    {% if pode_aprovar_lote %}
+      <form id="bulk-approval" method="post" action="{% url 'financeiro:aprovacoes_lote' %}">
+        {% csrf_token %}
+        <button class="fin-btn fin-btn--primary">Aprovar selecionadas</button>
+      </form>
+    {% endif %}
+  </div>
   <div class="fin-section__body--flush fin-table-wrap">
-    <table class="fin-table" style="font-size:12px">
-      <thead><tr><th style="width:34px"><input type="checkbox" id="check-all" aria-label="Selecionar toda a página"></th><th>Fornecedor / conta</th><th>O que foi comprado/pago</th><th>Obra</th><th>Apropriação</th><th>Venc.</th><th style="text-align:right">Valor</th><th style="text-align:right">Ações</th></tr></thead>
+    <table class="fin-table">
+      <thead><tr>
+        {% if pode_aprovar_lote %}<th scope="col"><input type="checkbox" class="fin-check" id="check-all" aria-label="Selecionar todas as contas elegíveis da página"></th>{% endif %}
+        <th scope="col">Conta e descrição</th><th scope="col">Origem e obra</th><th scope="col">Solicitação</th>
+        <th scope="col">Vencimento</th><th scope="col">Status</th><th scope="col">Conferência</th>
+        <th scope="col" class="fin-money">Valor solicitado</th><th scope="col">Ação</th>
+      </tr></thead>
       <tbody>
       {% for titulo in titulos %}
       <tr>
-        <td><input class="fin-check row-check" type="checkbox" name="titulo" aria-label="Selecionar {{ titulo.numero }}" value="{{ titulo.pk }}" form="bulk-approval"></td>
-        <td class="fin-main-cell"><strong>{{ titulo.beneficiario_exibicao }}</strong><small>{{ titulo.numero }} · {{ titulo.descricao }}{% if titulo.parcela_total %} · {{ titulo.rotulo_parcela }}{% endif %}</small></td>
-        <td style="min-width:260px;max-width:420px">
-          <a href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar{% if titulo.pedido_id %} ? {{ titulo.pedido.numero }}{% endif %}</a>
+        {% if pode_aprovar_lote %}
+          <td>{% if titulo.status == 'AGUARDANDO_APROVACAO' and not titulo.divergente %}
+            <input class="fin-check row-check" type="checkbox" name="titulo" aria-label="Selecionar {{ titulo.numero }}" value="{{ titulo.pk|unlocalize }}:{{ titulo.ciclo_aprovacao|unlocalize }}" form="bulk-approval">
+          {% endif %}</td>
+        {% endif %}
+        <td class="fin-main-cell"><strong>{{ titulo.numero }} · {{ titulo.beneficiario_exibicao }}</strong>
+          <small>{{ titulo.descricao }}{% if titulo.parcela_total > 1 %} · Parcela {{ titulo.rotulo_parcela }}{% endif %}</small>
         </td>
-        <td>{{ titulo.obra|default:"—" }}</td>
-        <td>{% if titulo.plano_financeiro %}<strong>{{ titulo.plano_financeiro.nome }}</strong>{% if titulo.plano_financeiro.pai %}<small class="fin-muted" style="display:block">{{ titulo.plano_financeiro.pai.nome }}</small>{% endif %}{% else %}—{% endif %}</td>
+        <td class="fin-main-cell"><strong>{{ titulo.get_origem_display }} · {{ titulo.obra|default:"Obra não informada" }}</strong>
+          {% if titulo.pedido_id %}<small>{{ titulo.pedido.processo.numero }} · {{ titulo.pedido.numero }}{% if titulo.recebimento_id %} · Recebimento {{ titulo.recebimento_id|unlocalize }}{% endif %}</small>
+          {% elif titulo.plano_financeiro_id %}<small>{{ titulo.plano_financeiro.caminho }}</small>{% endif %}
+        </td>
+        <td class="fin-main-cell"><strong>{{ titulo.criado_em|date:"d/m/Y" }}</strong><small>{{ titulo.criado_por|default:"—" }}</small></td>
         <td class="fin-date">{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>
-        <td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
-        <td style="white-space:nowrap;text-align:right">
-          <form method="post" action="{% url 'financeiro:titulo_decidir' titulo.pk %}" style="display:inline-flex;gap:5px">{% csrf_token %}<button class="fin-btn fin-btn--sm fin-btn--danger" name="decisao" value="REJEITADO">Reprovar</button><button class="fin-btn fin-btn--sm fin-btn--primary" name="decisao" value="APROVADO">Aprovar</button></form>
+        <td><span class="fin-badge fin-badge--{{ titulo.status|status_fin_classe }}">{% if titulo.status == 'PREVISTA' and titulo.recebimento_id %}Dados pendentes{% else %}{{ titulo.get_status_display }}{% endif %}</span></td>
+        <td class="fin-main-cell"><strong>{{ titulo.get_conferencia_display }}</strong>
+          {% if titulo.divergente %}<small><span class="fin-badge fin-badge--warning">Divergência · análise individual</span></small>{% endif %}
         </td>
+        <td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
+        <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Analisar</a></td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
-{% include 'financeiro/_paginacao.html' %}
+  {% include 'financeiro/_paginacao.html' %}
 </section>
-{% else %}<section class="fin-section"><div class="fin-empty"><strong>Nenhuma aprovação pendente</strong></div></section>{% endif %}
-<script>const all=document.getElementById('check-all');if(all){all.addEventListener('change',()=>document.querySelectorAll('.row-check').forEach(c=>c.checked=all.checked));}</script>
+{% else %}
+<section class="fin-section"><div class="fin-empty"><strong>Nenhuma solicitação encontrada</strong></div></section>
+{% endif %}
+{% if pode_aprovar_lote %}
+<script>
+(() => {
+  const todos = document.getElementById('check-all');
+  const contas = Array.from(document.querySelectorAll('.row-check'));
+  todos.addEventListener('change', () => contas.forEach(conta => { conta.checked = todos.checked; }));
+  contas.forEach(conta => conta.addEventListener('change', () => {
+    const quantidade = contas.filter(item => item.checked).length;
+    todos.checked = quantidade === contas.length;
+    todos.indeterminate = quantidade > 0 && quantidade < contas.length;
+  }));
+})();
+</script>
+{% endif %}
 {% endblock %}

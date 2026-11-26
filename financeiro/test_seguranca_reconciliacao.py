@@ -14,7 +14,7 @@ from cadastros.models import Fornecedor
 from compras.models import PedidoCompra, ProcessoCompra
 from financeiro.models import (
     AnexoTituloPagar, AprovacaoTituloFinanceiro, LiberacaoFinanceiraPedido,
-    Pagamento, PlanoFinanceiro, ProgramacaoPagamento, RelatorioPagamento, TituloPagar,
+    ItemRelatorioPagamento, Pagamento, PlanoFinanceiro, ProgramacaoPagamento, RelatorioPagamento, TituloPagar,
 )
 from financeiro.services.compromissos import pedidos_comprometidos, totais_pedidos
 from financeiro.services.fluxo_caixa import serie_desembolsos
@@ -77,7 +77,9 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
 
         self.client.force_login(self.aprovador)
         self.assertEqual(self.client.get(decidir).status_code, 405)
-        self.assertEqual(self.client.post(decidir, {"decisao": "APROVADO"}).status_code, 302)
+        self.assertEqual(self.client.post(decidir, {
+            "decisao": "APROVADO", "ciclo": self.titulo.ciclo_aprovacao,
+        }).status_code, 302)
         self.titulo.refresh_from_db()
         self.assertEqual(self.titulo.status, TituloPagar.Status.APROVADO)
         self.assertEqual(self.titulo.aprovacoes.get().usuario, self.aprovador)
@@ -161,8 +163,7 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
 
     @modify_settings(MIDDLEWARE={"append": "django.middleware.csrf.CsrfViewMiddleware"})
     def test_confirmacao_exige_post_e_csrf_e_repeticao_preserva_um_pagamento(self):
-        self.titulo.status = TituloPagar.Status.APROVADO
-        self.titulo.save(update_fields=["status"])
+        self.aprovar_titulo(self.titulo)
         cliente = Client(enforce_csrf_checks=True)
         cliente.force_login(self.pagador)
         confirmar = reverse("financeiro:pagamento_confirmar_direto", args=[self.titulo.pk])
@@ -187,9 +188,10 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
         self.assertEqual(self.client.post(confirmar).status_code, 400)
         self.titulo.refresh_from_db()
         self.assertEqual(self.titulo.status, TituloPagar.Status.AGUARDANDO_APROVACAO)
-        self.titulo.status = TituloPagar.Status.APROVADO
+        self.aprovar_titulo(self.titulo)
+        self.client.force_login(self.pagador)
         self.titulo.desconto = Decimal("105.00")
-        self.titulo.save(update_fields=["status", "desconto"])
+        self.titulo.save(update_fields=["desconto"])
         self.assertEqual(self.client.post(confirmar).status_code, 400)
         self.assertFalse(Pagamento.objects.filter(titulo=self.titulo).exists())
         self.titulo.refresh_from_db()
@@ -237,8 +239,7 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
         self.assertEqual(b"".join(resposta.streaming_content), conteudo)
 
     def test_estorno_repetido_com_instancia_antiga_preserva_autor_e_evento(self):
-        self.titulo.status = TituloPagar.Status.APROVADO
-        self.titulo.save(update_fields=["status"])
+        self.aprovar_titulo(self.titulo)
         pagamento = self.efetivar_titulo(self.titulo)
         leitura_alternativa = Pagamento.objects.get(pk=pagamento.pk)
         segundo_pagador = self.usuario_financeiro("segundo_pagador", registrar_pagamentos=True)
@@ -274,8 +275,11 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
 
     def aprovar_titulo(self, titulo):
         self.client.force_login(self.aprovador)
+        titulo.refresh_from_db()
         decidir = reverse("financeiro:titulo_decidir", args=[titulo.pk])
-        self.assertEqual(self.client.post(decidir, {"decisao": "APROVADO"}).status_code, 302)
+        self.assertEqual(self.client.post(decidir, {
+            "decisao": "APROVADO", "ciclo": titulo.ciclo_aprovacao,
+        }).status_code, 302)
         titulo.refresh_from_db()
         return titulo.aprovacoes.get(ciclo=titulo.ciclo_aprovacao)
 
@@ -318,10 +322,18 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
             descricao="Obrigação sintética de outra obra", obra=outra_obra,
             fornecedor=self.fornecedor, vencimento=self.vencimento, valor_original=Decimal("12.34"),
         )
-        self.emitir_malote(self.aprovar_titulo(self.titulo), self.aprovar_titulo(outro_titulo))
-        malote = RelatorioPagamento.objects.get()
-        self.assertEqual(malote.valor_total, Decimal("112.34"))
-        self.assertEqual(malote.quantidade_itens, 2)
+        aprovacoes = [self.aprovar_titulo(self.titulo), self.aprovar_titulo(outro_titulo)]
+        malote = RelatorioPagamento.objects.create(
+            numero="MALOTE-LEGADO-QA", periodo_inicio=self.vencimento, periodo_fim=self.vencimento,
+            valor_total=Decimal("112.34"), quantidade_itens=2, emitido_por=self.pagador,
+        )
+        for aprovacao in aprovacoes:
+            titulo = aprovacao.titulo
+            ItemRelatorioPagamento.objects.create(
+                relatorio=malote, aprovacao=aprovacao, titulo=titulo, data_aprovacao=aprovacao.criado_em,
+                conta_numero=titulo.numero, beneficiario_nome=titulo.beneficiario_exibicao, obra_nome=titulo.obra.nome,
+                descricao=titulo.descricao, vencimento=titulo.vencimento, valor=titulo.saldo_aberto,
+            )
 
         self.client.force_login(self.leitor)
         url = reverse("financeiro:relatorio_pagamento_excel", args=[malote.pk])
@@ -368,7 +380,9 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
         esperado_liquido = Decimal("106.37")
         decidir = reverse("financeiro:titulo_decidir", args=[legado.pk])
         self.client.force_login(self.aprovador)
-        self.assertEqual(self.client.post(decidir, {"decisao": "APROVADO"}).status_code, 302)
+        self.assertEqual(self.client.post(decidir, {
+            "decisao": "APROVADO", "ciclo": legado.ciclo_aprovacao,
+        }).status_code, 302)
         legado.refresh_from_db()
         aprovacao = legado.aprovacoes.get()
         self.assertEqual(aprovacao.decisao, AprovacaoTituloFinanceiro.Decisao.APROVADO)

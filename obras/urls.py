@@ -48,7 +48,9 @@ urlpatterns = [
     path("diario/novo/", views.diario_novo, name="diario_novo"),
     # Mantido para links antigos já salvos/favoritados.
     path("diario/<int:obra_id>/novo/", views.diario_novo, name="diario_novo_obra"),
+    path("diario/registro/<int:diario_id>/", views.diario_detalhe, name="diario_detalhe"),
     path("diario/registro/<int:diario_id>/editar/", views.diario_editar, name="diario_editar"),
+    path("diario/registro/<int:diario_id>/fotos/<int:foto_id>/<str:variante>/", views.diario_foto, name="diario_foto"),
 
     # Concretagem
     path("concretagem/", conc.painel.painel, name="concretagem_painel"),

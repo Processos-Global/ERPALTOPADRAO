@@ -6,21 +6,20 @@ from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
-from financeiro.models import TituloPagar
 from financeiro.services.agenda import _inteiro_positivo, recorte_contas_a_pagar
 from financeiro.services.compromissos import contratos_assinados_separados, pedidos_comprometidos
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
+from financeiro.views.aprovacoes import recorte_aprovacoes
 from financeiro.views.indicadores import contexto_indicadores
 from financeiro.views.liberacoes import recorte_liberacoes
 from financeiro.views.pagamentos import recorte_pagamentos, titulos_central_pagamentos
 
 
 def _contas(parametros, hoje, *, aprovacoes=False):
-    filtros = parametros.copy()
     if aprovacoes:
-        filtros["status"] = TituloPagar.Status.AGUARDANDO_APROVACAO
-        filtros.pop("atalho", None)
-    _, qs, *_ = recorte_contas_a_pagar(filtros, hoje)
+        qs, _ = recorte_aprovacoes(parametros, hoje)
+    else:
+        _, qs, *_ = recorte_contas_a_pagar(parametros, hoje)
     qs = qs.select_related("obra", "fornecedor", "pedido", "plano_financeiro", "pagamento", "programacao_pagamento")
     return (
         ("Código FIN", "Descrição", "Beneficiário", "Obra", "Origem", "Competência", "Vencimento",
@@ -67,9 +66,11 @@ def _compromissos(parametros):
     pedidos = pedidos_comprometidos(**filtros, status=parametros.get("status", ""))
     return (
         ("Pedido", "Obra", "Fornecedor", "Status", "Original (R$)", "Desconto (R$)", "Frete (R$)",
-         "Vigente (R$)", "Liberado (R$)", "Pago (R$)", "Saldo (R$)"),
+         "Vigente (R$)", "Liberado (R$)", "Pago (R$)", "Saldo (R$)",
+         "Recebido aguardando aprovação (R$)", "Aprovado a pagar (R$)"),
         ((p.numero, p.obra.nome, p.fornecedor.nome_exibicao, p.get_status_display(), p.valor_total, p.descontos,
-          p.frete, p.valor_vigente, p.liberado_financeiramente, p.pago_efetivado, p.saldo_financeiro)
+          p.frete, p.valor_vigente, p.liberado_financeiramente, p.pago_efetivado, p.saldo_financeiro,
+          p.recebido_aguardando_aprovacao, p.aprovado_a_pagar)
          for p in pedidos.iterator(chunk_size=500)),
     )
 
@@ -195,7 +196,7 @@ def exportar(request, tipo, formato):
         raise PermissionDenied
     relatorios = {
         "contas": ("Contas a pagar", lambda: _contas(parametros, hoje)),
-        "aprovacoes": ("Aprovações pendentes", lambda: _contas(parametros, hoje, aprovacoes=True)),
+        "aprovacoes": ("Aprovações", lambda: _contas(parametros, hoje, aprovacoes=True)),
         "pagamentos": ("Pagamentos", lambda: _pagamentos(parametros)),
         "compromissos": ("Compromissos", lambda: _compromissos(parametros)),
         "liberacoes": ("Liberações", lambda: _liberacoes(parametros)),

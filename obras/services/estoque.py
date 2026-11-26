@@ -4,6 +4,7 @@ import unicodedata
 
 from django.db.models import Q, Sum
 
+from cadastros.models import Material
 from compras.models import RecebimentoPedidoItem
 from obras.models import MovimentoEstoque, Obra
 
@@ -214,6 +215,45 @@ def obter_item_estoque(obra, chave):
         if linha["chave"] == chave:
             return linha
     return None
+
+
+def saldos_fisicos_materiais(obra_id, material_ids):
+    """Saldo por material na unidade cadastrada, sem reconstruir a valorização."""
+    unidades = dict(Material.objects.filter(pk__in=material_ids).values_list("pk", "unidade__sigla"))
+    if not unidades:
+        return {}
+
+    entradas = (
+        RecebimentoPedidoItem.objects.filter(
+            item_pedido__pedido__obra_id=obra_id,
+            item_pedido__necessidade__material_id__in=unidades,
+        )
+        .order_by()
+        .values_list("item_pedido__necessidade__material_id", "item_pedido__unidade")
+        .annotate(total=Sum("quantidade"))
+    )
+    movimentos = MovimentoEstoque.objects.filter(material_id__in=unidades).order_by()
+    saidas = (
+        movimentos.filter(obra_origem_id=obra_id)
+        .values_list("material_id", "unidade")
+        .annotate(total=Sum("quantidade"))
+    )
+    transferencias = (
+        movimentos.filter(obra_destino_id=obra_id, tipo=MovimentoEstoque.Tipo.TRANSFERENCIA)
+        .values_list("material_id", "unidade")
+        .annotate(total=Sum("quantidade"))
+    )
+    saldos = {material_id: ZERO for material_id in unidades}
+    unidades_normalizadas = {material_id: _normalizar(unidade) for material_id, unidade in unidades.items()}
+    for linhas, direcao, unidade_padrao in ((entradas, 1, "UN"), (transferencias, 1, ""), (saidas, -1, "")):
+        for material_id, unidade, quantidade in linhas:
+            if (_normalizar(unidade) or unidade_padrao) == unidades_normalizadas[material_id]:
+                saldos[material_id] += direcao * quantidade
+
+    return {
+        material_id: {"saldo": f"{saldo:.4f}", "unidade": unidades[material_id]}
+        for material_id, saldo in saldos.items()
+    }
 
 
 def saldo_fisico_compativel(obra, material, unidade, especificacao):

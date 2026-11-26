@@ -11,7 +11,6 @@ from financeiro.models import Pagamento, PlanoFinanceiro, TituloPagar
 from financeiro.services.agenda import _inteiro_positivo, filtrar_por_vencimento, filtrar_titulos_base, periodo_vencimento
 from financeiro.services.fluxo_caixa import STATUS_ABERTOS, serie_desembolsos
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
-from financeiro.views.liberacoes import recorte_liberacoes
 from obras.models import Obra
 
 
@@ -129,5 +128,4 @@ def dashboard(request):
         "apropriacoes": PlanoFinanceiro.objects.filter(ativo=True, pai__isnull=False).select_related("pai"),
         "desembolsos": pontos, "maior_desembolso": max(ponto["saida"] for ponto in pontos) or Decimal("1"),
         "pode_aprovar": pode_aprovar, "pode_pagar": pode_pagar,
-        "liberacoes_pendentes": recorte_liberacoes({**filtros_links.dict(), "pendencias": "1"}).count() if pode_aprovar else 0,
     })

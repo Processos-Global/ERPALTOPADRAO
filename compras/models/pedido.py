@@ -190,6 +190,7 @@ class HistoricoPrevisaoPedido(models.Model):
 class RecebimentoPedido(models.Model):
     pedido = models.ForeignKey(PedidoCompra, on_delete=models.PROTECT, related_name="recebimentos")
     numero_nota_fiscal = models.CharField(max_length=80, null=True, blank=True)
+    vencimento_nota = models.DateField(null=True, blank=True)
     arquivo_nota_fiscal = models.FileField(storage=private_media_storage, upload_to="compras/notas_fiscais/%Y/%m/", blank=True)
     valor_total_nota = models.DecimalField(
         max_digits=18,

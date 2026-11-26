@@ -1,5 +1,6 @@
 import logging
 from hashlib import sha256
+from random import uniform
 from sqlite3 import SQLITE_BUSY, SQLITE_LOCKED
 from time import sleep
 
@@ -81,10 +82,15 @@ def _bloqueio_de_concorrencia(erro):
 
 def registrar_solicitacao_avulsa(*, usuario, chave, impressao, validar_dados):
     """Materializa título, parcelas, anexos, histórico e notificações numa tentativa."""
-    for espera in (0.02, 0.05, 0.10, 0.20, 0.40, 0):
+    esperas = (0.02, 0.05, 0.10, 0.20, 0.40, 0)
+    if connection.vendor == "sqlite":
+        # O cache compartilhado do SQLite pode bloquear a promoção de leitura
+        # para escrita. Evita que tentativas simultâneas repitam em sincronia.
+        esperas = (0.02, 0.05, 0.10, 0.20, 0.40, 0.80, 1.60, 0)
+    for espera in esperas:
         try:
             return _registrar(usuario, chave, impressao, validar_dados)
         except OperationalError as erro:
             if not espera or not _bloqueio_de_concorrencia(erro):
                 raise
-            sleep(espera)
+            sleep(uniform(espera / 2, espera) if connection.vendor == "sqlite" else espera)

@@ -325,6 +325,7 @@
                     <div class="cp-history-value"><span>Itens recebidos</span><strong>R$ {{ recebimento.valor_itens_recebidos|floatformat:2 }}</strong></div>
                     <div class="cp-history-value"><span>Total da NF</span><strong>{% if recebimento.valor_total_nota %}R$ {{ recebimento.valor_total_nota|floatformat:2 }}{% else %}—{% endif %}</strong></div>
                     {% if recebimento.valor_frete_nota %}<div class="cp-history-value"><span>Frete na NF</span><strong>R$ {{ recebimento.valor_frete_nota|floatformat:2 }}</strong></div>{% endif %}
+                    {% if recebimento.vencimento_nota %}<div class="cp-history-value"><span>Vencimento informado</span><strong>{{ recebimento.vencimento_nota|date:"d/m/Y" }}</strong></div>{% endif %}
                   </div>
 
                   <div class="cp-history-items">
@@ -338,6 +339,12 @@
 
                   {% if recebimento.observacao %}<div class="cp-muted" style="margin-top:8px">{{ recebimento.observacao }}</div>{% endif %}
                   {% if recebimento.arquivo_nota_fiscal %}<div style="margin-top:9px"><a class="cp-btn cp-btn--sm" href="{% url 'compras:baixar_nota_fiscal_recebimento' recebimento.pk %}" target="_blank" rel="noopener">Abrir nota fiscal</a></div>{% endif %}
+                  {% with liberacao=recebimento.liberacao_financeira %}
+                    {% if liberacao.valor_esperado != None and liberacao.status == 'DIVERGENTE' and not liberacao.titulo_id %}
+                      <p class="cp-muted" role="status">Pendência financeira. {{ liberacao.divergencia }}</p>
+                      {% if pode_receber_pedidos %}{% include 'compras/_corrigir_recebimento.html' %}{% endif %}
+                    {% endif %}
+                  {% endwith %}
                 </div>
                 {% endfor %}
               </div>
@@ -388,7 +395,7 @@
               </details>
               {% endif %}
 
-              {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.receber_pedidos %}
+              {% if pode_receber_pedidos %}
               <details class="cp-action-card">
                 <summary>Registrar recebimento + NF</summary>
                 <div class="cp-action-card__body">
@@ -406,17 +413,19 @@
                           <label>Valor total da nota <span class="cp-required">*</span></label>
                           <div class="cp-money-wrap"><input class="cp-input" type="number" name="valor_total_nota" min="0.01" step="0.01" placeholder="0,00" required></div>
                         </div>
-                        {% if pedido.frete %}
-                          <div class="cp-field">
-                            <label for="frete-nf-{{ pedido.pk|unlocalize }}">Frete discriminado na nota</label>
-                            <div class="cp-money-wrap"><input class="cp-input" id="frete-nf-{{ pedido.pk|unlocalize }}" type="number" name="valor_frete_nota" min="0" step="0.01" inputmode="decimal" aria-describedby="frete-nf-ajuda-{{ pedido.pk|unlocalize }}"></div>
-                            <small id="frete-nf-ajuda-{{ pedido.pk|unlocalize }}">Informe se o fornecedor cobrou o frete à parte dos itens nesta nota.</small>
-                          </div>
-                        {% endif %}
+                        <div class="cp-field">
+                          <label for="frete-nf-{{ pedido.pk|unlocalize }}">Frete discriminado na nota</label>
+                          <div class="cp-money-wrap"><input class="cp-input" id="frete-nf-{{ pedido.pk|unlocalize }}" type="number" name="valor_frete_nota" min="0" step="0.01" inputmode="decimal" aria-describedby="frete-nf-ajuda-{{ pedido.pk|unlocalize }}"></div>
+                          <small id="frete-nf-ajuda-{{ pedido.pk|unlocalize }}">Informe se o fornecedor cobrou o frete à parte dos itens nesta nota.</small>
+                        </div>
+                        <div class="cp-field">
+                          <label for="vence-nf-{{ pedido.pk|unlocalize }}">Vencimento informado na nota</label>
+                          <input class="cp-input" id="vence-nf-{{ pedido.pk|unlocalize }}" type="date" name="vencimento_nota">
+                        </div>
                       </div>
                       <div class="cp-field">
                         <label>Arquivo da nota fiscal <span class="cp-required">*</span></label>
-                        <input class="cp-input cp-file-input" type="file" name="arquivo_nota_fiscal" accept=".pdf,.xml,.jpg,.jpeg,.png,.webp,application/pdf,text/xml,image/*" required>
+                        <input class="cp-input cp-file-input" type="file" name="arquivo_nota_fiscal" accept=".pdf,.xml,.jpg,.jpeg,.png" required>
                       </div>
                     </div>
 

@@ -73,8 +73,7 @@
   <div class="fin-section__head"><h2>Pendências operacionais</h2></div>
   <div class="fin-section__body fin-tabs">
     {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}{% querystring filtros_links %}">Aprovações pendentes</a>{% endif %}
-    <a class="fin-btn" href="{% url 'financeiro:titulos' %}{% querystring filtros_links conferencia='DIVERGENCIA' %}">Divergências documentais</a>
-    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:liberacoes' %}{% querystring filtros_links pendencias='1' %}">Liberações para revisar ({{ liberacoes_pendentes }})</a>{% endif %}
+    <a class="fin-btn" href="{% url 'financeiro:titulos' %}{% querystring filtros_links conferencia='DIVERGENCIA' %}">Solicitações com divergência</a>
     {% if pode_pagar %}<a class="fin-btn" href="{% url 'financeiro:pagamentos' %}{% querystring filtros_links aba='programados' %}">Pagamentos a confirmar</a>{% endif %}
   </div>
 </section>

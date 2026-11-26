@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, PrevisaoFinanceira, TituloPagar
 from financeiro.services.agenda import _inteiro_positivo, periodo_vencimento, saldo_titulo_sql
-from financeiro.services.compromissos import contratos_assinados_separados, pedidos_comprometidos
+from financeiro.services.compromissos import compromissos_datados, contratos_assinados_separados, pedidos_comprometidos
 from financeiro.services.fluxo_caixa import STATUS_ABERTOS, previsoes_independentes, titulos_com_data_desembolso
 
 
@@ -163,9 +163,18 @@ def resumo_planejamento(recorte):
     meses = _meses_de_analise(inicio)
     ultimo = meses[-1]
     fim_tendencia = date(ultimo.year + (ultimo.month == 12), ultimo.month % 12 + 1, 1) - timedelta(days=1)
-    totais = dict.fromkeys((*TIPOS_PLANEJAMENTO, "PROGRAMADO"), ZERO)
-    por_mes = {mes: dict.fromkeys(("PREVISAO", "SALDO", "PAGO"), ZERO) for mes in meses}
+    totais = dict.fromkeys((*TIPOS_PLANEJAMENTO, "PROGRAMADO", "COMPROMISSO_FUTURO"), ZERO)
+    por_mes = {mes: dict.fromkeys(("PREVISAO", "SALDO", "PAGO", "COMPROMISSO_FUTURO"), ZERO) for mes in meses}
     por_obra = []
+    filtros = recorte["filtros"]
+    if not sem_data and not filtros["certeza"] and filtros["origem"] in ("", TituloPagar.Origem.COMPRA):
+        por_data = compromissos_datados(
+            meses[0], fim_tendencia, obra_ids=[filtros["obra"]] if filtros["obra"] else None,
+            apropriacao=filtros["apropriacao"], fornecedor=filtros["fornecedor"],
+        )
+        for data, valor in por_data.items():
+            por_mes[data.replace(day=1)]["COMPROMISSO_FUTURO"] += valor
+        totais["COMPROMISSO_FUTURO"] = por_mes[inicio]["COMPROMISSO_FUTURO"]
     for tipo, qs, *_ in recorte["fontes"]:
         periodo = qs.filter(mov_data__isnull=True) if sem_data else qs.filter(mov_data__range=(inicio, fim))
         if tipo in {"PREVISAO", "SALDO", "PAGO"} and not sem_data:

@@ -1,15 +1,15 @@
 ﻿{% extends "financeiro/base_financeiro.html" %}
 {% load financeiro_extras static %}
-{% block financeiro_title %}Contas a pagar{% endblock %}
+{% block financeiro_title %}{% if agenda %}Agenda de pagamentos{% else %}Solicitações de pagamento{% endif %}{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><h1 class="fin-title">Contas a pagar</h1>{% include 'financeiro/_exportar.html' with tipo='contas' %}</header>
+{% pode_financeiro "EDITAR_TITULOS" as pode_preparar %}
+<header class="fin-head"><h1 class="fin-title">{% if agenda %}Agenda de pagamentos{% else %}Solicitações de pagamento{% endif %}</h1>{% include 'financeiro/_exportar.html' with tipo='contas' %}</header>
 
-<nav class="fin-tabs" aria-label="Contas a pagar">
+<nav class="fin-tabs" aria-label="Solicitações de pagamento">
   {% url 'financeiro:titulos' as contas_url %}
   {% url 'financeiro:agenda' as agenda_url %}
-  <a class="fin-btn" href="{{ contas_url }}{% querystring page=None %}" {% if not agenda %}aria-current="page"{% endif %}>Títulos</a>
+  <a class="fin-btn" href="{{ contas_url }}{% querystring page=None %}" {% if not agenda %}aria-current="page"{% endif %}>Solicitações</a>
   <a class="fin-btn" href="{{ agenda_url }}{% querystring page=None %}" {% if agenda %}aria-current="page"{% endif %}>Agenda</a>
-  {% if fin_pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Aprovações</a>{% endif %}
 </nav>
 
 {% if indicadores %}
@@ -27,7 +27,7 @@
     <a class="fin-btn fin-btn--sm" href="{% querystring status=codigo atalho=None abertas=None page=None %}" {% if filtros.status == codigo %}aria-current="page"{% endif %}>{{ rotulo }}</a>
   {% endfor %}
 </nav>
-<form method="get" class="fin-toolbar" aria-label="Filtros de contas a pagar" data-local-submit-loading data-fin-catalogo-url="{% url 'financeiro:titulo_catalogo' %}">
+<form method="get" class="fin-toolbar" aria-label="Filtros de solicitações de pagamento" data-local-submit-loading data-fin-catalogo-url="{% url 'financeiro:titulo_catalogo' %}">
   {% if filtros.status %}<input type="hidden" name="status" value="{{ filtros.status }}">{% endif %}
   <label class="fin-filter-field">Buscar<input class="fin-control" type="search" name="q" value="{{ filtros.q }}" placeholder="Conta, beneficiário ou documento"></label>
   {% include 'financeiro/_filtro_periodo.html' %}
@@ -50,21 +50,25 @@
 <section class="fin-section" aria-label="Resultados">
   <div class="fin-table-wrap">
     <table class="fin-table">
-      <thead><tr><th>Código FIN</th><th>Beneficiário</th><th>Obra</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+      <thead><tr><th scope="col">Solicitação</th><th scope="col">Beneficiário</th><th scope="col">Obra</th><th scope="col">Origem</th><th scope="col">Vencimento</th><th scope="col">Valor</th><th scope="col">Status</th><th scope="col">Conferência</th><th scope="col">Ações</th></tr></thead>
       <tbody>
         {% for titulo in page_obj %}
           <tr>
             {% url 'financeiro:titulo_detalhe' titulo.pk as titulo_url %}
             {% with retorno=request.get_full_path|urlencode:'' %}
-            <td><a href="{{ titulo_url }}?retorno={{ retorno }}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+            <td class="fin-main-cell"><a href="{{ titulo_url }}?retorno={{ retorno }}">{{ titulo.numero }}</a><small>{{ titulo.descricao }}</small></td>
+            <td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+            <td>{% if titulo.solicitacao_avulsa_id %}Solicitação avulsa{% else %}{{ titulo.get_origem_display }}{% endif %}</td>
             <td>{{ titulo.vencimento|date:"d/m/Y"|default:"Sem vencimento" }}</td><td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
-            <td><span class="fin-badge fin-badge--{{ titulo.status|status_fin_classe }}">{{ titulo.get_status_display }}</span>{% if titulo.conferencia == 'DIVERGENCIA' %}<small class="fin-danger-text">Divergência documental</small>{% endif %}</td>
+            <td><span class="fin-badge fin-badge--{{ titulo.status|status_fin_classe }}">{{ titulo.get_status_display }}</span></td>
+            <td><span class="fin-badge fin-badge--{{ titulo.conferencia|status_fin_classe }}">{{ titulo.get_conferencia_display }}</span></td>
             <td><a class="fin-btn fin-btn--sm" href="{{ titulo_url }}?retorno={{ retorno }}">Detalhar</a>
+              {% if pode_preparar and titulo.status == 'PREVISTA' and not titulo.esta_pago %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_editar' titulo.pk %}">Preparar</a>{% endif %}
               {% if pode_pagar and titulo.status == 'APROVADO' and not titulo.esta_pago %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Pagar</a>{% endif %}
             </td>
             {% endwith %}
           </tr>
-        {% empty %}<tr><td colspan="7" class="fin-empty">Nenhuma conta encontrada.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="9" class="fin-empty">Nenhuma solicitação encontrada.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

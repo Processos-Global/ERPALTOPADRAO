@@ -1,0 +1,53 @@
+{% load financeiro_extras l10n %}
+{% with origem=origem_recebimento r=origem_recebimento.recebimento %}
+<section class="fin-section">
+  <div class="fin-section__head"><h2>Recebimento de Compras</h2><span class="fin-badge fin-badge--{{ titulo.conferencia|status_fin_classe }}">{{ titulo.get_conferencia_display }}</span></div>
+  <div class="fin-section__body">
+    <div class="fin-data-grid">
+      <div class="fin-data"><span>Processo</span><strong>{{ titulo.pedido.processo.numero }}</strong></div>
+      <div class="fin-data"><span>Pedido</span><strong>{{ titulo.pedido.numero }}</strong></div>
+      <div class="fin-data"><span>Recebimento</span><strong>{{ r.pk|unlocalize }} · {{ r.criado_em|date:"d/m/Y H:i" }}</strong><small>{{ r.usuario|default:"Responsável não informado" }}</small></div>
+      <div class="fin-data"><span>Nota fiscal</span><strong>{{ r.numero_nota_fiscal|default:"Não informada" }}</strong></div>
+      <div class="fin-data"><span>Valor total contratado</span><strong>{{ titulo.pedido.valor_total|moeda_br }}</strong></div>
+      <div class="fin-data"><span>Valor proporcional esperado</span><strong>{% if origem.esperado != None %}{{ origem.esperado|moeda_br }}{% else %}—{% endif %}</strong></div>
+      <div class="fin-data"><span>Valor documentado do recebimento</span><strong>{% if origem.documentado != None %}{{ origem.documentado|moeda_br }}{% else %}—{% endif %}</strong></div>
+      <div class="fin-data"><span>Diferença</span><strong>{% if origem.diferenca != None %}{{ origem.diferenca|moeda_br }}{% else %}—{% endif %}{% if origem.percentual != None %} · {{ origem.percentual|numero_br }}%{% endif %}</strong></div>
+      <div class="fin-data"><span>Condição contratada</span><strong>{{ titulo.pedido.condicao_pagamento|default:"—" }}</strong></div>
+    </div>
+    {% if origem.motivos_divergencia %}
+      <div class="fin-note"><strong>Divergências comerciais</strong>
+        <ul>{% for motivo in origem.motivos_divergencia %}<li>{{ motivo }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+  </div>
+  <div class="fin-section__body--flush fin-table-wrap">
+    <table class="fin-table">
+      <thead><tr>
+        <th scope="col">Material ou serviço recebido</th><th scope="col">Quantidade contratada</th>
+        <th scope="col">Quantidade recebida</th><th scope="col" class="fin-money">Preço unitário aprovado (R$)</th>
+        <th scope="col" class="fin-money">Valor informado</th>
+      </tr></thead>
+      <tbody>{% for item in origem.itens %}
+        <tr><td>{{ item.item_pedido.descricao }}</td>
+          <td>{{ item.item_pedido.quantidade|numero_br:4 }} {{ item.item_pedido.unidade }}</td>
+          <td>{{ item.quantidade|numero_br:4 }} {{ item.item_pedido.unidade }}</td>
+          <td class="fin-money">{{ item.item_pedido.valor_unitario|numero_br:4 }}</td>
+          <td class="fin-money">{% if item.valor_recebido != None %}{{ item.valor_recebido|moeda_br }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="fin-empty">Nenhum item vinculado ao recebimento.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</section>
+{% if origem.historico %}
+  <section class="fin-section">
+    <div class="fin-section__head"><h2>Histórico comercial</h2></div>
+    <div class="fin-section__body fin-timeline">
+      {% for evento in origem.historico %}
+        <div class="fin-timeline__item"><strong>{{ evento.descricao }}</strong>
+          <small>{{ evento.criado_em|date:"d/m/Y H:i" }}{% if evento.usuario %} · {{ evento.usuario }}{% endif %}</small>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+{% endwith %}

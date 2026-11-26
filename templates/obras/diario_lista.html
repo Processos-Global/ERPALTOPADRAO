@@ -21,8 +21,20 @@
     {% for d in diarios %}
       <article class="op-diario-card">
         <div class="op-diario-top">
-          <div><h3>{{ d.obra|nome_obra }}</h3><div class="op-diario-meta"><span class="op-badge">{{ d.data|date:"d/m/Y" }}</span>{% if d.clima %}<span class="op-badge">{{ d.get_clima_display }}</span>{% endif %}{% if d.efetivo != None %}<span class="op-badge">Efetivo: {{ d.efetivo }}</span>{% endif %}<span class="op-muted">{{ d.obra.codigo }}</span></div></div>
-          {% if pode_editar_diario %}<a class="op-btn secondary" href="{% url 'obras:diario_editar' d.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Editar</a>{% endif %}
+          <div>
+            <h3>{{ d.obra|nome_obra }}</h3>
+            <div class="op-diario-meta">
+              <time class="op-badge" datetime="{{ d.data|date:'Y-m-d' }}">{{ d.data|date:"d/m/Y" }}</time>
+              {% if d.clima %}<span class="op-badge">{{ d.get_clima_display }}</span>{% endif %}
+              {% if d.efetivo != None %}<span class="op-badge">Efetivo: {{ d.efetivo }}</span>{% endif %}
+              {% if d.qtd_fotos %}<span class="op-badge">{{ d.qtd_fotos }} foto{{ d.qtd_fotos|pluralize }}</span>{% endif %}
+              <span class="op-muted">{{ d.obra.codigo }}</span>
+            </div>
+          </div>
+          <div class="op-head-actions">
+            <a class="op-btn" href="{% url 'obras:diario_detalhe' d.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Ver diário</a>
+            {% if pode_editar_diario %}<a class="op-btn secondary" href="{% url 'obras:diario_editar' d.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Editar</a>{% endif %}
+          </div>
         </div>
         {% if d.servicos_executados %}<div class="op-diario-text"><strong>Serviços executados (registro manual)</strong><br>{{ d.servicos_executados }}</div>{% endif %}
         {% if d.observacoes %}<div class="op-diario-text"><strong>Observações registradas</strong><br>{{ d.observacoes }}</div>{% endif %}
@@ -31,7 +43,6 @@
         {% if d.equipe_presente %}<div class="op-diario-text"><strong>Equipe / terceiros</strong><br>{{ d.equipe_presente }}</div>{% endif %}
         {% if d.ocorrencias %}<div class="op-diario-text"><strong>Ocorrências</strong><br>{{ d.ocorrencias }}</div>{% endif %}
         {% if d.concretagens_dia %}<div class="op-diario-text"><strong>Concretagens do dia</strong>{% for c in d.concretagens_dia %}<br><a href="{% url 'obras:concretagem_detalhe' c.pk %}">{{ c.codigo }}</a> · {{ c.horario_programado|time:"H:i" }} · {{ c.get_status_display }} · {{ c.descricao_servico|default:"—" }} · {{ c.volume_solicitado|numero_br:2 }} m³{% if c.qtd_caminhoes %} ({{ c.qtd_caminhoes }} caminhão(ões), {{ c.vol_entregue|numero_br:2 }} m³ entregues){% endif %}{% endfor %}</div>{% endif %}
-        {% if d.fotos.all %}<div class="op-diario-fotos">{% for foto in d.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener"><img src="{{ foto.arquivo.url }}" alt="Evidência fotográfica" loading="lazy"></a>{% endfor %}</div>{% endif %}
         <div class="op-muted op-diario-autor">Registrado por {% if d.registrado_por %}{{ d.registrado_por.get_full_name|default:d.registrado_por.username }}{% else %}—{% endif %} · atualizado {{ d.atualizado_em|date:"d/m/Y H:i" }}</div>
       </article>
     {% empty %}<div class="op-empty">Nenhum diário encontrado.</div>{% endfor %}

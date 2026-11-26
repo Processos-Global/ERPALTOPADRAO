@@ -1,3 +1,5 @@
+from pathlib import PurePosixPath
+
 from django.conf import settings
 from django.db import models
 
@@ -51,6 +53,10 @@ class FotoDiarioObra(models.Model):
 
     class Meta:
         ordering = ["id"]
+
+    @property
+    def nome_arquivo(self):
+        return PurePosixPath((self.arquivo.name or "").replace("\\", "/")).name
 
 
 class DiarioAtividadePlanejada(models.Model):

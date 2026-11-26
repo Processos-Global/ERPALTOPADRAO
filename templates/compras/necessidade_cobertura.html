@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% block title %}Cobertura da necessidade{% endblock %}
+{% block title %}Consulta de cobertura legada{% endblock %}
 {% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
 {% block content %}
 <div class="cp-page">
@@ -10,6 +10,19 @@
     </div>
     <div class="cp-actions"><a class="cp-btn" href="{% url 'compras:detalhe_processo' necessidade.processo_id %}#itens-compra">Voltar ao processo</a></div>
   </header>
+  <p>Consulta do cálculo legado de cobertura. A quantidade comercial é definida no processo de compra.</p>
+  {% if cobertura.reserva_historica %}
+  <section aria-labelledby="reserva-historica">
+    <h2 id="reserva-historica">Reserva registrada</h2>
+    <dl>
+      <dt>Material da reserva</dt><dd>{{ cobertura.reserva_historica.material.nome }}</dd>
+      {% if cobertura.reserva_historica.especificacao %}<dt>Especificação</dt><dd>{{ cobertura.reserva_historica.especificacao }}</dd>{% endif %}
+      <dt>Situação</dt><dd>{{ cobertura.reserva_historica.get_status_display }}</dd>
+      <dt>Quantidade reservada originalmente</dt><dd>{{ cobertura.reserva_historica.quantidade_original|floatformat:"-4" }} {{ cobertura.reserva_historica.unidade }}</dd>
+      <dt>Quantidade consumida</dt><dd>{{ cobertura.reserva_consumida_historica|floatformat:"-4" }} {{ cobertura.reserva_historica.unidade }}</dd>
+    </dl>
+  </section>
+  {% endif %}
   <div class="cp-kpis">
     <div class="cp-kpi"><span>Necessidade</span><strong>{{ cobertura.necessidade|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
     <div class="cp-kpi"><span>Disponível em estoque</span><strong>{{ cobertura.disponivel|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
@@ -17,7 +30,7 @@
     <div class="cp-kpi"><span>Falta cobrir</span><strong>{{ cobertura.descoberta|floatformat:"-4" }} {{ necessidade.unidade }}</strong></div>
   </div>
   {% if cobertura.especificacao_ambigua %}
-  <p role="status">Confirme a compatibilidade do estoque com a especificação do item.</p>
+  <p>O cálculo legado identificou estoque com especificação ambígua.</p>
   {% endif %}
   <details>
     <summary>Detalhes da cobertura</summary>

@@ -51,8 +51,14 @@ class LiberacoesPedidoTests(TestCase):
         )
         return rec
 
+    def previsao_legada(self):
+        return TituloPagar.objects.create(
+            numero="FIN-LIB-LEGADO", pedido=self.pedido, origem=TituloPagar.Origem.COMPRA,
+            referencia_externa=f"COMPRA_PEDIDO:{self.pedido.pk}", valor_original=self.pedido.valor_total,
+        )
+
     def test_recebimento_parcial_gera_titulos_separados_sem_recriar_integral(self):
-        placeholder = TituloPagar.objects.get(pedido=self.pedido)
+        placeholder = self.previsao_legada()
         primeira = registrar_recebimento_para_liberacao(self.recebimento("NF-800", "8", "800", "800"))
         self.assertEqual(primeira, registrar_recebimento_para_liberacao(primeira.recebimento))
         titulo_800 = autorizar_liberacao(primeira, usuario=self.usuario)
@@ -93,7 +99,7 @@ class LiberacoesPedidoTests(TestCase):
         self.assertEqual(sem_valor.status, LiberacaoFinanceiraPedido.Status.DIVERGENTE)
 
     def test_titulo_legado_pago_nao_e_reescrito(self):
-        antigo = TituloPagar.objects.get(pedido=self.pedido)
+        antigo = self.previsao_legada()
         antigo.status = TituloPagar.Status.PAGO
         antigo.save(update_fields=["status"])
         Pagamento.objects.create(titulo=antigo, data_pagamento=self.pedido.data, valor=Decimal("1000"))
@@ -168,7 +174,7 @@ class LiberacoesPedidoTests(TestCase):
             cancelar_titulo(titulo_antecipacao, usuario=self.usuario, motivo="Tentativa após compensação")
 
     def test_cancelamento_de_titulo_liberado_concilia_saldo_sem_recriar_integral(self):
-        placeholder = TituloPagar.objects.get(pedido=self.pedido)
+        placeholder = self.previsao_legada()
         cancelar_titulo(placeholder, usuario=self.usuario, motivo="Previsão substituída")
         liberacao = registrar_recebimento_para_liberacao(self.recebimento("NF-CAN-800", "8", "800", "800"))
         titulo = autorizar_liberacao(liberacao, usuario=self.usuario)

@@ -11,7 +11,7 @@ from pos_obra.models import Cliente
 from usuarios.decorators import possui_permissao_acao
 from usuarios.models import AcaoCompra, ModuloSistema, NivelPermissao, Notificacao, PermissaoModulo
 from usuarios.services import pode_acao_cadastros
-from usuarios.services.navegacao import internal_navigation, portal_navigation
+from usuarios.services.navegacao import acesso_menu_financeiro, internal_navigation, portal_navigation
 
 
 def erp_layout(request):
@@ -55,8 +55,7 @@ def _build_erp_layout(request):
         "projetos": user.is_active and ModuloSistema.PROJETOS in levels,
         "compras": ModuloSistema.COMPRAS in levels and possui_acao_compras(user, AcaoCompra.VISUALIZAR),
         "cadastros": ModuloSistema.CADASTROS in levels and pode_acao_cadastros(user, "visualizar"),
-        "financeiro": permite_financeiro("VISUALIZAR"),
-        "lancar_titulos": permite_financeiro("LANCAR_TITULOS"),
+        **acesso_menu_financeiro(permite_financeiro),
         "pos_obra": ModuloSistema.POS_OBRA in levels and acesso_interno(user)
         and possui_permissao_acao(user, ModuloSistema.POS_OBRA, "visualizar"),
         "indicadores": ModuloSistema.RELATORIOS in levels

@@ -6,7 +6,7 @@ from .cadastros import despesas_recorrentes, plano_financeiro
 from .dashboard import dashboard
 from .gastos import gastos
 from .indicadores import indicadores
-from .liberacoes import liberacao_autorizar, liberacoes_lista
+from .liberacoes import liberacao_autorizar, liberacao_reprocessar, liberacoes_lista
 from .pagamentos import pagamento_confirmar_direto, pagamento_estornar, pagamento_novo, pagamento_programar, pagamentos_lista
 from .previsoes import previsao_nova, previsoes_lista, sincronizar_compras
 from .relatorios import relatorio_pagamento_emitir, relatorio_pagamento_excel, relatorios_pagamento

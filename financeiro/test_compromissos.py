@@ -1,18 +1,71 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from cadastros.models import Fornecedor
-from compras.models import HistoricoProcessoCompra, NecessidadeCompra, PedidoCompra, PedidoCompraItem, ProcessoCompra, RecebimentoPedido, RecebimentoPedidoItem
+from compras.models import HistoricoProcessoCompra, NecessidadeCompra, ParcelaPrevistaPedido, PedidoCompra, PedidoCompraItem, ProcessoCompra, RecebimentoPedido, RecebimentoPedidoItem
 from compras.services.pedidos import cancelar_pedido
 from financeiro.models import Pagamento, TituloPagar
 from financeiro.services.compromissos import pedidos_comprometidos, totais_pedidos
+from financeiro.services.fluxo_caixa import serie_desembolsos
+from financeiro.services.planejamento_financeiro import recorte_planejamento, resumo_planejamento
 from obras.models import Obra
 
 
 class CompromissosTest(TestCase):
+    def test_etapas_do_compromisso_e_projecao_datada_sem_dupla_contagem(self):
+        obra = Obra.objects.create(nome="Obra sintética de projeção", codigo="OB-PROJ")
+        fornecedor = Fornecedor.objects.create(nome="Fornecedor sintético de projeção")
+        processo = ProcessoCompra.objects.create(numero="PC-PROJ", obra=obra, titulo="Projeção sem duplicidade")
+        pedido = PedidoCompra.objects.create(
+            numero="PED-PROJ", processo=processo, obra=obra, fornecedor=fornecedor,
+            valor_total=Decimal("100000.00"),
+        )
+        vencimento = timezone.localdate() + timedelta(days=10)
+        ParcelaPrevistaPedido.objects.create(pedido=pedido, valor=Decimal("100000.00"), data_prevista=vencimento)
+        self.assertFalse(TituloPagar.objects.filter(pedido=pedido).exists())
+        projeção = serie_desembolsos(inicio=vencimento, dias=0, obra_id=obra.pk)
+        self.assertEqual(projeção["total"], Decimal("100000.00"))
+
+        necessidade = NecessidadeCompra.objects.create(
+            processo=processo, descricao="Material sintético", unidade="UN", quantidade_necessaria=100,
+            quantidade_incluida=100,
+        )
+        item = PedidoCompraItem.objects.create(
+            pedido=pedido, necessidade=necessidade, descricao="Material sintético", unidade="UN",
+            quantidade=100, valor_unitario=1000, valor_total=100000,
+        )
+        for indice, (status, valor) in enumerate([
+            (TituloPagar.Status.AGUARDANDO_APROVACAO, Decimal("10000.00")),
+            (TituloPagar.Status.APROVADO, Decimal("20000.00")),
+            (TituloPagar.Status.PAGO, Decimal("30000.00")),
+        ], start=1):
+            recebimento = RecebimentoPedido.objects.create(pedido=pedido, numero_nota_fiscal=f"NF-PROJ-{indice}")
+            RecebimentoPedidoItem.objects.create(
+                recebimento=recebimento, item_pedido=item, quantidade=valor / 1000, valor_recebido=valor,
+            )
+            titulo = TituloPagar.objects.create(
+                numero=f"TIT-PROJ-{indice}", descricao="Parcela sintética", pedido=pedido, recebimento=recebimento,
+                obra=obra, fornecedor=fornecedor, origem=TituloPagar.Origem.COMPRA, status=status,
+                vencimento=vencimento, valor_original=valor,
+            )
+            if status == TituloPagar.Status.PAGO:
+                Pagamento.objects.create(titulo=titulo, data_pagamento=timezone.localdate(), valor=valor)
+        linha = pedidos_comprometidos(obra_id=obra.pk).get()
+        self.assertEqual(linha.saldo_receber, Decimal("40000.00"))
+        self.assertEqual(linha.recebido_aguardando_aprovacao, Decimal("10000.00"))
+        self.assertEqual(linha.aprovado_a_pagar, Decimal("20000.00"))
+        self.assertEqual(linha.pago_efetivado, Decimal("30000.00"))
+        self.assertEqual(linha.saldo_financeiro, Decimal("70000.00"))
+        self.assertEqual(serie_desembolsos(inicio=vencimento, dias=0, obra_id=obra.pk)["total"], Decimal("70000.00"))
+        planejamento = resumo_planejamento(recorte_planejamento({"mes": vencimento.strftime("%Y-%m"), "obra": obra.pk}))
+        self.assertEqual(planejamento["totais"]["COMPROMISSO_FUTURO"], Decimal("40000.00"))
+        self.assertEqual(planejamento["totais"]["SALDO"], Decimal("30000.00"))
+
     def test_cancelamento_integral_audita_saldo_sem_ocultar_pago(self):
         """Fixture sintética: 1000 contratado, 800 recebido/pago, 200 cancelado."""
         usuario = get_user_model().objects.create_superuser(
@@ -39,9 +92,11 @@ class CompromissosTest(TestCase):
             quantidade=Decimal("8"), valor_recebido=Decimal("800.00"),
         )
         # O título provisório não representa o pagamento da entrega parcial.
-        titulo = TituloPagar.objects.get(pedido=pedido)
-        titulo.status = TituloPagar.Status.CANCELADO
-        titulo.save(update_fields=["status"])
+        titulo = TituloPagar.objects.create(
+            numero="PREV-CAN-LEGADO", pedido=pedido, obra=obra, fornecedor=fornecedor,
+            referencia_externa=f"COMPRA_PEDIDO:{pedido.pk}", origem=TituloPagar.Origem.COMPRA,
+            descricao="Previsão legada", valor_original=Decimal("1000.00"), status=TituloPagar.Status.CANCELADO,
+        )
         titulo_800 = TituloPagar.objects.create(
             numero="T-CAN-COMP", pedido=pedido, obra=obra, fornecedor=fornecedor,
             origem=TituloPagar.Origem.COMPRA, descricao="Entrega parcial",
@@ -124,7 +179,11 @@ class CompromissosTest(TestCase):
                 recebimento=recebimento, item_pedido=item,
                 quantidade=Decimal("4"), valor_recebido=Decimal("400.00"),
             )
-        titulo = TituloPagar.objects.get(pedido=pedido)
+        titulo = TituloPagar.objects.create(
+            numero="COMP-PAGO-LEGADO", pedido=pedido, obra=obra, fornecedor=fornecedor,
+            origem=TituloPagar.Origem.COMPRA, descricao="Obrigação histórica",
+            valor_original=Decimal("1000.00"), status=TituloPagar.Status.PAGO,
+        )
         Pagamento.objects.create(titulo=titulo, data_pagamento=pedido.data, valor=Decimal("800.00"))
 
         linha = pedidos_comprometidos(obra_id=obra.pk).get(pk=pedido.pk)

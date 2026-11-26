@@ -6,11 +6,11 @@ Datas dos títulos são de vencimento; pagamentos usam data_pagamento.
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Case, DecimalField, F, Q, Sum, Value, When
+from django.db.models import Case, DecimalField, Exists, F, OuterRef, Q, Sum, Value, When
 from django.db.models.functions import Coalesce, Greatest
 from django.utils.dateparse import parse_date
 
-from financeiro.models import Pagamento, TituloPagar
+from financeiro.models import AprovacaoTituloFinanceiro, Pagamento, TituloPagar
 from financeiro.services.fluxo_caixa import STATUS_ABERTOS
 
 
@@ -115,7 +115,13 @@ def saldo_titulo_sql():
 
 
 def titulos_disponiveis_pagamento(qs):
-    return qs.filter(status=TituloPagar.Status.APROVADO).exclude(
+    aprovacao_vigente = AprovacaoTituloFinanceiro.objects.filter(
+        titulo_id=OuterRef("pk"), ciclo=OuterRef("ciclo_aprovacao"),
+        decisao=AprovacaoTituloFinanceiro.Decisao.APROVADO,
+    )
+    return qs.filter(
+        Q(ciclo_aprovacao=0) | Exists(aprovacao_vigente), status=TituloPagar.Status.APROVADO,
+    ).exclude(
         pagamento__status=Pagamento.Status.EFETIVADO,
     ).alias(saldo_disponivel=saldo_titulo_sql()).filter(saldo_disponivel__gt=0)
 

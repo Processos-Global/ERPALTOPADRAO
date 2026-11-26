@@ -1,0 +1,32 @@
+{% load l10n %}
+<details class="cp-action-card">
+  <summary>Corrigir documentação fiscal</summary>
+  <div class="cp-action-card__body">
+    <form method="post" enctype="multipart/form-data" action="{% url 'compras:corrigir_documentacao_recebimento' pedido.pk recebimento.pk %}">
+      {% csrf_token %}
+      <div class="cp-nf-top">
+        <label class="cp-field">Número da nota fiscal
+          <input class="cp-input" name="numero_nota_fiscal" maxlength="80" value="{{ recebimento.numero_nota_fiscal|default_if_none:'' }}" required>
+        </label>
+        <label class="cp-field">Valor total da nota
+          <input class="cp-input" type="number" min="0.01" step="0.01" name="valor_total_nota" value="{{ recebimento.valor_total_nota|default_if_none:''|unlocalize }}" required>
+        </label>
+        <label class="cp-field">Frete discriminado na nota
+          <input class="cp-input" type="number" min="0" step="0.01" name="valor_frete_nota" value="{{ recebimento.valor_frete_nota|default_if_none:''|unlocalize }}">
+        </label>
+        <label class="cp-field">Vencimento informado na nota
+          <input class="cp-input" type="date" name="vencimento_nota" value="{{ recebimento.vencimento_nota|date:'Y-m-d' }}">
+        </label>
+      </div>
+      <label class="cp-field">Arquivo da nota fiscal
+        <input class="cp-input cp-file-input" type="file" name="arquivo_nota_fiscal" accept=".pdf,.xml,.jpg,.jpeg,.png"{% if not recebimento.arquivo_nota_fiscal %} required{% endif %}>
+      </label>
+      {% for rec_item in recebimento.itens.all %}
+        <label class="cp-field">Valor na nota de {{ rec_item.item_pedido.descricao }} · {{ rec_item.quantidade|floatformat:'-4' }} {{ rec_item.item_pedido.unidade }}
+          <input class="cp-input" name="valor_item_{{ rec_item.item_pedido_id|unlocalize }}" type="number" min="0.01" step="0.01" value="{{ rec_item.valor_recebido|default_if_none:''|unlocalize }}" required>
+        </label>
+      {% endfor %}
+      <button class="cp-btn cp-btn--primary" type="submit">Salvar documentação</button>
+    </form>
+  </div>
+</details>

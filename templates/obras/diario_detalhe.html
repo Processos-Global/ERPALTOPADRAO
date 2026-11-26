@@ -1,0 +1,116 @@
+{% extends "layouts/base.html" %}
+{% load obras_format saari_contexto static %}
+
+{% block title %}{{ diario.obra|nome_obra }} · Diário de Obra{% endblock %}
+{% block page_name %}Obras{% endblock %}
+{% block extra_css %}
+  {% include "obras/_operacional_styles.html" %}
+  <link rel="stylesheet" href="{% static 'css/obras-diario.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+  {% retorno_listagem request 'obras:diario_lista' as lista_diarios %}
+  <nav class="saari-breadcrumbs" aria-label="Localização"><ol>
+    <li><a href="{% url 'obras:menu' %}">Obras</a></li>
+    <li><a href="{{ lista_diarios }}">Diário de Obra</a></li>
+    <li aria-current="page">{{ diario.data|date:"d/m/Y" }}</li>
+  </ol></nav>
+{% endblock %}
+
+{% block content %}
+{% retorno_listagem request 'obras:diario_lista' as lista_diarios %}
+<div class="op-page diario-detalhe">
+  <header class="op-head">
+    <div class="op-head-copy">
+      <h1>{{ diario.obra|nome_obra }}</h1>
+      <div class="op-diario-meta">
+        <time class="op-badge" datetime="{{ diario.data|date:'Y-m-d' }}">{{ diario.data|date:"l" }} · {{ diario.data|date:"d/m/Y" }}</time>
+        {% if diario.registrado_por %}
+          <span class="op-muted">Responsável · {{ diario.registrado_por.get_full_name|default:diario.registrado_por.username }}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="op-head-actions">
+      <a class="op-btn secondary" href="{{ lista_diarios }}">Voltar aos registros</a>
+      {% if pode_editar_diario %}
+        <a class="op-btn" href="{% url 'obras:diario_editar' diario.pk %}?retorno={{ lista_diarios|urlencode:'' }}">Editar diário</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="op-panel" aria-labelledby="diario-informacoes">
+    <div class="op-panel-head"><h2 id="diario-informacoes">Informações gerais</h2></div>
+    <div class="diario-secao">
+      <dl class="diario-info">
+        <div><dt>Clima</dt><dd>{{ diario.get_clima_display|default:"Não informado" }}</dd></div>
+        <div><dt>Efetivo no dia</dt><dd>{{ diario.efetivo|default_if_none:"Não informado" }}</dd></div>
+        <div><dt>Atualizado em</dt><dd>{{ diario.atualizado_em|date:"d/m/Y H:i" }}</dd></div>
+      </dl>
+      {% if diario.equipe_presente %}
+        <h3>Equipe e terceiros</h3><p class="diario-texto">{{ diario.equipe_presente }}</p>
+      {% endif %}
+      {% if diario.ocorrencias %}
+        <h3>Ocorrências e impedimentos</h3><p class="diario-texto">{{ diario.ocorrencias }}</p>
+      {% endif %}
+      {% if diario.observacoes %}
+        <h3>Observações registradas</h3><p class="diario-texto">{{ diario.observacoes }}</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="op-panel" aria-labelledby="diario-atividades">
+    <div class="op-panel-head"><h2 id="diario-atividades">Atividades</h2></div>
+    <div class="diario-secao">
+      {% with planejadas=diario.atividades_planejadas.all adicionais=diario.atividades_adicionais.all %}
+        {% regroup planejadas|dictsort:"origem" by get_origem_display as grupos %}
+        {% for grupo in grupos %}
+          <h3>{{ grupo.grouper }}</h3>
+          <ul class="diario-registros">
+            {% for vinculo in grupo.list %}
+              <li>
+                <strong>{{ vinculo.atividade.nome_tarefa }}</strong>
+                <small class="op-muted">Semana {{ vinculo.semana }} · início {{ vinculo.inicio_semana|date:"d/m/Y" }}</small>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endfor %}
+        {% if adicionais %}
+          <h3>Atividades adicionais</h3>
+          <ul class="diario-registros">
+            {% for adicional in adicionais %}
+              <li><strong>{{ adicional.descricao }}</strong><small class="op-muted">Justificativa · {{ adicional.justificativa }}</small></li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        {% if diario.servicos_executados %}
+          <h3>Serviços executados</h3><p class="diario-texto">{{ diario.servicos_executados }}</p>
+        {% endif %}
+        {% if not grupos and not adicionais and not diario.servicos_executados and not diario.concretagens_dia %}
+          <p class="op-muted diario-texto">Nenhuma atividade registrada.</p>
+        {% endif %}
+      {% endwith %}
+      {% if diario.concretagens_dia %}
+        <h3>Concretagens do dia</h3>
+        <ul class="diario-registros">
+          {% for concretagem in diario.concretagens_dia %}
+            <li>
+              <strong><a href="{% url 'obras:concretagem_detalhe' concretagem.pk %}">{{ concretagem.codigo }}</a> · {{ concretagem.get_status_display }}</strong>
+              <small class="op-muted">
+                {% if concretagem.horario_programado %}{{ concretagem.horario_programado|time:"H:i" }} · {% endif %}
+                {{ concretagem.descricao_servico|default:"—" }} · {{ concretagem.volume_solicitado|numero_br:2 }} m³ solicitados
+                {% if concretagem.qtd_caminhoes %} · {{ concretagem.qtd_caminhoes }} caminh{{ concretagem.qtd_caminhoes|pluralize:"ão,ões" }} · {{ concretagem.vol_entregue|numero_br:2 }} m³ entregues{% endif %}
+              </small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  </section>
+
+  {% include "obras/_diario_galeria.html" with diario=diario only %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script defer src="{% static 'js/obras-diario-galeria.js' %}"></script>
+{% endblock %}

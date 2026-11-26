@@ -1,37 +1,41 @@
 {% extends "financeiro/base_financeiro.html" %}
-{% load financeiro_extras %}
-{% block financeiro_title %}Compromissos · Liberações{% endblock %}
+{% load financeiro_extras l10n %}
+{% block financeiro_title %}Histórico financeiro de compras{% endblock %}
 {% block financeiro_content %}
-<header class="fin-head"><h1 class="fin-title">Compromissos</h1>{% include 'financeiro/_exportar.html' with tipo='liberacoes' %}</header>
-<nav class="fin-tabs" aria-label="Compromissos">
-  {% url 'financeiro:compromissos' as compromissos_url %}
-  {% url 'financeiro:liberacoes' as liberacoes_url %}
-  <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='pedidos' status=None pedido=None page=None %}">Pedidos</a>
-  <a class="fin-btn" href="{{ compromissos_url }}{% querystring aba='contratos' status=None pedido=None page=None %}">Contratos</a>
-  <a class="fin-btn" href="{{ liberacoes_url }}{% querystring page=None %}" aria-current="page">Liberações</a>
-</nav>
+<header class="fin-head"><h1 class="fin-title">Histórico financeiro de compras</h1>{% include 'financeiro/_exportar.html' with tipo='liberacoes' %}</header>
+{% url 'financeiro:liberacoes' as liberacoes_url %}
   <form method="get" data-local-submit-loading class="fin-toolbar fin-toolbar--compact">
     <div class="fin-filter-field"><label for="lib-status">Situação</label><select id="lib-status" name="status" class="fin-control"><option value="">Todas</option>{% for valor,rotulo in status_choices %}<option value="{{ valor }}" {% if status_filtro == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
-    <div class="fin-filter-field"><label for="lib-obra">Obra</label><select id="lib-obra" name="obra" class="fin-control"><option value="">Todas</option>{% for obra in obras %}<option value="{{ obra.pk }}" {% if obra_filtro == obra.pk|stringformat:"s" %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
-    <div class="fin-filter-field"><label for="lib-fornecedor">Fornecedor</label><select id="lib-fornecedor" name="fornecedor" class="fin-control"><option value="">Todos</option>{% for fornecedor in fornecedores %}<option value="{{ fornecedor.pk }}" {% if fornecedor_filtro == fornecedor.pk|stringformat:"s" %}selected{% endif %}>{{ fornecedor.nome_exibicao }}</option>{% endfor %}</select></div>
+    <div class="fin-filter-field"><label for="lib-obra">Obra</label><select id="lib-obra" name="obra" class="fin-control"><option value="">Todas</option>{% for obra in obras %}<option value="{{ obra.pk|unlocalize }}" {% if obra_filtro == obra.pk|stringformat:"s" %}selected{% endif %}>{{ obra.nome }}</option>{% endfor %}</select></div>
+    <div class="fin-filter-field"><label for="lib-fornecedor">Fornecedor</label><select id="lib-fornecedor" name="fornecedor" class="fin-control"><option value="">Todos</option>{% for fornecedor in fornecedores %}<option value="{{ fornecedor.pk|unlocalize }}" {% if fornecedor_filtro == fornecedor.pk|stringformat:"s" %}selected{% endif %}>{{ fornecedor.nome_exibicao }}</option>{% endfor %}</select></div>
     <div class="fin-filter-field"><label for="lib-q">Número</label><input id="lib-q" type="search" name="q" class="fin-control" value="{{ busca }}" placeholder="Pedido ou processo"></div>
     {% if pedido_filtro %}<input type="hidden" name="pedido" value="{{ pedido_filtro }}">{% endif %}
     <div class="fin-toolbar__actions"><button class="fin-btn fin-btn--primary" type="submit">Filtrar</button><a class="fin-btn" href="{{ liberacoes_url }}">Limpar</a></div>
   </form>
 <section class="fin-section">
-  <div class="fin-section__head"><h2>Liberações</h2></div>
+  <div class="fin-section__head"><h2>Registros financeiros</h2></div>
   <div class="fin-section__body--flush fin-table-wrap"><table class="fin-table"><thead><tr><th>Pedido / obra</th><th>Fornecedor</th><th>Origem</th><th>Valor</th><th>Situação</th><th>Título</th><th>Ação</th></tr></thead><tbody>
   {% for liberacao in pagina %}<tr>
     <td class="fin-main-cell"><strong>{{ liberacao.pedido.numero }}</strong><small>{{ liberacao.pedido.obra.nome }}</small></td>
     <td>{{ liberacao.pedido.fornecedor.nome_exibicao }}</td>
-    <td>{{ liberacao.get_tipo_display }}<small>{{ liberacao.referencia }}</small>{% if liberacao.recebimento %}<small>NF {{ liberacao.recebimento.numero_nota_fiscal|default:"não informada" }}</small>{% endif %}{% if liberacao.justificativa %}<small>{{ liberacao.justificativa }}</small>{% endif %}</td>
+    <td>{{ liberacao.get_tipo_display }}{% if liberacao.valor_esperado != None %}<small>Registro automático do recebimento</small>{% endif %}<small>{{ liberacao.referencia }}</small>{% if liberacao.recebimento %}<small>NF {{ liberacao.recebimento.numero_nota_fiscal|default:"não informada" }}</small>{% endif %}{% if liberacao.justificativa %}<small>{{ liberacao.justificativa }}</small>{% endif %}</td>
     <td class="fin-money">{{ liberacao.valor|moeda_br }}</td>
     <td>{{ liberacao.get_status_display }}{% if liberacao.divergencia %}<small>{{ liberacao.divergencia }}</small>{% endif %}</td>
     <td>{% if liberacao.titulo %}<a href="{% url 'financeiro:titulo_detalhe' liberacao.titulo_id %}">{{ liberacao.titulo.numero }}</a>{% else %}—{% endif %}</td>
-    <td>{% if pode_autorizar and liberacao.status == 'PENDENTE' %}<form method="post" action="{% url 'financeiro:liberacao_autorizar' liberacao.pk %}">{% csrf_token %}<button class="fin-btn" type="submit">Liberar valor</button></form>{% endif %}</td>
-  </tr>{% empty %}<tr><td colspan="7" class="fin-empty">Nenhuma liberação encontrada.</td></tr>{% endfor %}
+    <td>
+      {% if pode_reprocessar and liberacao.status == 'DIVERGENTE' and liberacao.valor_esperado != None and liberacao.recebimento_id and not liberacao.titulo_id %}
+        <form method="post" action="{% url 'financeiro:liberacao_reprocessar' liberacao.pk %}">
+          {% csrf_token %}<button class="fin-btn" type="submit">Reavaliar pendência</button>
+        </form>
+      {% elif pode_autorizar and liberacao.status == 'PENDENTE' and liberacao.valor_esperado == None %}
+        <form method="post" action="{% url 'financeiro:liberacao_autorizar' liberacao.pk %}">
+          {% csrf_token %}<button class="fin-btn" type="submit">Autorizar registro legado</button>
+        </form>
+      {% endif %}
+    </td>
+  </tr>{% empty %}<tr><td colspan="7" class="fin-empty">Nenhum registro financeiro encontrado.</td></tr>{% endfor %}
   </tbody></table></div>
-  {% if pagina.has_other_pages %}<nav class="fin-section__body fin-tabs" aria-label="Páginas das liberações">
+  {% if pagina.has_other_pages %}<nav class="fin-section__body fin-tabs" aria-label="Páginas do histórico financeiro">
     {% if pagina.has_previous %}<a class="fin-btn" href="{% querystring page=pagina.previous_page_number %}">Anterior</a>{% endif %}
     <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
     {% if pagina.has_next %}<a class="fin-btn" href="{% querystring page=pagina.next_page_number %}">Próxima</a>{% endif %}

@@ -1,20 +1,29 @@
 from datetime import date
 
 from django.contrib import messages
-from django.db import IntegrityError, transaction
-from django.core.exceptions import ValidationError
+from django.core.exceptions import SuspiciousFileOperation, ValidationError
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.db import IntegrityError, transaction
+from django.db.models import Count, Prefetch
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_safe
+from google.auth.exceptions import GoogleAuthError
+from googleapiclient.errors import HttpError
+from PIL import Image
 
-from usuarios.decorators import acao_required, modulo_required, possui_permissao_modulo
+from usuarios.decorators import acao_required, modulo_required, possui_permissao_acao, possui_permissao_modulo
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import (
     DiarioAtividadePlanejada, DiarioObra, Obra,
     FotoDiarioObra,
 )
-from obras.services.fotos import validar_fotos
+from obras.services.concretagem.permissoes import pode_concretagem
+from obras.services.diario_midias import (
+    ErroUploadFotoDiario, VARIANTES_FOTO_DIARIO, gerar_variante_foto_diario,
+    storage_foto_diario, uploads_privados_diario, validar_fotos_diario,
+)
 from planejamento.services.cronograma.agenda_semanal import calcular_programacao_semanal
 from planejamento.services.cronograma.atividades import listar_atividades_do_retrato
 from planejamento.services.cronograma.consultas import (
@@ -135,16 +144,13 @@ def diario_lista(request):
     if data_fim:
         diarios = diarios.filter(data__lte=data_fim)
 
-    diarios = diarios.prefetch_related(
-        "fotos",
-        "atividades_planejadas__atividade",
+    diarios = diarios.annotate(qtd_fotos=Count("fotos")).prefetch_related(
+        Prefetch("atividades_planejadas", queryset=DiarioAtividadePlanejada.objects.select_related("atividade")),
         "atividades_adicionais",
     ).order_by("-data", "obra__nome", "-id")
     pagina = Paginator(diarios, 30).get_page(request.GET.get("page"))
     diarios = list(pagina.object_list)
     pagina.object_list = diarios
-
-    from obras.services.concretagem.permissoes import pode_concretagem
 
     if pode_concretagem(request.user):
         _anexar_concretagens(diarios)
@@ -152,6 +158,7 @@ def diario_lista(request):
         for d in diarios:
             d.concretagens_dia = []
 
+    pode_escrever = possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO)
     return render(request, "obras/diario_lista.html", {
         "diarios": diarios,
         "pagina": pagina,
@@ -159,8 +166,61 @@ def diario_lista(request):
         "obra_filtro": obra_id,
         "data_inicio": data_inicio or "",
         "data_fim": data_fim or "",
-        "pode_editar_diario": possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO),
+        "pode_criar_diario": pode_escrever and possui_permissao_acao(request.user, ModuloSistema.DIARIO_OBRA, "criar"),
+        "pode_editar_diario": pode_escrever and possui_permissao_acao(request.user, ModuloSistema.DIARIO_OBRA, "editar"),
     })
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+@require_safe
+def diario_detalhe(request, diario_id):
+    diarios = DiarioObra.objects.select_related("obra", "registrado_por").prefetch_related(
+        "fotos",
+        Prefetch("atividades_planejadas", queryset=DiarioAtividadePlanejada.objects.select_related("atividade")),
+        "atividades_adicionais",
+    )
+    diario = get_object_or_404(diarios, pk=diario_id)
+    diario.qtd_fotos = diario.fotos.count()
+    diario.concretagens_dia = []
+    if pode_concretagem(request.user):
+        _anexar_concretagens([diario])
+
+    return render(request, "obras/diario_detalhe.html", {
+        "diario": diario,
+        "concretagens_dia": diario.concretagens_dia,
+        "pode_editar_diario": (
+            possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO)
+            and possui_permissao_acao(request.user, ModuloSistema.DIARIO_OBRA, "editar")
+        ),
+    })
+
+
+@modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+@require_safe
+def diario_foto(request, diario_id, foto_id, variante):
+    if variante != "original" and variante not in VARIANTES_FOTO_DIARIO:
+        raise Http404("Variante indisponível.")
+    foto = get_object_or_404(FotoDiarioObra, pk=foto_id, diario_id=diario_id)
+    arquivo = foto.arquivo
+    if not arquivo:
+        raise Http404("Foto indisponível.")
+
+    try:
+        if variante == "original":
+            resposta = FileResponse(
+                storage_foto_diario(foto).open(arquivo.name, "rb"), as_attachment=True,
+                filename=foto.nome_arquivo, content_type="application/octet-stream",
+            )
+            resposta["Cache-Control"] = "private, no-store"
+        else:
+            resposta = HttpResponse(gerar_variante_foto_diario(foto, variante), content_type="image/jpeg")
+            resposta["Cache-Control"] = "private, no-cache"
+    except (OSError, ValueError, SyntaxError, SuspiciousFileOperation, Image.DecompressionBombError, HttpError, GoogleAuthError) as exc:
+        raise Http404("Foto indisponível.") from exc
+
+    resposta["X-Content-Type-Options"] = "nosniff"
+    resposta["Cross-Origin-Resource-Policy"] = "same-origin"
+    return resposta
 
 
 def _anexar_concretagens(diarios):
@@ -200,7 +260,7 @@ def diario_novo(request, obra_id=None):
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.EDICAO)
 @acao_required(ModuloSistema.DIARIO_OBRA, "editar")
 def diario_editar(request, diario_id):
-    diario = get_object_or_404(DiarioObra.objects.select_related("obra"), pk=diario_id)
+    diario = get_object_or_404(DiarioObra.objects.select_related("obra").prefetch_related("fotos"), pk=diario_id)
     return _diario_form(request, obra_inicial=diario.obra, diario=diario)
 
 
@@ -232,6 +292,28 @@ def _diario_form(request, obra_inicial=None, diario=None):
     opcoes = [opcao for opcao in opcoes if opcao["id"] not in atividades_historicas]
     opcoes_por_id = {opcao["id"]: opcao for opcao in opcoes}
     selecionadas = {vinculo.atividade_id for vinculo in vinculos_existentes} - atividades_historicas
+    campos_formulario = ("clima", "efetivo", "equipe_presente", "ocorrencias")
+    dados_formulario = {
+        campo: request.POST.get(campo, "") if request.method == "POST" else getattr(diario, campo, "")
+        for campo in campos_formulario
+    }
+    ids_remocao = set()
+
+    def renderizar_formulario():
+        return render(request, "obras/diario_form.html", {
+            "obra": obra_selecionada,
+            "obras": obras,
+            "diario": diario,
+            "climas": DiarioObra.Clima.choices,
+            "hoje": date.today().isoformat(),
+            "data_exibida": data_texto,
+            "semana": semana,
+            "atividades": opcoes,
+            "atividades_selecionadas": selecionadas,
+            "vinculos_historicos": vinculos_historicos,
+            "vinculos_a_remover": {ids_historicos[pk] for pk in ids_remocao & ids_historicos.keys()},
+            "dados_formulario": dados_formulario,
+        })
 
     if request.method == "POST":
         efetivo_texto = (request.POST.get("efetivo") or "").strip()
@@ -253,18 +335,12 @@ def _diario_form(request, obra_inicial=None, diario=None):
             messages.error(request, "Remova os vínculos das atividades antes de alterar a obra ou a data do diário.")
         else:
             try:
-                fotos = validar_fotos(request.FILES.getlist("fotos"))
+                fotos = validar_fotos_diario(request.FILES.getlist("fotos"))
             except ValidationError as exc:
                 messages.error(request, "; ".join(exc.messages))
                 fotos = None
             if fotos is None:
-                return render(request, "obras/diario_form.html", {
-                    "obra": obra_selecionada, "obras": obras, "diario": diario,
-                    "climas": DiarioObra.Clima.choices, "hoje": date.today().isoformat(),
-                    "data_exibida": data_texto, "semana": semana, "atividades": opcoes,
-                    "atividades_selecionadas": selecionadas,
-                    "vinculos_historicos": vinculos_historicos,
-                })
+                return renderizar_formulario()
             obj = diario or DiarioObra(registrado_por=request.user, servicos_executados="")
             identidade_anterior = (obj.obra_id, obj.data) if obj.pk else None
             obj.obra = obra_selecionada
@@ -274,7 +350,7 @@ def _diario_form(request, obra_inicial=None, diario=None):
             obj.equipe_presente = (request.POST.get("equipe_presente") or "").strip()
             obj.ocorrencias = (request.POST.get("ocorrencias") or "").strip()
             try:
-                with transaction.atomic():
+                with uploads_privados_diario() as salvar_foto, transaction.atomic():
                     if diario:
                         obj.save(update_fields=[
                             "obra", "data", "clima", "efetivo", "equipe_presente",
@@ -298,22 +374,13 @@ def _diario_form(request, obra_inicial=None, diario=None):
                             "inicio_semana": semana["inicio_semana"],
                         })
                     for foto in fotos:
-                        FotoDiarioObra.objects.create(diario=obj, arquivo=foto)
+                        salvar_foto(FotoDiarioObra(diario=obj), foto)
+            except ErroUploadFotoDiario:
+                messages.error(request, "Não foi possível salvar as fotos. Selecione os arquivos novamente e tente de novo.")
             except IntegrityError:
                 messages.error(request, "Já existe um diário registrado para esta obra nesta data.")
             else:
                 messages.success(request, "Diário de obra salvo com sucesso.")
                 return redirect("obras:diario_lista")
 
-    return render(request, "obras/diario_form.html", {
-        "obra": obra_selecionada,
-        "obras": obras,
-        "diario": diario,
-        "climas": DiarioObra.Clima.choices,
-        "hoje": date.today().isoformat(),
-        "data_exibida": data_texto,
-        "semana": semana,
-        "atividades": opcoes,
-        "atividades_selecionadas": selecionadas,
-        "vinculos_historicos": vinculos_historicos,
-    })
+    return renderizar_formulario()

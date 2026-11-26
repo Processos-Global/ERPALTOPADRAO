@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.forms import formset_factory
 
@@ -537,10 +539,15 @@ class ItemCompraAberturaForm(forms.Form):
     )
 
     quantidade = forms.DecimalField(
-        min_value=0.0001,
+        min_value=Decimal("0.0001"),
         max_digits=18,
         decimal_places=4,
-        label="Quantidade",
+        label="Quantidade solicitada",
+    )
+
+    quantidade_compra = forms.DecimalField(
+        required=False, min_value=Decimal("0.0001"), max_digits=18, decimal_places=4,
+        label="Quantidade a cotar",
     )
 
     observacao = forms.CharField(
@@ -553,22 +560,6 @@ class ItemCompraAberturaForm(forms.Form):
             }
         ),
     )
-
-    excecao_estoque = forms.BooleanField(
-        required=False,
-        label="Autorizar exceção de estoque",
-    )
-    justificativa_excecao = forms.CharField(
-        required=False,
-        label="Justificativa da exceção",
-        widget=forms.Textarea(attrs={"rows": 2, "placeholder": "Explique por que a compra é necessária"}),
-    )
-
-    def clean(self):
-        dados = super().clean()
-        if dados.get("excecao_estoque") and not (dados.get("justificativa_excecao") or "").strip():
-            self.add_error("justificativa_excecao", "Informe a justificativa da exceção.")
-        return dados
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

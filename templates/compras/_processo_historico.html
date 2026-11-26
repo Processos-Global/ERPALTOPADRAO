@@ -7,3 +7,13 @@
   </div>
   {% empty %}<p class="pc-empty">Nenhum evento registrado.</p>{% endfor %}
 </div>
+{% if reservas_legadas %}
+<section class="pc-card">
+  <div class="pc-card-head"><h2>Reservas de estoque legadas</h2></div>
+  <ul class="pc-card-body">
+    {% for reserva in reservas_legadas %}
+      <li><a href="{% url 'compras:cobertura_necessidade' processo.pk reserva.necessidade_id %}">{{ reserva.material.nome }} · {{ reserva.get_status_display }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

@@ -2,6 +2,19 @@
 from django.urls import reverse
 
 
+PAIS_FINANCEIRO = {
+    "financeiro:agenda": "financeiro:titulos",
+    "financeiro:compromissos": "financeiro:previsoes",
+    "financeiro:liberacoes": "financeiro:previsoes",
+    "financeiro:relatorios_pagamento": "financeiro:pagamentos",
+    "financeiro:relatorio_pagamento_excel": "financeiro:pagamentos",
+    "financeiro:gastos": "financeiro:indicadores",
+    "financeiro:analises": "financeiro:indicadores",
+    "financeiro:despesas_recorrentes": "financeiro:plano_financeiro",
+    "financeiro:despesa_recorrente_editar": "financeiro:plano_financeiro",
+}
+
+
 def _entry(request, route, label, terms=""):
     current = getattr(getattr(request, "resolver_match", None), "view_name", "")
     return {
@@ -10,21 +23,30 @@ def _entry(request, route, label, terms=""):
     }
 
 
-def navigation_context(request, groups, home_label):
+def _entries(request, specs):
+    return [_entry(request, route, title, terms) for route, title, terms, allowed in specs if allowed]
+
+
+def _active_branch(request, entries, parent_routes=None):
+    view_name = getattr(getattr(request, "resolver_match", None), "view_name", "")
+    parent = parent_routes.get(view_name) if parent_routes else None
+    return max(
+        (entry for entry in entries if entry["current"] or entry["route"] == parent or request.path.startswith(entry["url"])),
+        key=lambda entry: (entry["current"], entry["route"] == parent, len(entry["url"])),
+        default=None,
+    )
+
+
+def navigation_context(request, groups, home_label, parent_routes=None):
     home = _entry(request, "core:index", home_label)
     active_group = None
     active_entry = None
     visible_groups = []
-    path = request.path
     for section, key, label, icon, specs in groups:
-        entries = [_entry(request, route, title, terms) for route, title, terms, allowed in specs if allowed]
+        entries = _entries(request, specs)
         if not entries:
             continue
-        branch = max(
-            (entry for entry in entries if entry["current"] or path.startswith(entry["url"])),
-            key=lambda entry: (entry["current"], len(entry["url"])),
-            default=None,
-        )
+        branch = _active_branch(request, entries, parent_routes)
         group = {
             "section": section, "key": key, "label": label, "icon": icon,
             "entries": entries, "landing": entries[0], "children": entries[1:],
@@ -51,16 +73,49 @@ def portal_navigation(request, available):
     ], "Minha área")
 
 
+def acesso_menu_financeiro(permite):
+    return {
+        "financeiro": permite("VISUALIZAR"),
+        "lancar_titulos": permite("LANCAR_TITULOS"),
+        "aprovar_financeiro": permite("APROVAR"),
+        "administrar_financeiro": permite("ADMINISTRAR"),
+    }
+
+
+def _secoes_financeiro(access):
+    visualizar = access["financeiro"]
+    return [
+        ("financeiro:dashboard", "Visão geral", "financeiro saldo vencimento", visualizar),
+        ("financeiro:titulos", "Solicitações de pagamento", "títulos contas a pagar agenda vencimentos", visualizar),
+        ("financeiro:titulo_novo", "Solicitações de pagamento", "nova solicitação lançar título", access["lancar_titulos"] and not visualizar),
+        ("financeiro:aprovacoes", "Aprovações", "decidir revisão pagamentos", access["aprovar_financeiro"]),
+        ("financeiro:pagamentos", "Pagamentos", "programados efetivados malote relatórios de pagamento", visualizar),
+        ("financeiro:previsoes", "Planejamento financeiro", "previsões compromissos contratos despesas recorrentes", visualizar),
+        ("financeiro:indicadores", "Relatórios e indicadores", "análises gastos exportações", visualizar),
+        ("financeiro:plano_financeiro", "Configurações", "apropriações plano financeiro despesas recorrentes", access["administrar_financeiro"]),
+    ]
+
+
+def menu_financeiro(request, access, entries=None):
+    if entries is None:
+        entries = _entries(request, _secoes_financeiro(access))
+    return {
+        "entries": entries,
+        "branch": _active_branch(request, entries, PAIS_FINANCEIRO),
+        "pode_lancar": access["lancar_titulos"],
+        "pode_administrar": access["administrar_financeiro"],
+    }
+
+
 def internal_navigation(request, access):
     obras = access["obras"]
     compras = access["compras"]
-    financeiro = access["financeiro"]
     planejamento = access["planejamento"]
     suprimentos = access["suprimentos"]
     pos_obra = access["pos_obra"]
     projetos = access["projetos"]
     cadastros = access["cadastros"]
-    return navigation_context(request, [
+    context = navigation_context(request, [
         ("Operações", "obras", "Obras", "building", [
             ("obras:menu", "Obras", "", obras),
             ("obras:diario_lista", "Diário de Obra", "registro execução", obras),
@@ -85,17 +140,7 @@ def internal_navigation(request, access):
             ("compras:grandes_fornecedores", "Grandes Fornecedores", "", compras),
             ("compras:contratos_dashboard", "Contratos", "", compras),
         ]),
-        ("Operações", "financeiro", "Financeiro", "wallet", [
-            ("financeiro:dashboard", "Visão Geral Financeira", "financeiro saldo vencimento", financeiro),
-            ("financeiro:titulos", "Contas a Pagar", "títulos despesas vencimentos", financeiro),
-            ("financeiro:titulo_novo", "Nova solicitação financeira", "lançar título pagamento", access["lancar_titulos"]),
-            ("financeiro:pagamentos", "Pagamentos", "programados efetivados", financeiro),
-            ("financeiro:compromissos", "Compromissos", "compras contratadas", financeiro),
-            ("financeiro:previsoes", "Planejamento Financeiro", "previsões", financeiro),
-            ("financeiro:relatorios_pagamento", "Relatórios de Pagamento", "exportações", financeiro),
-            ("financeiro:indicadores", "Indicadores Financeiros", "relatórios", financeiro),
-            ("financeiro:agenda", "Agenda Financeira", "calendário", financeiro),
-        ]),
+        ("Operações", "financeiro", "Financeiro", "wallet", _secoes_financeiro(access)),
         ("Operações", "projetos", "Projetos", "ruler", [
             ("projetos:menu", "Projetos", "", projetos),
             ("projetos:checklist_compatibilizacao", "Checklist de compatibilização", "", projetos),
@@ -122,4 +167,7 @@ def internal_navigation(request, access):
         ("Configurações", "usuarios", "Usuários", "users", [
             ("usuarios:lista_usuarios", "Usuários", "permissões acessos configurações", access["usuarios"]),
         ]),
-    ], "Início")
+    ], "Início", parent_routes=PAIS_FINANCEIRO)
+    entries = next((group["entries"] for group in context["erp_nav_groups"] if group["key"] == "financeiro"), [])
+    context["financeiro_menu"] = menu_financeiro(request, access, entries)
+    return context

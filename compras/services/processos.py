@@ -1,18 +1,52 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
+from django.core.validators import DecimalValidator
 from django.db import transaction
 
-from compras.models import NecessidadeCompra, ProcessoCompra
-from obras.models import Obra
+from compras.models import NecessidadeCompra, ProcessoCompra, ReservaEstoqueCompra
 
 from .auditoria import registrar_evento
-from .cobertura_estoque import avaliar_solicitacao, registrar_cobertura
 from .numeracao import gerar_numero
 from .notificacoes import notificar_novo_processo_para_cotacao
 
 
 CRONOGRAMAS_SEM_ATIVIDADE_FISICA = {"02-04-02"}
+
+
+def _quantidade_positiva(valor):
+    try:
+        quantidade = Decimal(str(valor))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValidationError("Informe uma quantidade válida.") from exc
+    if not quantidade.is_finite() or quantidade <= 0:
+        raise ValidationError("A quantidade deve ser maior que zero.")
+    DecimalValidator(18, 4)(quantidade)
+    return quantidade
+
+
+def _quantidade_comercial(valor, solicitada):
+    quantidade = _quantidade_positiva(valor)
+    if quantidade > solicitada:
+        raise ValidationError("A quantidade a cotar não pode exceder a quantidade solicitada.")
+    return quantidade
+
+
+def _criar_necessidade(*, processo, material, quantidade, quantidade_compra=None, observacao=""):
+    solicitada = _quantidade_positiva(quantidade)
+    comercial = solicitada if quantidade_compra is None else _quantidade_comercial(quantidade_compra, solicitada)
+    if material is None or not material.ativo:
+        raise ValidationError("Selecione um material ativo do catálogo.")
+    return NecessidadeCompra.objects.create(
+        processo=processo,
+        material=material,
+        descricao=material.nome,
+        especificacao=material.especificacao,
+        unidade=material.unidade.sigla,
+        quantidade_necessaria=solicitada,
+        quantidade_incluida=comercial,
+        observacao=(observacao or "").strip(),
+    )
 
 
 def permite_compra_sem_atividade(item_cronograma):
@@ -78,7 +112,6 @@ def criar_processo(
         # Os itens reais nascem exclusivamente na matriz de compatibilização.
         itens = []
 
-    Obra.objects.select_for_update().get(pk=obra_id)
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra_id=obra_id,
@@ -98,37 +131,10 @@ def criar_processo(
         criado_por=usuario,
     )
 
-    necessidades = []
     for item in itens:
-        quantidade = Decimal(str(item["quantidade"]))
-        if quantidade <= 0:
-            raise ValidationError("A quantidade dos itens deve ser maior que zero.")
-        material = item.get("material")
-        if material is None:
-            raise ValidationError("Selecione um material válido do catálogo.")
-        if not material.ativo:
-            raise ValidationError(f"O material {material} está inativo no cadastro.")
-        cobertura, quantidade_compra, quantidade_reservada, justificativa = avaliar_solicitacao(
-            processo=processo, material=material, quantidade=quantidade, usuario=usuario,
-            excecao_estoque=bool(item.get("excecao_estoque")),
-            justificativa_excecao=item.get("justificativa_excecao", ""),
-        )
-        necessidade = NecessidadeCompra.objects.create(
-                processo=processo,
-                atividade_origem=None,
-                material=material,
-                descricao=material.nome,
-                especificacao=material.especificacao,
-                unidade=material.unidade.sigla,
-                quantidade_necessaria=quantidade,
-                quantidade_incluida=quantidade_compra,
-                observacao=(item.get("observacao") or "").strip(),
-        )
-        necessidades.append(necessidade)
-        registrar_cobertura(
-            processo=processo, necessidade=necessidade, usuario=usuario,
-            cobertura=cobertura, quantidade_reservada=quantidade_reservada,
-            justificativa_excecao=justificativa,
+        _criar_necessidade(
+            processo=processo, material=item.get("material"), quantidade=item["quantidade"],
+            quantidade_compra=item.get("quantidade_compra"), observacao=item.get("observacao"),
         )
 
     from .sla import reconciliar_regra_inicial
@@ -139,7 +145,7 @@ def criar_processo(
         "CRIACAO",
         usuario,
         (
-            f"Compra criada com apropriação {apropriacao.caminho} e {len(necessidades)} item(ns). "
+            f"Compra criada com apropriação {apropriacao.caminho} e {len(itens)} item(ns). "
             + (
                 "Os micro itens e fornecedores serão definidos na matriz de Grande Fornecedor."
                 if fluxo_grande_fornecedor
@@ -178,8 +184,7 @@ def incluir_necessidade(
     quantidade,
     usuario,
     observacao="",
-    excecao_estoque=False,
-    justificativa_excecao="",
+    quantidade_compra=None,
 ):
     processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.etapa_atual != processo.Etapa.COTACAO or processo.status in {
@@ -189,33 +194,9 @@ def incluir_necessidade(
     }:
         raise ValidationError("Itens só podem ser incluídos enquanto o processo estiver na etapa de cotação.")
 
-    quantidade = Decimal(str(quantidade))
-    if quantidade <= 0:
-        raise ValidationError("A quantidade deve ser maior que zero.")
-    if material is None or not material.ativo:
-        raise ValidationError("Selecione um material ativo do catálogo.")
-
-    Obra.objects.select_for_update().get(pk=processo.obra_id)
-    cobertura, quantidade_compra, quantidade_reservada, justificativa = avaliar_solicitacao(
-        processo=processo, material=material, quantidade=quantidade, usuario=usuario,
-        excecao_estoque=excecao_estoque, justificativa_excecao=justificativa_excecao,
-    )
-
-    necessidade = NecessidadeCompra.objects.create(
-        processo=processo,
-        atividade_origem=None,
-        material=material,
-        descricao=material.nome,
-        especificacao=material.especificacao,
-        unidade=material.unidade.sigla,
-        quantidade_necessaria=quantidade,
-        quantidade_incluida=quantidade_compra,
-        observacao=(observacao or "").strip(),
-    )
-    registrar_cobertura(
-        processo=processo, necessidade=necessidade, usuario=usuario,
-        cobertura=cobertura, quantidade_reservada=quantidade_reservada,
-        justificativa_excecao=justificativa,
+    necessidade = _criar_necessidade(
+        processo=processo, material=material, quantidade=quantidade,
+        quantidade_compra=quantidade_compra, observacao=observacao,
     )
     registrar_evento(
         processo,
@@ -225,7 +206,8 @@ def incluir_necessidade(
         {
             "necessidade_id": necessidade.pk,
             "material_id": material.pk,
-            "quantidade": str(quantidade),
+            "quantidade": str(necessidade.quantidade_necessaria),
+            "quantidade_compra": str(necessidade.quantidade_incluida),
         },
     )
     return necessidade
@@ -260,12 +242,6 @@ def excluir_necessidade(*, processo, necessidade, usuario):
     if necessidade.situacao == NecessidadeCompra.Situacao.CANCELADA:
         raise ValidationError("Este item já foi cancelado.")
 
-    from compras.models import ReservaEstoqueCompra
-    Obra.objects.select_for_update().get(pk=processo.obra_id)
-    reserva = ReservaEstoqueCompra.objects.select_for_update().filter(necessidade=necessidade).first()
-    if reserva and reserva.movimentos.exists():
-        raise ValidationError("Este item já consumiu uma reserva de estoque e não pode ser excluído.")
-
     itens_cotados = necessidade.itens_cotados.select_related("cotacao").all()
     if any(
         item.cotacao.enviada_compatibilizacao_em
@@ -283,10 +259,6 @@ def excluir_necessidade(*, processo, necessidade, usuario):
     descricao = necessidade.descricao
     necessidade_id = necessidade.pk
     quantidade = necessidade.quantidade_incluida
-    ReservaEstoqueCompra.objects.filter(necessidade=necessidade).update(
-        status=ReservaEstoqueCompra.Status.LIBERADA, quantidade_disponivel=Decimal("0")
-    )
-
     # NecessidadeCompra é PROTECT em CotacaoFornecedorItem; removemos primeiro
     # apenas os itens das propostas ainda abertas, preservando as propostas.
     quantidade_propostas = itens_cotados.count()
@@ -322,7 +294,6 @@ def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprado
     if apropriacao is None or apropriacao.pai_id is None:
         raise ValidationError("Selecione uma apropriação financeira válida.")
 
-    Obra.objects.select_for_update().get(pk=obra.pk)
     processo = ProcessoCompra.objects.create(
         numero=gerar_numero("PROCESSO"),
         obra=obra,
@@ -338,46 +309,21 @@ def criar_processo_avulso(*, obra, apropriacao, titulo, usuario, itens, comprado
         criado_por=usuario,
     )
 
-    necessidades = []
     for item in itens:
-        quantidade = Decimal(str(item["quantidade"]))
-        material = item.get("material")
-        if quantidade <= 0:
-            raise ValidationError("A quantidade dos itens deve ser maior que zero.")
-        if material is None or not material.ativo:
-            raise ValidationError("Selecione materiais ativos do catálogo.")
-        cobertura, quantidade_compra, quantidade_reservada, justificativa = avaliar_solicitacao(
-            processo=processo, material=material, quantidade=quantidade, usuario=usuario,
-            excecao_estoque=bool(item.get("excecao_estoque")),
-            justificativa_excecao=item.get("justificativa_excecao", ""),
-        )
-        necessidade = NecessidadeCompra.objects.create(
-            processo=processo,
-            material=material,
-            descricao=material.nome,
-            especificacao=material.especificacao,
-            unidade=material.unidade.sigla,
-            quantidade_necessaria=quantidade,
-            quantidade_incluida=quantidade_compra,
-            observacao=(item.get("observacao") or "").strip(),
-        )
-        necessidades.append(necessidade)
-        registrar_cobertura(
-            processo=processo, necessidade=necessidade, usuario=usuario,
-            cobertura=cobertura, quantidade_reservada=quantidade_reservada,
-            justificativa_excecao=justificativa,
+        _criar_necessidade(
+            processo=processo, material=item.get("material"), quantidade=item["quantidade"],
+            quantidade_compra=item.get("quantidade_compra"), observacao=item.get("observacao"),
         )
     from .sla import reconciliar_regra_inicial
     reconciliar_regra_inicial(processo)
-    registrar_evento(processo, "CRIACAO_AVULSA", usuario, f"Compra avulsa criada com {len(necessidades)} item(ns) e apropriação {apropriacao.caminho}.")
+    registrar_evento(processo, "CRIACAO_AVULSA", usuario, f"Compra avulsa criada com {len(itens)} item(ns) e apropriação {apropriacao.caminho}.")
     if iniciar_cotacao:
         notificar_novo_processo_para_cotacao(processo)
     return processo
 
 
 @transaction.atomic
-def editar_necessidade(*, processo, necessidade, material, quantidade, observacao, usuario,
-                      excecao_estoque=False, justificativa_excecao=""):
+def editar_necessidade(*, processo, necessidade, material, quantidade, observacao, usuario):
     processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.fluxo_grande_fornecedor:
         raise ValidationError("Use a edição própria do fluxo de Grandes Fornecedores.")
@@ -395,36 +341,32 @@ def editar_necessidade(*, processo, necessidade, material, quantidade, observaca
         raise ValidationError("Este item já faz parte de uma proposta que avançou no fluxo e não pode mais ser editado.")
     if necessidade.adjudicacoes.filter(cancelada=False).exists() or necessidade.itens_pedido.exists():
         raise ValidationError("Este item já possui adjudicação ou pedido e não pode ser editado.")
-    quantidade = Decimal(str(quantidade))
-    if quantidade <= 0:
-        raise ValidationError("A quantidade deve ser maior que zero.")
-    if material is None or not material.ativo:
+    quantidade_compra = _quantidade_comercial(quantidade, necessidade.quantidade_necessaria)
+    if material is None or (not material.ativo and material.pk != necessidade.material_id):
         raise ValidationError("Selecione um material ativo do catálogo.")
-    from compras.models import ReservaEstoqueCompra
-    Obra.objects.select_for_update().get(pk=processo.obra_id)
-    reserva = ReservaEstoqueCompra.objects.select_for_update().filter(necessidade=necessidade).first()
-    if reserva and reserva.movimentos.exists():
-        raise ValidationError("Este item já consumiu uma reserva de estoque e não pode ser editado.")
-    cobertura, quantidade_compra, quantidade_reservada, justificativa = avaliar_solicitacao(
-        processo=processo, material=material, quantidade=quantidade, usuario=usuario,
-        excecao_estoque=excecao_estoque, justificativa_excecao=justificativa_excecao,
-        excluir_reserva=reserva.pk if reserva else None,
-    )
+    material_anterior = necessidade.material_id
+    quantidade_anterior = necessidade.quantidade_incluida
     necessidade.material = material
     necessidade.descricao = material.nome
     necessidade.especificacao = material.especificacao
     necessidade.unidade = material.unidade.sigla
-    necessidade.quantidade_necessaria = quantidade
     necessidade.quantidade_incluida = quantidade_compra
     necessidade.observacao = (observacao or "").strip()
-    necessidade.save(update_fields=["material","descricao","especificacao","unidade","quantidade_necessaria","quantidade_incluida","observacao"])
-    registrar_cobertura(
-        processo=processo, necessidade=necessidade, usuario=usuario,
-        cobertura=cobertura, quantidade_reservada=quantidade_reservada,
-        justificativa_excecao=justificativa,
-    )
+    necessidade.save(update_fields=[
+        "material", "descricao", "especificacao", "unidade", "quantidade_incluida", "observacao",
+    ])
     for item in itens_cotados:
-        item.quantidade = quantidade_compra
-        item.save(update_fields=["quantidade","atualizado_em"])
-    registrar_evento(processo, "NECESSIDADE_EDITADA", usuario, f"Item editado: {necessidade.descricao}.", {"necessidade_id": necessidade.pk, "quantidade": str(quantidade)})
+        if item.quantidade > quantidade_compra:
+            item.quantidade = quantidade_compra
+            item.save(update_fields=["quantidade", "atualizado_em"])
+    registrar_evento(
+        processo, "NECESSIDADE_EDITADA", usuario, f"Item editado: {necessidade.descricao}.",
+        {
+            "necessidade_id": necessidade.pk,
+            "quantidade": str(quantidade_compra),
+            "quantidade_compra_anterior": str(quantidade_anterior),
+            "material_id_anterior": material_anterior,
+            "material_id": material.pk,
+        },
+    )
     return necessidade

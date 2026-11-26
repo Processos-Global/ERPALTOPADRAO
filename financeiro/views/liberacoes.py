@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from cadastros.models import Fornecedor
@@ -43,6 +44,7 @@ def liberacoes_lista(request):
         "pedido_filtro": request.GET.get("pedido", ""), "fornecedor_filtro": request.GET.get("fornecedor", ""),
         "busca": request.GET.get("q", "").strip()[:120],
         "pode_autorizar": possui_acao_financeiro(request.user, "APROVAR"),
+        "pode_reprocessar": possui_acao_financeiro(request.user, "EDITAR_TITULOS"),
     })
 
 
@@ -59,3 +61,24 @@ def liberacao_autorizar(request, pk):
     except ValidationError as exc:
         messages.error(request, "; ".join(exc.messages))
     return redirect("financeiro:liberacoes")
+
+
+@financeiro_acao_required("EDITAR_TITULOS")
+@require_POST
+def liberacao_reprocessar(request, pk):
+    from financeiro.services.solicitacoes_recebimentos import reprocessar_solicitacao_recebimento
+
+    registro = get_object_or_404(
+        recorte_liberacoes({}), pk=pk, recebimento__isnull=False, valor_esperado__isnull=False,
+    )
+    try:
+        resultado = reprocessar_solicitacao_recebimento(registro.recebimento, usuario=request.user)
+        if resultado.status == LiberacaoFinanceiraPedido.Status.DIVERGENTE:
+            messages.warning(request, resultado.divergencia)
+        elif resultado.titulo_id:
+            messages.success(request, "Solicitação financeira gerada para o recebimento.")
+        else:
+            messages.success(request, "Recebimento integralmente compensado pela antecipação.")
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    return redirect(reverse("financeiro:liberacoes", query={"pedido": registro.pedido_id}))
