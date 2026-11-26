@@ -6,20 +6,20 @@
 .av-wrap{max-width:1180px;margin:0 auto;padding:24px}
 .av-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
 .av-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.av-card{background:#fff;border:1px solid #eee8d6;border-radius:10px;padding:18px;margin-bottom:14px}
-.av-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:#2d201c}
+.av-card{background:var(--saari-surface);border:1px solid var(--saari-border);border-radius:10px;padding:18px;margin-bottom:14px}
+.av-field label{display:block;font-size:12px;font-weight:700;margin-bottom:6px;color:var(--saari-text)}
 .av-field--full{grid-column:1/-1}
 .av-items{display:grid;gap:10px}
-.av-item{display:grid;grid-template-columns:minmax(320px,1fr) 150px minmax(260px,.9fr) 44px;gap:10px;align-items:end;padding:14px;border:1px solid #eee8d6;border-radius:10px;background:#faf7f1}
+.av-item{display:grid;grid-template-columns:minmax(320px,1fr) 150px minmax(260px,.9fr) 44px;gap:10px;align-items:end;padding:14px;border:1px solid var(--saari-border);border-radius:10px;background:var(--saari-hover)}
 .av-item__meta{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
-.av-item__meta strong{font-size:12px;color:#2d201c}
-.av-item__meta small{font-size:10px;color:#77655c}
+.av-item__meta strong{font-size:12px;color:var(--saari-text)}
+.av-item__meta small{font-size:10px;color:var(--saari-text-muted)}
 .av-exception{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px;align-items:start}.av-exception .av-field{flex:1 1 280px}
-.av-remove{height:42px;border:1px solid #eee8d6;background:#fff;border-radius:8px;cursor:pointer;color:#453330;font-size:20px;line-height:1}
-.av-remove:hover{background:#f8fbfc}
+.av-remove{height:42px;border:1px solid var(--saari-border);background:var(--saari-surface);border-radius:8px;cursor:pointer;color:var(--saari-text);font-size:20px;line-height:1}
+.av-remove:hover{background:var(--saari-hover)}
 .av-actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
 .av-hidden-delete{display:none!important}
-.av-note{margin-top:6px;color:#77655c;font-size:11px}
+.av-note{margin-top:6px;color:var(--saari-text-muted);font-size:11px}
 @media(max-width:900px){.av-grid,.av-item{grid-template-columns:1fr}.av-field--full{grid-column:auto}.av-head{flex-direction:column}.av-actions{justify-content:stretch}.av-actions .cp-btn{width:100%}}
 </style>
 {% endblock %}

@@ -5,6 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods
 
 from usuarios.models import Notificacao
 
@@ -43,13 +45,16 @@ def lista_notificacoes(request):
 
 
 @login_required
+@require_http_methods(["GET", "HEAD", "POST"])
+@csrf_protect
 def abrir_notificacao(request, notificacao_id):
     notificacao = get_object_or_404(
         Notificacao,
         pk=notificacao_id,
         usuario=request.user,
     )
-    notificacao.marcar_como_lida()
+    if request.method == "POST":
+        notificacao.marcar_como_lida()
 
     destino = (notificacao.url or "").strip()
 
@@ -60,13 +65,11 @@ def abrir_notificacao(request, notificacao_id):
     ):
         return redirect(destino)
 
-    if destino.startswith("/"):
-        return redirect(destino)
-
     return redirect("usuarios:notificacoes")
 
 
 @login_required
+@csrf_protect
 def marcar_todas_notificacoes_lidas(request):
     if request.method != "POST":
         raise Http404
@@ -78,7 +81,9 @@ def marcar_todas_notificacoes_lidas(request):
     ).update(lida=True, lida_em=agora)
 
     proximo = (request.POST.get("next") or "").strip()
-    if proximo and proximo.startswith("/"):
+    if proximo.startswith("/") and url_has_allowed_host_and_scheme(
+        proximo, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
         return redirect(proximo)
 
     return redirect(reverse("usuarios:notificacoes"))

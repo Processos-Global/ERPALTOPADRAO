@@ -9,21 +9,21 @@
 
 <div class="cad-toolbar">
   <form method="get" data-local-submit-loading>
-    <input type="search" name="q" value="{{ q }}" placeholder="Pesquisar código, material ou especificação">
-    <select name="unidade">
+    <input type="search" name="q" aria-label="Pesquisar registros" value="{{ q }}" placeholder="Pesquisar código, material ou especificação">
+    <select name="unidade" aria-label="Unidade de medida">
       <option value="">Todas as unidades</option>
       {% for u in unidades %}<option value="{{ u.id }}" {% if unidade_id == u.id|stringformat:'s' %}selected{% endif %}>{{ u.sigla }}</option>{% endfor %}
     </select>
-    <select name="status">
+    <select name="status" aria-label="Status">
       <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativos</option>
       <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativos</option>
       <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todos</option>
     </select>
     <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
-  </form>
+  <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:materiais_lista' %}">Limpar</a></form>
 </div>
 
-<div class="cad-table-wrap">
+<div class="cad-table-wrap" role="region" aria-label="Materiais" tabindex="0">
   <table class="cad-table">
     <thead><tr><th>Código</th><th>Material</th><th>Especificação</th><th>Un.</th><th>Status</th>{% if cad_pode_editar %}<th></th>{% endif %}</tr></thead>
     <tbody>

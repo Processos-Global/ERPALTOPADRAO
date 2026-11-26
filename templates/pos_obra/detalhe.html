@@ -1,10 +1,17 @@
 {% extends 'pos_obra/_base.html' %}
+{% load l10n saari_contexto %}
 {% block po_heading %}{% endblock %}{% block po_navigation %}{% endblock %}
 {% block po_content %}
 <header class="po-os-header po2-os-header">
   <div class="po-os-title">
     <div class="po-os-identification">
-      <a class="po-back" href="{% url 'pos_obra:lista' %}">← Ordens de serviço</a>
+      {% retorno_listagem request 'pos_obra:lista' 'pos_obra:kanban' as voltar_url %}
+      {% url 'pos_obra:kanban' as quadro_url %}
+      <nav class="po-detail-breadcrumb" aria-label="Localização da ordem de serviço">
+        <a href="{% url 'pos_obra:painel' %}">Pós-Obra</a>
+        <span aria-hidden="true">/</span>
+        <a href="{{ voltar_url }}#chamado-{{ chamado.pk|unlocalize }}">{% if quadro_url in voltar_url %}Quadro de atendimento{% else %}Ordens de serviço{% endif %}</a>
+      </nav>
       <div class="po-os-title-line"><h1>{{ chamado.numero }}</h1><span class="po-priority" data-priority="{{ chamado.prioridade }}">Prioridade {{ chamado.get_prioridade_display|lower }}</span><span class="po-status" data-status="{{ chamado.status }}">{{ chamado.get_status_display }}</span></div>
       <p>{{ chamado.cliente.nome }} <span aria-hidden="true">·</span> {{ chamado.empreendimento }} <span aria-hidden="true">·</span> {% firstof chamado.tipo_original chamado.tipo_problema.nome %}</p>
     </div>

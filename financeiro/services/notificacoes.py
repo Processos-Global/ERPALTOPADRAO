@@ -2,26 +2,15 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.urls import reverse
 
-from usuarios.models import ModuloSistema, PermissaoModulo, TipoNotificacao
+from financeiro.services.permissoes import permissao_modulo_financeiro_permite, permissoes_modulo_financeiro_ativas
+from usuarios.models import TipoNotificacao
 from usuarios.services.notificacoes import criar_notificacao
-
-try:
-    from usuarios.models import PermissaoFinanceiro
-except ImportError:
-    PermissaoFinanceiro = None
 
 
 def usuarios_aprovadores_financeiro():
     ids = set(User.objects.filter(is_active=True, is_superuser=True).values_list("pk", flat=True))
-    gerais = PermissaoModulo.objects.filter(usuario__is_active=True, modulo=ModuloSistema.FINANCEIRO, ativo=True).select_related("usuario")
-    for geral in gerais:
-        if PermissaoFinanceiro:
-            granular = PermissaoFinanceiro.objects.filter(usuario=geral.usuario, ativo=True).first()
-            if granular and (granular.aprovar_pagamentos or granular.administrar):
-                ids.add(geral.usuario_id)
-                continue
-        if geral.nivel in {"APROVACAO", "ADMINISTRADOR"}:
-            ids.add(geral.usuario_id)
+    permissoes = permissoes_modulo_financeiro_ativas().filter(usuario__is_active=True, usuario__is_superuser=False)
+    ids.update(p.usuario_id for p in permissoes if permissao_modulo_financeiro_permite(p, "APROVAR"))
     return User.objects.filter(pk__in=ids, is_active=True)
 
 

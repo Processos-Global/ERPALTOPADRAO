@@ -54,12 +54,15 @@
       <tbody>
         {% for titulo in page_obj %}
           <tr>
-            <td><a href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+            {% url 'financeiro:titulo_detalhe' titulo.pk as titulo_url %}
+            {% with retorno=request.get_full_path|urlencode:'' %}
+            <td><a href="{{ titulo_url }}?retorno={{ retorno }}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
             <td>{{ titulo.vencimento|date:"d/m/Y"|default:"Sem vencimento" }}</td><td class="fin-money">{{ titulo.valor_liquido|moeda_br }}</td>
             <td><span class="fin-badge fin-badge--{{ titulo.status|status_fin_classe }}">{{ titulo.get_status_display }}</span>{% if titulo.conferencia == 'DIVERGENCIA' %}<small class="fin-danger-text">Divergência documental</small>{% endif %}</td>
-            <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar</a>
+            <td><a class="fin-btn fin-btn--sm" href="{{ titulo_url }}?retorno={{ retorno }}">Detalhar</a>
               {% if pode_pagar and titulo.status == 'APROVADO' and not titulo.esta_pago %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Pagar</a>{% endif %}
             </td>
+            {% endwith %}
           </tr>
         {% empty %}<tr><td colspan="7" class="fin-empty">Nenhuma conta encontrada.</td></tr>{% endfor %}
       </tbody>

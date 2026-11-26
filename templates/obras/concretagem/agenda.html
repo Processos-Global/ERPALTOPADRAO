@@ -14,7 +14,7 @@
     <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:concretagem_painel' %}">Voltar</a></div>
   </section>
 
-  <form method="get" class="op-toolbar" style="grid-template-columns:auto minmax(200px,320px) 1fr auto auto auto">
+  <form method="get" class="op-toolbar cc-toolbar-agenda">
     <a class="op-btn secondary" href="?mes={{ mes_anterior }}{% if obra_filtro %}&obra={{ obra_filtro }}{% endif %}" aria-label="Mês anterior">‹</a>
     <div class="op-field"><select name="obra" onchange="this.form.submit()"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
     <h2 style="margin:0;align-self:center;color:var(--op-ink);font-family:var(--font-serif);font-weight:400">{{ titulo_mes }}</h2>

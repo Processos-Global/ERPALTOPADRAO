@@ -41,7 +41,7 @@
     <td>{% if t.status == 'AGUARDANDO_APROVACAO' %}Aguardando{% elif t.status == 'APROVADO' or t.status == 'PAGO' %}Aprovado{% else %}{{ t.get_status_display }}{% endif %}</td>
     <td>{% if t.pagamento.status == 'EFETIVADO' %}Pago{% elif t.pagamento.status == 'ESTORNADO' %}Estornado{% else %}Em aberto{% endif %}</td>
     <td class="fin-money">{% if t.pagamento.status == 'EFETIVADO' %}{{ t.pagamento.valor|moeda_br }}{% else %}{{ t.saldo_aberto|moeda_br }}{% endif %}</td>
-    <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' t.pk %}">Consultar</a></td>
+    <td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' t.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Consultar</a></td>
   </tr>{% empty %}<tr><td colspan="9" class="fin-empty"><strong>Nenhum título encontrado</strong>Ajuste os filtros.</td></tr>{% endfor %}</tbody>
 </table></div>
 {% if page_obj.paginator.num_pages > 1 %}<div class="fin-pagination"><span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span><span>{% if page_obj.has_previous %}<a class="fin-btn fin-btn--sm" href="?{{ query_string }}&page={{ page_obj.previous_page_number }}">Anterior</a>{% endif %} {% if page_obj.has_next %}<a class="fin-btn fin-btn--sm" href="?{{ query_string }}&page={{ page_obj.next_page_number }}">Próxima</a>{% endif %}</span></div>{% endif %}

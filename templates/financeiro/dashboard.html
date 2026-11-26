@@ -1,36 +1,53 @@
 ﻿{% extends "financeiro/base_financeiro.html" %}
-{% load financeiro_extras l10n %}
+{% load financeiro_extras l10n static %}
 {% block financeiro_title %}Visão geral{% endblock %}
 {% block financeiro_content %}
 <header class="fin-head"><h1 class="fin-title">Visão geral</h1></header>
 
+<form method="get" class="fin-toolbar" aria-label="Filtros da Visão Geral" data-local-submit-loading data-fin-catalogo-url="{% url 'financeiro:titulo_catalogo' %}">
+  <input type="hidden" name="periodo" value="{{ periodo }}">
+  {% if periodo == 'intervalo' %}<input type="hidden" name="inicio" value="{{ inicio_iso }}"><input type="hidden" name="fim" value="{{ fim_iso }}">{% endif %}
+  <label class="fin-filter-field">Obra<select class="fin-control" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk|unlocalize }}" {% if dimensoes.obra == o.pk %}selected{% endif %}>{{ o.nome }}</option>{% endfor %}</select></label>
+  <label class="fin-filter-field">Fornecedor<select class="fin-control" name="fornecedor" data-fin-catalogo="fornecedor_publico" data-no-search><option value="">Todos</option>{% if fornecedor_selecionado %}<option value="{{ fornecedor_selecionado.pk|unlocalize }}" selected>{{ fornecedor_selecionado.nome_exibicao }}</option>{% endif %}</select></label>
+  <details class="fin-filter-more" {% if dimensoes.classe or dimensoes.apropriacao or dimensoes.origem %}open{% endif %}>
+    <summary>Outros filtros</summary>
+    <div class="fin-filter-more__campos">
+      <label class="fin-filter-field">Classe<select name="classe" class="fin-control"><option value="">Todas</option>{% for p in classes_financeiras %}<option value="{{ p.pk|unlocalize }}" {% if dimensoes.classe == p.pk %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}</select></label>
+      <label class="fin-filter-field">Apropriação<select name="apropriacao" class="fin-control"><option value="">Todas</option>{% for p in apropriacoes %}<option value="{{ p.pk|unlocalize }}" {% if dimensoes.apropriacao == p.pk %}selected{% endif %}>{{ p.pai.nome }} · {{ p.nome }}</option>{% endfor %}</select></label>
+      <label class="fin-filter-field">Origem<select name="origem" class="fin-control"><option value="">Todas</option>{% for codigo, rotulo in origens %}<option value="{{ codigo }}" {% if dimensoes.origem == codigo %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></label>
+    </div>
+  </details>
+  <div class="fin-toolbar__actions"><button type="submit" class="fin-btn fin-btn--primary">Filtrar</button><a class="fin-btn" href="{% url 'financeiro:dashboard' %}">Limpar</a></div>
+</form>
+
 <div class="fin-kpis">
-  <a class="fin-kpi" href="{% url 'financeiro:titulos' %}?periodo=hoje&amp;abertas=1">
+  <a class="fin-kpi" href="{% url 'financeiro:titulos' %}{% querystring filtros_links periodo='hoje' abertas='1' %}">
     <span>Vence hoje</span><strong>{{ total_hoje|moeda_br }}</strong><small>{{ qtd_hoje }} conta{{ qtd_hoje|pluralize }}</small>
   </a>
-  <a class="fin-kpi fin-kpi--success" href="{% url 'financeiro:pagamentos' %}?aba=disponiveis&amp;periodo=vencidas_e_hoje">
+  <a class="fin-kpi fin-kpi--success" href="{% url 'financeiro:pagamentos' %}{% querystring filtros_links aba='disponiveis' periodo='vencidas_e_hoje' %}">
     <span>Disponível para pagar até hoje</span><strong>{{ total_disponivel|moeda_br }}</strong><small>{{ qtd_disponivel }} conta{{ qtd_disponivel|pluralize }} aprovada{{ qtd_disponivel|pluralize }}</small>
   </a>
-  <a class="fin-kpi fin-kpi--danger" href="{% url 'financeiro:titulos' %}?periodo=vencidas&amp;abertas=1">
+  <a class="fin-kpi fin-kpi--danger" href="{% url 'financeiro:titulos' %}{% querystring filtros_links periodo='vencidas' abertas='1' %}">
     <span>Vencido</span><strong>{{ total_vencido|moeda_br }}</strong><small>{{ qtd_vencidos }} conta{{ qtd_vencidos|pluralize }}</small>
   </a>
-  <a class="fin-kpi" href="{% url 'financeiro:pagamentos' %}?aba=efetivados&amp;mes={% now 'Y-m' %}">
-    <span>Pago no mês</span><strong>{{ pagos_mes|moeda_br }}</strong>
+  <a class="fin-kpi" href="{% url 'financeiro:pagamentos' %}{% if periodo == 'intervalo' %}{% querystring filtros_links aba='efetivados' periodo='intervalo' inicio=inicio_iso fim=fim_iso %}{% else %}{% querystring filtros_links aba='efetivados' mes=mes_pago %}{% endif %}">
+    <span>{% if periodo == 'intervalo' %}Pago no período{% else %}Pago no mês{% endif %}</span><strong>{{ pagos_mes|moeda_br }}</strong>
   </a>
 </div>
 
 <section class="fin-section">
-  <div class="fin-section__head"><h2>Agenda financeira</h2><a class="fin-btn" href="{% url 'financeiro:titulos' %}?periodo={{ periodo }}&amp;abertas=1{% if inicio %}&amp;inicio={{ inicio|date:'Y-m-d' }}{% endif %}{% if fim %}&amp;fim={{ fim|date:'Y-m-d' }}{% endif %}">Ver contas</a></div>
+  <div class="fin-section__head"><h2>Agenda financeira</h2><a class="fin-btn" href="{% url 'financeiro:titulos' %}{% querystring filtros_links periodo=periodo abertas='1' inicio=inicio_iso fim=fim_iso %}">Ver contas</a></div>
   <div class="fin-section__body">
     <nav class="fin-tabs" aria-label="Período da agenda">
-      <a class="fin-btn" href="?periodo=hoje" {% if periodo == 'hoje' %}aria-current="page"{% endif %}>Hoje</a>
-      <a class="fin-btn" href="?periodo=vencidas" {% if periodo == 'vencidas' %}aria-current="page"{% endif %}>Vencidos</a>
-      <a class="fin-btn" href="?periodo=7" {% if periodo == '7' %}aria-current="page"{% endif %}>Próximos dias</a>
+      <a class="fin-btn" href="{% querystring filtros_links periodo='hoje' %}" {% if periodo == 'hoje' %}aria-current="page"{% endif %}>Hoje</a>
+      <a class="fin-btn" href="{% querystring filtros_links periodo='vencidas' %}" {% if periodo == 'vencidas' %}aria-current="page"{% endif %}>Vencidos</a>
+      <a class="fin-btn" href="{% querystring filtros_links periodo='7' %}" {% if periodo == '7' %}aria-current="page"{% endif %}>Próximos dias</a>
     </nav>
     <details {% if periodo == 'intervalo' %}open{% endif %}>
       <summary>Período personalizado</summary>
       <form method="get" class="fin-actions" data-local-submit-loading>
         <input type="hidden" name="periodo" value="intervalo">
+        {% for chave, valor in filtros_links.items %}<input type="hidden" name="{{ chave }}" value="{{ valor }}">{% endfor %}
         <label>Início <input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}" required></label>
         <label>Fim <input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}" required></label>
         <button type="submit" class="fin-btn">Aplicar</button>
@@ -45,7 +62,7 @@
         {% for titulo in agenda %}
           <tr><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
             <td>{{ titulo.vencimento|date:"d/m/Y" }}</td><td>{{ titulo.saldo_aberto|moeda_br }}</td>
-            <td>{{ titulo.get_status_display }}</td><td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar</a></td></tr>
+            <td>{{ titulo.get_status_display }}</td><td><a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Detalhar</a></td></tr>
         {% empty %}<tr><td colspan="6">Nenhuma obrigação neste período.</td></tr>{% endfor %}
       </tbody>
     </table>
@@ -55,10 +72,10 @@
 <section class="fin-section">
   <div class="fin-section__head"><h2>Pendências operacionais</h2></div>
   <div class="fin-section__body fin-tabs">
-    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}">Aprovações pendentes</a>{% endif %}
-    <a class="fin-btn" href="{% url 'financeiro:titulos' %}?conferencia=DIVERGENCIA">Divergências documentais</a>
-    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:liberacoes' %}?pendencias=1">Liberações para revisar ({{ liberacoes_pendentes }})</a>{% endif %}
-    {% if pode_pagar %}<a class="fin-btn" href="{% url 'financeiro:pagamentos' %}?aba=programados">Pagamentos a confirmar</a>{% endif %}
+    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}{% querystring filtros_links %}">Aprovações pendentes</a>{% endif %}
+    <a class="fin-btn" href="{% url 'financeiro:titulos' %}{% querystring filtros_links conferencia='DIVERGENCIA' %}">Divergências documentais</a>
+    {% if pode_aprovar %}<a class="fin-btn" href="{% url 'financeiro:liberacoes' %}{% querystring filtros_links pendencias='1' %}">Liberações para revisar ({{ liberacoes_pendentes }})</a>{% endif %}
+    {% if pode_pagar %}<a class="fin-btn" href="{% url 'financeiro:pagamentos' %}{% querystring filtros_links aba='programados' %}">Pagamentos a confirmar</a>{% endif %}
   </div>
 </section>
 
@@ -70,4 +87,5 @@
     {% endfor %}
   </div>
 </section>
+<script defer src="{% static 'js/financeiro-catalogo.js' %}"></script>
 {% endblock %}

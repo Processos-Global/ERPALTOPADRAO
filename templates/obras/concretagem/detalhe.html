@@ -7,14 +7,13 @@
 <div class="op-page cc-page">
   <section class="op-head">
     <div class="op-head-copy">
-      <span class="op-eyebrow">Concretagem · {{ conc.obra|nome_obra }}</span>
+      <nav class="op-breadcrumb" aria-label="Localização"><a href="{% url 'obras:concretagem_painel' %}">Concretagem</a> / <a href="{% url 'obras:concretagem_obra' conc.obra_id %}" aria-label="Voltar para a obra {{ conc.obra|nome_obra }}">← Obra · {{ conc.obra|nome_obra }}</a></nav>
       <h1>{{ conc.codigo }}</h1>
       <p><span class="cc-status {{ conc.status }}">{{ conc.get_status_display }}</span>
         &nbsp;{{ conc.data_programada|date:"d/m/Y"|default:"Sem data" }}{% if conc.horario_programado %} às {{ conc.horario_programado|time:"H:i" }}{% endif %}
         · {{ conc.concreteira_nome|default:"Concreteira não definida" }}</p>
     </div>
     <div class="op-head-actions">
-      <a class="op-btn secondary" href="{% url 'obras:concretagem_obra' conc.obra_id %}">← Obra</a>
       <a class="op-btn secondary" href="{% url 'obras:concretagem_mapa' conc.obra_id %}">Mapa</a>
       {% if conc.drive_pasta_url %}
         <a class="op-btn secondary" href="{{ conc.drive_pasta_url }}" target="_blank" rel="noopener">Pasta no Drive</a>
@@ -29,7 +28,7 @@
 
   {% if conc.status != "CANCELADA" %}
   <div class="cc-steps">
-    {% for e in etapas %}<div class="cc-step {% if e.feita %}feita{% endif %} {% if e.atual %}atual{% endif %}"><span class="dot">{% if e.feita %}✓{% else %}{{ forloop.counter }}{% endif %}</span>{{ e.label }}</div>{% endfor %}
+    {% for e in etapas %}<div class="cc-step {% if e.feita %}feita{% endif %} {% if e.atual %}atual{% endif %}"{% if e.atual %} aria-current="step"{% endif %}><span class="dot">{% if e.feita %}✓{% else %}{{ forloop.counter }}{% endif %}</span>{{ e.label }}</div>{% endfor %}
   </div>
   {% endif %}
 
@@ -80,16 +79,18 @@
     <div class="cc-alerta perigo"><div><strong>Cancelada em {{ conc.cancelado_em|date:"d/m/Y H:i" }}</strong>{{ conc.motivo_cancelamento }}</div></div>
   {% endif %}
 
-  <div class="cc-tabs" role="tablist">
-    <button class="cc-tab ativa" type="button" data-tab="solicitacao">Solicitação{% if aviso_solicitacao %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
-    {% if conc.status == "SOLICITADA" %}<button class="cc-tab" type="button" data-tab="envio">Envio à concreteira{% if aviso_envio %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>{% endif %}
+  <div class="cc-tabs">
+    <div class="cc-tablist" role="tablist" aria-label="Etapas da concretagem">
+    <button class="cc-tab ativa" type="button" role="tab" id="cc-tab-solicitacao" aria-controls="cc-panel-solicitacao" aria-selected="true" tabindex="0" data-tab="solicitacao">Solicitação{% if aviso_solicitacao %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    {% if conc.status == "SOLICITADA" %}<button class="cc-tab" type="button" role="tab" id="cc-tab-envio" aria-controls="cc-panel-envio" aria-selected="false" tabindex="-1" data-tab="envio">Envio à concreteira{% if aviso_envio %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>{% endif %}
     {% if mostrar_execucao %}
-    <button class="cc-tab" type="button" data-tab="campo">Campo{% if aviso_campo %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
-    <button class="cc-tab" type="button" data-tab="moldagem">Moldagem{% if aviso_moldagem %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
-    <button class="cc-tab" type="button" data-tab="laudos">Laudos{% if aviso_laudos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
-    <button class="cc-tab" type="button" data-tab="anexos">Fotos e documentos{% if aviso_anexos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" role="tab" id="cc-tab-campo" aria-controls="cc-panel-campo" aria-selected="false" tabindex="-1" data-tab="campo">Campo{% if aviso_campo %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" role="tab" id="cc-tab-moldagem" aria-controls="cc-panel-moldagem" aria-selected="false" tabindex="-1" data-tab="moldagem">Moldagem{% if aviso_moldagem %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" role="tab" id="cc-tab-laudos" aria-controls="cc-panel-laudos" aria-selected="false" tabindex="-1" data-tab="laudos">Laudos{% if aviso_laudos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
+    <button class="cc-tab" type="button" role="tab" id="cc-tab-anexos" aria-controls="cc-panel-anexos" aria-selected="false" tabindex="-1" data-tab="anexos">Fotos e documentos{% if aviso_anexos %}<span class="cc-aviso" role="img" aria-label="Pendência" title="Tem pendência nesta aba">!</span>{% endif %}</button>
     {% endif %}
-    <button class="cc-tab" type="button" data-tab="historico">Histórico</button>
+    <button class="cc-tab" type="button" role="tab" id="cc-tab-historico" aria-controls="cc-panel-historico" aria-selected="false" tabindex="-1" data-tab="historico">Histórico</button>
+    </div>
     {% if pode_preencher and mostrar_execucao %}
     <div class="cc-etapa-acoes">
       {% if conc.status == "EXECUTADA" or conc.status == "AGUARDANDO_LAUDOS" %}
@@ -107,7 +108,7 @@
   </div>
 
   {# ---------- Solicitação ---------- #}
-  <div class="cc-tab-panel ativa" data-panel="solicitacao">
+  <div class="cc-tab-panel ativa" role="tabpanel" id="cc-panel-solicitacao" aria-labelledby="cc-tab-solicitacao" tabindex="0" data-panel="solicitacao">
     <section class="op-panel"><div class="op-panel-body">
       <dl class="cc-dados">
         <div><dt>Obra</dt><dd>{{ conc.obra.nome }}</dd></div>
@@ -141,7 +142,7 @@
 
   {# ---------- Envio ---------- #}
   {% if conc.status == "SOLICITADA" %}
-  <div class="cc-tab-panel" data-panel="envio">
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-envio" aria-labelledby="cc-tab-envio" tabindex="0" data-panel="envio">
     <div class="cc-grid">
       <section class="op-panel">
         <div class="op-panel-head"><div><h2>Mensagem para a concreteira</h2><span class="op-muted">Já inclui o link para aceitar, recusar ou pedir outra data</span></div></div>
@@ -175,14 +176,14 @@
   {% endif %}
 
   {% if mostrar_execucao %}
-  <div class="cc-tab-panel" data-panel="campo">{% include "obras/concretagem/_aba_campo.html" %}</div>
-  <div class="cc-tab-panel" data-panel="moldagem">{% include "obras/concretagem/_aba_moldagem.html" %}</div>
-  <div class="cc-tab-panel" data-panel="laudos">{% include "obras/concretagem/_aba_laudos.html" %}</div>
-  <div class="cc-tab-panel" data-panel="anexos">{% include "obras/concretagem/_aba_anexos.html" %}</div>
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-campo" aria-labelledby="cc-tab-campo" tabindex="0" data-panel="campo">{% include "obras/concretagem/_aba_campo.html" %}</div>
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-moldagem" aria-labelledby="cc-tab-moldagem" tabindex="0" data-panel="moldagem">{% include "obras/concretagem/_aba_moldagem.html" %}</div>
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-laudos" aria-labelledby="cc-tab-laudos" tabindex="0" data-panel="laudos">{% include "obras/concretagem/_aba_laudos.html" %}</div>
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-anexos" aria-labelledby="cc-tab-anexos" tabindex="0" data-panel="anexos">{% include "obras/concretagem/_aba_anexos.html" %}</div>
   {% endif %}
 
   {# ---------- Histórico ---------- #}
-  <div class="cc-tab-panel" data-panel="historico">
+  <div class="cc-tab-panel" role="tabpanel" id="cc-panel-historico" aria-labelledby="cc-tab-historico" tabindex="0" data-panel="historico">
     <section class="op-panel"><div class="op-panel-body">
       <ul class="cc-timeline">
         {% for h in historico %}
@@ -290,19 +291,61 @@
 {% include "obras/concretagem/_modal_js.html" %}
 <script>
 (function(){
-  var abas=document.querySelectorAll('.cc-tab');
-  function ativar(nome){abas.forEach(function(a){a.classList.toggle('ativa',a.dataset.tab===nome);});document.querySelectorAll('.cc-tab-panel').forEach(function(p){p.classList.toggle('ativa',p.dataset.panel===nome);});try{sessionStorage.setItem('cc-aba-{{ conc.pk }}',nome);}catch(e){}}
-  abas.forEach(function(a){a.addEventListener('click',function(){ativar(a.dataset.tab);});});
-  function existe(n){return n&&document.querySelector('[data-panel="'+n+'"]');}
-  document.addEventListener('click',function(e){var b=e.target.closest('[data-ir-aba]');if(b){ativar(b.dataset.irAba);window.scrollTo({top:document.querySelector('.cc-tabs').offsetTop-20,behavior:'smooth'});}});
-  var hash=(location.hash||'').replace('#aba-','');
-  var salva=null;try{salva=sessionStorage.getItem('cc-aba-{{ conc.pk }}');}catch(e){}
-  if(existe(hash)){ativar(hash);history.replaceState(null,'',location.pathname+location.search);}
-  else if(existe(salva))ativar(salva);
-  else{
-    {% if conc.status == "SOLICITADA" and not conc.confirmacao_cliente and not envios %}ativar('envio');
-    {% elif conc.status == "CONFIRMADA" and pode_preencher %}ativar('campo');
-    {% elif conc.status == "EXECUTADA" or conc.status == "AGUARDANDO_LAUDOS" %}ativar('laudos');{% endif %}
+  const tablist = document.querySelector('.cc-tablist');
+  const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+  const storageKey = 'cc-aba-{{ conc.pk }}';
+
+  function activate(name, {remember = false, focus = false} = {}) {
+    const tab = tabs.find(item => item.dataset.tab === name);
+    if (!tab) return false;
+    tabs.forEach(item => {
+      const selected = item === tab;
+      item.classList.toggle('ativa', selected);
+      item.setAttribute('aria-selected', String(selected));
+      item.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(item.getAttribute('aria-controls'));
+      panel.classList.toggle('ativa', selected);
+      panel.hidden = !selected;
+    });
+    if (focus) {
+      tab.focus({preventScroll: true});
+      tab.scrollIntoView({block: 'nearest', inline: 'nearest'});
+    }
+    if (remember) history.replaceState(history.state, '', '#aba-' + name);
+    try { sessionStorage.setItem(storageKey, name); } catch (_) {}
+    return true;
+  }
+
+  tabs.forEach(tab => tab.addEventListener('click', () => activate(tab.dataset.tab, {remember: true})));
+  tablist.addEventListener('keydown', event => {
+    const index = tabs.indexOf(event.target);
+    if (index < 0) return;
+    let next;
+    switch (event.key) {
+      case 'ArrowLeft': next = (index - 1 + tabs.length) % tabs.length; break;
+      case 'ArrowRight': next = (index + 1) % tabs.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = tabs.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    activate(tabs[next].dataset.tab, {remember: true, focus: true});
+  });
+  document.addEventListener('click', event => {
+    const shortcut = event.target.closest('[data-ir-aba]');
+    if (shortcut) activate(shortcut.dataset.irAba, {remember: true, focus: true});
+  });
+
+  const fromHash = () => location.hash.startsWith('#aba-') && activate(location.hash.slice(5));
+  window.addEventListener('hashchange', fromHash);
+  let saved = null;
+  try { saved = sessionStorage.getItem(storageKey); } catch (_) {}
+  if (!fromHash() && !activate(saved)) {
+    let initial = 'solicitacao';
+    {% if conc.status == "SOLICITADA" and not conc.confirmacao_cliente and not envios %}initial = 'envio';
+    {% elif conc.status == "CONFIRMADA" and pode_preencher %}initial = 'campo';
+    {% elif conc.status == "EXECUTADA" or conc.status == "AGUARDANDO_LAUDOS" %}initial = 'laudos';{% endif %}
+    if (!activate(initial)) activate('solicitacao');
   }
 
   var texto=document.getElementById('texto-msg');

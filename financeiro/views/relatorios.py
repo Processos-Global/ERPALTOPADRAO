@@ -485,7 +485,9 @@ def relatorio_pagamento_excel(request, pk):
     ]
     for linha, (rotulo, valor) in enumerate(controle, 1):
         meta.cell(row=linha, column=1, value=rotulo).font = Font(bold=True)
-        meta.cell(row=linha, column=2, value=valor)
+        celula = meta.cell(row=linha, column=2, value=valor)
+        if isinstance(valor, str):
+            celula.data_type = "s"
     meta.column_dimensions["A"].width = 24
     meta.column_dimensions["B"].width = 46
     meta.cell(row=7, column=2).number_format = 'R$ #,##0.00'

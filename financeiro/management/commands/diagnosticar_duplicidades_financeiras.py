@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
+from financeiro.management.commands._csv import celula_csv
 from financeiro.services.diagnostico_duplicidades import linhas_diagnostico_duplicidades
 
 
@@ -12,12 +13,6 @@ COLUNAS = (
     "origem", "usuario_id", "descricao", "documento_numero", "parcela", "aprovacoes", "anexos",
     "referencia_externa", "solicitacao_id", "pagamento_id",
 )
-
-
-def _celula_csv(valor):
-    if isinstance(valor, str) and (valor.startswith(("\t", "\r", "\n")) or valor.lstrip().startswith(("=", "+", "-", "@"))):
-        return "'" + valor
-    return valor
 
 
 class Command(BaseCommand):
@@ -41,4 +36,4 @@ class Command(BaseCommand):
     def _escrever_csv(saida):
         csv_saida = csv.writer(saida)
         csv_saida.writerow(COLUNAS)
-        csv_saida.writerows((_celula_csv(celula) for celula in linha) for linha in linhas_diagnostico_duplicidades())
+        csv_saida.writerows((celula_csv(celula) for celula in linha) for linha in linhas_diagnostico_duplicidades())

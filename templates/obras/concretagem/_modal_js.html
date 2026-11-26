@@ -17,15 +17,88 @@
   host.className='cc-page cc-modais';
   document.body.appendChild(host);
   document.querySelectorAll('.op-modal').forEach(function(m){host.appendChild(m);});
+  const shell = document.querySelector('.app-shell');
 
-  function fechar(){document.querySelectorAll('.cc-modais .op-modal.is-open').forEach(function(m){m.classList.remove('is-open');m.setAttribute('aria-hidden','true');});document.body.classList.remove('op-modal-open');}
-  function abrir(id){var m=document.getElementById(id);if(!m)return;if(m.parentNode!==host)host.appendChild(m);fechar();m.classList.add('is-open');m.setAttribute('aria-hidden','false');document.body.classList.add('op-modal-open');var d=m.querySelector('.op-modal-dialog');if(d)d.scrollTop=0;var f=m.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=file]),select,textarea');if(f)setTimeout(function(){f.focus({preventScroll:true});},60);}
-  window.ccAbrirModal=abrir;window.ccFecharModal=fechar;
-  document.addEventListener('click',function(e){
-    var a=e.target.closest('[data-cc-open]');if(a){e.preventDefault();abrir(a.getAttribute('data-cc-open'));return;}
-    if(e.target.closest('[data-cc-close]')||e.target.classList.contains('op-modal-backdrop')){e.preventDefault();fechar();}
+  let active = null;
+  let returnFocus = null;
+
+  function focusable(dialog) {
+    return [...dialog.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')]
+      .filter(element => element.tabIndex >= 0 && !element.disabled && element.getClientRects().length);
+  }
+
+  function fechar(restoreFocus = true) {
+    if (!active) return;
+    active.classList.remove('is-open');
+    active.setAttribute('aria-hidden', 'true');
+    active = null;
+    document.body.classList.remove('op-modal-open');
+    if (shell) shell.inert = false;
+    if (restoreFocus && returnFocus?.isConnected) returnFocus.focus({preventScroll: true});
+  }
+
+  function abrir(id, trigger = document.activeElement) {
+    const modal = document.getElementById(id);
+    if (!modal) return;
+    if (!active || !active.contains(trigger)) returnFocus = trigger;
+    fechar(false);
+    if (modal.parentNode !== host) host.appendChild(modal);
+    active = modal;
+    active.classList.add('is-open');
+    active.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('op-modal-open');
+    if (shell) shell.inert = true;
+    const dialog = active.querySelector('.op-modal-dialog');
+    if (!dialog) return;
+    dialog.scrollTop = 0;
+    dialog.tabIndex = -1;
+    const heading = dialog.querySelector('.op-modal-head h2');
+    if (heading && !dialog.hasAttribute('aria-labelledby')) {
+      heading.id ||= id + '-titulo';
+      dialog.setAttribute('aria-labelledby', heading.id);
+    }
+    const initial = dialog.querySelector('[data-cc-close]') || dialog;
+    initial.focus({preventScroll: true});
+    if (!dialog.contains(document.activeElement)) {
+      requestAnimationFrame(() => {
+        if (active === modal) initial.focus({preventScroll: true});
+      });
+    }
+  }
+
+  window.ccAbrirModal = abrir;
+  window.ccFecharModal = fechar;
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('[data-cc-open]');
+    if (trigger) {
+      event.preventDefault();
+      abrir(trigger.dataset.ccOpen, trigger);
+      return;
+    }
+    if (active && (event.target.closest('[data-cc-close]') || event.target.classList.contains('op-modal-backdrop'))) {
+      event.preventDefault();
+      fechar();
+    }
   });
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')fechar();});
+  document.addEventListener('keydown', event => {
+    if (!active) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      fechar();
+    }
+    if (event.key !== 'Tab') return;
+    const dialog = active.querySelector('.op-modal-dialog');
+    const controls = focusable(dialog);
+    const first = controls[0];
+    const last = controls.at(-1);
+    const current = document.activeElement;
+    if (!dialog.contains(current) || (event.shiftKey && (current === first || current === dialog)) || (!event.shiftKey && current === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first)?.focus();
+    } else if (!controls.length) {
+      event.preventDefault();
+    }
+  });
   /* Formulários com confirmação: o app.js do ERP marca o botão como "carregando"
      em todo submit, mesmo quando a confirmação cancela. Por isso o botão recebe
      data-no-loading e o estado de carregamento só é aplicado ao confirmar. */
@@ -44,7 +117,7 @@
         botoes.forEach(function(b){b.classList.add('is-submitting');if(b.matches('button'))b.setAttribute('aria-busy','true');});
         f.submit();
       };
-      abrir('cc-confirmar');
+      abrir('cc-confirmar', e.submitter || document.activeElement);
     });
   });}
   preparar(document);

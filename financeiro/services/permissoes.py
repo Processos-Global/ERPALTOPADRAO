@@ -32,29 +32,31 @@ def _legado_permite(nivel, acao):
     return nivel in {NivelPermissao.EDICAO, NivelPermissao.APROVACAO}
 
 
+def permissoes_modulo_financeiro_ativas():
+    permissoes = PermissaoModulo.objects.filter(modulo=ModuloSistema.FINANCEIRO, ativo=True)
+    if PermissaoFinanceiro is not None:
+        return permissoes.select_related("usuario__permissao_financeiro_erp")
+    return permissoes
+
+
+def permissao_modulo_financeiro_permite(geral, acao):
+    granular = getattr(geral.usuario, "permissao_financeiro_erp", None) if PermissaoFinanceiro is not None else None
+    if granular is not None and granular.ativo:
+        if granular.administrar:
+            return True
+        campo = CAMPO_POR_ACAO.get(str(acao))
+        return bool(campo and getattr(granular, campo, False))
+    return _legado_permite(geral.nivel, str(acao))
+
+
 def possui_acao_financeiro(usuario, acao):
     if not usuario or not usuario.is_authenticated or not usuario.is_active:
         return False
     if usuario.is_superuser:
         return True
 
-    geral = PermissaoModulo.objects.filter(
-        usuario=usuario,
-        modulo=ModuloSistema.FINANCEIRO,
-        ativo=True,
-    ).first()
-    if geral is None:
-        return False
-
-    if PermissaoFinanceiro is not None:
-        granular = PermissaoFinanceiro.objects.filter(usuario=usuario, ativo=True).first()
-        if granular is not None:
-            if granular.administrar:
-                return True
-            campo = CAMPO_POR_ACAO.get(str(acao))
-            return bool(campo and getattr(granular, campo, False))
-
-    return _legado_permite(geral.nivel, str(acao))
+    geral = permissoes_modulo_financeiro_ativas().filter(usuario=usuario).first()
+    return geral is not None and permissao_modulo_financeiro_permite(geral, acao)
 
 
 def financeiro_acao_required(acao):

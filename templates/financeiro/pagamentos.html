@@ -8,6 +8,8 @@
   {% if not por_titulo %}
     <form method="get" class="fin-toolbar" data-local-submit-loading>
       <input type="hidden" name="aba" value="{{ aba }}">
+      {% for chave, valor in request.GET.items %}{% if chave == 'obra' or chave == 'fornecedor' or chave == 'classe' or chave == 'apropriacao' or chave == 'origem' or chave == 'excluir_cancelados' %}<input type="hidden" name="{{ chave }}" value="{{ valor }}">{% endif %}{% endfor %}
+      {% if request.GET.periodo == 'intervalo' %}<span>Período de {{ request.GET.inicio }} a {{ request.GET.fim }}</span>{% endif %}
       <label>Mês {% if aba == 'estornos' %}do estorno{% else %}do pagamento{% endif %}<input class="fin-control" name="mes" type="month" value="{{ mes_filtro }}"></label>
       <button class="fin-btn" type="submit">Filtrar</button>
       {% if aba == 'estornos' %}<strong>Estornado {{ total_estornado|moeda_br }}</strong>{% else %}<strong>Efetivado {{ total_pago|moeda_br }}</strong>{% endif %}
@@ -18,16 +20,16 @@
       {% if por_titulo %}
         <thead><tr><th>Código FIN</th><th>Beneficiário</th><th>Obra</th><th>Vencimento</th>{% if aba == 'programados' %}<th>Data programada</th>{% endif %}<th>Valor</th><th>Ações</th></tr></thead>
         <tbody>{% for titulo in page_obj %}
-          <tr><td><a href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
+          <tr><td><a href="{% url 'financeiro:titulo_detalhe' titulo.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">{{ titulo.numero }}</a></td><td>{{ titulo.beneficiario_exibicao }}</td><td>{{ titulo.obra.nome|default:"—" }}</td>
             <td>{{ titulo.vencimento|date:"d/m/Y"|default:"—" }}</td>{% if aba == 'programados' %}<td>{{ titulo.programacao_pagamento.data_programada|date:"d/m/Y" }}</td>{% endif %}
-            <td>{{ titulo.saldo_aberto|moeda_br }}</td><td>{% if pode_pagar %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Programar ou pagar</a>{% else %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}">Detalhar</a>{% endif %}</td>
+            <td>{{ titulo.saldo_aberto|moeda_br }}</td><td>{% if pode_pagar %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:pagamento_novo' titulo.pk %}">Programar ou pagar</a>{% else %}<a class="fin-btn fin-btn--sm" href="{% url 'financeiro:titulo_detalhe' titulo.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Detalhar</a>{% endif %}</td>
           </tr>
         {% empty %}<tr><td colspan="{% if aba == 'programados' %}7{% else %}6{% endif %}" class="fin-empty">Nenhuma conta nesta etapa.</td></tr>{% endfor %}</tbody>
       {% else %}
         <thead><tr><th>Data efetiva</th>{% if aba == 'estornos' %}<th>Data do estorno</th>{% endif %}<th>Beneficiário</th><th>Obra</th><th>Forma</th><th>Valor</th><th>Ações</th></tr></thead>
         <tbody>{% for pagamento in page_obj %}
           <tr><td>{{ pagamento.data_pagamento|date:"d/m/Y" }}</td>{% if aba == 'estornos' %}<td>{{ pagamento.estornado_em|date:"d/m/Y H:i"|default:"—" }}</td>{% endif %}
-            <td><a href="{% url 'financeiro:titulo_detalhe' pagamento.titulo_id %}">{{ pagamento.titulo.numero }}</a> · {{ pagamento.titulo.beneficiario_exibicao }}</td>
+            <td><a href="{% url 'financeiro:titulo_detalhe' pagamento.titulo_id %}?retorno={{ request.get_full_path|urlencode:'' }}">{{ pagamento.titulo.numero }}</a> · {{ pagamento.titulo.beneficiario_exibicao }}</td>
             <td>{{ pagamento.titulo.obra.nome|default:"—" }}</td><td>{{ pagamento.get_forma_display }}{% if aba == 'historico' %} · {{ pagamento.get_status_display }}{% endif %}</td>
             <td>{{ pagamento.valor|moeda_br }}</td><td>
               {% if pagamento.comprovante %}<a class="fin-btn fin-btn--sm" data-download href="{% url 'financeiro:baixar_comprovante_pagamento' pagamento.pk %}">Comprovante</a>{% endif %}

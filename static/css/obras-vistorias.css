@@ -1,0 +1,79 @@
+.vs-page { width: 100%; min-width: 0; color: var(--op-text); }
+.vs-tabs, .vs-stage-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-block-end: 12px; }
+.vs-tab, .vs-stage-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 7px 11px;
+  border: 1px solid var(--op-line);
+  border-radius: 8px;
+  background: var(--saari-surface);
+  color: var(--op-muted);
+  font: 650 .8125rem/1.35 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+}
+.vs-tab:hover, .vs-stage-tab:hover { background: var(--saari-hover); color: var(--op-text); }
+.vs-tab.active, .vs-stage-tab.is-active {
+  border-color: var(--op-gold);
+  background: var(--op-soft);
+  color: var(--op-text);
+  box-shadow: inset 0 -2px var(--op-gold);
+}
+.vs-section[hidden] { display: none; }
+.vs-progress { display: flex; align-items: center; gap: 9px; }
+.vs-count { font-variant-numeric: tabular-nums; font-size: .8125rem; white-space: nowrap; color: var(--op-muted); }
+.vs-bar { width: clamp(48px,10vw,110px); height: 6px; background: var(--op-line); border-radius: 999px; overflow: hidden; }
+.vs-fill { height: 100%; width: 0; background: var(--op-gold); transition: width .16s; }
+.vs-table { width: 100%; min-width: 610px; }
+.vs-table :is(th,td) { overflow-wrap: anywhere; white-space: normal; }
+.vs-local { width: 23%; color: var(--op-muted); }
+.vs-activity { font-weight: 650; }
+.vs-state { width: 215px; }
+.vs-controls { display: inline-flex; gap: 4px; border-radius: 8px; padding: 3px; background: var(--op-soft); border: 1px solid var(--op-line); }
+.vs-button {
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--op-muted);
+  white-space: nowrap;
+  font: 650 .8125rem/1.25 var(--font-sans);
+  cursor: pointer;
+}
+.vs-button:hover:not(:disabled) { background: var(--saari-hover); color: var(--op-text); }
+.vs-button[data-status="FEITO"].is-selected { background: var(--op-success-soft); color: var(--op-success); border-color: var(--op-success); }
+.vs-button[data-status="NAO_FEITO"].is-selected { background: var(--op-danger-soft); color: var(--op-danger); border-color: var(--op-danger); }
+.vs-button:disabled { cursor: wait; }
+.vs-meta { margin-top: 4px; color: var(--op-muted); font-size: .75rem; }
+.vs-meta.is-error { color: var(--op-danger); }
+.vs-notice {
+  position: fixed;
+  inset: auto 16px 16px auto;
+  z-index: 9999;
+  display: none;
+  width: fit-content;
+  max-width: min(400px,calc(100vw - 32px));
+  padding: 10px 14px;
+  border: 1px solid var(--op-line);
+  border-radius: 8px;
+  background: var(--saari-surface);
+  color: var(--op-text);
+  box-shadow: var(--saari-shadow-popover);
+}
+.vs-notice.show { display: block; }
+.vs-notice.error { border-color: var(--op-danger); color: var(--op-danger); }
+
+@media (max-width: 700px) {
+  .vs-tabs { flex-wrap: nowrap; overflow: auto; scrollbar-width: thin; padding: 3px; }
+  .vs-tab { flex: 0 0 auto; }
+  .vs-stage-tabs > * { flex: 1 1 auto; justify-content: center; }
+  .vs-tab, .vs-stage-tab, .vs-button { min-height: 44px; }
+  .vs-table, .vs-table tbody { display: block; min-width: 0; }
+  .vs-table thead { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+  .vs-table tbody tr { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--op-line); padding: 9px 12px; }
+  .vs-table tbody tr:last-child { border-bottom: 0; }
+  .vs-table tbody td { inline-size: auto; padding: 4px 1px; border: 0; }
+  .vs-controls { display: grid; grid-template-columns: 1fr 1fr; }
+}

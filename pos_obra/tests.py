@@ -251,10 +251,12 @@ class IntegracaoCadastrosPosObraTests(TestCase):
             TipoProblema.objects.create(categoria=self.categoria, nome='Tipo integração')
 
     def test_index_inclui_pos_obra_para_cargo_autorizado(self):
-        from usuarios.models import ModuloSistema
+        from usuarios.models import ModuloSistema, PermissaoAcao, PermissaoModulo
         user = get_user_model().objects.create_user(username='operador_integracao')
         user.perfil_erp.cargo = 'POS_OBRA'
         user.perfil_erp.save()
+        PermissaoModulo.objects.create(usuario=user, modulo=ModuloSistema.POS_OBRA)
+        PermissaoAcao.objects.create(usuario=user, modulo=ModuloSistema.POS_OBRA, acao='visualizar', permitido=True)
         self.client.force_login(user)
         response = self.client.get(reverse('core:index'))
         self.assertContains(response, reverse('pos_obra:painel'))

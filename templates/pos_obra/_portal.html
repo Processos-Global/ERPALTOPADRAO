@@ -12,12 +12,12 @@
     </a>
     <nav class="po-nav" aria-label="Navegação do portal">
       <a href="{% url 'pos_obra:portal' %}" {% if request.resolver_match.url_name == 'portal' %}aria-current="page"{% endif %}>Minha área</a>
-      <a href="{% url 'pos_obra:portal' %}#meus-chamados">Minhas solicitações</a>
+      <a href="{% url 'pos_obra:portal' %}#meus-chamados" {% if request.resolver_match.url_name == 'portal_detalhe' %}aria-current="page"{% endif %}>Minhas solicitações</a>
       <a href="{% url 'pos_obra:portal_novo' %}" {% if request.resolver_match.url_name == 'portal_novo' or request.resolver_match.url_name == 'pesquisa' %}aria-current="page"{% endif %}>Nova solicitação</a>
     </nav>
   </div>
-  <main id="conteudo-portal">{% block portal_content %}{% endblock %}</main>
-  <footer class="pc-footer"><span>SAARI ERP · Assistência técnica</span><span>Seu imóvel e seus atendimentos, em um só lugar.</span></footer>
+  <div id="conteudo-portal">{% block portal_content %}{% endblock %}</div>
+  <footer class="pc-footer">SAARI ERP · Assistência técnica</footer>
 </div>
 {% include 'pos_obra/_internal_script.html' %}
 {% endblock %}

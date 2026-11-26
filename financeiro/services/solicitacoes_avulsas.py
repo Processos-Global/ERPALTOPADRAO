@@ -1,4 +1,5 @@
 import logging
+from hashlib import sha256
 from sqlite3 import SQLITE_BUSY, SQLITE_LOCKED
 from time import sleep
 
@@ -25,7 +26,11 @@ class SolicitacaoAvulsaInvalida(Exception):
 def _anexar_documentos(titulos, documentos, usuario, gravados):
     chaves = set()
     for documento in documentos:
-        chave = (documento.name.strip().lower(), documento.size)
+        conteudo = sha256()
+        for bloco in documento.chunks():
+            conteudo.update(bloco)
+        documento.seek(0)
+        chave = (documento.name.strip().lower(), conteudo.digest())
         if chave in chaves:
             continue
         chaves.add(chave)

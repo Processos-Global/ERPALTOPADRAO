@@ -7,7 +7,6 @@
 {% block extra_css %}
     {{ block.super }}
     {% include 'pos_obra/_styles.html' %}
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
         /* Cabeçalho compartilhado: compacto e sem textos acessórios. */
         .po-interno .po-head.po-head-card {
@@ -26,8 +25,8 @@
 
         /* Navegação em card nas quatro telas de gestão. */
         .po-interno .po-management-navigation-card {
-            background: #fff;
-            border: 1px solid #e9e3dc;
+            background: var(--saari-surface);
+            border: 1px solid var(--saari-border);
             border-radius: 12px;
             padding: 7px;
             margin-bottom: 14px;

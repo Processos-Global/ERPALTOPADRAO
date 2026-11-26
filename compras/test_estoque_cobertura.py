@@ -1,8 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
+from threading import Event
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.db import connections, transaction
+from django.test import TestCase, TransactionTestCase, skipUnlessDBFeature
 from django.urls import reverse
 
 from cadastros.models import Fornecedor, Material, UnidadeMedida
@@ -23,7 +26,7 @@ from planejamento.models.cronograma_suprimentos import (
 )
 
 
-class CoberturaEstoqueCompraTest(TestCase):
+class FixtureCoberturaEstoqueCompra:
     def setUp(self):
         self.usuario = get_user_model().objects.create_superuser(
             username="estoque_compras_admin", email="estoque-compras@example.test", password="teste"
@@ -66,6 +69,8 @@ class CoberturaEstoqueCompraTest(TestCase):
             valor_recebido=quantidade,
         )
 
+
+class CoberturaEstoqueCompraTest(FixtureCoberturaEstoqueCompra, TestCase):
     def test_bloqueia_compra_totalmente_coberta_na_mesma_obra(self):
         self.registrar_entrada(self.obra, Decimal("10"))
         with self.assertRaises(ValidationError):
@@ -368,3 +373,53 @@ class CoberturaEstoqueCompraTest(TestCase):
             quantidade=Decimal("5"), usuario=self.usuario,
         )
         self.assertEqual(nova.quantidade_incluida, Decimal("5"))
+
+
+class ConcorrenciaCoberturaEstoqueCompraTest(FixtureCoberturaEstoqueCompra, TransactionTestCase):
+    @skipUnlessDBFeature("has_select_for_update")
+    def test_necessidades_concorrentes_reservam_o_saldo_uma_unica_vez(self):
+        self.registrar_entrada(self.obra, Decimal("4"))
+        outro_processo = ProcessoCompra.objects.create(
+            numero="PC-COB-CONCORRENTE", obra=self.obra, titulo="Segunda necessidade concorrente",
+        )
+        tentativa_bloqueio = Event()
+
+        def incluir_segunda_necessidade():
+            conexao = connections["default"]
+            tabela_obra = conexao.ops.quote_name(Obra._meta.db_table)
+
+            def sinalizar_bloqueio(execute, sql, params, many, context):
+                if tabela_obra in sql and "FOR UPDATE" in sql:
+                    tentativa_bloqueio.set()
+                return execute(sql, params, many, context)
+
+            try:
+                with conexao.execute_wrapper(sinalizar_bloqueio):
+                    return incluir_necessidade(
+                        processo=outro_processo, material=self.material, quantidade=Decimal("10"),
+                        usuario=self.usuario,
+                    ).pk
+            finally:
+                conexao.close()
+
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with transaction.atomic():
+                primeira = incluir_necessidade(
+                    processo=self.processo, material=self.material, quantidade=Decimal("10"),
+                    usuario=self.usuario,
+                )
+                self.assertEqual(primeira.reserva_estoque.quantidade_disponivel, Decimal("4"))
+
+                # Mantém a primeira reserva sem commit até a segunda tentar travar a mesma obra.
+                concorrente = executor.submit(incluir_segunda_necessidade)
+                self.assertTrue(tentativa_bloqueio.wait(timeout=10), "A segunda conexão não tentou bloquear a obra.")
+                self.assertFalse(concorrente.done())
+            segunda = NecessidadeCompra.objects.get(pk=concorrente.result(timeout=10))
+
+        self.assertEqual(primeira.quantidade_incluida, Decimal("6"))
+        self.assertEqual(segunda.quantidade_incluida, Decimal("10"))
+        reserva = ReservaEstoqueCompra.objects.get(obra=self.obra, material=self.material)
+        self.assertEqual(reserva.necessidade_id, primeira.pk)
+        self.assertEqual(reserva.status, ReservaEstoqueCompra.Status.ATIVA)
+        self.assertEqual(reserva.quantidade_original, Decimal("4"))
+        self.assertEqual(reserva.quantidade_disponivel, Decimal("4"))

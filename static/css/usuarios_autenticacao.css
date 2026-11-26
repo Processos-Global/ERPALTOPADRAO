@@ -1,0 +1,153 @@
+/* Login e recuperação de senha usam o tema compartilhado com o ERP. */
+.auth-theme-picker {
+    position: absolute;
+    inset: 12px 16px auto auto;
+    z-index: 20;
+}
+
+
+.auth-theme-picker .saari-theme-picker select {
+    min-height: var(--saari-control-height);
+    padding: 6px 10px;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-surface);
+    color: var(--saari-text);
+    font: .86rem var(--saari-font-sans);
+}
+
+.auth-theme-picker .saari-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+body.login-body,
+body.auth-body {
+    background: var(--saari-bg);
+    color: var(--saari-text);
+}
+
+.auth-card,
+.login-body .login-panel {
+    background: var(--saari-surface);
+    border-color: var(--saari-border);
+    color: var(--saari-text);
+}
+
+.login-body .login-panel::after {
+    background: var(--saari-border);
+}
+
+.login-body .login-heading h1,
+.login-body .login-field > label,
+.auth-card h1,
+.auth-field label {
+    color: var(--saari-text);
+}
+
+.login-body .login-heading h1 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.login-body .login-heading p,
+.login-body .login-field__icon,
+.login-body .password-toggle,
+.login-body .login-footer,
+.auth-card p,
+.auth-label,
+.auth-help,
+.auth-footer {
+    color: var(--saari-text-muted);
+}
+
+.login-body .login-recovery a,
+.auth-secondary-link {
+    color: var(--saari-accent);
+}
+
+.login-body .login-field__control input,
+.auth-card .auth-field input {
+    background: var(--saari-input-bg);
+    border-color: var(--saari-control-border);
+    color: var(--saari-text);
+}
+
+.login-body .login-field__control input:hover,
+.auth-card .auth-field input:hover,
+.login-body .password-toggle:hover {
+    background: var(--saari-hover);
+}
+
+.login-body .login-field__control input:focus,
+.auth-card .auth-field input:focus {
+    border-color: var(--saari-focus-ring);
+    box-shadow: none;
+}
+
+.login-body .login-field__control input::placeholder,
+.auth-card .auth-field input::placeholder {
+    color: var(--saari-text-muted);
+}
+
+.login-body .login-submit,
+.auth-card :is(.auth-submit, .auth-primary-link),
+.login-body .login-submit:hover,
+.auth-card :is(.auth-submit, .auth-primary-link):hover {
+    background: var(--saari-primary);
+    border-color: var(--saari-primary);
+    color: var(--saari-primary-text, #fff);
+}
+
+.login-body .login-submit:hover,
+.auth-card :is(.auth-submit, .auth-primary-link):hover {
+    background: var(--saari-primary-hover);
+}
+
+.login-body .login-message {
+    background: var(--saari-surface-elevated);
+    border-color: var(--saari-border);
+    color: var(--saari-text);
+}
+
+.login-body .login-message__title {
+    color: var(--saari-text);
+}
+
+.login-body .login-message__text {
+    color: var(--saari-text-muted);
+}
+
+.login-body .form-errors,
+.auth-card .auth-errors {
+    background: color-mix(in srgb, var(--saari-danger) 10%, var(--saari-surface));
+    color: var(--saari-danger);
+    border-color: var(--saari-danger);
+}
+
+.login-body .login-message__icon { color: var(--saari-accent); }
+
+html[data-theme="dark"] .login-body .login-brand__logo {
+    box-sizing: content-box;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--saari-brand-beige);
+}
+
+.login-body :focus-visible,
+.auth-body :focus-visible {
+    outline: 2px solid var(--saari-focus-ring);
+    outline-offset: 3px;
+}
+
+@media (max-width: 650px) {
+    .login-body .login-panel {
+        padding-block-start: 30px;
+    }
+    .login-body .login-visual {
+        min-height: clamp(145px, 24svh, 215px);
+    }
+}

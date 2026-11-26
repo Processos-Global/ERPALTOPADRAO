@@ -4,11 +4,17 @@
 
 {% block content %}
 <style>
-  .csi-page{max-width:1400px;margin:0 auto;padding:24px}.csi-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.csi-title{margin:0;font-size:26px;color:#2d201c}.csi-btn{border:1px solid #d9d0c2;border-radius:9px;padding:9px 13px;background:#fff;color:#4b3a35;text-decoration:none;font-weight:650}.csi-box{background:#fff;border:1px solid #eee8d6;border-radius:14px;overflow:hidden}.csi-table-wrap{overflow-x:auto}.csi-table{width:100%;border-collapse:collapse;min-width:980px}.csi-table th{padding:11px 12px;text-align:left;background:#f8f4ed;color:#85776f;font-size:11px;text-transform:uppercase;border-bottom:1px solid #eee8d6}.csi-table td{padding:12px;color:#4b3a35;font-size:13px;border-bottom:1px solid #ece6dc;vertical-align:top}.csi-badge{display:inline-flex;border-radius:999px;padding:4px 8px;background:#f1ece4;font-size:11px;font-weight:700}.csi-active{background:#f5f1e9;color:#453330}.csi-fail{background:#fee2e2;color:#991b1b}.csi-empty{text-align:center;padding:40px;color:#85776f}
+  .csi-page{max-width:1400px;margin:0 auto;padding:24px}.csi-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.csi-title{margin:0;font-size:26px;color:var(--saari-text)}.csi-btn{border:1px solid var(--saari-border);border-radius:9px;padding:9px 13px;background:var(--saari-surface);color:var(--saari-text);text-decoration:none;font-weight:650}.csi-box{background:var(--saari-surface);border:1px solid var(--saari-border);border-radius:14px;overflow:hidden}.csi-table-wrap{overflow-x:auto}.csi-table{width:100%;border-collapse:collapse;min-width:980px}.csi-table th{padding:11px 12px;text-align:left;background:var(--saari-hover);color:var(--saari-text-muted);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--saari-border)}.csi-table td{padding:12px;color:var(--saari-text);font-size:13px;border-bottom:1px solid var(--saari-border);vertical-align:top}.csi-badge{display:inline-flex;border-radius:999px;padding:4px 8px;background:var(--saari-hover);font-size:11px;font-weight:700}.csi-active{background:var(--saari-hover);color:var(--saari-text)}.csi-fail{background:color-mix(in srgb,var(--saari-danger) 13%,var(--saari-surface));color:var(--saari-danger)}.csi-empty{text-align:center;padding:40px;color:var(--saari-text-muted)}
 
 /* 2026 refresh: cabecalho destacado das importacoes de suprimentos */
-.csi-head{position:relative;overflow:hidden;align-items:center;padding:21px 23px;border:1px solid #ded7c8;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 63%,#f3ecdc 100%);box-shadow:0 12px 34px rgba(69,51,48,.065)}.csi-head::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.csi-head>*{position:relative;z-index:1}.csi-title{font-size:30px;letter-spacing:-.035em;color:#4b3a35}
+.csi-head{position:relative;overflow:hidden;align-items:center;padding:21px 23px;border:1px solid var(--saari-border);border-radius:16px;background:var(--saari-surface);box-shadow:0 12px 34px rgba(69,51,48,.065)}.csi-head>*{position:relative;z-index:1}.csi-title{font-size:30px;letter-spacing:-.035em;color:var(--saari-text)}
 @media(max-width:720px){.csi-head{align-items:flex-start;padding:18px 17px 18px 20px;border-radius:14px}.csi-title{font-size:25px}}
+
+
+.csi-page .csi-head{padding:14px 18px;background:var(--saari-surface);border-radius:var(--saari-radius);box-shadow:none}
+.csi-table-wrap{overscroll-behavior-inline:contain}
+.csi-page .csi-table-wrap:focus-visible{outline:2px solid var(--saari-focus-ring);outline-offset:-3px}
+@media(max-width:600px){.csi-page{padding:8px}.csi-head{display:grid}.csi-btn{justify-self:start}}
 
 </style>
 <div class="csi-page">

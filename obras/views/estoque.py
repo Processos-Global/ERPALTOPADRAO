@@ -1,13 +1,15 @@
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods, require_POST
 
-from usuarios.decorators import acao_required, modulo_required
+from usuarios.decorators import acao_required, modulo_required, possui_permissao_modulo
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import MovimentoEstoque, Obra
@@ -264,6 +266,8 @@ def transferencia_estoque(request, obra_id):
 
 
 @modulo_required(ModuloSistema.OBRAS, NivelPermissao.LEITURA)
+@require_http_methods(["GET", "HEAD", "POST"])
+@csrf_protect
 def relatorio_transferencias(request, obra_id):
     """Registra depreciação definitiva por transferência e gera planilha financeira."""
     from datetime import datetime
@@ -297,6 +301,8 @@ def relatorio_transferencias(request, obra_id):
         movimentos = movimentos.filter(obra_destino_id=int(destino))
 
     registros = list(movimentos)
+    pendentes = sum(m.depreciacao_percentual is None for m in registros)
+    pode_registrar = possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO)
     if request.method != "POST":
         for mov in registros:
             mov.valor_bruto_relatorio = (mov.custo_unitario_transferencia * mov.quantidade
@@ -306,11 +312,14 @@ def relatorio_transferencias(request, obra_id):
             "destinos": Obra.objects.filter(ativa=True).exclude(pk=obra_id).order_by("nome"),
             "inicio": inicio, "fim": fim, "destino": destino,
             "qtd": len(registros), "movimentos": registros,
-            "pendentes": sum(m.depreciacao_percentual is None for m in registros),
+            "pendentes": pendentes,
+            "pode_registrar": pode_registrar,
         })
 
     if not registros:
         return HttpResponse("Nenhuma transferência selecionada para gerar o relatório.", status=400)
+    if pendentes and not pode_registrar:
+        raise PermissionDenied("A permissão de edição de Obras é necessária para registrar depreciações.")
     porcentagens = {}
     for mov in registros:
         if mov.depreciacao_percentual is not None:
@@ -333,14 +342,16 @@ def relatorio_transferencias(request, obra_id):
     with transaction.atomic():
         ids_obras = sorted(set([obra.pk] + [m.obra_destino_id for m in registros if m.obra_destino_id]))
         list(Obra.objects.select_for_update().filter(pk__in=ids_obras).order_by("pk"))
-        bloqueados = {m.pk: m for m in MovimentoEstoque.objects.select_for_update().filter(pk__in=[m.pk for m in registros])}
-        for mov in registros:
-            atual = bloqueados[mov.pk]
+        bloqueados = list(MovimentoEstoque.objects.select_for_update().filter(pk__in=porcentagens).order_by("pk"))
+        if len(bloqueados) != len(registros):
+            return HttpResponse("As transferências mudaram. Atualize a página.", status=409)
+        for atual in bloqueados:
+            if atual.depreciacao_percentual is not None and atual.depreciacao_percentual != porcentagens[atual.pk]:
+                return HttpResponse("A depreciação foi registrada por outra operação. Atualize a página.", status=409)
+        for atual in bloqueados:
             if atual.depreciacao_percentual is not None:
-                if atual.depreciacao_percentual != porcentagens[mov.pk]:
-                    return HttpResponse("A depreciação foi registrada por outra operação. Atualize a página.", status=409)
                 continue
-            atual.depreciacao_percentual = porcentagens[mov.pk]
+            atual.depreciacao_percentual = porcentagens[atual.pk]
             atual.depreciacao_registrada_em = timezone.now()
             atual.save(update_fields=["depreciacao_percentual", "depreciacao_registrada_em"])
 
@@ -349,6 +360,7 @@ def relatorio_transferencias(request, obra_id):
     ws.title = "Transferências"
     ws.append(["RELATÓRIO DE TRANSFERÊNCIAS ENTRE OBRAS"])
     ws.append(["Obra de origem", _nome_obra(obra), "Emitido em", timezone.localtime().strftime("%d/%m/%Y %H:%M")])
+    ws["B2"].data_type = "s"
     ws.append(["Data", "Movimento", "Obra origem", "Obra destino", "Material", "Un.", "Quantidade",
         "Custo unit. compra (R$)", "Depreciação individual (%)", "Valor unit. depreciado (R$)",
         "Valor a ressarcir (R$)", "Referência", "Observações"])
@@ -383,6 +395,9 @@ def relatorio_transferencias(request, obra_id):
                          "I":29,"J":30,"K":27,"L":22,"M":40}.items():
         ws.column_dimensions[col].width = largura
     for row in ws.iter_rows(min_row=4, max_row=3+len(registros)):
+        for cell in row:
+            if isinstance(cell.value, str):
+                cell.data_type = "s"
         for idx in (8,10,11):
             row[idx-1].number_format = '"R$" #,##0.00'
         row[8].number_format = '0.00"%"'

@@ -40,13 +40,7 @@
 <div class="os-form-caption">
 <span class="os-caption-dot">
 </span> Adicionar material</div>
-<form method="post" action="{% url 'pos_obra:material' chamado.pk %}">{% csrf_token %}<div class="po-material-search">
-<label for="material-live-search">Pesquisar material por nome ou código</label>
-<input id="material-live-search" class="sa-field" type="search" autocomplete="off" placeholder="Digite o código ou nome do material" aria-controls="material-live-results">
-<div id="material-live-results" class="po-material-results" role="group" hidden>
-</div>
-<div id="material-live-choice" class="po-help" aria-live="polite">Escolha um material para adicionar.</div>
-</div>
+<form method="post" action="{% url 'pos_obra:material' chamado.pk %}">{% csrf_token %}
 <div class="po-material-fields po-cp-material-grid"><div class="po-field" data-field="material"><label for="{{ material_form.material.id_for_label }}">Material do catálogo</label>{{ material_form.material }}{{ material_form.material.errors }}</div><div class="po-field" data-field="previsto"><label for="{{ material_form.previsto.id_for_label }}">Quantidade necessária</label>{{ material_form.previsto }}{{ material_form.previsto.errors }}</div></div>{{ material_form.non_field_errors }}<div class="os-actions po-cp-form-actions">
 <button class="po-button primary">Adicionar material</button>
 </div>

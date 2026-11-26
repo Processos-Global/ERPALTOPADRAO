@@ -61,6 +61,7 @@ def _celula(referencia, valor, formato="texto", destaque=False):
         # Excel armazena moeda como decimal e aplica a formatacao por estilo.
         numero = format(valor, "f") if isinstance(valor, Decimal) else str(valor)
         return f'<c r="{referencia}" s="{st}"><v>{numero}</v></c>'
+    # O tipo inlineStr mantém textos iniciados por =, +, - e @ como texto no Excel.
     return f'<c r="{referencia}" s="{st}" t="inlineStr"><is><t xml:space="preserve">{_esc(valor)}</t></is></c>'
 
 
@@ -208,7 +209,6 @@ def gerar_relatorio(saida):
             .exclude(status=TituloPagar.Status.CANCELADO)
             .select_related('fornecedor', 'obra', 'pedido', 'plano_financeiro', 'pagamento')
             .order_by('pk'))
-        # READ ONLY: a transacao evita atualizacoes por este comando. Nao usa select_for_update.
         for titulo in queryset.iterator(chunk_size=800):
             pagamento = getattr(titulo, 'pagamento', None)
             status_pag = pagamento.get_status_display() if pagamento else 'Sem pagamento registrado'

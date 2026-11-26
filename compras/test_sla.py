@@ -79,12 +79,14 @@ class PrazoComprasTests(TestCase):
         referencia = timezone.now()
         inicio = referencia - timedelta(days=14)
         hoje = timezone.localdate(referencia)
-        em_andamento, cancelado, legado = ProcessoCompra.objects.bulk_create([
+        processos = ProcessoCompra.objects.bulk_create([
             ProcessoCompra(numero="PC-ABERTO", obra=self.obra, titulo="Compra"),
             ProcessoCompra(numero="PC-CANCELADO", obra=self.obra, titulo="Compra",
                            status=ProcessoCompra.Status.CANCELADO, etapa_atual=ProcessoCompra.Etapa.CONTRATADO),
             ProcessoCompra(numero="PC-LEGADO", obra=self.obra, titulo="Compra"),
         ])
+        por_numero = ProcessoCompra.objects.in_bulk([p.numero for p in processos], field_name="numero")
+        em_andamento, cancelado, legado = (por_numero[p.numero] for p in processos)
         TransicaoEtapaCompra.objects.bulk_create([
             TransicaoEtapaCompra(
                 processo=processo, etapa="COTACAO", iniciada_em=iniciada, encerrada_em=encerrada,
@@ -109,7 +111,8 @@ class PrazoComprasTests(TestCase):
                 (PedidoCompra.Status.CONFIRMADO, None, None),
             ])
         ])
-        PrazoEntregaPedido.objects.create(pedido=contratos[-1], limite_em=hoje - timedelta(days=1))
+        ultimo_pedido = PedidoCompra.objects.get(numero=contratos[-1].numero)
+        PrazoEntregaPedido.objects.create(pedido=ultimo_pedido, limite_em=hoje - timedelta(days=1))
         queryset = ProcessoCompra.objects.filter(pk__in=(em_andamento.pk, cancelado.pk, legado.pk))
         for situacao, ids, atrasados in [
             ("", {em_andamento.pk, cancelado.pk, legado.pk}, 2),

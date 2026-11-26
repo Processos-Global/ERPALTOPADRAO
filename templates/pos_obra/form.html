@@ -1,6 +1,9 @@
 {% extends 'pos_obra/_portal.html' %}
 {% block portal_content %}
 <header class="pc-form-heading">
+  <nav class="pc-breadcrumb" aria-label="Localização no Portal do Cliente">
+    <a href="{% url 'pos_obra:portal' %}">Minha área</a>
+  </nav>
   <h1>{% if eh_pesquisa %}Avaliar atendimento{% else %}Nova solicitação{% endif %}</h1>
 </header>
 

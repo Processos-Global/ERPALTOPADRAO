@@ -1,6 +1,18 @@
 {% extends "layouts/base.html" %}
 {% block title %}Relatório de Grandes Fornecedores | SAARI{% endblock %}
-{% block extra_css %}{% include "compras/_styles.html" %}{% endblock %}
+{% block extra_css %}
+{% include "compras/_styles.html" %}
+<style>
+  html[data-theme="dark"] .cp-head {
+    background: linear-gradient(135deg, var(--saari-dark-raised), var(--saari-dark-panel));
+    border-color: var(--saari-dark-border);
+  }
+  html[data-theme="dark"] .cp-filter {
+    background: var(--saari-dark-panel);
+    border-color: var(--saari-dark-border);
+  }
+</style>
+{% endblock %}
 {% block content %}
 <div class="cp-page">
   <header class="cp-head">

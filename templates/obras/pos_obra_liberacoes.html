@@ -1,1 +1,52 @@
-{% extends 'layouts/base.html' %}{% block title %}Liberações | Pós-Obra | SAARI ERP{% endblock %}{% block content %}<main style="max-width:1420px;margin:0 auto;padding:24px 28px;font-family:var(--font-sans,Inter,sans-serif);color:#453330"><header style="background:linear-gradient(135deg,#fff,#f5eedf);border:1px solid #ded7c8;border-left:4px solid #b9aa72;border-radius:14px;padding:24px;margin-bottom:18px"><h1 style="font:400 36px var(--font-serif,Georgia,serif);margin:0">Liberação para Pós-Obra</h1><p style="color:#85776f;margin:8px 0 0">Empreendimentos concluídos aptos a receber atendimento de assistência técnica.</p></header><section style="background:#fff;border:1px solid #ded7c8;border-radius:12px;padding:18px;overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:650px;text-align:left"><thead><tr style="background:#faf7f1"><th style="padding:13px;border:1px solid #e5ddd2">Obra concluída</th><th style="padding:13px;border:1px solid #e5ddd2">Ação</th></tr></thead><tbody>{% for o in obras %}<tr><td style="padding:12px;border:1px solid #eee8dd">{{ o.nome }}</td><td style="padding:12px;border:1px solid #eee8dd"><form method="post" action="{% url 'obras:pos_obra_liberar' o.pk %}">{% csrf_token %}<button style="border:0;border-radius:8px;background:#453330;color:white;padding:10px 14px;cursor:pointer;font-weight:650" type="submit">Habilitar para Pós-Obra</button></form></td></tr>{% empty %}<tr><td colspan="2" style="padding:28px;text-align:center;color:#85776f">Nenhuma obra disponível para liberação.</td></tr>{% endfor %}</tbody></table></section></main>{% endblock %}
+{% extends "layouts/base.html" %}
+
+{% block title %}Liberações | Pós-Obra | SAARI ERP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .po-release-page { max-width: 1420px; margin-inline: auto; }
+    .po-release-table { width: 100%; border-collapse: collapse; text-align: start; }
+    .po-release-table th, .po-release-table td {
+        padding: 12px;
+        border-block-end: 1px solid var(--saari-border);
+    }
+    .po-release-table th { background: var(--saari-hover); color: var(--saari-text); text-align: start; }
+    .po-release-table tbody tr:last-child td { border-block-end: 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="po-release-page">
+    <header class="saari-page-header">
+        <div>
+            <h1>Liberação para Pós-Obra</h1>
+            <p>Empreendimentos concluídos aptos a receber atendimento de assistência técnica.</p>
+        </div>
+    </header>
+    <section class="saari-panel saari-table-scroll" aria-label="Obras disponíveis para liberação">
+        <table class="saari-table po-release-table">
+            <thead>
+                <tr>
+                    <th scope="col">Obra concluída</th>
+                    <th scope="col">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in obras %}
+                <tr>
+                    <td>{{ o.nome }}</td>
+                    <td>
+                        <form method="post" action="{% url 'obras:pos_obra_liberar' o.pk %}">
+                            {% csrf_token %}
+                            <button class="saari-button saari-button--primary" type="submit">Habilitar para Pós-Obra</button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td class="saari-empty" colspan="2">Nenhuma obra disponível para liberação.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</div>
+{% endblock %}

@@ -39,13 +39,20 @@ def relatorio_grandes_fornecedores(request):
     formato = (request.GET.get("formato") or "").lower()
     if formato == "xlsx":
         from openpyxl import Workbook
+        from openpyxl.cell import WriteOnlyCell
 
-        planilha = Workbook()
-        folha = planilha.active
-        folha.title = "Grandes Fornecedores"
+        planilha = Workbook(write_only=True)
+        folha = planilha.create_sheet("Grandes Fornecedores")
         folha.append([titulo for _, titulo in COLUNAS])
         for linha in linhas:
-            folha.append([linha[chave] for chave, _ in COLUNAS])
+            celulas = []
+            for chave, _ in COLUNAS:
+                valor = linha[chave]
+                celula = WriteOnlyCell(folha, value=valor)
+                if isinstance(valor, str):
+                    celula.data_type = "s"
+                celulas.append(celula)
+            folha.append(celulas)
         fluxo = BytesIO()
         planilha.save(fluxo)
         resposta = HttpResponse(

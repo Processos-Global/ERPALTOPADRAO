@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
+from django.db import IntegrityError, router, transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,6 +12,7 @@ from django.views.decorators.http import require_POST
 
 from cadastros.forms import FornecedorForm, MaoObraForm, MaterialForm, UnidadeMedidaForm
 from cadastros.models import ChecklistProjetoItem, Fornecedor, MaoObra, Material, ModeloFVS, UnidadeMedida
+from cadastros.models.fornecedores import DOCUMENTO_FORNECEDOR_DUPLICADO, DOCUMENTO_FORNECEDOR_UNICO
 from usuarios.services import pode_acao_cadastros
 
 
@@ -152,13 +154,34 @@ def fornecedores_lista(request):
     })
 
 
+def _salvar_fornecedor(form):
+    using = router.db_for_write(Fornecedor, instance=form.instance)
+    try:
+        with transaction.atomic(using=using):
+            return form.save()
+    except IntegrityError as erro:
+        tabela = Fornecedor._meta.db_table
+        chave = DOCUMENTO_FORNECEDOR_UNICO
+        conflito_sqlite = erro.args == (f"UNIQUE constraint failed: {tabela}.documento_chave",)
+        conflito_mysql = (
+            len(erro.args) == 2
+            and erro.args[0] == 1062
+            and erro.args[1].endswith((f"'{chave}'", f"'{tabela}.{chave}'"))
+        )
+        if not (conflito_sqlite or conflito_mysql):
+            raise
+        form.add_error(None, DOCUMENTO_FORNECEDOR_DUPLICADO)
+        return None
+
+
 @cadastros_permissao_required("criar")
 def fornecedor_novo(request):
     form = FornecedorForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        fornecedor = form.save()
-        messages.success(request, f"Fornecedor {fornecedor.codigo} cadastrado com sucesso.")
-        return redirect("cadastros:fornecedores_lista")
+        fornecedor = _salvar_fornecedor(form)
+        if fornecedor is not None:
+            messages.success(request, f"Fornecedor {fornecedor.codigo} cadastrado com sucesso.")
+            return redirect("cadastros:fornecedores_lista")
     return render(request, "cadastros/form.html", {
         "form": form,
         "titulo": "Novo fornecedor",
@@ -172,8 +195,7 @@ def fornecedor_novo(request):
 def fornecedor_editar(request, pk):
     fornecedor = get_object_or_404(Fornecedor, pk=pk)
     form = FornecedorForm(request.POST or None, instance=fornecedor)
-    if request.method == "POST" and form.is_valid():
-        form.save()
+    if request.method == "POST" and form.is_valid() and _salvar_fornecedor(form) is not None:
         messages.success(request, "Fornecedor atualizado com sucesso.")
         return redirect("cadastros:fornecedores_lista")
     return render(request, "cadastros/form.html", {

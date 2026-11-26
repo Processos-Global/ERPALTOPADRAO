@@ -34,12 +34,12 @@
     const category = {type:'category', data:data.rows.map(row => row.label), inverse:horizontal, axisLabel:{color:color('--sa-muted'), fontSize:10, width:horizontal?135:90, overflow:'truncate', hideOverlap:false}, axisTick:{show:false}, axisLine:{lineStyle:{color:color('--sa-line')}}};
     const value = {type:'value', name:units[c.unit], nameLocation:horizontal?'middle':'end', nameGap:horizontal?28:15, nameTextStyle:{color:color('--sa-muted'), fontSize:10}, min:c.min === null ? undefined : c.min, max:c.max === null ? undefined : c.max, minInterval:c.unit === 'count' ? 1 : undefined, axisLabel:{color:color('--sa-muted'), fontSize:10}, splitLine:{lineStyle:{color:color('--sa-line')}}};
     return {
-      color:[color('--sa-bar'),color('--sa-gold'),color('--sa-success')],
+      color:[color('--saari-series-planned'),color('--saari-series-actual'),color('--saari-info')],
       backgroundColor:color('--sa-card'), animation:false,
       aria:{enabled:true,description:data.title+'. '+units[c.unit]+'. '+(data.caption || '')+'. Consulte a tabela para os valores.'},
       grid:{left:horizontal?8:12,right:25,top:source.length>1?65:35,bottom:45,containLabel:true},
       legend:{show:source.length>1,textStyle:{color:color('--sa-text')},top:0},
-      tooltip:{trigger:'axis',renderMode:'richText',confine:true,formatter:params => {
+      tooltip:{trigger:'axis',renderMode:'richText',confine:true,backgroundColor:color('--saari-surface-elevated'),borderColor:color('--sa-line'),textStyle:{color:color('--sa-text')},formatter:params => {
         const items = Array.isArray(params) ? params : [params];
         const index = items[0] ? items[0].dataIndex : -1;
         if (index < 0) return '';
@@ -108,7 +108,9 @@
   });
   const resize = () => instances.forEach(entry => {if(!entry.chartView.hidden) entry.instance.resize();});
   if(window.ResizeObserver) {const observer=new ResizeObserver(resize); observer.observe(root);} else window.addEventListener('resize',resize);
-  new MutationObserver(() => instances.forEach(entry => entry.instance.setOption(options(entry),true))).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  document.addEventListener('saari:themechange', () => {
+    instances.forEach(entry => entry.instance.setOption(options(entry)));
+  });
   const details = [];
   window.addEventListener('beforeprint',() => {root.querySelectorAll('details').forEach(item => {details.push([item,item.open]); item.open=true;});});
   window.addEventListener('afterprint',() => {details.splice(0).forEach(([item,open]) => {item.open=open;}); resize();});

@@ -4,19 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f5f1e9" id="saari-login-theme-color">
-    <script>
-        (function () {
-            const key = 'saari-theme';
-            let theme = 'light';
-            try {
-                const saved = localStorage.getItem(key);
-                if (saved === 'dark' || saved === 'light') theme = saved;
-                else if (matchMedia('(prefers-color-scheme: dark)').matches) theme = 'dark';
-            } catch (e) {}
-            document.documentElement.dataset.theme = theme;
-        })();
-    </script>
+    <meta name="theme-color" content="#f5f1e9" id="saari-theme-color">
+    {% include "components/theme_init.html" %}
 
     <title>Entrar | SAARI</title>
 
@@ -33,19 +22,6 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
     <style>
-        :root {
-            --saari-brown: #453330;
-            --saari-brown-dark: #2d201c;
-            --saari-brown-soft: #77655c;
-
-            --saari-offwhite: #fbf9f4;
-            --saari-background: #f5f1e9;
-            --saari-line: #ded7c8;
-
-            --saari-gold: #b9aa72;
-            --saari-text: #4b3a35;
-            --saari-danger: #9a463e;
-        }
 
         * {
             box-sizing: border-box;
@@ -208,12 +184,12 @@
             margin: 0 !important;
             padding: 0 50px !important;
 
-            border: 1px solid rgba(69, 51, 48, .15) !important;
+            border: 1px solid var(--saari-control-border);
             border-radius: 8px !important;
-            outline: none !important;
+            outline-offset: 2px;
 
-            background: rgba(255, 255, 255, .44) !important;
-            color: var(--saari-brown) !important;
+            background: var(--saari-input-bg);
+            color: var(--saari-text);
 
             font-family: "Plus Jakarta Sans", sans-serif !important;
             font-size: 14px !important;
@@ -233,16 +209,16 @@
         }
 
         .login-field__control input:hover {
-            border-color: rgba(69, 51, 48, .26) !important;
-            background: rgba(255, 255, 255, .64) !important;
+            border-color: var(--saari-control-border);
+            background: var(--saari-hover);
         }
 
         .login-field__control input:focus {
-            border-color: rgba(185, 170, 114, .92) !important;
-            background: rgba(255, 255, 255, .90) !important;
+            border-color: var(--saari-focus-ring);
+            background: var(--saari-input-bg);
 
             box-shadow:
-                0 0 0 3px rgba(185, 170, 114, .085) !important;
+                0 0 0 2px var(--saari-focus-ring);
         }
 
         .login-field__icon {
@@ -285,7 +261,7 @@
             border-radius: 50% !important;
 
             background: transparent !important;
-            color: #76665f !important;
+            color: var(--saari-text-muted);
 
             cursor: pointer;
             box-shadow: none !important;
@@ -296,8 +272,8 @@
         }
 
         .password-toggle:hover {
-            background: rgba(69, 51, 48, .045) !important;
-            color: var(--saari-brown) !important;
+            background: var(--saari-hover);
+            color: var(--saari-text);
         }
 
         .password-toggle .icon {
@@ -331,7 +307,7 @@
         }
 
         .login-recovery a:hover {
-            color: var(--saari-brown-dark);
+            color: var(--saari-text);
             text-decoration: underline;
             text-underline-offset: 4px;
         }
@@ -349,11 +325,11 @@
 
             gap: 12px;
 
-            border: 1px solid #443128 !important;
+            border: 1px solid var(--saari-primary);
             border-radius: 8px !important;
 
-            background: #49352d !important;
-            color: #f8f3ea !important;
+            background: var(--saari-primary);
+            color: var(--saari-on-primary);
 
             font-family: "Plus Jakarta Sans", sans-serif !important;
             font-size: 14px !important;
@@ -374,7 +350,7 @@
 
         .login-submit:hover {
             transform: translateY(-1px);
-            background: #3f2d27 !important;
+            background: var(--saari-primary-hover);
             box-shadow:
                 0 12px 28px rgba(45, 32, 28, .17) !important;
         }
@@ -1045,85 +1021,15 @@
         /* =========================================================
            SAARI — MODO NOTURNO DA AUTENTICAÇÃO
         ========================================================== */
-        .login-theme-toggle {
-            position: absolute;
-            z-index: 40;
-            top: 24px;
-            left: 28px;
-            width: 38px;
-            height: 38px;
-            border: 1px solid rgba(69, 51, 48, .14);
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 253, 250, .72);
-            color: var(--saari-brown);
-            cursor: pointer;
-            backdrop-filter: blur(12px);
-            transition: background .18s ease, border-color .18s ease, transform .18s ease;
-        }
-        .login-theme-toggle:hover { transform: translateY(-1px); border-color: var(--saari-gold); }
-        .login-theme-toggle svg { width: 17px; height: 17px; }
-        .login-theme-toggle__sun { display: none; }
-        html[data-theme="dark"] .login-theme-toggle__moon { display: none; }
-        html[data-theme="dark"] .login-theme-toggle__sun { display: block; }
-
-        html[data-theme="dark"] {
-            color-scheme: dark;
-            --saari-brown: #f0e8e0;
-            --saari-brown-dark: #171311;
-            --saari-brown-soft: #c0b3a8;
-            --saari-offwhite: #191512;
-            --saari-background: #171311;
-            --saari-line: #44382f;
-            --saari-gold: #c0a264;
-            --saari-text: #eee6df;
-            --saari-danger: #e17a6d;
-        }
-        html[data-theme="dark"] body.login-body,
-        html[data-theme="dark"] .login-page { background: #171311; color: #eee6df; }
-        html[data-theme="dark"] .login-panel {
-            background:
-                radial-gradient(circle at 10% 0%, rgba(192, 162, 100, .07), transparent 34%),
-                linear-gradient(180deg, #201a17 0%, #171311 100%);
-        }
-        html[data-theme="dark"] .login-panel::after { background: rgba(244,239,232,.08); }
-        html[data-theme="dark"] .login-brand__logo { filter: brightness(0) invert(82%) sepia(21%) saturate(630%) hue-rotate(356deg) brightness(91%) contrast(89%); }
-        html[data-theme="dark"] .login-heading h1,
-        html[data-theme="dark"] .login-field > label { color: #f4efe8; }
-        html[data-theme="dark"] .login-heading p,
-        html[data-theme="dark"] .login-recovery a { color: #b8aca2; }
-        html[data-theme="dark"] .login-field__control input {
-            background: rgba(42,34,29,.78) !important;
-            border-color: #4b3e35 !important;
-            color: #f1eae3 !important;
-        }
-        html[data-theme="dark"] .login-field__control input:hover { background: rgba(49,40,34,.92) !important; border-color: #655348 !important; }
-        html[data-theme="dark"] .login-field__control input:focus { background: #2a221d !important; border-color: #c0a264 !important; box-shadow: 0 0 0 3px rgba(192,162,100,.12) !important; }
-        html[data-theme="dark"] .login-field__control input::placeholder { color: #8d8076; }
-        html[data-theme="dark"] .login-field__icon,
-        html[data-theme="dark"] .password-toggle { color: #b8aca2 !important; }
-        html[data-theme="dark"] .login-message { background: rgba(34,28,24,.92) !important; border-color: #44382f !important; color: #eee6df !important; box-shadow: 0 14px 38px rgba(0,0,0,.28) !important; }
-        html[data-theme="dark"] .login-message__title { color: #f4efe8 !important; }
-        html[data-theme="dark"] .login-message__text { color: #c9bdb3 !important; }
-        html[data-theme="dark"] .form-errors { background: #30201e !important; border-color: #653e38 !important; color: #f0b0a8 !important; }
-        html[data-theme="dark"] .login-submit { background: #735a47 !important; border-color: #735a47 !important; color: #fff !important; }
-        html[data-theme="dark"] .login-submit:hover { background: #866a52 !important; }
-        html[data-theme="dark"] .login-theme-toggle { background: rgba(34,28,24,.84); border-color: #44382f; color: #eee6df; }
-        html[data-theme="dark"] .login-theme-toggle:hover { background: #2d251f; border-color: #c0a264; color: #fff; }
-        html[data-theme="dark"] .login-visual__veil { background: linear-gradient(90deg, rgba(23,19,17,.50), rgba(23,19,17,.16)) !important; }
     </style>
+    <link rel="stylesheet" href="{% static 'css/usuarios_autenticacao.css' %}">
 </head>
 
 <body class="login-body">
 
     {% include "components/icons.html" %}
 
-    <button type="button" class="login-theme-toggle" data-login-theme-toggle aria-label="Ativar modo noturno" title="Modo noturno">
-        <svg class="login-theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path></svg>
-        <svg class="login-theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"></path></svg>
-    </button>
+    <div class="auth-theme-picker">{% include "components/theme_picker.html" %}</div>
 
     <main class="login-page">
 
@@ -1144,7 +1050,7 @@
                 <div class="login-card">
 
                     <header class="login-heading">
-                
+                        <h1 id="login-title">Entrar</h1>
                     </header>
 
                     {% if messages %}
@@ -1338,31 +1244,7 @@
 
     </main>
 
-    <script>
-        (function () {
-            const key = 'saari-theme';
-            const root = document.documentElement;
-            const button = document.querySelector('[data-login-theme-toggle]');
-            const meta = document.getElementById('saari-login-theme-color');
-
-            function apply(theme, persist) {
-                const dark = theme === 'dark';
-                root.dataset.theme = dark ? 'dark' : 'light';
-                if (meta) meta.setAttribute('content', dark ? '#171311' : '#f5f1e9');
-                if (button) {
-                    button.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo noturno');
-                    button.setAttribute('title', dark ? 'Modo claro' : 'Modo noturno');
-                    button.setAttribute('aria-pressed', dark ? 'true' : 'false');
-                }
-                if (persist) {
-                    try { localStorage.setItem(key, root.dataset.theme); } catch (e) {}
-                }
-            }
-
-            apply(root.dataset.theme, false);
-            if (button) button.addEventListener('click', () => apply(root.dataset.theme === 'dark' ? 'light' : 'dark', true));
-        })();
-    </script>
+    <script src="{% static 'js/saari-theme.js' %}?v=20261125" defer></script>
 
     <script>
         (() => {
@@ -1387,20 +1269,10 @@
         })();
     </script>
 
-    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{% static 'js/app.js' %}?v=20261125"></script>
 
     <script>
         (() => {
-
-            const input =
-                document.querySelector(
-                    "[data-password-input]"
-                );
-
-            const toggle =
-                document.querySelector(
-                    "[data-password-toggle]"
-                );
 
             const form =
                 document.querySelector(
@@ -1438,37 +1310,6 @@
                         titleNode.textContent = "Concluído";
                     }
                 });
-
-            if (
-                input &&
-                toggle
-            ) {
-                toggle.addEventListener(
-                    "click",
-                    () => {
-
-                        const visible =
-                            input.type === "text";
-
-                        input.type =
-                            visible
-                                ? "password"
-                                : "text";
-
-                        toggle.classList.toggle(
-                            "is-visible",
-                            !visible
-                        );
-
-                        toggle.setAttribute(
-                            "aria-label",
-                            visible
-                                ? "Exibir senha"
-                                : "Ocultar senha"
-                        );
-                    }
-                );
-            }
 
             if (
                 form &&

@@ -2,8 +2,13 @@ from decimal import Decimal
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.functions import NullIf
 
 from .base import ModeloAtivoTimestamp
+
+
+DOCUMENTO_FORNECEDOR_UNICO = "cad_for_doc_unico_uniq"
+DOCUMENTO_FORNECEDOR_DUPLICADO = "Já existe um fornecedor com este CPF/CNPJ."
 
 
 class Fornecedor(ModeloAtivoTimestamp):
@@ -18,6 +23,12 @@ class Fornecedor(ModeloAtivoTimestamp):
     nome = models.CharField(max_length=255, db_index=True, verbose_name="Razão social / nome")
     nome_fantasia = models.CharField(max_length=255, blank=True, db_index=True)
     documento = models.CharField(max_length=30, blank=True, db_index=True, verbose_name="CPF / CNPJ")
+    documento_chave = models.GeneratedField(
+        expression=NullIf("documento", models.Value("")),
+        output_field=models.CharField(max_length=30),
+        db_persist=False,
+        null=True,
+    )
     email = models.EmailField(blank=True)
     telefone = models.CharField(max_length=40, blank=True)
     contato = models.CharField(max_length=150, blank=True, verbose_name="Pessoa de contato")
@@ -48,11 +59,17 @@ class Fornecedor(ModeloAtivoTimestamp):
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["documento"],
-                condition=~models.Q(documento=""),
-                name="cad_for_doc_uniq",
+                fields=["documento_chave"],
+                name=DOCUMENTO_FORNECEDOR_UNICO,
+                violation_error_message=DOCUMENTO_FORNECEDOR_DUPLICADO,
             )
         ]
+
+    def validate_constraints(self, exclude=None):
+        # O ModelForm exclui a coluna interna. O Django valida a chave pela
+        # expressão e respeita a exclusão de documento quando ele não é válido.
+        campos_excluidos = set(exclude or ()) - {"documento_chave"}
+        super().validate_constraints(exclude=campos_excluidos)
 
     def save(self, *args, **kwargs):
         self.nome = (self.nome or "").strip()

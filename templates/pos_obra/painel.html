@@ -5,7 +5,7 @@
 
     <style>
         /* Ajustes exclusivos da visão geral. Não alteram as demais telas do Pós-Obra. */
-        .po-dashboard { --po-dash-border: #e5e9ef; --po-dash-muted: #667085; }
+        .po-dashboard { --po-dash-border: var(--saari-border); --po-dash-muted: var(--saari-text-muted); }
         .po-dashboard .po-management-intro {
             display: flex; align-items: center; justify-content: space-between;
             gap: 16px; padding: 0 0 16px; margin: 0 0 18px;
@@ -29,16 +29,16 @@
             display: flex; flex-direction: column; justify-content: center;
             gap: 7px; padding: 16px 18px; min-height: 102px;
             margin: 0; text-decoration: none; border: 1px solid var(--po-dash-border);
-            border-radius: 10px; background: #fff; box-shadow: none;
+            border-radius: 10px; background: var(--saari-surface); box-shadow: none;
         }
-        .po-dashboard a.po-stat:hover { border-color: #b8c4d2; background: #fafbfd; }
+        .po-dashboard a.po-stat:hover { border-color: var(--saari-accent); background: var(--saari-hover); }
         .po-dashboard .po-stat-label { font-size: 12px; font-weight: 650; color: var(--po-dash-muted); line-height: 1.35; }
         .po-dashboard .po-stat-value { font-size: clamp(24px, 2.5vw, 32px); line-height: 1; font-weight: 750; letter-spacing: -.035em; }
         .po-dashboard .po-stat-value small { font-size: 13px; font-weight: 500; color: var(--po-dash-muted); }
         .po-dashboard .po-dashboard-content { display: grid; grid-template-columns: minmax(290px, .9fr) minmax(0, 1.7fr); gap: 14px; align-items: start; }
         .po-dashboard .po-card {
             margin: 0; padding: 0; min-width: 0; border: 1px solid var(--po-dash-border);
-            border-radius: 10px; background: #fff; box-shadow: none; overflow: hidden;
+            border-radius: 10px; background: var(--saari-surface); box-shadow: none; overflow: hidden;
         }
         .po-dashboard .po-card__head {
             display: flex; align-items: center; justify-content: space-between;
@@ -47,7 +47,7 @@
         }
         .po-dashboard .po-card__head h2 { margin: 0; font-size: 15px; line-height: 1.3; font-weight: 750; }
         .po-dashboard .po-card__head .po-button { min-height: 30px; padding: 5px 10px; }
-        .po-dashboard .po-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; margin: 0; border-bottom: 1px solid #edf0f3; }
+        .po-dashboard .po-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; margin: 0; border-bottom: 1px solid var(--saari-border); }
         .po-dashboard .po-row:last-child { border-bottom: 0; }
         .po-dashboard .po-row > div { min-width: 0; }
         .po-dashboard .po-row a { display: block; text-decoration: none; line-height: 1.4; }
@@ -57,7 +57,7 @@
         .po-dashboard .po-table-wrap { overflow-x: auto; margin: 0; }
         .po-dashboard .po-table { width: 100%; margin: 0; border-collapse: collapse; font-size: 12px; }
         .po-dashboard .po-table th { padding: 11px 12px; text-align: left; font-size: 11px; font-weight: 700; white-space: nowrap; }
-        .po-dashboard .po-table td { padding: 11px 12px; vertical-align: middle; border-top: 1px solid #edf0f3; }
+        .po-dashboard .po-table td { padding: 11px 12px; vertical-align: middle; border-top: 1px solid var(--saari-border); }
         .po-dashboard .po-table a { font-weight: 700; text-decoration: none; }
         .po-dashboard .po-table td:nth-child(2), .po-dashboard .po-table td:nth-child(3) { overflow-wrap: anywhere; }
         .po-dashboard .po-empty { margin: 0; padding: 24px 16px; text-align: center; color: var(--po-dash-muted); font-size: 12px; }
@@ -77,19 +77,6 @@
             .po-dashboard .po-management-actions .po-button { flex: 1 1 auto; }
         }
 
-        /* Card da navegação compartilhada do Pós-Obra. */
-        .po-module-nav-card {
-            display: flex !important; flex-wrap: wrap; align-items: center;
-            gap: 6px !important; padding: 10px 12px !important;
-            margin: 0 0 14px !important; background: #fff !important;
-            border: 1px solid #e5e9ef !important; border-radius: 10px !important;
-            box-shadow: none !important; width: 100%; box-sizing: border-box;
-            min-height: 0 !important;
-        }
-        .po-module-nav-card > a { margin: 0 !important; }
-        @media (max-width: 720px) {
-            .po-module-nav-card { gap: 4px !important; padding: 8px !important; }
-        }
     </style>
 
 

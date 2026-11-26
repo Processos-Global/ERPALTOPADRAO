@@ -77,13 +77,17 @@ def periodo_vencimento(parametros, hoje):
 
 
 def filtrar_titulos_base(parametros):
+    from financeiro.services.indicadores_gerenciais import _filtros
+
     qs = TituloPagar.objects.all()
     for parametro, campo in (("obra", "obra_id"), ("fornecedor", "fornecedor_id"),
-                             ("apropriacao", "plano_financeiro_id"), ("classe", "plano_financeiro__pai_id"),
+                             ("apropriacao", "plano_financeiro_id"),
                              ("solicitacao", "solicitacao_avulsa_id")):
         identificador = _inteiro_positivo(parametros.get(parametro))
         if identificador:
             qs = qs.filter(**{campo: identificador})
+    if classe := _inteiro_positivo(parametros.get("classe")):
+        qs = _filtros(qs, classe=classe)
     for campo, choices in (("status", TituloPagar.Status), ("origem", TituloPagar.Origem), ("conferencia", TituloPagar.Conferencia)):
         valor = parametros.get(campo)
         if valor in choices.values:

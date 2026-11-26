@@ -121,13 +121,14 @@
 .op-modal-dialog{display:flex;flex-direction:column;overflow:hidden!important;max-height:calc(100dvh - 32px);margin:auto}
 .op-modal-head{flex:none}
 .op-modal-body{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-.op-modal-actions{position:sticky;bottom:-20px;z-index:2;flex:none;background:#fff;margin-top:18px;padding:15px 0 2px}
+.op-modal-actions{position:sticky;bottom:-20px;z-index:2;flex:none;background:var(--saari-surface);margin-top:18px;padding:15px 0 2px}
 .stock-picker{position:relative}
-.stock-picker-list{position:relative;z-index:5;max-height:230px;margin-top:5px;overflow-y:auto;border:1px solid var(--op-line);border-radius:10px;background:#fff;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.stock-picker-list{position:relative;z-index:5;max-height:230px;margin-top:5px;overflow-y:auto;border:1px solid var(--op-line);border-radius:10px;background:var(--saari-surface-elevated);box-shadow:0 8px 20px rgba(0,0,0,.08)}
 .stock-picker-list[hidden],.stock-picker-empty[hidden]{display:none!important}
-.stock-picker-option{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;text-align:left;background:#fff;border:0;border-bottom:1px solid var(--op-line-soft);color:var(--op-text);font:inherit;cursor:pointer}
+.stock-picker-option{display:flex;width:100%;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--op-line-soft);color:var(--op-text);font:inherit;cursor:pointer}
 .stock-picker-option[hidden]{display:none!important}
-.stock-picker-option:hover,.stock-picker-option:focus-visible{background:var(--op-soft);outline:none}
+.stock-picker-option:hover,.stock-picker-option:focus-visible{background:var(--saari-hover)}
+.op-modal .stock-picker-option:focus-visible{outline:2px solid var(--saari-focus-ring);outline-offset:-2px}
 .stock-picker-option small{flex-shrink:0;color:var(--op-muted)}
 .stock-picker-empty{padding:12px;margin:0;color:var(--op-muted)}
 .stock-pages{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:15px 18px;border-top:1px solid var(--op-line-soft);font-size:13px;color:var(--op-muted)}

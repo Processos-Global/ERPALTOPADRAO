@@ -7,19 +7,18 @@
 <div class="op-page cc-page">
   <section class="op-head">
     <div class="op-head-copy">
-      <span class="op-eyebrow">Concretagem</span>
+      <nav class="op-breadcrumb" aria-label="Localização"><a href="{% url 'obras:concretagem_painel' %}">Concretagem</a></nav>
       <h1>Indicadores</h1>
       <p>Período pela data programada · {{ inicio|date:"d/m/Y" }} a {{ fim|date:"d/m/Y" }}. Concretagens canceladas ficam fora dos volumes.</p>
     </div>
-    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:concretagem_painel' %}">Voltar</a></div>
   </section>
 
-  <form method="get" class="op-toolbar" style="grid-template-columns:repeat(4,minmax(150px,1fr)) auto">
+  <form method="get" class="op-toolbar cc-toolbar-indicadores">
     <input type="hidden" name="aba" value="{{ aba }}">
-    <div class="op-field"><label>De</label><input type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
-    <div class="op-field"><label>Até</label><input type="date" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
-    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
-    <div class="op-field"><label>Concreteira</label><select name="concreteira"><option value="">Todas</option>{% for f in concreteiras %}<option value="{{ f.pk }}" {% if concreteira_filtro == f.pk %}selected{% endif %}>{{ f.nome_fantasia|default:f.nome }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label for="cc-ind-inicio">De</label><input id="cc-ind-inicio" type="date" name="inicio" value="{{ inicio|date:'Y-m-d' }}"></div>
+    <div class="op-field"><label for="cc-ind-fim">Até</label><input id="cc-ind-fim" type="date" name="fim" value="{{ fim|date:'Y-m-d' }}"></div>
+    <div class="op-field"><label for="cc-ind-obra">Obra</label><select id="cc-ind-obra" name="obra"><option value="">Todas</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label for="cc-ind-concreteira">Concreteira</label><select id="cc-ind-concreteira" name="concreteira"><option value="">Todas</option>{% for f in concreteiras %}<option value="{{ f.pk }}" {% if concreteira_filtro == f.pk %}selected{% endif %}>{{ f.nome_fantasia|default:f.nome }}</option>{% endfor %}</select></div>
     <button class="op-btn" type="submit">Filtrar</button>
   </form>
 
@@ -98,25 +97,72 @@
 {% if aba != "uso" %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"></script>
 <script>
-(function(){
-  if(!window.echarts)return;
-  var d=JSON.parse(document.getElementById('dados-ind').textContent);
-  var escuro=document.documentElement.getAttribute('data-theme')==='dark';
-  var txt=escuro?'#e8dfd6':'#453330',linha=escuro?'rgba(235,222,205,.14)':'#eee8d6';
-  var cores=['#2d201c','#b9aa72','#356848','#a94343','#2d5a8c','#8e5db8'];
-  var base={color:cores,textStyle:{color:txt,fontFamily:'inherit'},grid:{left:48,right:16,top:36,bottom:40},
-    tooltip:{trigger:'axis',valueFormatter:function(v){return (+v).toLocaleString('pt-BR',{maximumFractionDigits:2});}},legend:{top:0,textStyle:{color:txt}}};
-  function eixoY(){return {type:'value',axisLabel:{color:txt},splitLine:{lineStyle:{color:linha}}};}
-  function eixoX(dados){return {type:'category',data:dados,axisLabel:{color:txt,interval:0,hideOverlap:true},axisLine:{lineStyle:{color:linha}}};}
-  function grafico(nome,opcao){var el=document.querySelector('[data-grafico="'+nome+'"]');if(!el)return;var g=echarts.init(el);g.setOption(Object.assign({},base,opcao));window.addEventListener('resize',function(){g.resize();});}
-  var m=d.serie_mensal;
-  grafico('mensal',{xAxis:eixoX(m.rotulos),yAxis:eixoY(),series:[{name:'Solicitado',type:'bar',data:m.solicitado},{name:'Entregue',type:'bar',data:m.entregue,itemStyle:{color:'#b9aa72'}}]});
-  grafico('sobras',{tooltip:{trigger:'item'},legend:{show:false},series:[{type:'pie',radius:['40%','70%'],label:{color:txt,formatter:'{b}\n{c} m³'},data:d.destinos_sobra.map(function(x){return {name:x.destino,value:x.volume};})}]});
-  grafico('laudos',{xAxis:eixoX(d.laudos_idade.map(function(x){return x.idade;})),yAxis:Object.assign(eixoY(),{minInterval:1}),
-    series:[{name:'Aprovados',type:'bar',stack:'t',data:d.laudos_idade.map(function(x){return x.aprovados;}),itemStyle:{color:'#356848'}},
-            {name:'Abaixo do mínimo',type:'bar',stack:'t',data:d.laudos_idade.map(function(x){return x.reprovados;}),itemStyle:{color:'#a94343'}}]});
-  grafico('tipos',{grid:{left:130,right:20,top:10,bottom:20},legend:{show:false},xAxis:eixoY(),yAxis:Object.assign(eixoX(d.por_tipo.map(function(x){return x.tipo;})),{inverse:true}),
-    series:[{type:'bar',data:d.por_tipo.map(function(x){return x.volume;}),itemStyle:{color:'#2d201c'}}]});
+(() => {
+  if (!window.echarts) return;
+  const data = JSON.parse(document.getElementById('dados-ind').textContent);
+  const chartElements = [...document.querySelectorAll('[data-grafico]')];
+  const charts = new Map(chartElements.map(element => [element.dataset.grafico, echarts.init(element)]));
+
+  function updateTheme() {
+    const style = getComputedStyle(document.documentElement);
+    const token = name => style.getPropertyValue(name).trim();
+    const text = token('--op-text');
+    const line = token('--op-line');
+    const requested = token('--op-action');
+    const delivered = token('--op-gold');
+    const approved = token('--op-success');
+    const rejected = token('--op-danger');
+    const base = {
+      color: [requested, delivered, approved, rejected, token('--op-info'), token('--op-warning')],
+      textStyle: {color: text, fontFamily: token('--font-sans')},
+      grid: {left: 48, right: 16, top: 36, bottom: 40},
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: token('--saari-surface'),
+        borderColor: line,
+        textStyle: {color: text},
+        valueFormatter: value => (+value).toLocaleString('pt-BR', {maximumFractionDigits: 2}),
+      },
+      legend: {top: 0, textStyle: {color: text}},
+    };
+    const valueAxis = () => ({type: 'value', axisLabel: {color: text}, splitLine: {lineStyle: {color: line}}});
+    const categoryAxis = values => ({type: 'category', data: values, axisLabel: {color: text, interval: 0, hideOverlap: true},
+                                     axisLine: {lineStyle: {color: line}}});
+    function render(name, options) {
+      charts.get(name)?.setOption({...base, ...options}, {notMerge: true});
+    }
+
+    const monthly = data.serie_mensal;
+    render('mensal', {
+      xAxis: categoryAxis(monthly.rotulos), yAxis: valueAxis(),
+      series: [{name: 'Solicitado', type: 'bar', data: monthly.solicitado},
+               {name: 'Entregue', type: 'bar', data: monthly.entregue, itemStyle: {color: delivered}}],
+    });
+    render('sobras', {
+      tooltip: {...base.tooltip, trigger: 'item'},
+      legend: {show: false},
+      series: [{type: 'pie', radius: ['40%', '70%'], label: {color: text, formatter: '{b}\n{c} m³'},
+                data: data.destinos_sobra.map(entry => ({name: entry.destino, value: entry.volume}))}],
+    });
+    render('laudos', {
+      xAxis: categoryAxis(data.laudos_idade.map(entry => entry.idade)),
+      yAxis: {...valueAxis(), minInterval: 1},
+      series: [{name: 'Aprovados', type: 'bar', stack: 't', data: data.laudos_idade.map(entry => entry.aprovados), itemStyle: {color: approved}},
+               {name: 'Abaixo do mínimo', type: 'bar', stack: 't', data: data.laudos_idade.map(entry => entry.reprovados), itemStyle: {color: rejected}}],
+    });
+    render('tipos', {
+      grid: {left: 130, right: 20, top: 10, bottom: 20},
+      legend: {show: false},
+      xAxis: valueAxis(),
+      yAxis: {...categoryAxis(data.por_tipo.map(entry => entry.tipo)), inverse: true},
+      series: [{type: 'bar', data: data.por_tipo.map(entry => entry.volume), itemStyle: {color: requested}}],
+    });
+  }
+
+  updateTheme();
+  new MutationObserver(updateTheme).observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme', 'data-bs-theme']});
+  const observer = new ResizeObserver(entries => entries.forEach(({target}) => charts.get(target.dataset.grafico).resize()));
+  chartElements.forEach(element => observer.observe(element));
 })();
 </script>
 {% endif %}

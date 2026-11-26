@@ -6,7 +6,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from cadastros.models import Fornecedor
 from financeiro.models import Pagamento, TituloPagar
+from obras.models import Obra
 from usuarios.models import ModuloSistema, NivelPermissao, PermissaoModulo
 
 
@@ -63,6 +65,30 @@ class NavegacaoFinanceiraTests(TestCase):
                 self.assertTemplateUsed(resposta, 'financeiro/titulos_lista.html')
                 self.assertEqual([t.numero for t in resposta.context['page_obj']], ['FIN-LEGADO'])
                 self.assertEqual(resposta.context['indicadores']['em_aberto'], Decimal('42.16'))
+
+    def test_visao_geral_preserva_filtros_da_agenda_ao_detalhar_pagamentos(self):
+        self.client.force_login(get_user_model().objects.create_superuser('financeiro-dashboard-filtros'))
+        hoje = timezone.localdate()
+        obra = Obra.objects.create(nome='Obra selecionada', codigo='DASH-1')
+        outra = Obra.objects.create(nome='Outra obra', codigo='DASH-2')
+        fornecedor = Fornecedor.objects.create(nome='Fornecedor selecionado')
+        for i, destino in enumerate((obra, outra), 1):
+            TituloPagar.objects.create(numero=f'DASH-ABERTO-{i}', descricao='Em aberto', valor_original='50.20',
+                                      vencimento=hoje, obra=destino, fornecedor=fornecedor, status=TituloPagar.Status.APROVADO)
+            pago = TituloPagar.objects.create(numero=f'DASH-PAGO-{i}', descricao='Pago', valor_original='70.10',
+                                            vencimento=hoje - timedelta(days=40), obra=destino, fornecedor=fornecedor,
+                                            status=TituloPagar.Status.PAGO)
+            Pagamento.objects.create(titulo=pago, valor='70.10', data_pagamento=hoje)
+        filtros = {'obra': obra.pk, 'fornecedor': fornecedor.pk, 'periodo': 'intervalo',
+                   'inicio': hoje.isoformat(), 'fim': hoje.isoformat()}
+        resposta = self.client.get(reverse('financeiro:dashboard'), filtros)
+        self.assertEqual(resposta.context['total_hoje'], Decimal('50.20'))
+        self.assertEqual(resposta.context['pagos_mes'], Decimal('70.10'))
+        self.assertEqual([titulo.numero for titulo in resposta.context['agenda']], ['DASH-ABERTO-1'])
+        filtro_pago = {**filtros, 'aba': 'efetivados'}
+        pagamentos = self.client.get(reverse('financeiro:pagamentos'), filtro_pago)
+        self.assertEqual(pagamentos.context['total_pago'], Decimal('70.10'))
+        self.assertEqual([p.titulo.numero for p in pagamentos.context['page_obj']], ['DASH-PAGO-1'])
 
     def test_programar_preserva_vencimento_e_so_confirmar_liquida(self):
         self.client.force_login(get_user_model().objects.create_superuser('financeiro-programacao'))

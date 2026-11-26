@@ -7,15 +7,15 @@
 .op-page.fe-pagina{max-width:none}
 .fe-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 8px}
 .fe-head .op-muted{font-size:12px}
-.fe-modo{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 12px;border:2px solid var(--op-line);border-radius:10px;background:#fff;font:inherit;font-size:13px;font-weight:800;color:var(--op-ink);cursor:pointer}
+.fe-modo{appearance:none;display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:8px 12px;border:2px solid var(--op-line);border-radius:10px;background:var(--saari-surface);font:inherit;font-size:13px;font-weight:800;color:var(--op-ink);cursor:pointer}
 .fe-modo[aria-pressed="true"]{border-color:var(--op-ink);box-shadow:0 0 0 3px rgba(185,170,114,.35)}
 .fe-dica .fe-so-toque{display:none}
 @media(hover:none),(pointer:coarse){.fe-dica .fe-so-pc{display:none}.fe-dica .fe-so-toque{display:inline}}
 .fe-area.marcando{outline:3px solid rgba(185,170,114,.55);outline-offset:-3px}
 html[data-theme="dark"] .fe-modo{background:var(--saari-dark-raised);color:var(--saari-dark-text);border-color:var(--saari-dark-border)}
 .fe-zoom{display:inline-flex;gap:4px;margin-left:auto}
-.fe-zoom button{width:42px;height:42px;border:1px solid var(--op-line);border-radius:10px;background:#fff;font-size:20px;font-weight:800;color:var(--op-ink);cursor:pointer}
-.fe-area{overflow:auto;max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px);padding:6px;border:1px solid var(--op-line);border-radius:14px;background:#fcfaf6;-webkit-overflow-scrolling:touch}
+.fe-zoom button{width:42px;height:42px;border:1px solid var(--op-line);border-radius:10px;background:var(--saari-surface);font-size:20px;font-weight:800;color:var(--op-ink);cursor:pointer}
+.fe-area{overflow:auto;max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px);padding:6px;border:1px solid var(--op-line);border-radius:14px;background:var(--op-soft);-webkit-overflow-scrolling:touch}
 .fe-area .cc-grade{margin:0 auto;max-width:none;gap:1px;padding:1px}
 .fe-area .cc-cel{border-radius:3px}
 @media(max-width:760px){.fe-zoom{margin-left:0}.fe-area{max-height:calc(100dvh - 260px)}}

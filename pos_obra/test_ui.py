@@ -127,7 +127,8 @@ class InterfaceOperacionalTests(TestCase):
         with CaptureQueriesContext(connection) as consultas:
             resposta = self.client.get(reverse('pos_obra:painel'))
         self.assertEqual([resposta.context[chave] for chave in ('total', 'abertos', 'concluidos')], [3, 1, 1])
-        contagens = [q['sql'] for q in consultas if 'COUNT(' in q['sql'] and f'FROM "{Chamado._meta.db_table}"' in q['sql']]
+        tabela = connection.ops.quote_name(Chamado._meta.db_table)
+        contagens = [q['sql'] for q in consultas if 'COUNT(' in q['sql'] and f'FROM {tabela}' in q['sql']]
         self.assertEqual(len(contagens), 1)
 
     def test_encerramento_respeita_permissao_especifica(self):

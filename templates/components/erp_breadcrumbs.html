@@ -1,0 +1,16 @@
+{% if erp_nav_group and erp_nav_branch.route != erp_nav_group.landing.route %}
+    <nav class="saari-breadcrumbs" aria-label="Caminho da página">
+        <ol>
+            <li><a href="{{ erp_nav_group.landing.url }}">{{ erp_nav_group.label }}</a></li>
+            {% if erp_nav_branch.current %}
+                <li aria-current="page">{{ erp_nav_branch.label }}</li>
+            {% else %}
+                <li><a href="{{ erp_nav_branch.url }}">{{ erp_nav_branch.label }}</a></li>
+            {% endif %}
+        </ol>
+    </nav>
+{% elif erp_nav_group %}
+    <span class="topbar__module">{{ erp_nav_group.label }}</span>
+{% elif request.resolver_match.view_name == 'usuarios:notificacoes' %}
+    <span class="topbar__module">Notificações</span>
+{% endif %}

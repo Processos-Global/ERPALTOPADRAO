@@ -16,26 +16,7 @@
         id="saari-theme-color"
     >
 
-    <script>
-        /* Aplica o tema antes da pintura da página e evita clarão na navegação. */
-        (function () {
-            const STORAGE_KEY = 'saari-theme';
-            let theme = 'light';
-
-            try {
-                const saved = window.localStorage.getItem(STORAGE_KEY);
-                if (saved === 'dark' || saved === 'light') {
-                    theme = saved;
-                } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    theme = 'dark';
-                }
-            } catch (error) {
-                theme = 'light';
-            }
-
-            document.documentElement.dataset.theme = theme;
-        })();
-    </script>
+    {% include "components/theme_init.html" %}
 
     <title>{% block title %}SAARI ERP{% endblock %}</title>
 
@@ -46,617 +27,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap" rel="stylesheet">
     <link
         rel="stylesheet"
-        href="{% static 'css/base.css' %}?v=20261124-2"
+        href="{% static 'css/base.css' %}?v=20261125"
     >
-
-    <style>
-        :root {
-            /* Identidade visual SAARI */
-            --opal-blue: #b9aa72;
-            --opal-blue-dark: #453330;
-            --opal-blue-deep: #2d201c;
-            --opal-blue-soft: #eee8d6;
-            --opal-blue-border: #ded7c8;
-        }
-
-        .sidebar {
-            background: var(--opal-blue-deep);
-        }
-
-        .brand__mark,
-        .sidebar-link__icon,
-        .sidebar-logout,
-        .user-summary__avatar,
-        .sidebar__section-title,
-        .sidebar__modules-header small {
-            color: #ffffff;
-        }
-
-        .brand__mark,
-        .page-transition__mark {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .brand__mark .icon {
-            width: 1.15rem;
-            height: 1.15rem;
-        }
-
-        .page-transition__mark .icon {
-            width: 1.35rem;
-            height: 1.35rem;
-        }
-
-        .sidebar-link--active {
-            background: rgba(255, 255, 255, 0.10);
-            border-left-color: #ffffff;
-        }
-
-        .sidebar-link:hover {
-            background: rgba(255, 255, 255, 0.07);
-        }
-
-        .topbar__status {
-            background: var(--opal-blue);
-        }
-
-        .page-transition {
-            background: var(--opal-blue-deep);
-        }
-
-        .page-transition__mark {
-            border-color: rgba(255, 255, 255, 0.55);
-            color: #ffffff;
-        }
-
-        .page-transition {
-            z-index: 2147483000;
-        }
-
-        /* Estado recolhido: deixa a sidebar realmente icon-only. */
-        body.sidebar-is-collapsed .sidebar {
-            overflow-x: hidden !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar__project,
-        body.sidebar-is-collapsed .sidebar__section-title,
-        body.sidebar-is-collapsed .sidebar__modules-header,
-        body.sidebar-is-collapsed .brand__content,
-        body.sidebar-is-collapsed .sidebar-link__text,
-        body.sidebar-is-collapsed .user-summary__content,
-        body.sidebar-is-collapsed .sidebar-logout__text,
-        body.sidebar-is-collapsed .sidebar__mobile-close {
-            display: none !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar__header {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-        }
-
-        body.sidebar-is-collapsed .brand {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 100% !important;
-            min-width: 0 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            gap: 0 !important;
-        }
-
-        body.sidebar-is-collapsed .brand__mark {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 2.5rem !important;
-            height: 2.5rem !important;
-            min-width: 2.5rem !important;
-            margin: 0 auto !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-
-        body.sidebar-is-collapsed .brand__mark .icon {
-            display: block !important;
-            width: 1.15rem !important;
-            height: 1.15rem !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar__navigation,
-        body.sidebar-is-collapsed .sidebar__modules,
-        body.sidebar-is-collapsed .sidebar__modules-list,
-        body.sidebar-is-collapsed .sidebar__footer,
-        body.sidebar-is-collapsed .logout-form {
-            width: 100% !important;
-            min-width: 0 !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar__navigation,
-        body.sidebar-is-collapsed .sidebar__modules-list,
-        body.sidebar-is-collapsed .sidebar__footer {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-link,
-        body.sidebar-is-collapsed .sidebar-logout,
-        body.sidebar-is-collapsed .user-summary {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 2.75rem !important;
-            min-width: 2.75rem !important;
-            max-width: 2.75rem !important;
-            height: 2.75rem !important;
-            min-height: 2.75rem !important;
-            padding: 0 !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            gap: 0 !important;
-            box-sizing: border-box !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-link__icon {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            flex: 0 0 auto !important;
-            width: 1.25rem !important;
-            height: 1.25rem !important;
-            min-width: 1.25rem !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            color: #ffffff !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-link__icon .icon,
-        body.sidebar-is-collapsed .sidebar-logout .icon {
-            display: block !important;
-            width: 1.05rem !important;
-            height: 1.05rem !important;
-            min-width: 1.05rem !important;
-            margin: 0 !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-            color: #ffffff !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-link--active {
-            background: rgba(255, 255, 255, 0.12) !important;
-            border-left: 0 !important;
-            box-shadow: inset 2px 0 0 rgba(255, 255, 255, 0.95) !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-link:hover {
-            background: rgba(255, 255, 255, 0.08) !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar__divider {
-            width: calc(100% - 2rem) !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-        }
-
-        body.sidebar-is-collapsed .user-summary {
-            border: 0 !important;
-            background: transparent !important;
-        }
-
-        body.sidebar-is-collapsed .user-summary__avatar {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-
-        /* Navegação hierárquica dos módulos. */
-        .sidebar-module-group {
-            width: 100%;
-        }
-
-        .sidebar__modules-list {
-            overflow: visible !important;
-        }
-
-        .sidebar-module-group,
-        .sidebar-module-parent,
-        .sidebar-submenu,
-        .sidebar-submenu__inner {
-            box-sizing: border-box;
-        }
-
-        .sidebar-module-parent {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 2rem;
-            align-items: center;
-            width: 100%;
-            min-width: 0;
-            position: relative;
-        }
-
-        .sidebar-module-parent > .sidebar-link {
-            width: auto !important;
-            min-width: 0 !important;
-            max-width: none !important;
-            margin-right: 0 !important;
-            padding-right: .35rem !important;
-        }
-
-        .sidebar-submenu-toggle {
-            width: 1.8rem;
-            height: 1.8rem;
-            min-width: 1.8rem;
-            border: 0;
-            border-radius: .45rem;
-            margin: 0 .35rem 0 0;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: rgba(255, 255, 255, .78);
-            background: transparent;
-            cursor: pointer;
-            transition:
-                background .16s ease,
-                color .16s ease,
-                transform .16s ease;
-            position: relative;
-            z-index: 4;
-        }
-
-        .sidebar-submenu-toggle:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, .08);
-        }
-
-        .sidebar-submenu-toggle .icon {
-            width: .9rem;
-            height: .9rem;
-            transition: transform .18s ease;
-        }
-
-        .sidebar-module-group.is-open .sidebar-submenu-toggle .icon {
-            transform: rotate(180deg);
-        }
-
-        .sidebar-submenu {
-            display: grid;
-            grid-template-rows: 0fr;
-            opacity: 0;
-            transition:
-                grid-template-rows .2s ease,
-                opacity .16s ease,
-                margin .2s ease;
-            margin: 0;
-        }
-
-        .sidebar-module-group.is-open .sidebar-submenu {
-            grid-template-rows: 1fr;
-            opacity: 1;
-            margin: .15rem 0 .35rem;
-        }
-
-        .sidebar-submenu__inner {
-            overflow: hidden;
-            min-height: 0;
-        }
-
-        .sidebar-sublink {
-            min-height: 2.15rem;
-            display: flex;
-            align-items: center;
-            gap: .55rem;
-            margin: .08rem .5rem .08rem 2.45rem;
-            padding: .4rem .65rem;
-            border-radius: .55rem;
-            color: rgba(255, 255, 255, .72);
-            text-decoration: none;
-            font-size: .78rem;
-            font-weight: 600;
-            transition:
-                background .16s ease,
-                color .16s ease,
-                transform .16s ease;
-        }
-
-        .sidebar-sublink:hover {
-            color: #ffffff;
-            background: rgba(255, 255, 255, .07);
-        }
-
-        .sidebar-sublink--active {
-            color: #ffffff;
-            background: rgba(255, 255, 255, .055);
-        }
-
-        .sidebar-sublink__dot {
-            width: .42rem;
-            height: .42rem;
-            border-radius: 50%;
-            background: currentColor;
-            opacity: .65;
-            flex: 0 0 .42rem;
-        }
-
-        .sidebar-sublink--active .sidebar-sublink__dot {
-            opacity: 1;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, .08);
-        }
-
-        .sidebar-sublink--disabled {
-            cursor: default;
-            opacity: .46;
-            pointer-events: none;
-        }
-
-        .sidebar-sublink--disabled .sidebar-sublink__dot {
-            opacity: .4;
-        }
-
-        /* Quando a sidebar inteira estiver recolhida, mantém apenas o item pai. */
-        body.sidebar-is-collapsed .sidebar-submenu,
-        body.sidebar-is-collapsed .sidebar-submenu-toggle {
-            display: none !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-module-parent {
-            display: flex !important;
-            width: 100% !important;
-            justify-content: center !important;
-        }
-
-        body.sidebar-is-collapsed .sidebar-module-parent > .sidebar-link {
-            width: 2.75rem !important;
-            min-width: 2.75rem !important;
-            max-width: 2.75rem !important;
-            padding-right: 0 !important;
-        }
-
-
-        /* Central de notificações — adicionada sem alterar o layout existente. */
-        .notification-center {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            margin-right: .35rem;
-        }
-
-        .notification-center__button {
-            position: relative;
-            width: 2.15rem;
-            height: 2.15rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 0;
-            border-radius: .6rem;
-            background: transparent;
-            color: #756861;
-            cursor: pointer;
-            transition: background .16s ease, color .16s ease;
-        }
-
-        .notification-center__button:hover,
-        .notification-center.is-open .notification-center__button {
-            background: #f1ece4;
-            color: var(--opal-blue-dark);
-        }
-
-        .notification-center__button svg {
-            width: 1.08rem;
-            height: 1.08rem;
-        }
-
-        .notification-center__badge {
-            position: absolute;
-            top: .1rem;
-            right: .05rem;
-            min-width: 1rem;
-            height: 1rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 .2rem;
-            border-radius: 999px;
-            border: 2px solid #ffffff;
-            background: #DC2626;
-            color: #ffffff;
-            font-size: .57rem;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .notification-center__panel {
-            position: absolute;
-            top: calc(100% + .65rem);
-            right: 0;
-            z-index: 1200;
-            width: min(360px, calc(100vw - 24px));
-            overflow: hidden;
-            border: 1px solid #ded7c8;
-            border-radius: .75rem;
-            background: #ffffff;
-            box-shadow: 0 18px 45px rgba(45,32,28, .14);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-6px);
-            transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
-        }
-
-        .notification-center.is-open .notification-center__panel {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .notification-center__header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: .75rem;
-            padding: .9rem 1rem;
-            border-bottom: 1px solid #ece6dc;
-        }
-
-        .notification-center__header strong {
-            color: #453330;
-            font-size: .84rem;
-        }
-
-        .notification-center__header span {
-            color: #85776f;
-            font-size: .69rem;
-        }
-
-        .notification-center__list {
-            max-height: 360px;
-            overflow-y: auto;
-        }
-
-        .notification-center__item {
-            display: grid;
-            grid-template-columns: 8px minmax(0, 1fr);
-            gap: .65rem;
-            padding: .8rem 1rem;
-            border-bottom: 1px solid #f1ece4;
-            color: inherit;
-            text-decoration: none;
-        }
-
-        .notification-center__item:hover {
-            background: #f8f4ed;
-        }
-
-        .notification-center__dot {
-            width: 7px;
-            height: 7px;
-            margin-top: .34rem;
-            border-radius: 50%;
-            background: transparent;
-        }
-
-        .notification-center__item.is-unread .notification-center__dot {
-            background: var(--opal-blue);
-        }
-
-        .notification-center__content strong {
-            display: block;
-            margin-bottom: .18rem;
-            color: #453330;
-            font-size: .76rem;
-            line-height: 1.35;
-        }
-
-        .notification-center__content span,
-        .notification-center__content small {
-            display: block;
-            color: #85776f;
-            font-size: .68rem;
-            line-height: 1.4;
-        }
-
-        .notification-center__content small {
-            margin-top: .3rem;
-            color: #a39890;
-        }
-
-        .notification-center__empty {
-            padding: 1.4rem 1rem;
-            text-align: center;
-            color: #85776f;
-            font-size: .74rem;
-        }
-
-        .notification-center__footer {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 2.7rem;
-            padding: .35rem;
-            border-top: 1px solid #ece6dc;
-        }
-
-        .notification-center__footer a {
-            color: var(--opal-blue-dark);
-            font-size: .72rem;
-            font-weight: 750;
-            text-decoration: none;
-        }
-
-        @media (max-width: 640px) {
-            .notification-center__panel {
-                position: fixed;
-                top: 4.3rem;
-                right: .75rem;
-                left: .75rem;
-                width: auto;
-            }
-        }
-
-        /* Ajustes finais da identidade SAARI */
-        .brand__content strong {
-            font-family: "Source Serif 4", Georgia, serif;
-            color: #ffffff;
-            letter-spacing: .08em;
-            font-weight: 500;
-        }
-
-        .brand__content small {
-            color: rgba(255, 255, 255, .62);
-            letter-spacing: .18em;
-        }
-
-        .brand__mark img,
-        .page-transition__mark img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .brand__mark {
-            border-color: rgba(185, 170, 114, .58);
-        }
-
-        .page-transition__mark {
-            border-color: rgba(185, 170, 114, .58);
-        }
-
-        .topbar__status {
-            background: #b9aa72 !important;
-        }
-
-    </style>
 
     {% block extra_css %}{% endblock %}
     {% include "components/saari_theme.html" %}
+    <link rel="stylesheet" href="{% static 'css/saari-shell.css' %}?v=20261125">
+    <link rel="stylesheet" href="{% static 'css/saari-select-search.css' %}?v=20261125">
 </head>
 
-<body class="app-body">
+<body class="app-body" data-nav-account="{{ erp_nav_account }}">
+    <a class="saari-skip-link" href="#main-content">Ir para o conteúdo</a>
     {% include "components/icons.html" %}
-
-    <div
-        class="page-transition"
-        data-page-transition
-        aria-hidden="true"
-    >
-        <div class="page-transition__mark">
-            <img src="{% static 'img/saari/saari-simbolo-gold.png' %}" alt="" aria-hidden="true">
-        </div>
-    </div>
 
     <div class="app-shell">
         <aside
@@ -723,248 +105,7 @@
             {% endif %}
 
             {% endif %}
-            <nav
-                class="sidebar__navigation"
-                aria-label="Navegação principal"
-            >
-                <span class="sidebar__section-title">
-                    Navegação
-                </span>
-
-                <a
-                    href="{{ sidebar_dashboard.url }}"
-                    class="sidebar-link {% if sidebar_dashboard.ativo %}sidebar-link--active{% endif %}"
-                    data-transition-link
-                    title="{{ sidebar_dashboard.titulo }}"
-                >
-                    <span class="sidebar-link__icon">
-                        <svg class="icon">
-                            <use href="#icon-{{ sidebar_dashboard.icone }}"></use>
-                        </svg>
-                    </span>
-
-                    <span class="sidebar-link__text">
-                        {{ sidebar_dashboard.titulo }}
-                    </span>
-                </a>
-            </nav>
-
-            {% if is_cliente_pos_obra %}
-            <section class="sidebar__modules">
-              <header class="sidebar__modules-header"><span class="sidebar__section-title">Portal do cliente</span><small>3</small></header>
-              <div class="sidebar__modules-list">
-                <a href="{% url 'pos_obra:portal' %}" class="sidebar-link {% if request.resolver_match.view_name == 'pos_obra:portal' %}sidebar-link--active{% endif %}" data-transition-link title="Meus imóveis"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-building"></use></svg></span><span class="sidebar-link__text">Meus imóveis</span></a>
-                <a href="{% url 'pos_obra:portal_novo' %}" class="sidebar-link {% if request.resolver_match.view_name == 'pos_obra:portal_novo' %}sidebar-link--active{% endif %}" data-transition-link title="Nova solicitação"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-file"></use></svg></span><span class="sidebar-link__text">Nova solicitação</span></a>
-                <a href="{% url 'pos_obra:portal' %}#meus-chamados" class="sidebar-link" data-transition-link title="Minhas solicitações"><span class="sidebar-link__icon"><svg class="icon"><use href="#icon-calendar"></use></svg></span><span class="sidebar-link__text">Minhas solicitações</span></a>
-              </div>
-            </section>
-            {% else %}
-            <section class="sidebar__modules">
-                <header class="sidebar__modules-header">
-                    <span class="sidebar__section-title">
-                        Módulos
-                    </span>
-
-                    <small>{{ sidebar_total_modulos }}</small>
-                </header>
-
-                <div class="sidebar__modules-list">
-                    {% if planejamento_acesso %}
-<a
-                        href="{% url 'planejamento:menu' %}"
-                        class="sidebar-link {% if request.resolver_match.namespace == 'planejamento' %}sidebar-link--active{% endif %}"
-                        data-transition-link
-                        title="Planejamento"
-                    >
-                        <span class="sidebar-link__icon">
-                            <svg class="icon">
-                                <use href="#icon-calendar"></use>
-                            </svg>
-                        </span>
-
-                        <span class="sidebar-link__text">
-                            Planejamento
-                        </span>
-                    </a>
-{% endif %}
-                        {% if projetos_acesso %}
-<a
-                            href="{% url 'projetos:menu' %}"
-                            class="sidebar-link {% if request.resolver_match.namespace == 'projetos' %}sidebar-link--active{% endif %}"
-                            data-transition-link
-                            title="Projetos"
-                        >
-                            <span class="sidebar-link__icon">
-                                <svg class="icon">
-                                    <use href="#icon-file"></use>
-                                </svg>
-                            </span>
-
-                            <span class="sidebar-link__text">
-                                Projetos
-                            </span>
-                        </a>
-{% endif %}
-
-                    {% if obras_acesso %}
-<a
-                        href="{% url 'obras:menu' %}"
-                        class="sidebar-link {% if request.resolver_match.namespace == 'obras' %}sidebar-link--active{% endif %}"
-                        data-transition-link
-                        title="Obras"
-                    >
-                        <span class="sidebar-link__icon">
-                            <svg class="icon">
-                                <use href="#icon-building"></use>
-                            </svg>
-                        </span>
-
-                        <span class="sidebar-link__text">
-                            Obras
-                        </span>
-                    </a>
-{% endif %}
-
-                    {% if compras_acesso %}
-<a
-                        href="{% url 'compras:menu' %}"
-                        class="sidebar-link {% if request.resolver_match.namespace == 'compras' %}sidebar-link--active{% endif %}"
-                        data-transition-link
-                        title="Suprimentos"
-                    >
-                        <span class="sidebar-link__icon">
-                            <svg class="icon">
-                                <use href="#icon-cart"></use>
-                            </svg>
-                        </span>
-
-                        <span class="sidebar-link__text">
-                            Suprimentos
-                        </span>
-                    </a>
-{% endif %}
-
-
-                    {% if financeiro_acesso %}
-                        <a
-                            href="{% url 'financeiro:dashboard' %}"
-                            class="sidebar-link {% if request.resolver_match.namespace == 'financeiro' %}sidebar-link--active{% endif %}"
-                            data-transition-link
-                            title="Financeiro"
-                        >
-                            <span class="sidebar-link__icon">
-                                <svg class="icon"><use href="#icon-wallet"></use></svg>
-                            </span>
-                            <span class="sidebar-link__text">Financeiro</span>
-                        </a>
-                    {% endif %}
-
-                    {% if pos_obra_acesso %}
-                        <a
-                            href="{% url 'pos_obra:painel' %}"
-                            class="sidebar-link {% if request.resolver_match.namespace == 'pos_obra' %}sidebar-link--active{% endif %}"
-                            data-transition-link
-                            title="Pós-Obra"
-                        >
-                            <span class="sidebar-link__icon">
-                                <svg class="icon"><use href="#icon-tools"></use></svg>
-                            </span>
-                            <span class="sidebar-link__text">Pós-Obra</span>
-                        </a>
-                    {% endif %}
-
-                    {% if indicadores_acesso %}
-                    <a href="{% url 'relatorios:indicadores' %}" class="sidebar-link {% if request.resolver_match.namespace == 'relatorios' %}sidebar-link--active{% endif %}" data-transition-link title="Indicadores">
-                        <span class="sidebar-link__icon"><svg class="icon"><use href="#icon-chart"></use></svg></span>
-                        <span class="sidebar-link__text">Indicadores</span>
-                    </a>
-                    {% endif %}
-
-                    {% if cadastros_acesso %}
-                        <a
-                            href="{% url 'cadastros:index' %}"
-                            class="sidebar-link {% if request.resolver_match.namespace == 'cadastros' %}sidebar-link--active{% endif %}"
-                            data-transition-link
-                            title="Cadastros"
-                        >
-                            <span class="sidebar-link__icon">
-                                <svg class="icon"><use href="#icon-file"></use></svg>
-                            </span>
-                            <span class="sidebar-link__text">Cadastros</span>
-                        </a>
-                    {% endif %}
-
-                    {% if usuarios_acesso %}
-                        <a
-                            href="{% url 'usuarios:lista_usuarios' %}"
-                            class="sidebar-link {% if request.resolver_match.namespace == 'usuarios' %}sidebar-link--active{% endif %}"
-                            data-transition-link
-                            title="Usuários"
-                        >
-                            <span class="sidebar-link__icon">
-                                <svg class="icon">
-                                    <use href="#icon-user"></use>
-                                </svg>
-                            </span>
-
-                            <span class="sidebar-link__text">
-                                Usuários
-                            </span>
-                        </a>
-                    {% endif %}
-                </div>
-            </section>
-
-            {% endif %}
-            <footer class="sidebar__footer">
-                <div class="user-summary">
-                    <span class="user-summary__avatar">
-                        {% if request.user.first_name %}
-                            {{ request.user.first_name|first|upper }}
-                        {% else %}
-                            {{ request.user.username|first|upper }}
-                        {% endif %}
-                    </span>
-
-                    <span class="user-summary__content">
-                        <strong>
-                            {{ request.user.get_full_name|default:request.user.username }}
-                        </strong>
-
-                        <small>
-                            {% if request.user.is_superuser %}
-                                Administrador
-                            {% else %}
-                                {{ request.user.perfil_erp.get_cargo_display|default:"Usuário" }}
-                            {% endif %}
-                        </small>
-                    </span>
-                </div>
-
-                <form
-                    method="post"
-                    action="{% url 'usuarios:logout' %}"
-                    class="logout-form"
-                    data-logout-form
-                >
-                    {% csrf_token %}
-
-                    <button
-                        type="submit"
-                        class="sidebar-logout"
-                        title="Sair"
-                        data-logout-open
-                    >
-                        <svg class="icon">
-                            <use href="#icon-exit"></use>
-                        </svg>
-
-                        <span class="sidebar-logout__text">
-                            Sair
-                        </span>
-                    </button>
-                </form>
-            </footer>
+            {% if erp_nav_home %}{% include "components/erp_sidebar_navigation.html" %}{% endif %}
         </aside>
 
         <div
@@ -989,26 +130,19 @@
                     </button>
 
                     <div class="topbar__context">
+                        {% block breadcrumbs %}{% include "components/erp_breadcrumbs.html" %}{% endblock %}
                     </div>
                 </div>
 
                 <div class="topbar__account">
 
-                    <button
-                        type="button"
-                        class="theme-toggle"
-                        data-theme-toggle
-                        aria-label="Ativar modo noturno"
-                        title="Modo noturno"
-                    >
-                        <svg class="theme-toggle__moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path>
-                        </svg>
-                        <svg class="theme-toggle__sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="4"></circle>
-                            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"></path>
-                        </svg>
+                    {% if erp_nav_home %}
+                    <button type="button" class="saari-command-trigger" data-command-open aria-label="Buscar funcionalidades" aria-haspopup="dialog" aria-controls="saari-command" aria-keyshortcuts="Control+k Meta+k">
+                        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+                        <span>Buscar</span><kbd>Ctrl K</kbd>
                     </button>
+                    {% endif %}
+                    {% include "components/theme_picker.html" %}
 
                     {% if not is_cliente_pos_obra %}
                     <div class="notification-center" data-notification-center>
@@ -1016,7 +150,8 @@
                             type="button"
                             class="notification-center__button"
                             data-notification-toggle
-                            aria-label="Abrir notificações"
+                            aria-label="Notificações{% if notificacoes_nao_lidas %}, {{ notificacoes_nao_lidas }} não lidas{% endif %}"
+                            aria-controls="saari-notifications"
                             aria-expanded="false"
                             title="Notificações"
                         >
@@ -1032,7 +167,7 @@
                             {% endif %}
                         </button>
 
-                        <div class="notification-center__panel" data-notification-panel>
+                        <div class="notification-center__panel" id="saari-notifications" data-notification-panel hidden>
                             <div class="notification-center__header">
                                 <strong>Notificações</strong>
                                 <span>{{ notificacoes_nao_lidas }} não lida{{ notificacoes_nao_lidas|pluralize:"s" }}</span>
@@ -1040,18 +175,20 @@
 
                             <div class="notification-center__list">
                                 {% for notificacao in notificacoes_recentes %}
-                                    <a
-                                        href="{% url 'usuarios:abrir_notificacao' notificacao.pk %}"
-                                        class="notification-center__item {% if not notificacao.lida %}is-unread{% endif %}"
-                                        data-notification-link
-                                    >
-                                        <span class="notification-center__dot" aria-hidden="true"></span>
-                                        <span class="notification-center__content">
-                                            <strong>{{ notificacao.titulo }}</strong>
-                                            <span>{{ notificacao.mensagem }}</span>
-                                            <small>{{ notificacao.atualizada_em|timesince }} atrás</small>
-                                        </span>
-                                    </a>
+                                    <form method="post" action="{% url 'usuarios:abrir_notificacao' notificacao.pk %}">
+                                        {% csrf_token %}
+                                        <button
+                                            type="submit"
+                                            class="notification-center__item {% if not notificacao.lida %}is-unread{% endif %}"
+                                        >
+                                            <span class="notification-center__dot" aria-hidden="true"></span>
+                                            <span class="notification-center__content">
+                                                <strong>{{ notificacao.titulo }}</strong>
+                                                <span>{{ notificacao.mensagem }}</span>
+                                                <small>{% if not notificacao.lida %}Não lida · {% endif %}{{ notificacao.atualizada_em|timesince }} atrás</small>
+                                            </span>
+                                        </button>
+                                    </form>
                                 {% empty %}
                                     <div class="notification-center__empty">
                                         Nenhuma notificação por enquanto.
@@ -1066,18 +203,31 @@
                     </div>
 
                     {% endif %}
-                    <span class="topbar__status"></span>
-
-                    <span class="topbar__account-text">
-                        {{ request.user.first_name|default:request.user.username }}
-                    </span>
+                    {% if request.user.is_authenticated %}
+                    <details class="saari-profile">
+                        <summary class="saari-profile__summary" title="Perfil" aria-label="Perfil de {{ request.user.get_full_name|default:request.user.username }}">
+                            {{ request.user.first_name|default:request.user.username|first|upper }}
+                        </summary>
+                        <div class="saari-profile__panel">
+                            <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                            <span>{% if request.user.is_superuser %}Administrador{% else %}{{ request.user.perfil_erp.get_cargo_display|default:"Usuário" }}{% endif %}</span>
+                            <form method="post" action="{% url 'usuarios:logout' %}" data-logout-form>
+                                {% csrf_token %}
+                                <button type="submit" class="saari-profile__logout" data-logout-open>
+                                    <svg class="icon" aria-hidden="true"><use href="#icon-exit"></use></svg>
+                                    Sair
+                                </button>
+                            </form>
+                        </div>
+                    </details>
+                    {% endif %}
                 </div>
             </header>
 
             {% if messages %}
                 <div class="messages">
                     {% for message in messages %}
-                        <div class="message message--{{ message.tags }}" role="status">
+                        <div class="message message--{{ message.tags }}" role="{% if 'error' in message.tags or 'danger' in message.tags %}alert{% else %}status{% endif %}">
                             <span class="message__icon" aria-hidden="true">
                                 {% if 'error' in message.tags or 'danger' in message.tags %}
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5"></path><path d="M12 16.5h.01"></path></svg>
@@ -1099,15 +249,16 @@
                 </div>
             {% endif %}
 
-            <main class="page-content page-reveal">
+            <main id="main-content" class="page-content page-reveal" tabindex="-1">
                 {% block content %}{% endblock %}
             </main>
         </section>
     </div>
 
-    <div class="logout-dialog" data-logout-dialog aria-hidden="true">
-        <div class="logout-dialog__backdrop" data-logout-cancel></div>
-        <div class="logout-dialog__card" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
+    {% if erp_nav_home %}{% include "components/erp_search.html" %}{% endif %}
+
+    <dialog class="saari-logout-dialog" data-logout-dialog aria-labelledby="logout-dialog-title">
+        <div class="saari-logout-dialog__content">
             <div class="logout-dialog__top">
                 <span class="logout-dialog__icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M13 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6"></path></svg>
@@ -1118,186 +269,17 @@
                 </div>
             </div>
             <div class="logout-dialog__actions">
-                <button type="button" class="logout-dialog__btn" data-logout-cancel>Cancelar</button>
+                <button type="button" class="logout-dialog__btn" data-logout-cancel autofocus>Cancelar</button>
                 <button type="button" class="logout-dialog__btn logout-dialog__btn--primary" data-logout-confirm>Sair</button>
             </div>
         </div>
-    </div>
-
-    <script>
-        (function(){
-            const form=document.querySelector('[data-logout-form]');
-            const dialog=document.querySelector('[data-logout-dialog]');
-            if(!form||!dialog) return;
-            const open=()=>{dialog.classList.add('is-open');dialog.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>dialog.querySelector('[data-logout-confirm]')?.focus(),20)};
-            const close=()=>{dialog.classList.remove('is-open');dialog.setAttribute('aria-hidden','true');document.body.style.overflow=''};
-            form.addEventListener('submit',function(e){if(form.dataset.logoutConfirmed==='1') return;e.preventDefault();open()});
-            dialog.querySelectorAll('[data-logout-cancel]').forEach(el=>el.addEventListener('click',close));
-            dialog.querySelector('[data-logout-confirm]')?.addEventListener('click',()=>{form.dataset.logoutConfirmed='1';form.submit()});
-            document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dialog.classList.contains('is-open')) close()});
-        })();
-
-    </script>
+    </dialog>
 
     {% url 'financeiro:relatorio_pagamento_emitir' as emissao_pacote_pagamento %}
-    <script defer src="{% static 'js/app.js' %}?v=20261124-2"
-            data-native-download-action="{{ emissao_pacote_pagamento }}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            /* Submenus dos módulos da sidebar. */
-            const submenuToggles = document.querySelectorAll('[data-sidebar-submenu-toggle]');
-
-            submenuToggles.forEach(function (submenuToggle) {
-                const groupName = submenuToggle.getAttribute('data-sidebar-submenu-toggle');
-                const group = document.querySelector(
-                    '[data-sidebar-module-group="' + groupName + '"]'
-                );
-
-                if (!group) {
-                    return;
-                }
-
-                const storageKey = 'erp-sidebar-submenu-' + groupName;
-                const activeChild = group.querySelector('.sidebar-sublink--active');
-
-                if (!activeChild) {
-                    try {
-                        const savedState = window.localStorage.getItem(storageKey);
-
-                        if (savedState === 'open') {
-                            group.classList.add('is-open');
-                            submenuToggle.setAttribute('aria-expanded', 'true');
-                        } else if (savedState === 'closed') {
-                            group.classList.remove('is-open');
-                            submenuToggle.setAttribute('aria-expanded', 'false');
-                        }
-                    } catch (error) {
-                        /* localStorage indisponível: mantém o estado padrão. */
-                    }
-                } else {
-                    group.classList.add('is-open');
-                    submenuToggle.setAttribute('aria-expanded', 'true');
-                }
-
-                submenuToggle.addEventListener('click', function (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-
-                    const isOpen = group.classList.toggle('is-open');
-                    submenuToggle.setAttribute(
-                        'aria-expanded',
-                        isOpen ? 'true' : 'false'
-                    );
-
-                    try {
-                        window.localStorage.setItem(
-                            storageKey,
-                            isOpen ? 'open' : 'closed'
-                        );
-                    } catch (error) {
-                        /* localStorage indisponível: submenu continua funcional. */
-                    }
-                });
-            });
-        });
-    </script>
-
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const center = document.querySelector('[data-notification-center]');
-            const toggle = document.querySelector('[data-notification-toggle]');
-
-            if (!center || !toggle) {
-                return;
-            }
-
-            function closeNotifications() {
-                center.classList.remove('is-open');
-                toggle.setAttribute('aria-expanded', 'false');
-            }
-
-            toggle.addEventListener('click', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                const open = center.classList.toggle('is-open');
-                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            });
-
-            center.addEventListener('click', function (event) {
-                event.stopPropagation();
-            });
-
-            document.addEventListener('click', closeNotifications);
-
-            document.addEventListener('keydown', function (event) {
-                if (event.key === 'Escape') {
-                    closeNotifications();
-                }
-            });
-        });
-    </script>
-
-
-    <script>
-        (function () {
-            const STORAGE_KEY = 'saari-theme';
-            const root = document.documentElement;
-            const toggle = document.querySelector('[data-theme-toggle]');
-            const themeMeta = document.getElementById('saari-theme-color');
-
-            function setTheme(theme, persist) {
-                const normalized = theme === 'dark' ? 'dark' : 'light';
-                root.dataset.theme = normalized;
-
-                if (themeMeta) {
-                    themeMeta.setAttribute('content', normalized === 'dark' ? '#171311' : '#453330');
-                }
-
-                if (toggle) {
-                    const dark = normalized === 'dark';
-                    toggle.setAttribute('aria-label', dark ? 'Ativar modo claro' : 'Ativar modo noturno');
-                    toggle.setAttribute('title', dark ? 'Modo claro' : 'Modo noturno');
-                    toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
-                }
-
-                if (persist) {
-                    try {
-                        window.localStorage.setItem(STORAGE_KEY, normalized);
-                    } catch (error) {
-                        /* Navegação privada/restrita: o tema segue funcional na página atual. */
-                    }
-                }
-            }
-
-            setTheme(root.dataset.theme || 'light', false);
-
-            if (toggle) {
-                toggle.addEventListener('click', function () {
-                    setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true);
-                });
-            }
-
-            /* Se o usuário ainda não escolheu manualmente, acompanha o sistema operacional. */
-            if (window.matchMedia) {
-                const media = window.matchMedia('(prefers-color-scheme: dark)');
-                const followSystem = function (event) {
-                    try {
-                        if (window.localStorage.getItem(STORAGE_KEY)) return;
-                    } catch (error) {
-                        return;
-                    }
-                    setTheme(event.matches ? 'dark' : 'light', false);
-                };
-
-                if (media.addEventListener) {
-                    media.addEventListener('change', followSystem);
-                }
-            }
-        })();
-    </script>
-
+    <script defer src="{% static 'js/app.js' %}?v=20261125" data-native-download-action="{{ emissao_pacote_pagamento }}"></script>
+    <script defer src="{% static 'js/saari-theme.js' %}?v=20261125"></script>
+    <script defer src="{% static 'js/saari-navigation.js' %}?v=20261125"></script>
+    <script defer src="{% static 'js/saari-select-search.js' %}?v=20261125"></script>
 
     {% block extra_js %}{% endblock %}
 </body>

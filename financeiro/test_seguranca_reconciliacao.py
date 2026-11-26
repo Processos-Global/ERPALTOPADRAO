@@ -335,6 +335,24 @@ class SegurancaReconciliacaoFinanceiraTests(TestCase):
         self.assertEqual(controle["B6"].value, 1)
         self.assertEqual(Decimal(str(controle["B7"].value)), Decimal("12.34"))
 
+    def test_excel_do_malote_trata_nome_do_emissor_como_texto(self):
+        texto = "=1+1"
+        self.pagador.first_name = texto
+        self.pagador.last_name = ""
+        self.pagador.save(update_fields=["first_name", "last_name"])
+        self.emitir_malote(self.aprovar_titulo(self.titulo))
+        malote = RelatorioPagamento.objects.get()
+        url = reverse("financeiro:relatorio_pagamento_excel", args=[malote.pk])
+
+        resposta = self.client.get(url, {"formato": "xlsx"})
+
+        self.assertEqual(resposta.status_code, 200)
+        planilha = load_workbook(BytesIO(resposta.content), read_only=True)
+        self.addCleanup(planilha.close)
+        emissor = planilha["Controle da emissão"]["B4"]
+        self.assertEqual(emissor.value, texto)
+        self.assertEqual(emissor.data_type, "s")
+
     def test_titulo_legado_reconcilia_aprovado_pacote_pago_estornado_e_cancelado(self):
         legado = TituloPagar.objects.create(
             numero="QA-FIN-LEGADO", origem=TituloPagar.Origem.DESPESA,

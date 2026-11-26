@@ -1,8 +1,9 @@
+{% load l10n %}
 <section class="pc-card">
   <div class="pc-card-head"><div><h2>Pedidos gerados</h2></div><a class="cp-btn cp-btn--sm" href="{% url 'compras:lista_pedidos' %}?q={{ processo.numero|urlencode }}">Abrir acompanhamento completo</a></div>
   <div class="pc-card-body pc-card-body--flush">
     {% for pedido, prazo in sla_pedidos %}
-      <div class="pc-order-wrap">
+      <div class="pc-order-wrap" id="pedido-{{ pedido.pk|unlocalize }}">
         <div class="pc-order">
           <div><span>Pedido</span><strong>{{ pedido.numero }} · {{ pedido.fornecedor.nome_exibicao }}</strong></div>
           <div><span>Status</span><strong>{{ pedido.get_status_display }}</strong></div>

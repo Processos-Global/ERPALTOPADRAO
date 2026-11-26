@@ -1,22 +1,23 @@
-{% load obras_format %}<!DOCTYPE html>
-<html lang="pt-br">
+{% load obras_format static %}<!DOCTYPE html>
+<html lang="pt-br" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+{% include "components/theme_init.html" %}
 <title>Solicitação de concretagem {{ conc.codigo }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#2d201c;--text:#453330;--muted:#77655c;--line:#ded7c8;--soft:#f5f1e9;--gold:#b9aa72;--bg:#f7f5f1;--panel:#fff;--danger:#a94343;--ok:#356848}
-@media (prefers-color-scheme:dark){:root{--ink:#e8dfd6;--text:#e8dfd6;--muted:#aa9e95;--line:rgba(235,222,205,.14);--soft:#302823;--gold:#b89b5c;--bg:#1d1916;--panel:#28221e;--danger:#f0b8b8;--ok:#b6dcc2}}
+:root{--ink:var(--saari-text);--text:var(--saari-text);--muted:var(--saari-text-muted);--line:var(--saari-border);--soft:var(--saari-hover);--gold:var(--saari-brand-secondary);--bg:var(--saari-bg);--panel:var(--saari-surface);--danger:var(--saari-danger);--ok:var(--saari-success)}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15px;line-height:1.55}
 .wrap{max-width:720px;margin:0 auto;padding:28px 16px 48px}
 .head{position:relative;overflow:hidden;padding:24px 24px 22px 28px;border:1px solid var(--line);border-radius:18px;background:var(--panel)}
-.head::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,var(--gold),#2d201c)}
-.eyebrow{display:block;color:var(--gold);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.head::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--gold)}
+.head .saari-theme-picker{margin-bottom:10px}
+.eyebrow{display:block;color:var(--saari-accent);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 h1{margin:4px 0 4px;color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-weight:400;font-size:clamp(1.8rem,6vw,2.5rem);line-height:1.08;letter-spacing:-.03em}
 .muted{color:var(--muted);font-size:13px}
 .card{margin-top:14px;padding:18px 20px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
@@ -29,18 +30,22 @@ ul.itens{margin:0;padding:0;list-style:none}ul.itens li{display:flex;justify-con
 details{border:1px solid var(--line);border-radius:12px;background:var(--panel)}
 summary{padding:14px 16px;cursor:pointer;font-weight:800;color:var(--ink);list-style:none}
 summary::-webkit-details-marker{display:none}
+summary::after{content:"";float:right;width:8px;height:8px;margin:.35em 3px 0;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+details[open] summary::after{margin-top:.55em;transform:rotate(225deg)}
 details[open] summary{border-bottom:1px solid var(--line)}
 details form{padding:14px 16px}
 label{display:block;margin:0 0 5px;font-size:12.5px;font-weight:750}
-input,textarea{width:100%;min-height:42px;margin-bottom:12px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--text);font:inherit;font-size:14px}
+input,textarea{width:100%;min-height:42px;margin-bottom:12px;padding:9px 11px;border:1px solid var(--saari-control-border);border-radius:9px;background:var(--saari-input-bg);color:var(--text);font:inherit;font-size:14px}
 textarea{min-height:80px;resize:vertical}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:10px 16px;border:1px solid #2d201c;border-radius:10px;background:#2d201c;color:#fff;font:inherit;font-weight:800;cursor:pointer}
-.btn.aceitar{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:10px 16px;border:1px solid var(--saari-primary);border-radius:10px;background:var(--saari-primary);color:var(--saari-on-primary);font:inherit;font-weight:800;cursor:pointer}
+.btn:hover{background:var(--saari-primary-hover)}
+.btn.recusar:hover{background:var(--soft)}
 .btn.recusar{background:transparent;border-color:var(--danger);color:var(--danger)}
 .aviso{margin-top:14px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--soft)}
-.aviso.ok{border-color:rgba(53,104,72,.4)}.aviso.erro{border-color:rgba(169,67,67,.45);color:var(--danger)}
+.aviso.ok{border-color:var(--ok)}.aviso.erro{border-color:var(--danger);color:var(--danger)}
 .aviso strong{display:block;color:var(--ink);margin-bottom:2px}
+a{color:var(--saari-accent)}
 footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
 @media(max-width:480px){.row{grid-template-columns:1fr}.head{padding:20px 18px 18px 22px}}
 </style>
@@ -48,13 +53,14 @@ footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
 <body>
 <main class="wrap">
   <section class="head">
+    {% include "components/theme_picker.html" %}
     <span class="eyebrow">Solicitação de concretagem</span>
     <h1>{{ conc.obra.nome }}</h1>
     <div class="muted">{{ conc.codigo }}{% if empresa %} · {{ empresa.razao_social|default:empresa.nome_fantasia }}{% endif %}</div>
   </section>
 
-  {% if erro %}<div class="aviso erro"><strong>Não foi possível registrar</strong>{{ erro }}</div>{% endif %}
-  {% if resultado == "aceito" %}<div class="aviso ok"><strong>Obrigado! Agendamento confirmado.</strong>A obra foi avisada.</div>
+  {% if erro %}<div class="aviso erro" role="alert"><strong>Não foi possível registrar</strong>{{ erro }}</div>{% endif %}
+  {% if resultado == "aceito" %}<div class="aviso ok" role="status"><strong>Obrigado! Agendamento confirmado.</strong>A obra foi avisada.</div>
   {% elif resultado == "recusado" %}<div class="aviso"><strong>Recusa registrada.</strong>A obra foi avisada.</div>
   {% elif resultado == "reagendamento" %}<div class="aviso"><strong>Pedido de nova data registrado.</strong>A obra vai avaliar e enviar uma nova solicitação.</div>
   {% elif not aguardando %}
@@ -91,13 +97,13 @@ footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
     <h2>Sua resposta</h2>
     <div class="opcoes">
       <details open>
-        <summary>✅ Aceitar agendamento</summary>
+        <summary>Aceitar agendamento</summary>
         <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="aceitar">
           <label for="obs-aceite">Observação (opcional)</label><input id="obs-aceite" name="observacao" maxlength="1000">
-          <button class="btn aceitar" type="submit">Confirmar agendamento</button></form>
+          <button class="btn" type="submit">Confirmar agendamento</button></form>
       </details>
       <details>
-        <summary>📅 Pedir outra data</summary>
+        <summary>Pedir outra data</summary>
         <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="reagendar">
           <div class="row"><div><label for="r-data">Data sugerida *</label><input id="r-data" type="date" name="data" required></div>
           <div><label for="r-hora">Horário sugerido</label><input id="r-hora" type="time" name="horario"></div></div>
@@ -106,7 +112,7 @@ footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
           <button class="btn" type="submit">Enviar pedido de nova data</button></form>
       </details>
       <details>
-        <summary>✖️ Recusar</summary>
+        <summary>Recusar</summary>
         <form method="post">{% csrf_token %}<input type="hidden" name="acao" value="recusar">
           <label for="obs-recusa">Motivo</label><textarea id="obs-recusa" name="observacao" maxlength="1000"></textarea>
           <button class="btn recusar" type="submit">Recusar solicitação</button></form>
@@ -116,5 +122,6 @@ footer{margin-top:22px;text-align:center;color:var(--muted);font-size:12px}
   {% endif %}
   <footer>{% if empresa %}{{ empresa.razao_social|default:empresa.nome_fantasia }}{% if empresa.cnpj %} · CNPJ {{ empresa.cnpj }}{% endif %}{% else %}SAARI ERP{% endif %}</footer>
 </main>
+<script defer src="{% static 'js/saari-theme.js' %}?v=20261125"></script>
 </body>
 </html>

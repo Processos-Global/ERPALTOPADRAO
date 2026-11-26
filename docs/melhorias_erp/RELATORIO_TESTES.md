@@ -1,6 +1,6 @@
 ﻿# Testes
 
-Python 3.13.18 na virtualenv existente. Todos os comandos Django abaixo usaram SQLite em memória e mídia temporária. O módulo de settings isolado não importa a configuração da aplicação nem o arquivo de ambiente.
+Este registro é da primeira rodada em Python 3.13.18. Os comandos Django da tabela usaram SQLite em memória e mídia temporária. Os resultados atuais em SQLite e MySQL, incluindo a validação no Edge, estão no [relatório da retomada](../reestruturacao_financeiro/RELATORIO_TESTES.md).
 
 | Verificação | Resultado |
 | --- | --- |
@@ -20,3 +20,5 @@ As regressões abrangem paginação e filtros de Diário e Projetos, separação
 Sete cenários do carregamento global e localizado foram exercitados no V8. A compilação JavaScript passou em oito blocos de navegação, Diário, Ficha Técnica, Suprimentos e detalhe de Compras. Um bloco de Compras contém interpolação Django e foi excluído da compilação direta do arquivo. O Edge headless falhou ao iniciar o processo gráfico. Capturas e inspeção visual de claro, escuro e tamanhos de tela ficaram pendentes.
 
 A suíte isolada não comprova planos de execução ou bloqueios concorrentes no MySQL. Validar em homologação o saldo de estoque sob operações simultâneas, as consultas de Compras com a massa representativa e os arquivos estáticos e exports no navegador.
+
+As execuções posteriores em MySQL isolado e as capturas no Edge estão no [relatório atualizado](../reestruturacao_financeiro/RELATORIO_TESTES.md).

@@ -1,0 +1,53 @@
+.orcamento-page { min-width: 0; }
+.orcamento-table { width: 100%; min-width: 570px; border-collapse: collapse; }
+.orcamento-table :is(th, td) {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--saari-border);
+    text-align: left;
+    font-size: .875rem;
+}
+.orcamento-table th { color: var(--saari-text); background: var(--saari-hover); }
+.orcamento-table tbody tr:hover { background: var(--saari-hover); }
+.orcamento-table tbody tr:last-child td { border-bottom: 0; }
+.orcamento-table .cad-code { font-variant-numeric: tabular-nums; }
+.orcamento-table .cad-badge {
+    display: inline-flex;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--saari-border);
+    background: var(--saari-hover);
+    color: var(--saari-text);
+    font-size: .8125rem;
+    white-space: nowrap;
+}
+.orcamento-table .cad-badge.off { color: var(--saari-text-muted); }
+.orcamento-table .saari-empty { padding: 26px; text-align: center; }
+.orcamento-form { max-width: 42rem; padding: clamp(14px, 3vw, 22px); }
+.orcamento-form .cad-field { margin-bottom: 16px; }
+.orcamento-form .cad-field label { display: block; margin-bottom: 5px; font-weight: 700; }
+.orcamento-form .cad-field :is(select, input) {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: var(--saari-control-height);
+    padding: 6px 9px;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-input-bg);
+    color: var(--saari-text);
+    font: inherit;
+}
+.orcamento-form .cad-hint { margin: 7px 0 0; color: var(--saari-text-muted); font-size: .875rem; }
+.orcamento-form .cad-actions { padding-top: 12px; border-top: 1px solid var(--saari-border); }
+.orcamento-form .cad-alert, .orcamento-form .cad-errors {
+    margin-block: 10px;
+    padding: 10px 12px;
+    border: 1px solid currentColor;
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-hover);
+}
+.orcamento-form .cad-alert { color: var(--saari-success); }
+.orcamento-form .cad-errors { color: var(--saari-danger); }
+.orcamento-form .cad-errors ul { margin: 0; padding-inline-start: 18px; }
+@media (max-width: 640px) {
+    .orcamento-form .saari-button { width: 100%; }
+}

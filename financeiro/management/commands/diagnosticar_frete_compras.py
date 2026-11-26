@@ -9,6 +9,7 @@ from django.db.models.functions import Coalesce
 
 from compras.models import PedidoCompra
 from compras.services.valores import calcular_total_proposta
+from financeiro.management.commands._csv import celula_csv
 from financeiro.models import LiberacaoFinanceiraPedido, Pagamento, TituloPagar
 
 
@@ -83,9 +84,10 @@ class Command(BaseCommand):
                         motivos.append("Diferença coincide com o frete registrado, conferir a documentação.")
                     else:
                         motivos.append("Conferir parcelas, liberações e vínculos históricos.")
-                relatorio.writerow((
+                linha = (
                     pedido.numero, pedido.fornecedor.nome_exibicao, pedido.status, pedido.subtotal, pedido.descontos,
                     pedido.frete, pedido.valor_total, esperado, financeiro, diferenca, financeiro - esperado, pago,
                     " | ".join(f"{t.numero} ({t.status}, {t.valor_original:.2f})" for t in titulos),
                     " ".join(motivos) or "Valores conciliados.",
-                ))
+                )
+                relatorio.writerow(celula_csv(celula) for celula in linha)

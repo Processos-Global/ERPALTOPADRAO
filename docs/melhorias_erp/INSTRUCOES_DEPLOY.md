@@ -1,6 +1,6 @@
 ﻿# Publicação no PythonAnywhere
 
-Execute numa janela de manutenção autorizada e após revisar o diff, os testes e o ambiente de homologação. Use o caminho do checkout, a virtualenv e o procedimento de backup já configurados para a aplicação. Guarde a revisão atual e valide o backup do MySQL pelo painel ou pelo procedimento aprovado, sem incluir credenciais na linha de comando.
+Para publicar a revisão global, incluindo o Financeiro e as migrations, use as [instruções atuais](../reestruturacao_financeiro/INSTRUCOES_DEPLOY.md). O roteiro abaixo registra a primeira frente.
 
 ```bash
 cd /caminho/do/checkout
@@ -14,7 +14,7 @@ python manage.py check
 python manage.py collectstatic --noinput
 ```
 
-Confirme que `origin/main` contém a revisão aprovada antes do fast-forward. A entrega não exige alteração de dependências ou esquema. Faça o reload da aplicação pela aba Web do PythonAnywhere e confira os logs de erro.
+Confirme que `origin/main` contém a revisão aprovada. Para a revisão atual, siga também as etapas de backup, diagnósticos de unicidade, fuso horário, migrations e reload do roteiro global.
 
 Valide autenticação, permissões, filtro e download, paginação do Diário e de Projetos, listagem de Compras, seleção de material na Ficha Técnica e abertura de abas e itens em Planejamento. Valide o fluxo transacional de reservas com dados exclusivos de homologação em MySQL antes da publicação.
 

@@ -10,12 +10,13 @@ from django.contrib.auth import get_user_model
 from django.contrib.messages.storage.cookie import CookieStorage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import close_old_connections
-from django.test import RequestFactory, TestCase, TransactionTestCase
+from django.test import RequestFactory, TestCase, TransactionTestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from cadastros.models import Fornecedor
-from financeiro.models import Pagamento, PlanoFinanceiro, TituloPagar
+from core.storage import PrivateMediaStorage
+from financeiro.models import AnexoTituloPagar, Pagamento, PlanoFinanceiro, TituloPagar
 from financeiro.models.titulos import SolicitacaoAvulsa
 from financeiro.services.titulos import atualizar_titulo
 from financeiro.views.titulos import titulo_novo
@@ -44,6 +45,10 @@ def chave_da_pagina(response):
     return response.context["form"]["chave_idempotencia"].value()
 
 
+def anexos_homonimos(*conteudos):
+    return [SimpleUploadedFile("recibo.pdf", conteudo, content_type="application/pdf") for conteudo in conteudos]
+
+
 class SolicitacaoAvulsaTests(TestCase):
     def setUp(self):
         self.usuario = criar_usuario("lancador_avulsa")
@@ -53,7 +58,8 @@ class SolicitacaoAvulsaTests(TestCase):
         self.chave = chave_da_pagina(self.client.get(self.novo))
         midia = TemporaryDirectory()
         self.addCleanup(midia.cleanup)
-        self.enterContext(self.settings(PRIVATE_MEDIA_ROOT=midia.name))
+        campo_arquivo = AnexoTituloPagar._meta.get_field("arquivo")
+        self.enterContext(patch.object(campo_arquivo, "storage", PrivateMediaStorage(location=midia.name)))
         self.midia = Path(midia.name)
 
     def post(self, *, chave=None, arquivo=None, **dados):
@@ -81,15 +87,40 @@ class SolicitacaoAvulsaTests(TestCase):
                 self.assertEqual(arquivo.read(), b"%PDF-1.4 documento ficticio")
         self.assertEqual(Notificacao.objects.filter(evento="FINANCEIRO_APROVACAO").count(), 3)
 
+    @override_settings(FILE_UPLOAD_MAX_MEMORY_SIZE=0)
+    def test_anexos_homonimos_distintos_sao_preservados_sem_duplicar_em_reenvio(self):
+        primeiro, segundo = b"%PDF-1.4 recibo A", b"%PDF-1.4 recibo B"
+        anexos = (primeiro, segundo, primeiro)
+        criado = self.post(quantidade_parcelas=2, anexos=anexos_homonimos(*anexos))
+        reenvio = self.post(quantidade_parcelas=2, anexos=anexos_homonimos(*anexos))
+        self.assertEqual(criado.status_code, 302)
+        self.assertEqual(reenvio.url, criado.url)
+        self.assertEqual(TituloPagar.objects.count(), 2)
+        for titulo in TituloPagar.objects.all():
+            conteudos = []
+            for anexo in titulo.anexos.all():
+                self.assertEqual(anexo.nome_original, "recibo.pdf")
+                with anexo.arquivo.open("rb") as arquivo:
+                    conteudos.append(arquivo.read())
+            self.assertCountEqual(conteudos, [primeiro, segundo])
+        self.assertEqual(sum(caminho.is_file() for caminho in self.midia.rglob("*")), 4)
+
     def test_falha_apos_gravar_anexo_reverte_tentativa_arquivo_e_titulos(self):
-        with patch("financeiro.services.solicitacoes_avulsas.notificar_aprovadores", side_effect=RuntimeError("falha simulada")):
+        recibos = (b"%PDF-1.4 recibo A", b"%PDF-1.4 recibo B")
+
+        def falhar_notificacao(_titulo):
+            self.assertEqual(sum(caminho.is_file() for caminho in self.midia.rglob("*")), 6)
+            raise RuntimeError("falha simulada")
+
+        with patch("financeiro.services.solicitacoes_avulsas.notificar_aprovadores", side_effect=falhar_notificacao):
             with self.assertRaisesMessage(RuntimeError, "falha simulada"):
-                self.post(arquivo=b"%PDF-1.4 documento ficticio")
+                self.post(anexos=anexos_homonimos(*recibos))
         self.assertFalse(TituloPagar.objects.exists())
         self.assertFalse(SolicitacaoAvulsa.objects.exists())
         self.assertFalse(any(caminho.is_file() for caminho in self.midia.rglob("*")))
-        self.assertEqual(self.post(arquivo=b"%PDF-1.4 documento ficticio").status_code, 302)
+        self.assertEqual(self.post(anexos=anexos_homonimos(*recibos)).status_code, 302)
         self.assertEqual(TituloPagar.objects.count(), 3)
+        self.assertTrue(all(titulo.anexos.count() == 2 for titulo in TituloPagar.objects.all()))
 
     def test_reenvio_apos_resposta_perdida_redireciona_ao_mesmo_titulo(self):
         self.post(quantidade_parcelas=1)

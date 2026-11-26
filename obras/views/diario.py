@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from usuarios.decorators import acao_required, modulo_required
+from usuarios.decorators import acao_required, modulo_required, possui_permissao_modulo
 from usuarios.models import ModuloSistema, NivelPermissao
 
 from obras.models import (
@@ -159,6 +159,7 @@ def diario_lista(request):
         "obra_filtro": obra_id,
         "data_inicio": data_inicio or "",
         "data_fim": data_fim or "",
+        "pode_editar_diario": possui_permissao_modulo(request.user, ModuloSistema.OBRAS, NivelPermissao.EDICAO),
     })
 
 

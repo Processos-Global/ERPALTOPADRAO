@@ -1,0 +1,13 @@
+<dialog id="saari-command" class="saari-command" aria-labelledby="saari-command-title" data-command-dialog>
+    <div class="saari-command__head">
+        <label id="saari-command-title" class="saari-visually-hidden" for="saari-command-input">Buscar funcionalidades</label>
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <input id="saari-command-input" type="search" placeholder="Busque uma funcionalidade" autocomplete="off" spellcheck="false" autofocus>
+        <button type="button" class="saari-icon-button" data-command-close aria-label="Fechar busca">
+            <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+        </button>
+    </div>
+    <div class="saari-command__results" data-command-results></div>
+    <p class="saari-visually-hidden" role="status" data-command-status></p>
+    <footer class="saari-command__footer"><span>↑ ↓ Navegar</span><span>Enter Abrir</span><span>Esc Fechar</span></footer>
+</dialog>

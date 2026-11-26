@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% load l10n static %}
+{% load l10n static compras_acesso %}
 {% block title %}Ficha Técnica | {{ obra.nome }}{% endblock %}
 {% block page_name %}Ficha Técnica{% endblock %}
 
@@ -7,19 +7,21 @@
 <link rel="stylesheet" href="{% static 'css/ficha-material.css' %}">
 {% include "obras/_styles.html" %}
 <style>
-.ft-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid #e7dccd;border-radius:12px;background:#faf8f5}
-.ft-picker label{font-size:12px;font-weight:800;color:#665047}
-.ft-picker select{flex:1;min-width:240px;max-width:520px;padding:11px 12px;border:1px solid #ddceba;border-radius:9px;background:#fff;color:#50362c;font:inherit;font-size:13px}
-.ft-picker-count{font-size:12px;color:#866f61}
+.ft-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;padding:13px 16px;border:1px solid var(--saari-border);border-radius:12px;background:var(--saari-surface)}
+.ft-picker label{font-size:12px;font-weight:800;color:var(--saari-text)}
+.ft-picker select,.ft-picker .fin-searchable{flex:1 1 min(100%,240px);max-width:520px}
+.ft-picker select{padding:11px 12px;border:1px solid var(--saari-control-border);border-radius:9px;background:var(--saari-input-bg);color:var(--saari-text);font:inherit;font-size:13px}
+.ft-picker-count{font-size:12px;color:var(--saari-text-muted)}
+.ft-header-actions{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
 .ft-panel-head--with-action{flex-wrap:wrap}
 .ft-panel-head--with-action .ft-btn:focus-visible{outline:2px solid var(--saari-gold);outline-offset:2px}
 .ft-row-actions{display:flex;gap:6px;align-items:center}.ft-row-actions form{margin:0}
-.ft-edit-row[hidden]{display:none!important}.ft-edit-row td{background:#fbf8f3!important;padding:16px!important}
+.ft-edit-row[hidden]{display:none!important}.ft-edit-row td{background:var(--saari-surface-elevated)!important;padding:16px!important}
 .ft-edit-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-.ft-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:#725b50}
-.ft-edit-grid input,.ft-edit-grid select,.ft-edit-grid textarea{width:100%;min-width:0;padding:10px;border:1px solid #dfd4c5;border-radius:8px;background:#fff;color:#49342c;font:inherit;font-size:12px}
+.ft-edit-grid label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:800;color:var(--saari-text-muted)}
+.ft-edit-grid input,.ft-edit-grid select,.ft-edit-grid textarea{width:100%;min-width:0;padding:10px;border:1px solid var(--saari-control-border);border-radius:8px;background:var(--saari-input-bg);color:var(--saari-text);font:inherit;font-size:12px}
 .ft-edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
-.ft-page .fin-searchable__button{width:100%;min-height:38px;border:1px solid var(--border,#ddceba);border-radius:8px;background:var(--surface,#fff);color:var(--text-primary,#49342c);padding:8px 10px;font:inherit}
+.ft-page .fin-searchable__button{width:100%;min-height:38px;border:1px solid var(--saari-control-border);border-radius:8px;background:var(--saari-input-bg);color:var(--saari-text);padding:8px 10px;font:inherit}
 @media(max-width:1000px){.ft-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.ft-edit-grid{grid-template-columns:1fr}.ft-picker select{min-width:100%}}
 </style>
@@ -39,7 +41,13 @@
       <h1>{{ obra.nome }}</h1>
       <small>{{ obra.codigo }} · Estrutura, ambientes, categorias e itens da obra</small>
     </div>
-    <span class="ft-status">{{ ficha.get_status_display }}</span>
+    <div class="ft-header-actions">
+      <span class="ft-status">{{ ficha.get_status_display }}</span>
+      {% pode_compras 'VISUALIZAR' as visualizar_grandes_fornecedores %}
+      {% if visualizar_grandes_fornecedores %}
+        <a class="saari-button" href="{% url 'compras:relatorio_grandes_fornecedores' %}?obra={{ obra.pk|unlocalize }}">Grandes fornecedores da obra</a>
+      {% endif %}
+    </div>
   </div>
 
   <nav class="ft-flow">
@@ -63,7 +71,7 @@
             <input type="hidden" name="acao" value="adicionar_pavimento">
             <input type="hidden" name="etapa" value="1">
             <div class="ft-grid">
-              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" required>{% for p in tipos_pavimento %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c4"><label>Tipo</label><select name="tipo_pavimento" data-searchable required>{% for p in tipos_pavimento %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c5"><label>Nome na obra</label><input name="nome" placeholder="Ex.: Térreo, 1º Pavimento"></div>
               <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
             </div>
@@ -96,10 +104,10 @@
             <input type="hidden" name="acao" value="adicionar_ambiente">
             <input type="hidden" name="etapa" value="2">
             <div class="ft-grid">
-              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
-              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" required>{% for a in tipos_ambiente %}<option value="{{ a.pk|unlocalize }}">{{ a.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Pavimento</label><select name="pavimento" data-searchable required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}">{{ p.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Tipo</label><select name="tipo_ambiente" data-searchable required>{% for a in tipos_ambiente %}<option value="{{ a.pk|unlocalize }}">{{ a.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c3"><label>Identificação</label><input name="identificacao" placeholder="Ex.: Quarto 01" required></div>
-              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}">{{ c.nome }}</option>{% endfor %}</select></div>
+              <div class="ft-field c3"><label>Característica</label><select name="caracteristica" data-searchable required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}">{{ c.nome }}</option>{% endfor %}</select></div>
               <div class="ft-field c3"><label>Área (m²)</label><input name="area_m2" required inputmode="decimal" placeholder="12,50"></div>
               <div class="c3"><button class="ft-btn" type="submit">Adicionar</button></div>
             </div>
@@ -120,10 +128,10 @@
                 <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
                   {% csrf_token %}<input type="hidden" name="acao" value="editar_ambiente"><input type="hidden" name="etapa" value="2"><input type="hidden" name="ambiente_id" value="{{ a.pk|unlocalize }}">
                   <div class="ft-edit-grid">
-                    <label>Pavimento<select name="pavimento" required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}" {% if p.pk == a.pavimento_id %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}</select></label>
+                    <label>Pavimento<select name="pavimento" data-searchable required>{% for p in pavimentos %}<option value="{{ p.pk|unlocalize }}" {% if p.pk == a.pavimento_id %}selected{% endif %}>{{ p.nome }}</option>{% endfor %}</select></label>
                     <label>Ambiente<input name="identificacao" value="{{ a.identificacao }}" maxlength="160" required></label>
-                    <label>Tipo<select name="tipo_ambiente" required>{% for tipo in tipos_ambiente %}<option value="{{ tipo.pk|unlocalize }}" {% if tipo.pk == a.tipo_ambiente_id %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
-                    <label>Característica<select name="caracteristica" required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}" {% if c.pk == a.caracteristica_id %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></label>
+                    <label>Tipo<select name="tipo_ambiente" data-searchable required>{% for tipo in tipos_ambiente %}<option value="{{ tipo.pk|unlocalize }}" {% if tipo.pk == a.tipo_ambiente_id %}selected{% endif %}>{{ tipo.nome }}</option>{% endfor %}</select></label>
+                    <label>Característica<select name="caracteristica" data-searchable required>{% for c in caracteristicas %}<option value="{{ c.pk|unlocalize }}" {% if c.pk == a.caracteristica_id %}selected{% endif %}>{{ c.nome }}</option>{% endfor %}</select></label>
                     <label>Área (m²)<input name="area_m2" inputmode="decimal" value="{{ a.area_m2|floatformat:2 }}" required></label>
                   </div>
                   <div class="ft-edit-actions"><button type="button" class="ft-icon-btn" data-edit-row="amb-{{ a.pk }}">Cancelar</button><button type="submit" class="ft-btn">Salvar alterações</button></div>
@@ -173,7 +181,7 @@
         <div class="ft-form-box" id="ft-ambiente-panel">
           <div class="ft-form-title">Categorias por ambiente</div>
           <div class="ft-empty" style="margin-bottom:10px">Nos ambientes, marque <strong>AR CONDICIONADO - EQUIPAMENTO</strong> somente onde houver ar-condicionado. O equipamento do ambiente será detalhado na etapa de itens.</div>
-          <div class="ft-picker"><label for="ft-select-categorias">Ambiente</label><select id="ft-select-categorias" data-ambiente-select>
+          <div class="ft-picker"><label for="ft-select-categorias">Ambiente</label><select id="ft-select-categorias" data-ambiente-select data-searchable>
             {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=3&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_categorias_ativas }} categorias</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
           </select><span class="ft-picker-count">{{ total_ambientes }} ambientes cadastrados</span></div>
 
@@ -206,7 +214,7 @@
         <a class="ft-btn" href="{% url 'obras:ficha_tecnica_consulta' %}?obra={{ obra.pk|unlocalize }}">Consulta e relatórios</a>
       </div>
       <div class="ft-panel-body">
-        <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select>
+        <div class="ft-picker"><label for="ft-select-itens">Visualizar itens de</label><select id="ft-select-itens" data-ambiente-select data-searchable>
           <option value="?etapa=4" {% if not ambiente_selecionado %}selected{% endif %}>Itens gerais da obra</option>
           {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=4&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_itens_ativos }} itens</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
         </select><span class="ft-picker-count">{{ total_ambientes }} ambientes · {{ total_itens }} itens</span></div>
@@ -409,4 +417,4 @@
 })();
 </script>
 {% endblock %}
-{% block extra_js %}{{ block.super }}{% include 'financeiro/_dropdown_search.html' %}<script defer src="{% static 'js/ficha-material.js' %}"></script>{% endblock %}
+{% block extra_js %}{{ block.super }}<script defer src="{% static 'js/ficha-material.js' %}"></script>{% endblock %}

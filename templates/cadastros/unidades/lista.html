@@ -4,7 +4,7 @@
   <div class="cad-head__copy">
     <div class="cad-eyebrow">Dados mestres</div>
     <h1 class="cad-title">Unidades de medida</h1>
-    <p class="cad-sub">Cadastre e mantenha as unidades utilizadas em materiais, mão de obra e processos de compra.</p>
+
   </div>
   <div class="cad-head__actions">
     <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:index' %}">Voltar</a>
@@ -14,17 +14,17 @@
 
 <div class="cad-toolbar">
   <form method="get">
-    <input type="search" name="q" value="{{ q }}" placeholder="Buscar por sigla ou descrição">
-    <select name="status">
+    <input type="search" name="q" aria-label="Pesquisar registros" value="{{ q }}" placeholder="Buscar por sigla ou descrição">
+    <select name="status" aria-label="Status">
       <option value="ativos" {% if status == 'ativos' %}selected{% endif %}>Ativas</option>
       <option value="inativos" {% if status == 'inativos' %}selected{% endif %}>Inativas</option>
       <option value="todos" {% if status == 'todos' %}selected{% endif %}>Todas</option>
     </select>
     <button class="cad-btn cad-btn--secondary" type="submit">Filtrar</button>
-  </form>
+  <a class="cad-btn cad-btn--secondary" href="{% url 'cadastros:unidades_lista' %}">Limpar</a></form>
 </div>
 
-<div class="cad-table-wrap">
+<div class="cad-table-wrap" role="region" aria-label="Unidades de medida" tabindex="0">
   <table class="cad-table">
     <thead><tr><th>Sigla</th><th>Descrição</th><th>Status</th><th style="text-align:right">Ações</th></tr></thead>
     <tbody>

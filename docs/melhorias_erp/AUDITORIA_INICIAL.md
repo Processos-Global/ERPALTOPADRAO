@@ -16,7 +16,7 @@ Base `94dc49c` em `main`, com árvore limpa antes do trabalho. Python 3.13.18 do
 
 Referências de implementação anterior em `docs/RELATORIO_IMPLEMENTACAO_SAARI.md`, `docs/RELATORIO_TECNICO_SAARI.md` e `docs/relatorios/`. A auditoria utiliza as skills locais de desempenho, testes, identidade visual e integração.
 
-A sequência de trabalho segue a ordem do pedido. A medição deve comparar dados sintéticos iguais antes e depois e registrar SQL, tempo e volume do HTML. Mudanças de interface usam os tokens e componentes existentes, com escopo fora do Financeiro. A fonte da data em que o material é necessário deve ser comprovada antes de atribuir impacto no prazo da obra.
+A medição compara dados sintéticos iguais antes e depois e registra SQL, tempo e volume do HTML. As mudanças de interface usam os tokens e componentes existentes. A fonte da data em que o material é necessário precisa ser comprovada antes de atribuir impacto no prazo da obra. O Financeiro passou a integrar a reestruturação global na retomada de 25/11/2026. [Auditoria financeira](../reestruturacao_financeiro/AUDITORIA_FINANCEIRA.md)
 
 ## Revisão de continuidade de 24/11/2026
 

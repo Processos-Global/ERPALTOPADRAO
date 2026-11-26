@@ -1,7 +1,16 @@
 {% extends 'pos_obra/_portal.html' %}
 {% block portal_content %}
-<div class="pc-page-intro"><span class="pc-kicker">Minha área / Minhas solicitações</span><h1>Detalhes do atendimento</h1><p>Consulte as informações do protocolo e acompanhe cada etapa da sua solicitação.</p></div>
-<section class="pc-hero" aria-label="Resumo da solicitação"><div class="pc-hero__content"><span class="pc-kicker">Protocolo de atendimento</span><h1>{{ chamado.numero }}</h1><p>{{ chamado.empreendimento }}</p></div><span class="po-status" data-status="{{ chamado.status }}">{{ chamado.get_status_display }}</span></section>
+<header class="pc-hero" aria-labelledby="pc-protocol">
+  <div class="pc-hero__content">
+    <nav class="pc-breadcrumb" aria-label="Localização no Portal do Cliente">
+      <a href="{% url 'pos_obra:portal' %}">Minha área</a><span aria-hidden="true">/</span>
+      <a href="{% url 'pos_obra:portal' %}#meus-chamados">Minhas solicitações</a>
+    </nav>
+    <h1 id="pc-protocol">{{ chamado.numero }}</h1>
+    <p>{{ chamado.empreendimento }}</p>
+  </div>
+  <span class="po-status" data-status="{{ chamado.status }}">{{ chamado.get_status_display }}</span>
+</header>
 <div class="pc-detail-grid"><div class="pc-detail-main">
 <section class="po-card"><div class="po-card__head"><h2>Sobre sua solicitação</h2><a class="po-button" href="{% url 'pos_obra:portal' %}#meus-chamados">← Minhas solicitações</a></div>
 <dl class="pc-detail-facts"><div class="pc-detail-fact"><dt>Ocorrência</dt><dd>{{ chamado.tipo_original|default:chamado.tipo_problema.nome }}</dd></div><div class="pc-detail-fact"><dt>Data de abertura</dt><dd>{{ chamado.criado_em|date:'d/m/Y H:i' }}</dd></div><div class="pc-detail-fact"><dt>Ambiente</dt><dd>{{ chamado.ambiente_padrao|default:chamado.ambiente_ficha|default:'Não informado' }} {{ chamado.ambiente_detalhe }}</dd></div><div class="pc-detail-fact"><dt>Situação</dt><dd>{{ chamado.get_status_display }}</dd></div></dl>

@@ -1,10 +1,12 @@
 from decimal import Decimal
+from io import BytesIO
 
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from cadastros.models import CategoriaGrandeFornecedor, Fornecedor, Material, UnidadeMedida
 from compras.models import (
@@ -84,6 +86,20 @@ class SincronizacaoMatrizTest(TestCase):
         self.assertEqual(
             self.processo.historico.filter(tipo="GF_FICHA_TECNICA_SINCRONIZADA").count(), 2
         )
+
+    def test_excel_do_relatorio_preserva_texto_e_quantidade(self):
+        fluxo = GrandeFornecedorProcesso.objects.create(processo=self.processo)
+        texto = "=1+1"
+        GrandeFornecedorItem.objects.create(fluxo=fluxo, item=texto, quantidade=2)
+        resposta = self.client.get(reverse("compras:relatorio_grandes_fornecedores"), {"formato": "xlsx"})
+
+        self.assertEqual(resposta.status_code, 200)
+        planilha = load_workbook(BytesIO(resposta.content), read_only=True)
+        self.addCleanup(planilha.close)
+        self.assertEqual(planilha.active["I2"].value, texto)
+        self.assertEqual(planilha.active["I2"].data_type, "s")
+        self.assertEqual(planilha.active["K2"].value, 2)
+        self.assertEqual(planilha.active["K2"].data_type, "n")
 
     def test_post_respeita_permissao_de_edicao(self):
         leitor = get_user_model().objects.create_user(username="gf-leitor")

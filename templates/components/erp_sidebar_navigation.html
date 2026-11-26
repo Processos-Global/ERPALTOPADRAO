@@ -1,0 +1,44 @@
+<nav class="saari-sidebar-nav" aria-label="Menu principal">
+    <a class="sidebar-link{% if erp_nav_home.current %} sidebar-link--active{% endif %}"
+       href="{{ erp_nav_home.url }}" aria-label="{{ erp_nav_home.label }}"
+       {% if erp_nav_home.current %}aria-current="page"{% endif %} data-nav-link="{{ erp_nav_home.route }}">
+        <span class="sidebar-link__icon"><svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg></span>
+        <span class="sidebar-link__text">{{ erp_nav_home.label }}</span>
+    </a>
+    {% for group in erp_nav_groups %}
+        {% ifchanged group.section %}
+            <p class="sidebar__section-title">{{ group.section }}</p>
+        {% endifchanged %}
+        <div class="saari-sidebar-group{% if group.active %} is-open{% endif %}" data-nav-group="{{ group.key }}" data-group-label="{{ group.label }}" {% if group.active %}data-group-active{% endif %}>
+            <div class="saari-sidebar-group__row">
+                <a class="sidebar-link{% if group.active %} sidebar-link--active{% endif %}"
+                   href="{{ group.landing.url }}" aria-label="{{ group.label }}{% if group.label != group.landing.label %} — {{ group.landing.label }}{% endif %}"
+                   {% if group.landing.current %}aria-current="page"{% endif %}
+                   data-nav-link="{{ group.landing.route }}" data-search-label="{{ group.landing.label }}" data-search-terms="{{ group.landing.terms }}">
+                    <span class="sidebar-link__icon"><svg class="icon" aria-hidden="true"><use href="#icon-{{ group.icon }}"></use></svg></span>
+                    <span class="sidebar-link__text">{{ group.label }}</span>
+                </a>
+                {% if group.children %}
+                    <button class="saari-submenu-toggle" type="button" data-nav-submenu
+                            aria-label="Submenu de {{ group.label }}" aria-controls="nav-{{ group.key }}"
+                            aria-expanded="{% if group.active %}true{% else %}false{% endif %}">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+                    </button>
+                {% endif %}
+            </div>
+            {% if group.children %}
+                <div class="saari-submenu" id="nav-{{ group.key }}" {% if not group.active %}inert{% endif %}>
+                    <div class="saari-submenu__links">
+                        {% for entry in group.children %}
+                            <a class="sidebar-sublink{% if entry.route == erp_nav_branch.route %} sidebar-sublink--active{% endif %}"
+                               href="{{ entry.url }}" aria-label="{{ entry.label }}" data-nav-link="{{ entry.route }}"
+                               data-search-terms="{{ entry.terms }}" {% if entry.current %}aria-current="page"{% endif %}>
+                                {{ entry.label }}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+</nav>

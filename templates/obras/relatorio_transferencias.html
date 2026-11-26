@@ -28,17 +28,25 @@
 <h2>Transferências selecionadas ({{ qtd }})</h2>
 <p class="rt-help">Cada linha corresponde a um movimento transferido. Cada transferência aceita uma única depreciação, inclusive 0%. Movimentos concluídos ficam bloqueados. Movimentos antigos sem custo histórico devem ser conferidos antes do ressarcimento.</p>
 {% if movimentos %}
-<form method="post" action="?inicio={{ inicio|urlencode }}&amp;fim={{ fim|urlencode }}&amp;destino={{ destino|urlencode }}">
+<form method="post" data-download action="?inicio={{ inicio|urlencode }}&amp;fim={{ fim|urlencode }}&amp;destino={{ destino|urlencode }}">
 {% csrf_token %}
 <div style="overflow-x:auto">
 <table class="rt-tabela"><thead><tr><th>Data</th><th>Nº</th><th>Obra destino</th><th>Material</th><th>Un.</th><th class="num">Quantidade</th><th class="num">Custo unitário</th><th>Depreciação (%)</th><th class="num">Total original</th></tr></thead>
 <tbody>{% for mov in movimentos %}<tr>
 <td>{{ mov.data_movimento|date:"d/m/Y" }}</td><td>#{{ mov.pk }}</td><td>{{ mov.obra_destino|nome_obra }}</td><td>{{ mov.descricao_item }}</td><td>{{ mov.unidade }}</td>
 <td class="num">{{ mov.quantidade|floatformat:2 }}</td><td class="num">{% if mov.custo_unitario_transferencia is not None %}R$ {{ mov.custo_unitario_transferencia|floatformat:2 }}{% else %}<span title="Sem custo histórico">A conferir</span>{% endif %}</td>
-<td>{% if mov.depreciacao_percentual is not None %}<strong>{{ mov.depreciacao_percentual|floatformat:2 }}%</strong> <span class="rt-help">(registrada; bloqueada)</span>{% else %}<label for="depreciacao_{{ mov.pk }}" class="rt-help">% do movimento #{{ mov.pk }}</label><input id="depreciacao_{{ mov.pk }}" type="number" name="depreciacao_{{ mov.pk }}" min="0" max="100" step="0.01" value="0" required>{% endif %}</td>
+<td>{% if mov.depreciacao_percentual is not None %}<strong>{{ mov.depreciacao_percentual|floatformat:2 }}%</strong> <span class="rt-help">(registrada; bloqueada)</span>{% elif pode_registrar %}<label for="depreciacao_{{ mov.pk|unlocalize }}" class="rt-help">% do movimento #{{ mov.pk }}</label><input id="depreciacao_{{ mov.pk|unlocalize }}" type="number" name="depreciacao_{{ mov.pk|unlocalize }}" min="0" max="100" step="0.01" value="0" required>{% else %}Pendente{% endif %}</td>
 <td class="num">{% if mov.valor_bruto_relatorio is not None %}R$ {{ mov.valor_bruto_relatorio|floatformat:2 }}{% else %}A conferir{% endif %}</td>
 </tr>{% endfor %}</tbody></table></div>
-<div class="rt-summary"><p class="rt-help">A geração registra definitivamente os percentuais pendentes e cria o Excel. Os já registrados não podem ser alterados.</p><button class="op-btn" type="submit">{% if pendentes %}Registrar depreciações e gerar Excel{% else %}Baixar Excel dos lançamentos registrados{% endif %}</button></div>
+<div class="rt-summary">
+{% if pode_registrar and pendentes %}
+<button class="op-btn" type="submit">Registrar depreciações e gerar Excel</button>
+{% elif pendentes %}
+<p class="rt-help">O Excel fica disponível quando as depreciações selecionadas forem registradas.</p>
+{% else %}
+<button class="op-btn" type="submit">Baixar Excel dos lançamentos registrados</button>
+{% endif %}
+</div>
 </form>
 {% else %}<p>Nenhuma transferência encontrada. Ajuste os filtros para selecionar os movimentos do relatório.</p>{% endif %}
 </section></div>

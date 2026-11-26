@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from compras.models import ContratacaoCompra, PedidoCompra
+from compras.models import ContratacaoCompra, PedidoCompra, ProcessoCompra
 from .auditoria import registrar_evento
 
 
@@ -12,6 +12,8 @@ def formalizar_fornecedor(
     referencia_contrato="", documento=None, observacoes=""
 ):
     """Registra/atualiza a formalização sem alterar a etapa comercial do processo."""
+    # Serializa com os anexos e a emissão de pedidos, mesmo sem uma contratação ativa.
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.status not in {
         processo.Status.APROVADO,
         processo.Status.EM_CONTRATACAO,
@@ -79,6 +81,7 @@ def formalizar_fornecedor(
 @transaction.atomic
 def anexar_documento_fornecedor(*, processo, fornecedor, usuario, documento):
     """Anexa ou substitui somente o documento complementar do fornecedor."""
+    processo = ProcessoCompra.objects.select_for_update().get(pk=processo.pk)
     if processo.status not in {
         processo.Status.APROVADO,
         processo.Status.EM_CONTRATACAO,

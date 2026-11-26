@@ -2,11 +2,11 @@
 {% block financeiro_title %}Aprovações{% endblock %}
 {% block financeiro_content %}
 <header class="fin-head"><h1 class="fin-title">Aprova??es</h1>
-  <span>{{ page_obj.paginator.count }} pend?ncias ? {{ total|moeda_br }}</span>
+  <span>{{ page_obj.paginator.count }} pendências · {{ total|moeda_br }}</span>
   {% include 'financeiro/_exportar.html' with tipo='aprovacoes' %}
 </header>
 <nav class="fin-tabs" aria-label="Contas a pagar">
-  <a class="fin-btn" href="{% url 'financeiro:titulos' %}">T?tulos</a>
+  <a class="fin-btn" href="{% url 'financeiro:titulos' %}">Títulos</a>
   <a class="fin-btn" href="{% url 'financeiro:agenda' %}">Agenda</a>
   <a class="fin-btn" href="{% url 'financeiro:aprovacoes' %}" aria-current="page">Aprova??es</a>
 </nav>
@@ -18,7 +18,7 @@
   <div class="fin-section__head"><div><h2>Contas aguardando decisão</h2><p>Selecione várias linhas para aprovar em lote ou decida individualmente à direita.</p></div><form id="bulk-approval" method="post" action="{% url 'financeiro:aprovacoes_lote' %}">{% csrf_token %}<button class="fin-btn fin-btn--primary">Aprovar selecionados</button></form></div>
   <div class="fin-section__body--flush fin-table-wrap">
     <table class="fin-table" style="font-size:12px">
-      <thead><tr><th style="width:34px"><input type="checkbox" id="check-all" aria-label="Selecionar toda a p?gina"></th><th>Fornecedor / conta</th><th>O que foi comprado/pago</th><th>Obra</th><th>Apropriação</th><th>Venc.</th><th style="text-align:right">Valor</th><th style="text-align:right">Ações</th></tr></thead>
+      <thead><tr><th style="width:34px"><input type="checkbox" id="check-all" aria-label="Selecionar toda a página"></th><th>Fornecedor / conta</th><th>O que foi comprado/pago</th><th>Obra</th><th>Apropriação</th><th>Venc.</th><th style="text-align:right">Valor</th><th style="text-align:right">Ações</th></tr></thead>
       <tbody>
       {% for titulo in titulos %}
       <tr>

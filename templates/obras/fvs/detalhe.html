@@ -1,5 +1,5 @@
 {% extends "layouts/base.html" %}
-{% load obras_format %}
+{% load saari_contexto obras_format %}
 
 {% block title %}{{ fvs.numero }} | FVS{% endblock %}
 {% block page_name %}Obras{% endblock %}
@@ -29,7 +29,7 @@
   overflow:hidden;
   border:1px solid var(--op-line);
   border-radius:10px;
-  background:#fff;
+  background:var(--saari-surface);
 }
 .fvs-meta-card{
   min-height:48px;
@@ -60,10 +60,10 @@
 .fvs-locked{
   margin-bottom:8px;
   padding:7px 11px;
-  border:1px solid #d8ccb0;
+  border:1px solid var(--op-line);
   border-radius:10px;
-  background:#fcf8ee;
-  color:#5e4c45;
+  background:var(--op-warning-soft);
+  color:var(--op-warning);
   font-size:11.5px;
 }
 
@@ -73,7 +73,7 @@
   margin-bottom:12px;
   border:1px solid var(--op-line);
   border-radius:14px;
-  background:#fff;
+  background:var(--saari-surface);
   box-shadow:var(--op-shadow);
 }
 .fvs-sheet-title{
@@ -83,7 +83,7 @@
   gap:16px;
   padding:12px 14px;
   border-bottom:1px solid var(--op-line);
-  background:linear-gradient(180deg,#fff,#fcf9f3);
+  background:var(--op-soft);
 }
 .fvs-sheet-title h2{
   margin:0;
@@ -119,10 +119,10 @@
   top:0;
   z-index:3;
   padding:9px 8px;
-  border-right:1px solid #e7e0d5;
-  border-bottom:1px solid #d8cfbf;
-  background:#f5f0e7;
-  color:#62524b;
+  border-right:1px solid var(--op-line);
+  border-bottom:1px solid var(--op-line);
+  background:var(--op-soft);
+  color:var(--op-muted);
   text-align:left;
   font-size:10.5px;
   font-weight:850;
@@ -135,19 +135,19 @@
 
 .fvs-sheet tbody td{
   padding:7px 8px;
-  border-right:1px solid #eee8de;
-  border-bottom:1px solid #eee8de;
-  background:#fff;
+  border-right:1px solid var(--op-line);
+  border-bottom:1px solid var(--op-line);
+  background:var(--saari-surface);
   color:var(--op-text);
   vertical-align:top;
   line-height:1.48;
   font-size:11.5px;
 }
 .fvs-sheet tbody tr:nth-child(even) td{
-  background:#fdfbf7;
+  background:var(--op-soft);
 }
 .fvs-sheet tbody tr:hover td{
-  background:#faf6ed;
+  background:var(--op-soft);
 }
 .fvs-sheet tbody td:last-child{border-right:0}
 .fvs-sheet tbody tr:last-child td{border-bottom:0}
@@ -155,7 +155,7 @@
 .fvs-no{
   text-align:center;
   font-weight:850;
-  color:#6d5b53;
+  color:var(--op-muted);
 }
 .fvs-item-name{
   color:var(--op-ink);
@@ -164,7 +164,7 @@
   line-height:1.4;
 }
 .fvs-tech-text{
-  color:#554942;
+  color:var(--op-text);
   white-space:normal;
   overflow-wrap:anywhere;
   font-size:11.8px;
@@ -176,20 +176,20 @@
 .fvs-help-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:23px;height:23px;min-width:23px;padding:0;
-  border:1px solid #cbbda9;border-radius:50%;
-  background:#f8f3ea;color:#665047;
+  border:1px solid var(--op-line);border-radius:50%;
+  background:var(--op-soft);color:var(--op-text);
   font-size:12px;font-weight:800;cursor:help;
 }
-.fvs-help-btn:hover,.fvs-help-btn:focus-visible{background:#6f5a4f;color:#fff;outline:2px solid #e0cfae;outline-offset:2px}
+.fvs-help-btn:hover,.fvs-help-btn:focus-visible{background:var(--op-action);color:var(--op-on-action);outline:2px solid var(--op-gold);outline-offset:2px}
 .fvs-help-tooltip{
   position:fixed;z-index:99999;display:none;max-width:min(320px,calc(100vw - 24px));
-  padding:11px 13px;border:1px solid #d5c8b5;border-radius:9px;
-  background:#fffdf9;color:#4f4039;box-shadow:0 9px 26px #20140e25;
+  padding:11px 13px;border:1px solid var(--op-line);border-radius:9px;
+  background:var(--op-soft);color:var(--op-text);box-shadow:0 9px 26px #20140e25;
   font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;
   pointer-events:none;
 }
 .fvs-help-tooltip.is-visible{display:block}
-.fvs-help-tooltip strong{display:block;margin-bottom:4px;color:#58453c}
+.fvs-help-tooltip strong{display:block;margin-bottom:4px;color:var(--op-text)}
 
 /* C / NC / NA como células de planilha */
 .fvs-result-cell{
@@ -198,6 +198,7 @@
   text-align:center;
 }
 .fvs-result-label{
+  position:relative;
   display:flex;
   width:100%;
   min-height:52px;
@@ -217,30 +218,32 @@
   height:22px;
   align-items:center;
   justify-content:center;
-  border:1px solid #cfc6b8;
+  border:1px solid var(--op-line);
   border-radius:5px;
-  background:#fff;
+  background:var(--saari-surface);
   color:transparent;
   font-size:13px;
   font-weight:900;
   line-height:1;
 }
 .fvs-result-label:hover .fvs-result-mark{
-  border-color:#9e8c76;
-  background:#fbf7ee;
+  border-color:var(--op-gold);
+  background:var(--op-soft);
 }
 .fvs-result-label input:checked + .fvs-result-mark{
-  border-color:#6f5a4f;
-  background:#6f5a4f;
-  color:#fff;
+  border-color:var(--op-action);
+  background:var(--op-action);
+  color:var(--op-on-action);
 }
 .fvs-result-label.nc input:checked + .fvs-result-mark{
-  border-color:#a94f4f;
-  background:#a94f4f;
+  border-color:var(--op-danger);
+  background:var(--op-danger-soft);
+  color:var(--op-danger);
 }
 .fvs-result-label.na input:checked + .fvs-result-mark{
-  border-color:#8d857d;
-  background:#8d857d;
+  border-color:var(--op-muted);
+  background:var(--op-soft);
+  color:var(--op-text);
 }
 
 /* Campos dentro das células */
@@ -248,9 +251,9 @@
   width:100%;
   min-height:32px;
   padding:6px 7px;
-  border:1px solid #d9d0c2;
+  border:1px solid var(--op-line);
   border-radius:7px;
-  background:#fff;
+  background:var(--op-field);
   color:var(--op-text);
   font:inherit;
   font-size:11.5px;
@@ -262,9 +265,9 @@
   min-height:52px;
   max-height:120px;
   padding:7px 8px;
-  border:1px solid #d9d0c2;
+  border:1px solid var(--op-line);
   border-radius:7px;
-  background:#fff;
+  background:var(--op-field);
   color:var(--op-text);
   font:inherit;
   font-size:11.5px;
@@ -279,7 +282,7 @@
 }
 .fvs-cell-error{
   margin-top:4px;
-  color:#a23f3f;
+  color:var(--op-danger);
   font-size:9px;
 }
 
@@ -330,7 +333,7 @@
   font-size:10px;
 }
 .fvs-history-row:last-child{border-bottom:0}
-.decision{border-color:#d8ccb0}
+.decision{border-color:var(--op-line)}
 .decision textarea,.decision select{
   width:100%;
   box-sizing:border-box;
@@ -352,21 +355,49 @@
   .fvs-parecer-grid{grid-template-columns:1fr}
   .fvs-history-row{grid-template-columns:1fr}
 }
+
+.fvs-mobile-label{display:none}
+.fvs-original-date{display:block;color:var(--op-muted)}
+.fvs-result-label input:focus-visible + .fvs-result-mark{outline:2px solid var(--saari-focus-ring,var(--op-gold));outline-offset:3px}
+.fvs-sheet input:is([readonly],:disabled),.fvs-sheet textarea:is([readonly],:disabled){background:var(--op-soft);color:var(--op-muted)}
+.decision :is(textarea,select){background:var(--op-field);color:var(--op-text)}
+@media(max-width:700px){
+  .fvs-head{padding:14px}
+  .fvs-head h1{font-size:1.8rem}
+  .fvs-head .op-btn,.fvs-save-row .op-btn{min-height:44px;font-size:.875rem}
+  .fvs-sheet,.fvs-sheet tbody{display:block;min-width:0}
+  .fvs-sheet thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .fvs-sheet tbody tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:12px 10px;border-bottom:1px solid var(--op-line)}
+  .fvs-sheet tbody tr:last-child{border-bottom:0}
+  .fvs-sheet tbody td{border:0;background:transparent!important;color:var(--op-text);font-size:.875rem}
+  .fvs-sheet tbody tr:hover td{background:transparent}
+  .fvs-sheet .fvs-no{grid-column:1;min-width:0;text-align:start;color:var(--op-muted)}
+  .fvs-sheet .fvs-item{grid-column:2/-1}
+  .fvs-sheet .fvs-mobile-field{grid-column:1/-1;padding:3px 8px}
+  .fvs-item-name,.fvs-tech-text{font-size:.875rem}
+  .fvs-mobile-label{display:block;margin:0 0 4px;color:var(--op-muted);font-weight:650;font-size:.78rem}
+  .fvs-result-label{min-height:44px;gap:5px;border:1px solid var(--op-line);border-radius:8px;background:var(--op-soft)}
+  .fvs-result-label .fvs-mobile-label{margin:0}
+  .fvs-help-btn{width:35px;height:35px;min-width:35px}
+  .fvs-sheet input[type="date"]{min-height:42px}
+  .fvs-sheet-wrap:focus-visible{outline-offset:-3px}
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="op-page" style="max-width:none;padding-left:18px;padding-right:18px">
+{% retorno_listagem request 'obras:fvs_lista' as voltar_url %}
+<div class="op-page">
   <div class="fvs-page">
 
     <section class="op-head fvs-head">
       <div class="op-head-copy">
-        <span class="op-eyebrow">Obras · FVS</span>
+        <nav class="op-breadcrumb" aria-label="Localização"><a href="{{ voltar_url }}">FVS</a></nav>
         <h1>{{ fvs.numero }}</h1>
         <p>{{ fvs.modelo_nome }} · {{ fvs.modelo_revisao }}</p>
       </div>
       <div class="op-head-actions">
-        <a class="op-btn secondary" href="{% url 'obras:fvs_lista' %}">Voltar</a>
+        <a class="op-btn secondary" href="{{ voltar_url }}">Voltar à lista</a>
         {% if fvs.pode_editar %}
         <form method="post" action="{% url 'obras:fvs_enviar_aprovacao' fvs.pk %}" onsubmit="return confirm('Enviar esta FVS para aprovação do gestor?');">
           {% csrf_token %}
@@ -410,8 +441,8 @@
           </div>
         </div>
 
-        <div class="fvs-sheet-wrap">
-          <table class="fvs-sheet">
+        <div class="fvs-sheet-wrap" tabindex="0" role="region" aria-label="Itens de verificação">
+          <table class="fvs-sheet" role="table">
             <colgroup>
               <col class="col-no">
               <col class="col-item">
@@ -424,36 +455,38 @@
               <col class="col-obs">
               <col style="width:185px">
             </colgroup>
-            <thead>
-              <tr>
-                <th class="center">Nº</th>
-                <th>Item de verificação</th>
-                <th>Método / instrumento</th>
-                <th>Critério de aceite</th>
-                <th class="center">C</th>
-                <th class="center">NC</th>
-                <th class="center">NA</th>
-                <th>Data</th>
-                <th>Observação / ação corretiva</th>
-                <th>Fotos / evidências</th>
+            <thead role="rowgroup">
+              <tr role="row">
+                <th role="columnheader" class="center">Nº</th>
+                <th role="columnheader">Item de verificação</th>
+                <th role="columnheader">Método / instrumento</th>
+                <th role="columnheader">Critério de aceite</th>
+                <th role="columnheader" class="center">C</th>
+                <th role="columnheader" class="center">NC</th>
+                <th role="columnheader" class="center">NA</th>
+                <th role="columnheader">Data</th>
+                <th role="columnheader">Observação / ação corretiva</th>
+                <th role="columnheader">Fotos / evidências</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody role="rowgroup">
               {% for item_form in item_formset %}
-              <tr>
+              <tr role="row">
                 {% for hidden in item_form.hidden_fields %}{{ hidden }}{% endfor %}
 
-                <td class="fvs-no">{{ item_form.instance.ordem }}</td>
+                <td role="cell" class="fvs-no">{{ item_form.instance.ordem }}</td>
 
-                <td>
+                <td role="cell" class="fvs-item">
                   <div class="fvs-item-name">{{ item_form.instance.item_verificacao }}</div>
                 </td>
 
-                <td>
+                <td role="cell" class="fvs-mobile-field">
+                  <span class="fvs-mobile-label" aria-hidden="true">Método / instrumento</span>
                   <div class="fvs-tech-text">{{ item_form.instance.metodo_instrumento|default:"—" }}</div>
                 </td>
 
-                <td>
+                <td role="cell" class="fvs-mobile-field">
+                  <span class="fvs-mobile-label" aria-hidden="true">Critério de aceite</span>
                   <div class="fvs-criterio-wrap">
                     <div class="fvs-tech-text">{{ item_form.instance.criterio_aceite|default:"—" }}</div>
                     {% if item_form.instance.tolerancia %}
@@ -463,53 +496,53 @@
                   </div>
                 </td>
 
-                <td class="fvs-result-cell">
+                <td role="cell" class="fvs-result-cell">
                   <label class="fvs-result-label c" title="Conforme">
                     <input
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
-                      value="C"
+                      value="C" aria-label="Conforme, item {{ item_form.instance.ordem }}"
                       {% if item_form.resultado.value == "C" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
-                    <span class="fvs-result-mark">✓</span>
+                    <span class="fvs-result-mark" aria-hidden="true">✓</span><span class="fvs-mobile-label" aria-hidden="true">C</span>
                   </label>
                 </td>
 
-                <td class="fvs-result-cell">
+                <td role="cell" class="fvs-result-cell">
                   <label class="fvs-result-label nc" title="Não conforme">
                     <input
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
-                      value="NC"
+                      value="NC" aria-label="Não conforme, item {{ item_form.instance.ordem }}"
                       {% if item_form.resultado.value == "NC" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
-                    <span class="fvs-result-mark">✓</span>
+                    <span class="fvs-result-mark" aria-hidden="true">✓</span><span class="fvs-mobile-label" aria-hidden="true">NC</span>
                   </label>
                 </td>
 
-                <td class="fvs-result-cell">
+                <td role="cell" class="fvs-result-cell">
                   <label class="fvs-result-label na" title="Não aplicável">
                     <input
                       type="radio"
                       name="{{ item_form.resultado.html_name }}"
-                      value="NA"
+                      value="NA" aria-label="Não aplicável, item {{ item_form.instance.ordem }}"
                       {% if item_form.resultado.value == "NA" %}checked{% endif %}{% if item_form.bloqueado or not fvs.pode_editar %} disabled{% endif %}
                     >
-                    <span class="fvs-result-mark">✓</span>
+                    <span class="fvs-result-mark" aria-hidden="true">✓</span><span class="fvs-mobile-label" aria-hidden="true">NA</span>
                   </label>
                 </td>
 
-                <td>
-                  {{ item_form.data_verificacao }}{% if item_form.bloqueado %}<small style="display:block;color:#7a6d60">Data original preservada</small>{% endif %}
+                <td role="cell" class="fvs-mobile-field">
+                  <label class="fvs-mobile-label" for="{{ item_form.data_verificacao.id_for_label }}">Data da verificação</label>{{ item_form.data_verificacao }}{% if item_form.bloqueado %}<small class="fvs-original-date">Data original preservada</small>{% endif %}
                   {% for error in item_form.data_verificacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
                 </td>
 
-                <td>
-                  {{ item_form.observacao }}
+                <td role="cell" class="fvs-mobile-field">
+                  <label class="fvs-mobile-label" for="{{ item_form.observacao.id_for_label }}">Observação / ação corretiva</label>{{ item_form.observacao }}
                   {% for error in item_form.observacao.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
                   {% for error in item_form.resultado.errors %}<div class="fvs-cell-error">Resultado: {{ error }}</div>{% endfor %}
                 </td>
-                <td><input type="file" name="fotos_item_{{ item_form.instance.pk }}" accept="image/*" multiple {% if not fvs.pode_editar %}disabled{% endif %} style="max-width:165px;font-size:11px">{% for foto in item_form.instance.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener" style="display:inline-block;margin:4px"><img src="{{ foto.arquivo.url }}" alt="Foto do item" loading="lazy" style="width:53px;height:45px;object-fit:cover;border-radius:5px"></a>{% endfor %}</td>
+                <td role="cell" class="fvs-mobile-field"><label class="fvs-mobile-label" for="fvs-fotos-{{ item_form.instance.pk }}">Fotos / evidências</label><input type="file" id="fvs-fotos-{{ item_form.instance.pk }}" aria-label="Fotos ou evidências do item {{ item_form.instance.ordem }}" name="fotos_item_{{ item_form.instance.pk }}" accept="image/*" multiple {% if not fvs.pode_editar %}disabled{% endif %} style="max-width:165px;font-size:11px">{% for foto in item_form.instance.fotos.all %}<a href="{{ foto.arquivo.url }}" target="_blank" rel="noopener" style="display:inline-block;margin:4px"><img src="{{ foto.arquivo.url }}" alt="Foto do item" loading="lazy" style="width:53px;height:45px;object-fit:cover;border-radius:5px"></a>{% endfor %}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -528,19 +561,19 @@
           <div class="op-panel-body">
             <div class="fvs-parecer-grid">
               <div class="op-field">
-                <label>{{ resumo_form.parecer.label }}</label>
+                {{ resumo_form.parecer.label_tag }}
                 {{ resumo_form.parecer }}
                 {% for error in resumo_form.parecer.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
               </div>
               <div class="op-field">
-                <label>{{ resumo_form.observacao_final.label }}</label>
+                {{ resumo_form.observacao_final.label_tag }}
                 {{ resumo_form.observacao_final }}
                 {% for error in resumo_form.observacao_final.errors %}<div class="fvs-cell-error">{{ error }}</div>{% endfor %}
               </div>
             </div>
             {% if fvs.pode_editar %}
             <div class="fvs-save-row">
-              <button class="op-btn" type="submit" style="min-height:35px;padding:6px 11px;font-size:11px">Salvar preenchimento</button>
+              <button class="op-btn" type="submit">Salvar preenchimento</button>
             </div>
             {% endif %}
           </div>

@@ -17,7 +17,10 @@ from obras.models import (
     Concretagem, ContatoEmailConcreteira, EnvioMensagemConcretagem, HistoricoConcretagem, LocalUsoObra, Obra,
 )
 from obras.services.concretagem import fluxo
+from relatorios.isolamento_testes import validar_isolamento
 from usuarios.models import Notificacao, PermissaoAcao, PermissaoModulo
+
+validar_isolamento(settings)
 
 User = get_user_model()
 S = Concretagem.Status
@@ -26,7 +29,7 @@ S = Concretagem.Status
 class BaseConcretagem(TestCase):
     @classmethod
     def setUpTestData(cls):
-        assert settings.DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3"
+        validar_isolamento(settings, durante_testes=True)
         cls.leitor = cls._usuario("leitor")
         # Permissão única "Concretagem": eng e gerente têm os mesmos poderes.
         cls.eng = cls._usuario("eng", acoes=["concretagem"])

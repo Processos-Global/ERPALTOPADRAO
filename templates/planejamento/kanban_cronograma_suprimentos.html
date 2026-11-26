@@ -5,18 +5,18 @@
 {% block content %}
 <style>
   :root {
-    --kb-accent:#453330;
-    --kb-accent-dark:#453330;
-    --kb-text:#2d201c;
-    --kb-muted:#85776f;
-    --kb-border:#eee8d6;
-    --kb-soft:#f8f4ed;
-    --kb-success:#453330;
-    --kb-success-bg:#fffdfa;
-    --kb-warning:#b54708;
-    --kb-warning-bg:#fff4e8;
-    --kb-danger:#b42318;
-    --kb-danger-bg:#fef3f2;
+    --kb-accent:var(--saari-accent);
+    --kb-accent-dark:var(--saari-primary-hover);
+    --kb-text:var(--saari-text);
+    --kb-muted:var(--saari-text-muted);
+    --kb-border:var(--saari-border);
+    --kb-soft:var(--saari-hover);
+    --kb-success:var(--saari-success);
+    --kb-success-bg:color-mix(in srgb,var(--saari-success) 13%,var(--saari-surface));
+    --kb-warning:var(--saari-warning);
+    --kb-warning-bg:color-mix(in srgb,var(--saari-warning) 13%,var(--saari-surface));
+    --kb-danger:var(--saari-danger);
+    --kb-danger-bg:color-mix(in srgb,var(--saari-danger) 13%,var(--saari-surface));
   }
 
   .kb-page {
@@ -46,7 +46,7 @@
     border-radius:11px;
     display:grid;
     place-items:center;
-    background:#f5f0e7;
+    background:var(--saari-hover);
     color:var(--kb-accent);
     flex:0 0 38px;
   }
@@ -79,9 +79,9 @@
 
   .kb-btn {
     min-height:36px;
-    border:1px solid #d9d0c2;
-    background:#fff;
-    color:#4b3a35;
+    border:1px solid var(--saari-border);
+    background:var(--saari-surface);
+    color:var(--saari-text);
     border-radius:9px;
     padding:7px 11px;
     display:inline-flex;
@@ -96,15 +96,15 @@
   }
 
   .kb-btn:hover {
-    background:#f8f4ed;
-    border-color:#d9d0c2;
+    background:var(--saari-hover);
+    border-color:var(--saari-border);
     transform:translateY(-1px);
   }
 
   .kb-btn-primary {
-    background:var(--kb-accent);
-    border-color:var(--kb-accent);
-    color:#fff;
+    background:var(--saari-primary);
+    border-color:var(--saari-primary);
+    color:var(--saari-on-primary);
   }
 
   .kb-btn-primary:hover {
@@ -118,7 +118,7 @@
   }
 
   .kb-filters {
-    background:#fff;
+    background:var(--saari-surface);
     border:1px solid var(--kb-border);
     border-radius:12px;
     padding:11px 12px;
@@ -143,11 +143,11 @@
   .kb-field input {
     width:100%;
     min-height:36px;
-    border:1px solid #d9d0c2;
+    border:1px solid var(--saari-border);
     border-radius:8px;
     padding:7px 9px;
-    background:#fff;
-    color:#4b3a35;
+    background:var(--saari-surface);
+    color:var(--saari-text);
     outline:none;
     transition:border-color .15s, box-shadow .15s;
     font-size:.82rem;
@@ -155,7 +155,7 @@
 
   .kb-field select:focus,
   .kb-field input:focus {
-    border-color:#b9aa72;
+    border-color:var(--saari-accent);
     box-shadow:0 0 0 3px rgba(69,51,48,.10);
   }
 
@@ -168,7 +168,7 @@
   .kb-kpi {
     position:relative;
     overflow:hidden;
-    background:#fff;
+    background:var(--saari-surface);
     border:1px solid var(--kb-border);
     border-radius:11px;
     padding:9px 11px;
@@ -182,12 +182,12 @@
     top:0;
     bottom:0;
     width:3px;
-    background:#eee8d6;
+    background:var(--saari-hover);
   }
 
   .kb-kpi.is-accent::before { background:var(--kb-accent); }
   .kb-kpi.is-warning::before { background:#f79009; }
-  .kb-kpi.is-success::before { background:#77655c; }
+  .kb-kpi.is-success::before { background:var(--saari-primary); }
 
   .kb-kpi-label {
     color:var(--kb-muted);
@@ -206,7 +206,7 @@
   }
 
   .kb-kpi-help {
-    color:#a39890;
+    color:var(--saari-text-muted);
     font-size:.64rem;
     margin-top:1px;
   }
@@ -223,12 +223,12 @@
     display:flex;
     align-items:center;
     gap:8px;
-    color:#85776f;
+    color:var(--saari-text-muted);
     font-size:.72rem;
   }
 
   .kb-board-toolbar-left strong {
-    color:#4b3a35;
+    color:var(--saari-text);
   }
 
   .kb-filter-active {
@@ -237,7 +237,7 @@
     gap:6px;
     border-radius:999px;
     padding:4px 8px;
-    background:#f5f0e7;
+    background:var(--saari-hover);
     color:var(--kb-accent-dark);
     font-size:.68rem;
     font-weight:750;
@@ -256,7 +256,7 @@
     overflow-y:hidden;
     box-shadow:0 1px 2px rgba(45,32,28,.025);
     scrollbar-width:thin;
-    scrollbar-color:#d9d0c2 transparent;
+    scrollbar-color:var(--saari-border) transparent;
   }
 
   .kb-board {
@@ -268,8 +268,8 @@
 
   .kb-column {
     min-width:0;
-    border-right:1px solid #eee8d6;
-    background:#f8f4ed;
+    border-right:1px solid var(--saari-border);
+    background:var(--saari-hover);
     display:flex;
     flex-direction:column;
   }
@@ -295,8 +295,8 @@
     gap:8px;
     min-height:44px;
     padding:8px 9px;
-    border-bottom:1px solid #eee8d6;
-    background:#f5f1e9;
+    border-bottom:1px solid var(--saari-border);
+    background:var(--saari-hover);
   }
 
   .kb-column-title {
@@ -304,7 +304,7 @@
     align-items:center;
     gap:7px;
     min-width:0;
-    color:#4b3a35;
+    color:var(--saari-text);
     font-size:.69rem;
     font-weight:790;
     text-transform:uppercase;
@@ -319,11 +319,11 @@
     flex:0 0 8px;
   }
 
-  .kb-column[data-stage="COTACAO"] .kb-column-dot { background:#77655c; }
-  .kb-column[data-stage="COMPATIBILIZACAO"] .kb-column-dot { background:#77655c; }
-  .kb-column[data-stage="NEGOCIACAO"] .kb-column-dot { background:#77655c; }
+  .kb-column[data-stage="COTACAO"] .kb-column-dot { background:var(--saari-primary); }
+  .kb-column[data-stage="COMPATIBILIZACAO"] .kb-column-dot { background:var(--saari-primary); }
+  .kb-column[data-stage="NEGOCIACAO"] .kb-column-dot { background:var(--saari-primary); }
   .kb-column[data-stage="CONTRATACAO"] .kb-column-dot { background:#d97706; }
-  .kb-column[data-stage="CONCLUIDO"] .kb-column-dot { background:#77655c; }
+  .kb-column[data-stage="CONCLUIDO"] .kb-column-dot { background:var(--saari-primary); }
 
   .kb-count {
     display:inline-flex;
@@ -333,9 +333,9 @@
     height:21px;
     padding:0 6px;
     border-radius:999px;
-    background:#fff;
-    border:1px solid #eee8d6;
-    color:#85776f;
+    background:var(--saari-surface);
+    border:1px solid var(--saari-border);
+    color:var(--saari-text-muted);
     font-size:.64rem;
     font-weight:760;
   }
@@ -349,21 +349,21 @@
     flex-direction:column;
     gap:6px;
     scrollbar-width:thin;
-    scrollbar-color:#d9d0c2 transparent;
+    scrollbar-color:var(--saari-border) transparent;
   }
 
   .kb-column-body::-webkit-scrollbar { width:7px; }
   .kb-column-body::-webkit-scrollbar-thumb {
-    background:#d9d0c2;
+    background:var(--saari-border);
     border-radius:999px;
   }
 
   .kb-card {
     width:100%;
     text-align:left;
-    border:1px solid #eee8d6;
+    border:1px solid var(--saari-border);
     border-radius:9px;
-    background:#fff;
+    background:var(--saari-surface);
     padding:8px 9px;
     cursor:pointer;
     color:inherit;
@@ -373,7 +373,7 @@
 
   .kb-card:hover {
     transform:translateY(-1px);
-    border-color:#d9d0c2;
+    border-color:var(--saari-border);
     box-shadow:0 5px 14px rgba(45,32,28,.065);
   }
 
@@ -397,8 +397,8 @@
   .kb-work {
     max-width:145px;
     color:var(--kb-accent-dark);
-    background:#f5f0e7;
-    border:1px solid #eee8d6;
+    background:var(--saari-hover);
+    border:1px solid var(--saari-border);
     border-radius:999px;
     padding:2px 6px;
     font-size:.57rem;
@@ -409,7 +409,7 @@
   }
 
   .kb-percent {
-    color:#4b3a35;
+    color:var(--saari-text);
     font-size:.64rem;
     font-weight:800;
     white-space:nowrap;
@@ -429,7 +429,7 @@
 
   .kb-card-meta {
     margin-top:4px;
-    color:#77655c;
+    color:var(--saari-text-muted);
     font-size:.62rem;
     display:flex;
     align-items:center;
@@ -449,7 +449,7 @@
     height:4px;
     overflow:hidden;
     border-radius:999px;
-    background:#f5f1e9;
+    background:var(--saari-hover);
     margin-top:6px;
   }
 
@@ -461,7 +461,7 @@
   }
 
   .kb-card.is-done .kb-card-progress span {
-    background:#77655c;
+    background:var(--saari-primary);
   }
 
   .kb-card-foot {
@@ -471,12 +471,12 @@
     gap:6px;
     margin-top:6px;
     padding-top:6px;
-    border-top:1px solid #f5f1e9;
+    border-top:1px solid var(--saari-border);
   }
 
   .kb-date-label {
     display:block;
-    color:#a39890;
+    color:var(--saari-text-muted);
     font-size:.52rem;
     font-weight:780;
     text-transform:uppercase;
@@ -484,7 +484,7 @@
   }
 
   .kb-date {
-    color:#66534c;
+    color:var(--saari-text);
     font-size:.62rem;
     font-weight:700;
   }
@@ -518,7 +518,7 @@
     place-items:center;
     text-align:center;
     padding:15px 10px;
-    color:#a39890;
+    color:var(--saari-text-muted);
     font-size:.67rem;
   }
 
@@ -530,7 +530,7 @@
     padding:48px 20px;
     text-align:center;
     color:var(--kb-muted);
-    background:#fff;
+    background:var(--saari-surface);
     border:1px solid var(--kb-border);
     border-radius:13px;
   }
@@ -561,7 +561,7 @@
     width:min(760px,100%);
     max-height:calc(100vh - 60px);
     overflow:auto;
-    background:#fff;
+    background:var(--saari-surface);
     border-radius:15px;
     border:1px solid rgba(255,255,255,.45);
     box-shadow:0 24px 65px rgba(45,32,28,.30);
@@ -587,7 +587,7 @@
     gap:12px;
     padding:17px 19px 14px;
     border-bottom:1px solid var(--kb-border);
-    background:#fff;
+    background:var(--saari-surface);
   }
 
   .kb-modal-title-wrap {
@@ -602,7 +602,7 @@
     border-radius:10px;
     display:grid;
     place-items:center;
-    background:#f5f0e7;
+    background:var(--saari-hover);
     color:var(--kb-accent);
     flex:0 0 35px;
   }
@@ -637,8 +637,8 @@
   }
 
   .kb-close:hover {
-    background:#f5f1e9;
-    color:#4b3a35;
+    background:var(--saari-hover);
+    color:var(--saari-text);
   }
 
   .kb-modal-body {
@@ -656,16 +656,16 @@
     border:1px solid var(--kb-border);
     border-radius:10px;
     padding:10px;
-    background:#fff;
+    background:var(--saari-surface);
   }
 
   .kb-detail-card.is-highlight {
-    background:#f8fbfc;
-    border-color:#eee8d6;
+    background:var(--saari-hover);
+    border-color:var(--saari-border);
   }
 
   .kb-detail-label {
-    color:#a39890;
+    color:var(--saari-text-muted);
     font-size:.62rem;
     font-weight:760;
     text-transform:uppercase;
@@ -674,14 +674,14 @@
 
   .kb-detail-value {
     margin-top:4px;
-    color:#4b3a35;
+    color:var(--saari-text);
     font-size:.82rem;
     font-weight:730;
   }
 
   .kb-detail-progress {
     height:6px;
-    background:#f5f1e9;
+    background:var(--saari-hover);
     border-radius:999px;
     overflow:hidden;
     margin-top:7px;
@@ -696,7 +696,7 @@
 
   .kb-timeline-title {
     margin:2px 0 9px;
-    color:#4b3a35;
+    color:var(--saari-text);
     font-size:.76rem;
     font-weight:770;
     text-transform:uppercase;
@@ -713,7 +713,7 @@
     display:grid;
     grid-template-columns:minmax(145px,.9fr) minmax(120px,.75fr) minmax(120px,.75fr) minmax(88px,.6fr);
     align-items:center;
-    border-bottom:1px solid #f5f1e9;
+    border-bottom:1px solid var(--saari-border);
   }
 
   .kb-step:last-child {
@@ -726,14 +726,14 @@
   }
 
   .kb-step > div + div {
-    border-left:1px solid #f5f1e9;
+    border-left:1px solid var(--saari-border);
   }
 
   .kb-step-name {
     display:flex;
     align-items:center;
     gap:8px;
-    color:#4b3a35;
+    color:var(--saari-text);
     font-size:.76rem;
     font-weight:720;
   }
@@ -742,17 +742,17 @@
     width:8px;
     height:8px;
     border-radius:50%;
-    background:#d9d0c2;
+    background:var(--saari-border);
     flex:0 0 8px;
   }
 
   .kb-step-dot.done {
-    background:#77655c;
+    background:var(--saari-primary);
     box-shadow:0 0 0 3px #fffdfa;
   }
 
   .kb-step-head {
-    color:#a39890;
+    color:var(--saari-text-muted);
     font-size:.58rem;
     font-weight:760;
     text-transform:uppercase;
@@ -761,7 +761,7 @@
 
   .kb-step-value {
     margin-top:3px;
-    color:#66534c;
+    color:var(--saari-text);
     font-size:.72rem;
     font-weight:680;
   }
@@ -786,12 +786,12 @@
 
   .kb-step-delta.ontime {
     color:var(--kb-accent-dark);
-    background:#f5f0e7;
+    background:var(--saari-hover);
   }
 
   .kb-step-delta.pending {
-    color:#85776f;
-    background:#f5f1e9;
+    color:var(--saari-text-muted);
+    background:var(--saari-hover);
   }
 
   .kb-modal-foot {
@@ -803,7 +803,7 @@
     gap:8px;
     padding:12px 19px 15px;
     border-top:1px solid var(--kb-border);
-    background:#fff;
+    background:var(--saari-surface);
   }
 
   @media (max-width:1050px) {
@@ -852,21 +852,29 @@
     }
     .kb-step > div:nth-child(3) {
       border-left:0;
-      border-top:1px solid #f5f1e9;
+      border-top:1px solid var(--saari-border);
     }
     .kb-step > div:nth-child(4) {
-      border-top:1px solid #f5f1e9;
+      border-top:1px solid var(--saari-border);
     }
   }
 
 /* 2026 refresh: titulo do Kanban em card de contexto */
-.kb-title-wrap{position:relative;overflow:hidden;padding:21px 23px;border:1px solid #ded7c8;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 63%,#f3ecdc 100%);box-shadow:0 12px 34px rgba(69,51,48,.065)}.kb-title-wrap::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.kb-title-wrap>*{position:relative;z-index:1}.kb-title{font-size:30px;letter-spacing:-.035em}
+.kb-title-wrap{position:relative;overflow:hidden;padding:14px 18px;border:1px solid var(--saari-border);border-radius:16px;background:var(--saari-surface);box-shadow:none}.kb-title-wrap>*{position:relative;z-index:1}.kb-title{font-size:30px;letter-spacing:-.035em}
 @media(max-width:720px){.kb-title-wrap{padding:18px 17px 18px 20px;border-radius:14px}.kb-title{font-size:25px}}
+
+
+.kb-page .kb-head{align-items:center;gap:12px;padding:14px 18px;background:var(--saari-surface);border:1px solid var(--saari-border);border-radius:var(--saari-radius)}
+.kb-page .kb-title-wrap{padding:0;border:0;background:none}
+.kb-page .kb-board{overscroll-behavior-inline:contain}
+.kb-page .kb-board:focus-visible{outline:2px solid var(--saari-focus-ring);outline-offset:2px}
+.kb-modal{max-height:calc(100dvh - 24px)}
+@media(max-width:600px){.kb-page .kb-head{padding:12px 14px}.kb-page .kb-filters :is(input,select,button){min-height:var(--saari-control-height)}}
 
 </style>
 
 <div class="kb-page">
-  <div class="kb-head">
+  <header class="kb-head">
     <div class="kb-title-wrap">
       <div class="kb-title-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -877,9 +885,6 @@
       </div>
       <div>
         <h1 class="kb-title">Kanban de Suprimentos</h1>
-        <p class="kb-subtitle">
-          Acompanhe o estágio atual de cada suprimento. Os cards são posicionados automaticamente de acordo com as datas realizadas.
-        </p>
       </div>
     </div>
 
@@ -982,7 +987,7 @@
   </div>
 
   <div class="kb-board-wrap">
-    <div class="kb-board" id="kb-board">
+    <div class="kb-board" id="kb-board" role="region" aria-label="Kanban por etapa" tabindex="0">
 
       <section class="kb-column" data-stage="COTACAO">
         <header class="kb-column-head">

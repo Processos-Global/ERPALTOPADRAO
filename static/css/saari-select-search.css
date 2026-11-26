@@ -1,0 +1,90 @@
+.fin-searchable {
+    position: relative;
+    min-width: 0;
+}
+
+.fin-searchable__button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: var(--saari-control-height);
+    padding: .5rem .75rem;
+    gap: .5rem;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-input-bg);
+    color: var(--saari-text);
+    font: inherit;
+    text-align: start;
+}
+
+.fin-searchable__button span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fin-searchable__button[aria-invalid="true"] { border-color: var(--saari-danger); }
+.fin-searchable__error { display: block; margin-block-start: .25rem; color: var(--saari-danger); }
+.fin-searchable__error:empty { display: none; }
+
+.fin-searchable__panel {
+    position: fixed;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: .375rem;
+    max-height: 19rem;
+    padding: .5rem;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-surface-elevated);
+    color: var(--saari-text);
+    box-shadow: var(--saari-shadow-popover);
+}
+
+.fin-searchable__panel[hidden], .fin-searchable__option[hidden] { display: none; }
+
+.fin-searchable__panel input {
+    width: 100%;
+    min-height: var(--saari-control-height);
+    padding: .5rem .625rem;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-input-bg);
+    color: var(--saari-text);
+    font: inherit;
+}
+
+.fin-searchable__options { overflow-y: auto; min-height: 0; overscroll-behavior: contain; }
+
+.fin-searchable__option {
+    display: block;
+    width: 100%;
+    padding: .5rem;
+    border: 0;
+    border-radius: var(--saari-radius-sm);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.fin-searchable__option:is(:hover, :focus-visible, .is-highlighted) { background: var(--saari-hover); }
+.fin-searchable__option[aria-selected="true"] { font-weight: 750; color: var(--saari-accent); }
+.fin-searchable__option[aria-selected="true"]::after { content: "✓"; margin-inline-start: .5rem; }
+.fin-searchable__status { padding: .25rem .5rem; color: var(--saari-text-muted); }
+.fin-searchable__status:empty { display: none; }
+
+.fin-searchable__native {
+    position: absolute;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+}

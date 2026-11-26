@@ -1,0 +1,150 @@
+.saari-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+[data-theme] :focus-visible {
+    outline: 2px solid var(--saari-focus-ring);
+    outline-offset: 2px;
+}
+[data-theme] input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="button"], [type="reset"], [type="submit"]):focus-visible,
+[data-theme] :is(select, textarea):focus-visible {
+    outline: 2px solid var(--saari-focus-ring) !important;
+    outline-offset: 1px;
+}
+
+.saari-theme-picker { display: inline-flex; }
+.saari-theme-picker select {
+    min-height: var(--saari-control-height);
+    padding: .25rem .45rem;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    color: var(--saari-text);
+    background: var(--saari-input-bg);
+    font: 600 .8rem var(--saari-font-sans);
+}
+
+.saari-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .9rem 1.25rem;
+    margin-bottom: var(--saari-space-6);
+    padding: clamp(1rem, 2.4vw, 1.65rem);
+    border: 1px solid var(--saari-border);
+    border-inline-start: 3px solid var(--saari-brand-secondary);
+    border-radius: var(--saari-radius);
+    background: var(--saari-surface);
+}
+.saari-page-header h1 {
+    margin: 0;
+    color: var(--saari-text);
+    font: 450 clamp(1.65rem, 2.7vw, 2.55rem)/1.13 var(--saari-font-display);
+    letter-spacing: -.02em;
+}
+.saari-page-header p { margin: .45rem 0 0; color: var(--saari-text-muted); font-size: .9rem; }
+
+.saari-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    min-height: var(--saari-control-height);
+    padding: .45rem .9rem;
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-surface);
+    color: var(--saari-text);
+    font: 700 .85rem var(--saari-font-sans);
+    cursor: pointer;
+}
+.saari-button:hover { background: var(--saari-hover); }
+.saari-button--primary, .btn-primary {
+    --bs-btn-bg: var(--saari-primary);
+    --bs-btn-color: var(--saari-on-primary);
+    --bs-btn-border-color: var(--saari-primary);
+    --bs-btn-hover-bg: var(--saari-primary-hover);
+    --bs-btn-hover-color: var(--saari-on-primary);
+    --bs-btn-hover-border-color: var(--saari-primary-hover);
+    --bs-btn-active-bg: var(--saari-primary-hover);
+    --bs-btn-active-border-color: var(--saari-primary-hover);
+}
+.saari-button--primary { color: var(--saari-on-primary); background: var(--saari-primary); border-color: var(--saari-primary); }
+.saari-button--primary:hover { color: var(--saari-on-primary); background: var(--saari-primary-hover); }
+
+.saari-panel {
+    min-width: 0;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius);
+    background: var(--saari-surface);
+    color: var(--saari-text);
+}
+
+.saari-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    align-items: end;
+    padding: var(--saari-space-4);
+}
+html[data-theme] :where(.table-responsive, .saari-table-scroll) { max-width: 100%; overflow-x: auto; }
+html[data-theme] :where(.table, .saari-table) {
+    --bs-table-color: var(--saari-text);
+    --bs-table-bg: var(--saari-surface);
+    --bs-table-border-color: var(--saari-border);
+    --bs-table-striped-bg: var(--saari-bg);
+    --bs-table-hover-bg: var(--saari-hover);
+    color: var(--saari-text);
+    font-variant-numeric: tabular-nums;
+}
+.saari-table-scroll { overscroll-behavior-inline: contain; }
+.saari-empty { padding: 1.5rem 1rem; text-align: center; color: var(--saari-text-muted); }
+
+html[data-theme] :where(.dropdown-menu, .modal-content, .popover) {
+    --bs-dropdown-bg: var(--saari-surface-elevated);
+    --bs-dropdown-color: var(--saari-text);
+    --bs-dropdown-border-color: var(--saari-border);
+    --bs-dropdown-link-color: var(--saari-text);
+    --bs-dropdown-link-hover-bg: var(--saari-hover);
+    --bs-dropdown-link-hover-color: var(--saari-text);
+    --bs-modal-bg: var(--saari-surface-elevated);
+    --bs-modal-color: var(--saari-text);
+    --bs-modal-border-color: var(--saari-border);
+    --bs-modal-header-border-color: var(--saari-border);
+    --bs-modal-footer-border-color: var(--saari-border);
+    --bs-popover-bg: var(--saari-surface-elevated);
+    --bs-popover-body-color: var(--saari-text);
+}
+html[data-theme] :where(.pagination) {
+    --bs-pagination-bg: var(--saari-surface);
+    --bs-pagination-color: var(--saari-accent);
+    --bs-pagination-border-color: var(--saari-border);
+    --bs-pagination-hover-bg: var(--saari-hover);
+    --bs-pagination-active-bg: var(--saari-primary);
+    --bs-pagination-active-color: var(--saari-on-primary);
+    --bs-pagination-active-border-color: var(--saari-primary);
+    --bs-pagination-disabled-bg: var(--saari-hover);
+    --bs-pagination-disabled-border-color: var(--saari-border);
+}
+.saari-skeleton {
+    display: block;
+    width: min(100%, 18rem);
+    min-height: .8em;
+    margin-block: .45rem;
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-hover);
+}
+.saari-money { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+@media print {
+    :root[data-theme] { color-scheme: light; }
+    body.app-body, .app-content, .page-content { background: #fff !important; color: #222 !important; }
+}

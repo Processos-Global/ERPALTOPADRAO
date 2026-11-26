@@ -247,6 +247,13 @@ class ContratacaoCompra(models.Model):
     )
     formalizado_em = models.DateTimeField(auto_now_add=True)
     cancelada = models.BooleanField(default=False, db_index=True)
+    # NULL deixa as contratações canceladas fora da regra de unicidade.
+    marcador_ativa = models.GeneratedField(
+        expression=models.Case(models.When(cancelada=False, then=models.Value(1))),
+        output_field=models.SmallIntegerField(),
+        db_persist=False,
+        null=True,
+    )
     cancelada_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -260,8 +267,7 @@ class ContratacaoCompra(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["processo", "fornecedor"],
-                condition=models.Q(cancelada=False),
-                name="comp_contrat_proc_forn_ativa_uniq",
+                fields=["processo", "fornecedor", "marcador_ativa"],
+                name="comp_contratacao_ativa_uniq",
             )
         ]

@@ -18,19 +18,19 @@
   .cp-column{min-width:0;height:auto}
   .cp-column__head{align-items:flex-start;padding:8px 7px 9px}
   .cp-column__title{min-width:0}
-  .cp-column__title strong{display:block;color:#66534c;font-size:11px;font-weight:900}
-  .cp-column__title small{display:block;margin-top:3px;color:#91837b;font-size:9px;font-weight:600;line-height:1.35}
-  .cp-column[data-column="AJUSTE"]{background:#fff9ee;border-color:#ead9b9}
-  .cp-column[data-column="AJUSTE"] .cp-count{background:#f6e8c8;color:#7f5d29}
-  .cp-column[data-column="APROVACAO"]{background:#fffdfa;border-color:#ded9ec}
-  .cp-column[data-column="FINALIZADO"]{background:#fffdfa;border-color:#eee8d6}
-  .cp-column[data-column="FINALIZADO"] .cp-count{background:#eee8d6;color:#453330}
-  .cp-column[data-column="ENCERRADOS"]{background:#fff6f6;border-color:#efd2d2}
-  .cp-column[data-column="ENCERRADOS"] .cp-count{background:#f3dddd;color:#8b4646}
-  .cp-process-card__stage{display:block;margin-top:5px;color:#77655c;font-size:9px}
+  .cp-column__title strong{display:block;color:var(--saari-text);font-size:.875rem;font-weight:900}
+  .cp-column__title small{display:block;margin-top:3px;color:var(--saari-text-muted);font-size:.75rem;font-weight:600;line-height:1.35}
+  .cp-column[data-column="AJUSTE"]{background:color-mix(in srgb,var(--saari-warning) 13%,var(--saari-surface));border-color:#ead9b9}
+  .cp-column[data-column="AJUSTE"] .cp-count{background:color-mix(in srgb,var(--saari-warning) 13%,var(--saari-surface));color:var(--saari-warning)}
+  .cp-column[data-column="APROVACAO"]{background:var(--saari-surface);border-color:#ded9ec}
+  .cp-column[data-column="FINALIZADO"]{background:var(--saari-surface);border-color:var(--saari-border)}
+  .cp-column[data-column="FINALIZADO"] .cp-count{background:var(--saari-hover);color:var(--saari-text)}
+  .cp-column[data-column="ENCERRADOS"]{background:color-mix(in srgb,var(--saari-danger) 13%,var(--saari-surface));border-color:#efd2d2}
+  .cp-column[data-column="ENCERRADOS"] .cp-count{background:color-mix(in srgb,var(--saari-danger) 13%,var(--saari-surface));color:var(--saari-danger)}
+  .cp-process-card__stage{display:block;margin-top:5px;color:var(--saari-text-muted);font-size:9px}
   .cp-process-card--overdue{border-color:#e7c7a3}
-  .cp-process-card--overdue .cp-process-card__foot span:last-child{color:#986327;font-weight:850}
-  .cp-board-hint{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-4px 0 8px;color:#77655c;font-size:10px}
+  .cp-process-card--overdue .cp-process-card__foot span:last-child{color:var(--saari-warning);font-weight:850}
+  .cp-board-hint{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-4px 0 8px;color:var(--saari-text-muted);font-size:10px}
   .cp-board-more{display:grid;gap:8px;padding:10px 5px;color:var(--cp-muted);font-size:10px;text-align:center}
   .cp-board-more .cp-btn{justify-self:center}
   @media(max-width:1100px){.cp-kpis{grid-template-columns:repeat(2,1fr)}}
@@ -40,42 +40,49 @@
   }
 
 /* PADRÃO VISUAL — referência processo_form */
-.cp-board{grid-auto-columns:minmax(245px,280px);gap:9px}.cp-column{padding:7px;border-radius:8px;background:#f8f4ed!important;border-color:#ded7c8!important}.cp-column__title strong{color:#4b3a35;font-size:10px}.cp-column__title small{color:#85776f;font-size:8px}.cp-column[data-column="AJUSTE"],.cp-column[data-column="APROVACAO"],.cp-column[data-column="FINALIZADO"],.cp-column[data-column="ENCERRADOS"]{background:#f8f4ed!important}.cp-board-hint{font-size:9px;color:#a39890}.cp-process-card__stage{font-size:8px;color:#85776f}.cp-process-card--overdue{border-color:#FED7AA}
+.cp-board{grid-auto-columns:minmax(245px,280px);gap:9px}.cp-column{padding:7px;border-radius:8px;background:var(--saari-hover)!important;border-color:var(--saari-border)!important}.cp-column__title strong{color:var(--saari-text);font-size:10px}.cp-column__title small{color:var(--saari-text-muted);font-size:8px}.cp-column[data-column="AJUSTE"],.cp-column[data-column="APROVACAO"],.cp-column[data-column="FINALIZADO"],.cp-column[data-column="ENCERRADOS"]{background:var(--saari-hover)!important}.cp-board-hint{font-size:9px;color:var(--saari-text-muted)}.cp-process-card__stage{font-size:8px;color:var(--saari-text-muted)}.cp-process-card--overdue{border-color:#FED7AA}
 
 
 
 /* Kanban reorganizado — informação em blocos com hierarquia clara */
 .cp-process-card{padding:12px 12px 11px;border-radius:9px}
 .cp-process-card__top{align-items:flex-start;margin-bottom:9px}
-.cp-process-card__number{font-size:9px;letter-spacing:.035em}
-.cp-process-card__title{margin:0 0 9px;font-family:var(--font-serif);font-size:15px;font-weight:500;line-height:1.22;color:var(--saari-brown)}
+.cp-process-card__number{font-size:.75rem;letter-spacing:.035em}
+.cp-process-card__title{margin:0 0 9px;font-size:.925rem;font-weight:750;line-height:1.22;color:var(--saari-brown)}
 .cp-process-card__details{display:grid;gap:6px;padding:8px 0;border-top:1px solid var(--cp-line-soft);border-bottom:1px solid var(--cp-line-soft)}
 .cp-process-card__detail{display:grid;grid-template-columns:56px minmax(0,1fr);gap:7px;align-items:start}
 .cp-process-card__detail span{color:var(--cp-muted);font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.055em}
-.cp-process-card__detail strong{min-width:0;color:var(--cp-text);font-size:9px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
-.cp-process-card__stage{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin:8px 0 0;padding:4px 7px;border-radius:999px;background:#f5f1e9;color:#66534c!important;font-size:8px!important;font-weight:800}
+.cp-process-card__detail strong{min-width:0;color:var(--cp-text);font-size:.75rem;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.cp-process-card__stage{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin:8px 0 0;padding:4px 7px;border-radius:999px;background:var(--saari-hover);color:var(--saari-text)!important;font-size:.75rem;font-weight:800}
 .cp-process-card__foot{margin-top:9px;padding-top:0;border-top:0;align-items:flex-end}
 .cp-process-card__foot-item{display:grid;gap:2px;min-width:0}
 .cp-process-card__foot-item:last-child{text-align:right}
 .cp-process-card__foot-label{color:var(--cp-muted);font-size:7px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
-.cp-process-card__foot-value{color:#66534c;font-size:9px;font-weight:750;line-height:1.25}
+.cp-process-card__foot-value{color:var(--saari-text);font-size:9px;font-weight:750;line-height:1.25}
+
+.cp-board{scroll-snap-type:inline proximity}
+.cp-column{scroll-snap-align:start}
+.cp-column[data-column="AJUSTE"]{border-block-start:3px solid var(--saari-warning)}
+.cp-column[data-column="APROVACAO"]{border-block-start:3px solid var(--saari-accent)}
+.cp-column[data-column="FINALIZADO"]{border-block-start:3px solid var(--saari-success)}
+.cp-column[data-column="ENCERRADOS"]{border-block-start:3px solid var(--saari-danger)}
+
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="cp-page">
-  <div class="cp-head">
+  <header class="cp-head">
     <div class="cp-head__copy">
       <div class="cp-eyebrow">Suprimentos</div>
       <h1 class="cp-title">Painel de compras</h1>
-      <div class="cp-sub">Acompanhe cada processo pelo fluxo atual, da abertura até a aprovação do gestor e geração automática do pedido.</div>
     </div>
     <div class="cp-actions">
-      <a class="cp-btn" href="{% url 'compras:lista_processos' %}">Lista completa</a>
+      <a class="cp-btn" href="{% url 'compras:lista_processos' %}{% querystring page=None %}">Lista completa</a>
       <a class="cp-btn" href="{% url 'compras:lista_pedidos' %}">Pedidos</a>
       {% if request.user.is_superuser or request.user.permissao_compras_erp.administrar or request.user.permissao_compras_erp.solicitar_compra %}<a class="cp-btn cp-btn--primary" href="{% url 'compras:nova_compra_avulsa' %}">Nova compra</a>{% endif %}
     </div>
-  </div>
+  </header>
 
   {% if pode_administrar_sla %}<p><a class="cp-btn" href="{% url 'compras:regras_prazo' %}">Configurar prazos de compra</a></p>{% endif %}
   <div class="cp-kpis">
@@ -137,7 +144,7 @@
     <span>Role horizontalmente para ver todas as colunas →</span>
   </div>
 
-  <div class="cp-board">
+  <div class="cp-board" role="region" aria-label="Kanban por etapa" tabindex="0">
     {% for coluna in colunas %}
       <section class="cp-column" data-column="{{ coluna.chave }}">
         <div class="cp-column__head">
@@ -151,7 +158,7 @@
         {% for processo in coluna.processos %}
           <a
             class="cp-process-card{% if processo.item_cronograma.prazo_limite_contratacao and processo.item_cronograma.prazo_limite_contratacao < hoje and processo.status != 'CONTRATADO' and processo.status != 'REPROVADO' and processo.status != 'CANCELADO' %} cp-process-card--overdue{% endif %}"
-            href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}"
+            href="{% if processo.fluxo_grande_fornecedor %}{% url 'compras:grande_fornecedor_matriz' processo.pk %}{% else %}{% url 'compras:detalhe_processo' processo.pk %}{% endif %}?retorno={{ request.get_full_path|urlencode:'' }}"
           >
             <div class="cp-process-card__top">
               <div><span class="cp-process-card__number">{{ processo.numero }}</span>{% if processo.fluxo_grande_fornecedor %}<div style="margin-top:4px"><span class="cp-badge cp-badge--active">Grande Fornecedor</span></div>{% endif %}</div>

@@ -1,22 +1,12 @@
-﻿"""Synthetic regressions; independent SQLite settings required."""
-import sys
+"""Synthetic regressions; independent test settings required."""
 from datetime import date
 from decimal import Decimal
 from django.conf import settings
 
+from relatorios.isolamento_testes import validar_isolamento
+
 # Discovery imports this module before the runner creates any test database.
-# Fail closed if somebody forgets the explicit independent settings argument.
-if settings.SETTINGS_MODULE != 'relatorios.test_settings':
-    raise RuntimeError('Use --settings=relatorios.test_settings; application database is forbidden.')
-if set(settings.DATABASES) != {'default'}:
-    raise RuntimeError('Only the isolated default database is allowed.')
-_database = settings.DATABASES['default']
-if (_database['ENGINE'] != 'django.db.backends.sqlite3'
-        or _database['NAME'] != ':memory:'
-        or _database.get('TEST', {}).get('NAME') != ':memory:'):
-    raise RuntimeError('Tests require SQLite :memory: for NAME and TEST.NAME.')
-if 'config.settings' in sys.modules:
-    raise RuntimeError('Application settings were unexpectedly imported.')
+validar_isolamento(settings)
 
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
@@ -30,8 +20,7 @@ from relatorios.services import estrategicos
 class RelatoriosRegressionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        assert settings.SETTINGS_MODULE == 'relatorios.test_settings'
-        assert 'config.settings' not in sys.modules
+        validar_isolamento(settings, durante_testes=True)
         cls.admin = User.objects.create(username='qa-admin', is_superuser=True)
         cls.reader = User.objects.create(username='qa-reader')
         PermissaoModulo.objects.create(usuario=cls.reader, modulo='RELATORIOS', ativo=True)

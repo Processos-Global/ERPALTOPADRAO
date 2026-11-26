@@ -1,0 +1,168 @@
+:is(.proj-sheet-page, .proj-alt-page) {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    color: var(--saari-text);
+}
+
+:is(.proj-sheet-head, .proj-alt-head) {
+    margin: 0;
+}
+
+.proj-sheet-head__copy { min-width: 0; }
+.proj-sheet-head p { margin: 5px 0 0; color: var(--saari-text-muted); font-size: .875rem; }
+
+:is(.proj-sheet-filter, .proj-alt-filter) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px;
+}
+
+:is(.proj-sheet-field, .proj-field) label, .proj-alt-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: .8125rem;
+    font-weight: 700;
+    color: var(--saari-text);
+}
+
+:is(.proj-sheet-control, .proj-alt-control, .proj-control, .proj-status, .proj-observacao) {
+    max-width: 100%;
+    min-height: var(--saari-control-height);
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    padding: 6px 10px;
+    box-sizing: border-box;
+    background: var(--saari-input-bg);
+    color: var(--saari-text);
+    font: inherit;
+    font-size: .875rem;
+}
+
+.proj-sheet-control { width: min(20rem, 100%); }
+.proj-field .proj-control { width: 100%; }
+.proj-field textarea.proj-control { min-height: 62px; resize: vertical; }
+.proj-error, .proj-save-state[data-error] { color: var(--saari-danger); }
+.proj-error { display: block; margin-top: 4px; }
+
+.proj-sheet-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.proj-sheet-tab {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 7px 12px;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-surface);
+    color: var(--saari-text-muted);
+    font-size: .875rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.proj-sheet-tab:hover { background: var(--saari-hover); }
+.proj-sheet-tab.is-active { border-color: var(--saari-accent); color: var(--saari-accent); }
+.proj-sheet-scroll { overflow: auto; max-height: calc(100dvh - 270px); min-height: 7rem; }
+.proj-sheet { min-width: 58rem; table-layout: fixed; border-spacing: 0; }
+.proj-table { min-width: 48rem; border-collapse: collapse; }
+:is(.proj-sheet, .proj-table) { width: 100%; }
+
+:is(.proj-sheet, .proj-table) :is(th, td) {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--saari-border);
+    font-size: .875rem;
+    text-align: left;
+    vertical-align: middle;
+}
+
+:is(.proj-sheet, .proj-table) th { background: var(--saari-hover); color: var(--saari-text); }
+:is(.proj-sheet, .proj-table) tbody tr:hover { background: var(--saari-hover); }
+.proj-sheet th { position: sticky; top: 0; z-index: 1; }
+.proj-sheet .col-etapa, .proj-sheet .col-codigo { width: 76px; }
+.proj-sheet .col-entrega { width: 28%; }
+.proj-sheet .col-status { width: 190px; }
+.proj-sheet .col-historico { width: 100px; }
+.proj-cell-code, .proj-date { color: var(--saari-text-muted); }
+.proj-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proj-cell-entrega { font-weight: 650; }
+.proj-desc { max-width: 520px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.proj-status { width: 100%; border-inline-start-width: 4px !important; }
+.proj-status:is([data-status="FINALIZADO"], [data-status="RECEBIDO"]) { border-inline-start-color: var(--saari-success) !important; }
+.proj-status:is([data-status="EM_ANDAMENTO"], [data-status="PARCIALMENTE"]) { border-inline-start-color: var(--saari-warning) !important; }
+.proj-status[data-status="NAO_RECEBIDO"] { border-inline-start-color: var(--saari-danger) !important; }
+.proj-status[data-status="INICIADO"] { border-inline-start-color: var(--saari-info) !important; }
+.proj-observacao { width: 100%; max-height: 100px; resize: vertical; }
+.proj-save-state { margin-top: 4px; color: var(--saari-text-muted); font-size: .75rem; }
+.proj-history, .proj-file { color: var(--saari-accent); white-space: nowrap; }
+.proj-empty { padding: 24px; text-align: center; color: var(--saari-text-muted); }
+
+:is(.proj-alt-form__head, .proj-table-head) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--saari-border);
+    background: var(--saari-hover);
+    border-radius: var(--saari-radius) var(--saari-radius) 0 0;
+    font-weight: 700;
+}
+
+.proj-alt-form__body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: 10px;
+    align-items: end;
+    padding: 14px 15px;
+}
+.proj-alt-form__action { grid-column: 1 / -1; }
+.proj-pagination, .proj-pagination__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.proj-pagination { justify-content: space-between; padding: 10px 14px; color: var(--saari-text-muted); }
+
+.proj-dialog {
+    width: min(46rem, calc(100vw - 24px));
+    max-height: 82dvh;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius);
+    background: var(--saari-surface);
+    color: var(--saari-text);
+    box-shadow: var(--saari-shadow-popover);
+}
+.proj-dialog::backdrop { background: rgb(25 17 12 / .55); }
+.proj-dialog__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--saari-border);
+    background: var(--saari-surface-elevated);
+}
+.proj-dialog__title, .proj-history-entry__meta { color: var(--saari-text-muted); font-size: .8125rem; }
+.proj-dialog__body { padding: 8px 16px 16px; }
+.proj-history-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 8rem) minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--saari-border);
+    overflow-wrap: anywhere;
+}
+.proj-history-entry__change strong { display: block; margin-bottom: 3px; }
+
+@media (max-width: 760px) {
+    :is(.proj-sheet-filter, .proj-sheet-field, .proj-sheet-control, .proj-alt-filter, .proj-alt-control) {
+        width: 100%;
+    }
+    .proj-sheet-scroll { max-height: none; }
+    .proj-alt-form__action .saari-button { width: 100%; }
+}

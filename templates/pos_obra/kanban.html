@@ -1,35 +1,30 @@
 {% extends 'pos_obra/_base.html' %}
+{% load l10n %}
 {% block po_content %}
-{% include 'pos_obra/_management_styles.html' %}
 
 <style>
 /* SAARI ERP — Quadro de atendimento. Estilos isolados nesta tela. */
 .po-board-page,
 .po-board-page * { box-sizing: border-box; }
 .po-board-page {
-  --kb-ink: #342723;
-  --kb-muted: #84766d;
-  --kb-line: #e9e2da;
-  --kb-soft: #faf8f5;
-  --kb-accent: #493029;
-  width: 100%; min-width: 0; color: var(--kb-ink);
+  width: 100%; min-width: 0; color: var(--saari-text);
 }
 .po-board-page .po-board-panel {
   width: 100%; min-width: 0; padding: 0; overflow: hidden;
-  border: 1px solid var(--kb-line); border-radius: 14px;
-  background: #fff; box-shadow: 0 2px 12px rgba(50, 36, 28, .025);
+  border: 1px solid var(--saari-border); border-radius: 14px;
+  background: var(--saari-surface); box-shadow: 0 2px 12px rgba(50, 36, 28, .025);
 }
 .po-board-page .po-board-header {
   display: flex; justify-content: space-between; align-items: center;
-  gap: 18px; padding: 20px 24px; border-bottom: 1px solid var(--kb-line);
+  gap: 18px; padding: 20px 24px; border-bottom: 1px solid var(--saari-border);
 }
 .po-board-page .po-board-heading { min-width: 0; }
 .po-board-page .po-board-heading h2 {
   margin: 0; font-size: 19px; line-height: 1.3;
-  letter-spacing: -.35px; font-weight: 750; color: var(--kb-ink);
+  letter-spacing: -.35px; font-weight: 750; color: var(--saari-text);
 }
 .po-board-page .po-board-heading p {
-  margin: 5px 0 0; color: var(--kb-muted); font-size: 12px; line-height: 1.5;
+  margin: 5px 0 0; color: var(--saari-text-muted); font-size: 12px; line-height: 1.5;
 }
 .po-board-page .po-board-filters {
   display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
@@ -38,91 +33,91 @@
 .po-board-page .po-filter-field {
   display: flex; flex-direction: column; gap: 6px;
   margin: 0; font-size: 11px; line-height: 1.3; font-weight: 650;
-  color: #65564e;
+  color: var(--saari-text);
 }
 .po-board-page .po-filter-search { width: min(300px, 28vw); }
 .po-board-page .po-filter-priority { width: 175px; }
 .po-board-page .po-filter-field input,
 .po-board-page .po-filter-field select {
   display: block; width: 100%; height: 39px; min-height: 39px;
-  padding: 0 12px; border: 1px solid #ded5ca; border-radius: 8px;
-  background: #fff; color: #3e332d; font: inherit; font-size: 12px;
+  padding: 0 12px; border: 1px solid var(--saari-border); border-radius: 8px;
+  background: var(--saari-input-bg); color: var(--saari-text); font: inherit; font-size: 12px;
   font-weight: 450; box-shadow: none; outline: none;
 }
 .po-board-page .po-filter-field input:focus,
 .po-board-page .po-filter-field select:focus {
-  border-color: #8e6c5a; box-shadow: 0 0 0 3px rgba(142,108,90,.12);
+  border-color: var(--saari-focus-ring); box-shadow: 0 0 0 3px rgba(142,108,90,.12);
 }
 .po-board-page .po-board-button {
   display: inline-flex; align-items: center; justify-content: center;
   height: 39px; min-height: 39px; padding: 0 15px; gap: 7px;
   text-decoration: none; white-space: nowrap; border-radius: 8px;
-  background: #fff; border: 1px solid #ded5ca; color: #59473d;
+  background: var(--saari-surface); border: 1px solid var(--saari-border); color: var(--saari-text);
   font-size: 12px; line-height: 1; font-weight: 700; cursor: pointer;
   box-shadow: none; transition: background .15s, border-color .15s;
 }
-.po-board-page .po-board-button:hover { background: #f7f3ee; border-color: #cdbbab; }
+.po-board-page .po-board-button:hover { background: var(--saari-surface-elevated); border-color: var(--saari-border); }
 .po-board-page .po-board-button--primary {
-  background: var(--kb-accent); border-color: var(--kb-accent); color: #fff;
+  background: var(--saari-primary); border-color: var(--saari-primary); color: var(--saari-primary-text,#fff);
 }
-.po-board-page .po-board-button--primary:hover { background: #634338; border-color: #634338; }
+.po-board-page .po-board-button--primary:hover { background: var(--saari-primary-hover); border-color: var(--saari-primary-hover); }
 .po-board-page .po-board-board {
   width: 100%; min-width: 0; padding: 18px;
-  background: #faf9f7;
+  background: var(--saari-surface-elevated);
 }
 .po-board-page .po-board-grid {
   display: grid; grid-auto-flow: column; grid-auto-columns: 330px;
   gap: 12px; width: 100%; overflow-x: auto; padding: 0 0 12px;
   overscroll-behavior-inline: contain; scroll-snap-type: x proximity;
-  scrollbar-width: thin; scrollbar-color: #c7b7aa #f3eee8;
+  scrollbar-width: thin; scrollbar-color: var(--saari-border) var(--saari-surface-elevated);
 }
 /* Colunas têm largura confortável sem encolher até ficar ilegível. */
 .po-board-page .po-stage {
   display: flex; flex-direction: column; width: 330px; min-width: 330px;
   min-height: 295px; overflow: hidden;
   border: 1px solid #e5ded5; border-radius: 11px;
-  background: #fff; scroll-snap-align: start;
+  background: var(--saari-surface); scroll-snap-align: start;
 }
 .po-board-page .po-stage-header {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; min-height: 57px; padding: 12px 14px;
-  border-bottom: 1px solid var(--kb-line); background: #f5f1ec;
+  border-bottom: 1px solid var(--saari-border); background: var(--saari-surface-elevated);
   border-top: 3px solid #9b7c68;
 }
 .po-board-page .po-stage-header strong {
-  color: #3a2c26; font-size: 12px; font-weight: 750; line-height: 1.35;
+  color: var(--saari-text); font-size: 12px; font-weight: 750; line-height: 1.35;
 }
 .po-board-page .po-stage-count {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 28px; height: 27px; padding: 0 6px;
-  background: #fff; border: 1px solid #e4d9cc; border-radius: 7px;
-  font-size: 12px; font-weight: 750; color: #49362d;
+  background: var(--saari-surface); border: 1px solid var(--saari-border); border-radius: 7px;
+  font-size: 12px; font-weight: 750; color: var(--saari-text);
 }
 .po-board-page .po-stage-body {
   display: flex; flex: 1; flex-direction: column; gap: 10px;
   min-height: 190px; max-height: 65vh; overflow-y: auto;
-  padding: 11px; background: #fff;
+  padding: 11px; background: var(--saari-surface);
 }
 .po-board-page .po-stage-empty {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px;
   min-height: 170px; padding: 22px 8px;
-  color: #92837a; font-size: 12px; text-align: center;
+  color: var(--saari-text-muted); font-size: 12px; text-align: center;
 }
 .po-board-page .po-stage-empty-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border: 1px dashed #ddcfc0;
-  border-radius: 12px; color: #af9b8c; background: #faf8f5;
+  border-radius: 12px; color: var(--saari-text-muted); background: var(--saari-surface-elevated);
 }
 .po-board-page .po-stage-empty-icon svg { width: 19px; height: 19px; }
 .po-board-page .po-stage-card {
   display: flex; flex-direction: column; min-width: 0; height: auto; padding: 14px; border: 1px solid #e9e1d9;
-  border-radius: 9px; background: #fff; color: inherit;
+  border-radius: 9px; background: var(--saari-surface); color: inherit;
   text-decoration: none; box-shadow: 0 1px 4px rgba(45,30,20,.04);
   transition: border-color .15s, box-shadow .15s, transform .15s;
 }
 .po-board-page .po-stage-card:hover {
-  border-color: #b99e8a; box-shadow: 0 5px 14px rgba(45,30,20,.08);
+  border-color: var(--saari-border); box-shadow: 0 5px 14px rgba(45,30,20,.08);
   transform: translateY(-1px);
 }
 .po-board-page .po-stage-card-top,
@@ -135,25 +130,25 @@
   min-width: 0; flex: 1 1 auto; width: auto !important;
   font-size: 11px; font-weight: 800; line-height: 1.5 !important;
   white-space: normal !important; overflow-wrap: anywhere; word-break: break-word;
-  color: #684333;
+  color: var(--saari-accent);
 }
 .po-board-page .po-stage-priority {
   display: inline-flex; flex: 0 0 auto; align-self: flex-start; padding: 4px 7px; border-radius: 6px;
-  border: 1px solid #e3dbd3; background: #f7f4f0;
-  color: #786b62; font-size: 10px; font-weight: 700;
+  border: 1px solid var(--saari-border); background: var(--saari-surface-elevated);
+  color: var(--saari-text-muted); font-size: 10px; font-weight: 700;
 }
 .po-board-page .po-stage-priority[data-priority*="ALTA"],
 .po-board-page .po-stage-priority[data-priority*="URG"] {
-  background: #fff0ee; border-color: #f1cbc5; color: #a64233;
+  background: color-mix(in srgb,var(--saari-danger) 10%,var(--saari-surface)); border-color: var(--saari-danger); color: var(--saari-danger);
 }
 .po-board-page .po-stage-priority[data-priority*="MEDIA"],
 .po-board-page .po-stage-priority[data-priority*="MÉDIA"] {
-  background: #fff7e7; border-color: #eddcb2; color: #926820;
+  background: color-mix(in srgb,var(--saari-warning) 10%,var(--saari-surface)); border-color: var(--saari-warning); color: var(--saari-warning);
 }
 .po-board-page .po-stage-card h3 {
   display: block !important; position: static !important; clear: both;
   width: auto !important; height: auto !important; min-height: 0 !important;
-  margin: 12px 0 14px !important; color: #332820; font-size: 13px;
+  margin: 12px 0 14px !important; color: var(--saari-text); font-size: 13px;
   font-weight: 750; line-height: 1.45 !important; overflow-wrap: anywhere; white-space: normal !important;
 }
 .po-board-page .po-stage-card-info { display: grid; gap: 8px; }
@@ -161,23 +156,23 @@
   display: grid; grid-template-columns: 78px minmax(0, 1fr);
   gap: 8px; font-size: 11px; line-height: 1.45;
 }
-.po-board-page .po-stage-card-info span { color: #998b80; }
+.po-board-page .po-stage-card-info span { color: var(--saari-text-muted); }
 .po-board-page .po-stage-card-info strong {
-  color: #55473e; font-weight: 650; overflow-wrap: anywhere;
+  color: var(--saari-text); font-weight: 650; overflow-wrap: anywhere;
 }
 .po-board-page .po-stage-card-bottom {
   margin-top: 12px; padding-top: 10px; border-top: 1px solid #eee7df;
-  color: #918279; font-size: 10px; line-height: 1.4;
+  color: var(--saari-text-muted); font-size: 10px; line-height: 1.4;
 }
-.po-board-page .po-stage-card-bottom .po-card-open { color: #684333; font-weight: 750; white-space: nowrap; }
+.po-board-page .po-stage-card-bottom .po-card-open { color: var(--saari-accent); font-weight: 750; white-space: nowrap; }
 .po-board-page .po-stage-more {
-  display: block; padding: 11px 12px; border-top: 1px solid var(--kb-line);
-  background: #fff; color: #72523f; text-decoration: none;
+  display: block; padding: 11px 12px; border-top: 1px solid var(--saari-border);
+  background: var(--saari-surface); color: var(--saari-accent); text-decoration: none;
   font-size: 11px; font-weight: 700; text-align: center;
 }
-.po-board-page .po-stage-more:hover { background: #faf7f3; }
+.po-board-page .po-stage-more:hover { background: var(--saari-surface-elevated); }
 .po-board-page a:focus-visible,
-.po-board-page button:focus-visible { outline: 3px solid #be9b7e; outline-offset: 2px; }
+.po-board-page button:focus-visible { outline: 3px solid var(--saari-focus-ring); outline-offset: 2px; }
 @media (min-width: 1500px) {
   .po-board-page .po-board-grid { grid-auto-columns: 330px; }
 }
@@ -196,6 +191,17 @@
   .po-board-page .po-board-grid { grid-auto-columns: min(310px, 82vw); }
   .po-board-page .po-stage { width: min(310px, 82vw); min-width: 0; }
 }
+
+.po-board-page .po-board-grid { scroll-padding-inline: 12px; }
+.po-board-page .po-stage { border-block-start: 3px solid var(--po-stage-accent, var(--saari-accent)); }
+.po-board-page .po-stage[data-stage="CONCLUIDO"] { --po-stage-accent: var(--saari-success); }
+.po-board-page .po-stage[data-stage="CANCELADO"] { --po-stage-accent: var(--saari-danger); }
+.po-board-page .po-stage-card:target { border-color: var(--saari-focus-ring); }
+.po-board-page .po-stage-card :is(h3, strong, span) { overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+    .po-board-page .po-board-button { min-height: 44px; }
+}
+
 /* Protege os cards contra regras globais dos estilos compartilhados. */
 .po-board-page .po-stage-card > .po-stage-card-top {
   display: flex !important; flex-direction: row !important; align-items: flex-start !important;
@@ -254,7 +260,7 @@
             </div>
             <div class="po-stage-body">
               {% for c in grupo.itens %}
-                <a href="{% url 'pos_obra:detalhe' c.pk %}" class="po-stage-card">
+                <a href="{% url 'pos_obra:detalhe' c.pk %}?retorno={{ request.get_full_path|urlencode:'' }}" class="po-stage-card" id="chamado-{{ c.pk|unlocalize }}">
                   <div class="po-stage-card-top">
                     <strong class="po-stage-number">{{ c.numero }}</strong>
                     <span class="po-stage-priority" data-priority="{{ c.prioridade }}">{{ c.get_prioridade_display }}</span>

@@ -1,0 +1,151 @@
+.cad-page {
+    max-width: 1480px;
+    margin-inline: auto;
+    min-width: 0;
+    color: var(--saari-text);
+}
+
+.cad-page .cad-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    border: 1px solid var(--saari-border);
+    background: var(--saari-surface);
+    border-radius: var(--saari-radius);
+    padding: clamp(14px, 2vw, 22px);
+    margin-bottom: 16px;
+}
+
+.cad-page .cad-head::before,
+.cad-page .cad-head::after { content: none; }
+.cad-head__copy { min-width: 0; }
+.cad-title { margin: 0; font: 400 clamp(1.55rem, 2.7vw, 2.1rem)/1.2 var(--saari-font-display); }
+.cad-eyebrow, .cad-sub { color: var(--saari-text-muted); font-size: .84rem; }
+.cad-sub { margin: 5px 0 0; max-width: 72ch; }
+.cad-head__actions, .cad-actions__main { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.cad-directory {
+    padding: clamp(12px, 2vw, 20px);
+    margin-block: 0 14px;
+    border: 1px solid var(--saari-border);
+    background: var(--saari-surface);
+    border-radius: var(--saari-radius);
+}
+.cad-directory h2 { font-size: 1rem; font-weight: 700; margin: 0 0 12px; }
+.cad-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cad-directory-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    min-height: 50px;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius-sm);
+    color: var(--saari-text);
+    text-decoration: none;
+    font-size: .88rem;
+    overflow-wrap: anywhere;
+    transition: background var(--saari-motion), border-color var(--saari-motion);
+}
+.cad-directory-link:is(:hover, :focus-visible) { background: var(--saari-hover); border-color: var(--saari-accent); }
+.cad-directory-link .icon { color: var(--saari-accent); flex-shrink: 0; }
+.cad-directory-link span { margin-inline-start: auto; font-variant-numeric: tabular-nums; color: var(--saari-text-muted); }
+.cad-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius-sm);
+    color: var(--saari-text);
+    background: var(--saari-surface);
+    text-decoration: none;
+}
+.cad-card:hover { background: var(--saari-hover); border-color: var(--saari-accent); }
+.cad-card__top, .cad-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cad-card__count { font-variant-numeric: tabular-nums; }
+.cad-card__icon, .cad-card__footer { color: var(--saari-accent); font-size: .82rem; }
+.cad-card h3 { font-size: 1rem; margin: 0; }
+.cad-card p { color: var(--saari-text-muted); font-size: .84rem; margin: 0; }
+
+.cad-toolbar, .cad-toolbar form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-width: 0; }
+.cad-toolbar { border: 1px solid var(--saari-border); border-radius: var(--saari-radius); background: var(--saari-surface); padding: 10px; margin-bottom: 12px; }
+.cad-toolbar form { flex: 1; }
+.cad-toolbar input[type=search] { flex: 1 1 255px; min-width: 0; }
+.cad-input, .cad-toolbar :is(input, select), .cad-field :is(input:not([type=checkbox]):not([type=radio]), select, textarea) {
+    border: 1px solid var(--saari-control-border);
+    border-radius: var(--saari-radius-sm);
+    padding: 8px 10px;
+    min-height: var(--saari-control-height);
+    background: var(--saari-input-bg);
+    color: var(--saari-text);
+    font: inherit;
+    font-size: .88rem;
+}
+.cad-page :is(input, select, textarea):is([readonly], :disabled) {
+    background: var(--saari-surface-elevated);
+    color: var(--saari-text-muted);
+}
+.cad-page :is(.cad-input, input, select, textarea)[aria-invalid=true] { border-color: var(--saari-danger); }
+.cad-page :focus-visible { outline: 2px solid var(--saari-focus-ring); outline-offset: 2px; }
+.cad-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--saari-control-height);
+    padding: 8px 12px;
+    border: 1px solid var(--saari-primary);
+    border-radius: var(--saari-radius-sm);
+    background: var(--saari-primary);
+    color: var(--saari-on-primary);
+    text-decoration: none;
+    font: inherit;
+    font-size: .84rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.cad-btn:hover { background: var(--saari-primary-hover); }
+.cad-btn--secondary, .cad-btn--danger { background: var(--saari-surface); border-color: var(--saari-border); color: var(--saari-text); }
+.cad-btn--danger { color: var(--saari-danger); }
+.cad-btn--secondary:hover, .cad-btn--danger:hover { background: var(--saari-hover); }
+.cad-table-wrap { max-width: 100%; overflow-x: auto; background: var(--saari-surface); border: 1px solid var(--saari-border); border-radius: var(--saari-radius); }
+.cad-table { width: 100%; border-collapse: collapse; min-width: 44rem; font-size: .84rem; }
+.cad-table :is(th, td) { border-block-end: 1px solid var(--saari-border); padding: 10px 12px; text-align: start; }
+.cad-table th { background: var(--saari-surface-elevated); color: var(--saari-text-muted); font-size: .77rem; white-space: nowrap; }
+.cad-table tbody tr:hover { background: var(--saari-hover); }
+.cad-table tr:last-child td { border-block-end: 0; }
+.cad-code, .cad-badge { font-variant-numeric: tabular-nums; }
+.cad-code { color: var(--saari-text-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.cad-link { color: var(--saari-accent); font-weight: 700; text-underline-offset: .2em; }
+.cad-muted, .cad-empty { color: var(--saari-text-muted); font-size: .8rem; }
+.cad-empty { padding: 22px; }
+.cad-badge { display: inline-flex; padding: 4px 8px; border-radius: 99px; font-size: .76rem; background: var(--saari-hover); color: var(--saari-text); }
+.cad-badge.off { color: var(--saari-text-muted); }
+.cad-row-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+
+.cad-form-card { max-width: 980px; border: 1px solid var(--saari-border); border-radius: var(--saari-radius); background: var(--saari-surface); }
+.cad-form-card__head { padding: 12px 16px; border-block-end: 1px solid var(--saari-border); background: var(--saari-surface-elevated); }
+.cad-form-card__body { padding: clamp(12px, 2vw, 20px); }
+.cad-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cad-field { min-width: 0; }
+.cad-field label { display: block; margin-block-end: 6px; font-size: .84rem; font-weight: 700; }
+.cad-field :is(input:not([type=checkbox]):not([type=radio]), select, textarea) { width: 100%; }
+.cad-field.full { grid-column: 1 / -1; }
+.cad-errors { color: var(--saari-danger); font-size: .8rem; margin-block-start: 5px; }
+.cad-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-block-start: 16px; padding-block-start: 12px; border-block-start: 1px solid var(--saari-border); }
+
+@media (max-width: 1050px) {
+    .cad-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+    .cad-grid, .cad-form-grid { grid-template-columns: minmax(0, 1fr); }
+    .cad-toolbar input[type=search] { flex-basis: 100%; }
+    .cad-page :is(.cad-btn, input, select, textarea) { min-height: 44px; }
+    .cad-page :is(input, select, textarea) { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cad-directory-link { transition: none; }
+}

@@ -41,7 +41,8 @@
         const backdrop = qs("[data-sidebar-backdrop]");
         const content = qs(".app-content");
         if (!sidebar || !toggle) return;
-        let desktopCollapsed = safeStorage.get("erpSidebarCollapsed") === "true";
+        const sidebarKey = `saari-nav:${body.dataset.navAccount || "local"}:sidebar`;
+        let desktopCollapsed = safeStorage.get(sidebarKey) === "true";
 
         const syncSidebarState = () => {
             const desktop = isDesktop();
@@ -66,7 +67,7 @@
         toggle.addEventListener("click", () => {
             if (isDesktop()) {
                 desktopCollapsed = !desktopCollapsed;
-                safeStorage.set("erpSidebarCollapsed", String(desktopCollapsed));
+                safeStorage.set(sidebarKey, String(desktopCollapsed));
                 syncSidebarState();
                 return;
             }
@@ -84,68 +85,6 @@
         doc.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !event.defaultPrevented) closeMobile(true);
         });
-    }
-
-    function isNavigableTransition(event, link) {
-        if (event.defaultPrevented || event.button !== 0) return false;
-        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
-        if (link.target && link.target.toLowerCase() !== "_self") return false;
-        if (link.matches("[download], [data-download], [data-no-loading]")) return false;
-
-        const current = new URL(window.location.href);
-        let destination;
-        try {
-            destination = new URL(link.href, current);
-        } catch (_) {
-            return false;
-        }
-        if (destination.origin !== current.origin || !["http:", "https:"].includes(destination.protocol)) {
-            return false;
-        }
-        return destination.pathname !== current.pathname || destination.search !== current.search;
-    }
-
-    function initPageTransitions() {
-        const layer = qs("[data-page-transition]");
-        const mark = layer && qs(".page-transition__mark", layer);
-        let cover = null;
-        let logo = null;
-
-        function reset() {
-            cover?.cancel();
-            logo?.cancel();
-            cover = null;
-            logo = null;
-        }
-
-        doc.addEventListener("click", event => {
-            const link = event.target.closest("a[href][data-transition-link]");
-            if (!link || !isNavigableTransition(event, link)) return;
-            if (reduceMotion.matches || !layer?.animate) return;
-
-            event.preventDefault();
-            reset();
-            const animation = layer.animate(
-                [
-                    { transform: "translateY(100%)" },
-                    { transform: "translateY(0)" }
-                ],
-                { duration: 240, easing: "cubic-bezier(.22, .78, .18, 1)", fill: "forwards" }
-            );
-            cover = animation;
-            logo = mark?.animate(
-                [{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "translateY(0)" }],
-                { duration: 160, delay: 80, fill: "forwards" }
-            );
-            animation.finished.then(() => {
-                if (cover !== animation) return;
-                reset();
-                window.location.assign(link.href);
-            }, () => {});
-        });
-
-        window.addEventListener("pageshow", reset);
-        window.addEventListener("pagehide", reset);
     }
 
     function initPressFeedback() {
@@ -223,8 +162,6 @@
             input.type = show ? "text" : "password";
             toggle.classList.toggle("is-visible", show);
             toggle.setAttribute("aria-label", show ? "Ocultar senha" : "Exibir senha");
-            input.focus({ preventScroll: true });
-            try { input.setSelectionRange(input.value.length, input.value.length); } catch (_) {}
         });
     }
 
@@ -308,7 +245,6 @@
     function init() {
         body.classList.add("ui-enhanced");
         initSidebar();
-        initPageTransitions();
         initPressFeedback();
         initReveal();
         initCardSpotlight();

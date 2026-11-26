@@ -1,0 +1,7 @@
+<header class="saari-page-header">
+    <div class="saari-page-header__copy">
+        <h1>{{ heading }}</h1>
+        {% if context_text %}<p>{{ context_text }}</p>{% endif %}
+    </div>
+    {% if action_url and action_label %}<a class="saari-button saari-button--primary" href="{{ action_url }}">{{ action_label }}</a>{% endif %}
+</header>

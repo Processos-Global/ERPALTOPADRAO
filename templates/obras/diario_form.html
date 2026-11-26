@@ -1,28 +1,29 @@
 {% extends "layouts/base.html" %}
-{% load obras_format l10n %}
+{% load obras_format l10n saari_contexto %}
 {% block title %}{% if diario %}Editar{% else %}Novo{% endif %} Diário de Obra{% endblock %}{% block page_name %}Obras{% endblock %}
 {% block extra_css %}{% include "obras/_operacional_styles.html" %}<style>
-.op-diario-opcao{display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:10px;border:1px solid var(--op-line);border-radius:9px;background:var(--surface,#fff);color:var(--saari-text);cursor:pointer}.op-diario-opcao input{width:auto;min-height:0;margin-top:4px;accent-color:var(--op-ink)}.op-diario-opcao span{min-width:0}.op-diario-opcao small{display:block;color:var(--saari-muted);font-size:12px}
+.op-diario-opcao{display:flex;align-items:flex-start;gap:10px;margin-top:9px;padding:10px;border:1px solid var(--op-line);border-radius:9px;background:var(--saari-surface);color:var(--saari-text);cursor:pointer}.op-diario-opcao input{width:auto;min-height:0;margin-top:4px;accent-color:var(--op-ink)}.op-diario-opcao span{min-width:0}.op-diario-opcao small{display:block;color:var(--op-muted);font-size:12px}
 .op-diario-grupo{margin-top:10px}.op-diario-grupo summary{cursor:pointer;font-weight:700;padding:8px 0}
 </style>{% endblock %}
 {% block content %}
+{% retorno_listagem request 'obras:diario_lista' as voltar_url %}
 <div class="op-page">
   <section class="op-head">
-    <div class="op-head-copy"><span class="op-eyebrow">Diário de Obra</span><h1>{% if diario %}Editar registro{% else %}Novo registro diário{% endif %}</h1></div>
-    <div class="op-head-actions"><a class="op-btn secondary" href="{% url 'obras:diario_lista' %}">Voltar aos registros</a></div>
+    <div class="op-head-copy"><nav class="op-breadcrumb" aria-label="Localização"><a href="{{ voltar_url }}">Diário de Obra</a></nav><h1>{% if diario %}Editar registro{% else %}Novo registro diário{% endif %}</h1></div>
+    <div class="op-head-actions"><a class="op-btn secondary" href="{{ voltar_url }}">Voltar aos registros</a></div>
   </section>
 
   <form method="post" enctype="multipart/form-data" class="op-form">{% csrf_token %}<div class="op-grid">
-    <div class="op-field c6"><label>Obra *</label><select name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk|unlocalize }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
-    <div class="op-field c3"><label>Data *</label><input type="date" name="data" required value="{{ data_exibida }}"></div>
-    <div class="op-field c3"><label>Clima</label><select name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
-    <div class="op-field c4"><label>Efetivo no dia</label><input type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo|unlocalize }}{% endif %}" placeholder="Quantidade de pessoas"></div>
+    <div class="op-field c6"><label for="diario-obra">Obra *</label><select id="diario-obra" name="obra" required><option value="">Selecione a obra</option>{% for o in obras %}<option value="{{ o.pk|unlocalize }}" {% if obra and obra.pk == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field c3"><label for="diario-data">Data *</label><input id="diario-data" type="date" name="data" required value="{{ data_exibida }}"></div>
+    <div class="op-field c3"><label for="diario-clima">Clima</label><select id="diario-clima" name="clima"><option value="">Não informado</option>{% for valor, rotulo in climas %}<option value="{{ valor }}" {% if diario and diario.clima == valor %}selected{% endif %}>{{ rotulo }}</option>{% endfor %}</select></div>
+    <div class="op-field c4"><label for="diario-efetivo">Efetivo no dia</label><input id="diario-efetivo" type="number" min="0" name="efetivo" value="{% if diario.efetivo != None %}{{ diario.efetivo|unlocalize }}{% endif %}" placeholder="Quantidade de pessoas"></div>
     <div class="c12 op-stock-preview" data-conc-dia data-url="{% url 'obras:concretagem_api_dia' %}" hidden>
       <strong>Concretagens desta obra no dia</strong> <span class="op-muted">(somente leitura)</span>
       <div data-conc-dia-lista style="margin-top:8px"></div>
     </div>
-    <div class="op-field c12"><label>Equipe / terceiros presentes</label><textarea name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
-    <div class="op-field c12"><label>Ocorrências / impedimentos</label><textarea name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label for="diario-equipe">Equipe / terceiros presentes</label><textarea id="diario-equipe" name="equipe_presente" placeholder="Equipes próprias, empreiteiros, fornecedores ou terceiros presentes">{% if diario %}{{ diario.equipe_presente }}{% endif %}</textarea></div>
+    <div class="op-field c12"><label for="diario-ocorrencias">Ocorrências / impedimentos</label><textarea id="diario-ocorrencias" name="ocorrencias" placeholder="Atrasos, interferências, acidentes, chuvas, falta de material, liberações...">{% if diario %}{{ diario.ocorrencias }}{% endif %}</textarea></div>
     <div class="c12 op-stock-preview" data-diario-atividades data-url="{% url 'obras:diario_atividades_api' %}">
       <strong>Atividades da semana</strong> <span class="op-muted" data-diario-semana aria-live="polite">{% if semana %}Semana {{ semana.semana }} · início {{ semana.inicio_semana|date:'d/m/Y' }}{% else %}Sem semana importada para a obra e data.{% endif %}</span>
       {% regroup atividades by grupo as grupos %}

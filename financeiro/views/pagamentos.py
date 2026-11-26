@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 
 from core.validators import validar_documento_upload
 from financeiro.models import Pagamento, TituloPagar
-from financeiro.services.agenda import titulos_disponiveis_pagamento
+from financeiro.services.agenda import filtrar_titulos_base, periodo_vencimento, titulos_disponiveis_pagamento
 from financeiro.services.pagamentos import estornar_pagamento, programar_pagamento, registrar_pagamento
 from financeiro.services.permissoes import financeiro_acao_required, possui_acao_financeiro
 
@@ -38,7 +38,7 @@ class ProgramacaoPagamentoForm(forms.Form):
 
 def titulos_central_pagamentos(parametros, aba):
     programacao_valida = Q(programacao_pagamento__ativa=True, programacao_pagamento__ciclo_aprovacao=F("ciclo_aprovacao"))
-    titulos = titulos_disponiveis_pagamento(TituloPagar.objects.all()).select_related(
+    titulos = titulos_disponiveis_pagamento(filtrar_titulos_base(parametros)).select_related(
         "obra", "fornecedor", "pagamento", "programacao_pagamento",
     )
     if aba == "programados":
@@ -57,6 +57,14 @@ def recorte_pagamentos(parametros, aba):
         qs = qs.filter(status=Pagamento.Status.EFETIVADO)
     elif aba == "estornos":
         qs = qs.filter(status=Pagamento.Status.ESTORNADO).order_by("-estornado_em", "-id")
+    if any(parametros.get(campo) for campo in ("obra", "fornecedor", "apropriacao", "classe", "origem", "excluir_cancelados")):
+        qs = qs.filter(titulo__in=filtrar_titulos_base(parametros))
+    if parametros.get("periodo") == "intervalo":
+        _, inicio, fim = periodo_vencimento(parametros, timezone.localdate())
+        if not inicio or not fim or inicio > fim:
+            return qs.none(), ""
+        campo = "estornado_em__date" if aba == "estornos" else "data_pagamento"
+        return qs.filter(**{f"{campo}__range": (inicio, fim)}), ""
     try:
         ano, mes = (int(parte) for parte in mes_filtro.split("-"))
         inicio = date(ano, mes, 1)

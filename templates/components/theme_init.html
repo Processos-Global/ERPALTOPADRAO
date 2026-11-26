@@ -1,0 +1,17 @@
+{% load static %}
+<script>
+    (() => {
+        const root = document.documentElement;
+        const system = window.matchMedia("(prefers-color-scheme: dark)");
+        let preference = "auto";
+        try {
+            preference = localStorage.getItem("saari-theme") || localStorage.getItem("saari-erp-theme") || preference;
+        } catch (_) {}
+        root.dataset.themePreference = ["light", "dark"].includes(preference) ? preference : "auto";
+        const theme = preference === "light" || preference === "dark" ? preference : system.matches ? "dark" : "light";
+        root.dataset.theme = root.dataset.bsTheme = theme;
+        document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#1b1917" : "#453330");
+    })();
+</script>
+<link rel="stylesheet" href="{% static 'css/saari-tokens.css' %}?v=20261125">
+<link rel="stylesheet" href="{% static 'css/saari-components.css' %}?v=20261125">

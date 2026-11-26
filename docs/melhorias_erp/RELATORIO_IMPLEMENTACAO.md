@@ -15,4 +15,4 @@ O dashboard de Compras agrega indicadores em SQL, limita os cartões por coluna 
 
 Testes novos ou ampliados ficam nos módulos afetados. Os arquivos novos de aplicação são os templates `compras/_processo_historico.html`, `compras/_processo_pedidos.html`, `compras/necessidade_cobertura.html`, `compras/processo_secao.html` e `planejamento/_detalhe_comercial_suprimento.html`. O inventário completo pode ser conferido com `git status --short` e `git diff --stat`.
 
-As alterações não requerem migrations. As regras e arquivos do Financeiro ficaram fora da edição direta.
+A primeira frente descrita acima antecede as migrations de prazo, frete, idempotência, programação e unicidade. O estado atual está no [relatório da reestruturação global](../reestruturacao_financeiro/RELATORIO_IMPLEMENTACAO.md).

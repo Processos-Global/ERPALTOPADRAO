@@ -1,160 +1,86 @@
 {% extends "layouts/base.html" %}
+{% block title %}Notificações | SAARI ERP{% endblock %}
+{% block page_name %}Notificações{% endblock %}
 
 {% block extra_css %}
 <style>
-    .notifications-page {
-        display: grid;
-        gap: 16px;
-    }
-
-    .notifications-page__header,
-    .notifications-page__toolbar,
-    .notifications-page__list {
-        background: #ffffff;
-        border: 1px solid #ded7c8;
-        border-radius: 10px;
-    }
-
-    .notifications-page__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 20px 22px;
-    }
-
-    .notifications-page__header h1 {
-        margin: 0;
-        color: #453330;
-        font-size: 1.35rem;
-    }
-
-    .notifications-page__header p {
-        margin: 4px 0 0;
-        color: #85776f;
-        font-size: .82rem;
-    }
-
-    .notifications-page__toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding: 12px;
-    }
-
-    .notifications-page__filters {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .notifications-page__filter,
-    .notifications-page__button {
-        min-height: 34px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #ded7c8;
-        border-radius: 8px;
-        padding: 0 12px;
-        background: #ffffff;
-        color: #66534c;
-        text-decoration: none;
-        font: inherit;
-        font-size: .78rem;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .notifications-page__filter.is-active {
-        border-color: #eee8d6;
-        background: #f5f1e9;
-        color: #453330;
-    }
-
-    .notifications-page__list {
-        overflow: hidden;
-    }
-
-    .notifications-page__item {
-        display: grid;
-        grid-template-columns: 10px minmax(0, 1fr) auto;
-        gap: 12px;
-        align-items: start;
-        padding: 16px 18px;
-        border-bottom: 1px solid #ece6dc;
-        color: inherit;
-        text-decoration: none;
-    }
-
-    .notifications-page__item:last-child {
-        border-bottom: 0;
-    }
-
-    .notifications-page__item:hover {
-        background: #f8f4ed;
-    }
-
-    .notifications-page__dot {
-        width: 8px;
-        height: 8px;
-        margin-top: 6px;
-        border-radius: 50%;
-        background: transparent;
-    }
-
-    .notifications-page__item.is-unread .notifications-page__dot {
-        background: #b9aa72;
-    }
-
-    .notifications-page__content strong {
-        display: block;
-        margin-bottom: 4px;
-        color: #453330;
-        font-size: .86rem;
-    }
-
-    .notifications-page__content span {
-        display: block;
-        color: #85776f;
-        font-size: .79rem;
-        line-height: 1.45;
-    }
-
-    .notifications-page__meta {
-        color: #a39890;
-        font-size: .72rem;
-        white-space: nowrap;
-    }
-
-    .notifications-page__empty {
-        padding: 40px 20px;
-        text-align: center;
-        color: #85776f;
-        font-size: .84rem;
-    }
-
-    @media (max-width: 720px) {
-        .notifications-page__header,
-        .notifications-page__toolbar {
-            align-items: stretch;
-            flex-direction: column;
-        }
-
-        .notifications-page__item {
-            grid-template-columns: 10px minmax(0, 1fr);
-        }
-
-        .notifications-page__meta {
-            grid-column: 2;
-        }
-    }
-
-/* 2026 refresh: cabecalho de notificacoes */
-.notifications-page__header{position:relative;overflow:hidden;align-items:center;padding:22px 24px;border:1px solid #ded7c8;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#fcfaf6 63%,#f3ecdc 100%);box-shadow:0 12px 34px rgba(69,51,48,.065)}.notifications-page__header::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#b9aa72,#2d201c)}.notifications-page__header>*{position:relative;z-index:1}.notifications-page__header h1{font-size:30px;letter-spacing:-.035em}.notifications-page__header p{line-height:1.55}
-@media(max-width:720px){.notifications-page__header{align-items:flex-start;padding:18px 17px 18px 20px;border-radius:14px}.notifications-page__header h1{font-size:25px}}
-
+.notifications-page { display: grid; gap: 14px; }
+.notifications-page__header,
+.notifications-page__list {
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius);
+    background: var(--saari-surface);
+}
+.notifications-page__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: clamp(14px, 2vw, 22px);
+}
+.notifications-page__header h1 { margin: 0; font: 400 clamp(1.55rem, 2.7vw, 2.1rem)/1.2 var(--saari-font-display); }
+.notifications-page__header p { margin: 5px 0 0; }
+.notifications-page__header p,
+.notifications-page__meta,
+.notifications-page__content > span,
+.notifications-page__empty { color: var(--saari-text-muted); }
+.notifications-page__filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.notifications-page__filter,
+.notifications-page__button {
+    min-height: var(--saari-control-height);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--saari-border);
+    border-radius: var(--saari-radius-sm);
+    padding: 6px 12px;
+    background: var(--saari-surface);
+    color: var(--saari-text);
+    text-decoration: none;
+    font: inherit;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.notifications-page__filter[aria-current] { color: var(--saari-on-primary); border-color: var(--saari-primary); background: var(--saari-primary); }
+.notifications-page__button:hover,
+.notifications-page__filter:not([aria-current]):hover { background: var(--saari-hover); }
+.notifications-page__list { overflow: hidden; }
+.notifications-page__item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 16px;
+    border: 0;
+    border-inline-start: 3px solid transparent;
+    border-block-end: 1px solid var(--saari-border);
+    background: transparent;
+    color: var(--saari-text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+.notifications-page__item.is-unread {
+    border-inline-start-color: var(--saari-accent);
+    background: var(--saari-surface-elevated);
+}
+.notifications-page__item:hover { background: var(--saari-hover); }
+.notifications-page__list form:last-child .notifications-page__item { border-block-end: 0; }
+.notifications-page__item:focus-visible { outline: 2px solid var(--saari-focus-ring); outline-offset: -2px; }
+.notifications-page__content strong { display: block; margin-block-end: 4px; font-size: .94rem; }
+.notifications-page__content > span, .notifications-page__meta { display: block; font-size: .82rem; line-height: 1.5; }
+.notifications-page__meta { text-align: end; }
+.notifications-page__meta strong { display: block; color: var(--saari-accent); }
+.notifications-page__empty { padding: 26px 18px; text-align: center; font-size: .88rem; }
+@media (max-width: 640px) {
+    .notifications-page__item { grid-template-columns: minmax(0, 1fr); }
+    .notifications-page__meta { display: flex; flex-wrap: wrap; text-align: start; gap: 6px; }
+    .notifications-page__filter, .notifications-page__button { min-height: 44px; }
+}
 </style>
 {% endblock %}
 
@@ -177,27 +103,27 @@
         {% endif %}
     </header>
 
-    <div class="notifications-page__toolbar">
-        <div class="notifications-page__filters">
-            <a href="{% url 'usuarios:notificacoes' %}" class="notifications-page__filter {% if filtro_status == 'todas' %}is-active{% endif %}">Todas</a>
-            <a href="{% url 'usuarios:notificacoes' %}?status=nao_lidas" class="notifications-page__filter {% if filtro_status == 'nao_lidas' %}is-active{% endif %}">Não lidas</a>
-            <a href="{% url 'usuarios:notificacoes' %}?status=lidas" class="notifications-page__filter {% if filtro_status == 'lidas' %}is-active{% endif %}">Lidas</a>
-        </div>
-    </div>
+    <nav class="notifications-page__filters" aria-label="Filtrar notificações">
+            <a href="{% url 'usuarios:notificacoes' %}" class="notifications-page__filter" {% if filtro_status == 'todas' %}aria-current="page"{% endif %}>Todas</a>
+            <a href="{% url 'usuarios:notificacoes' %}?status=nao_lidas" class="notifications-page__filter" {% if filtro_status == 'nao_lidas' %}aria-current="page"{% endif %}>Não lidas</a>
+            <a href="{% url 'usuarios:notificacoes' %}?status=lidas" class="notifications-page__filter" {% if filtro_status == 'lidas' %}aria-current="page"{% endif %}>Lidas</a>
+    </nav>
 
     <div class="notifications-page__list">
         {% for notificacao in notificacoes %}
-            <a
-                href="{% url 'usuarios:abrir_notificacao' notificacao.pk %}"
-                class="notifications-page__item {% if not notificacao.lida %}is-unread{% endif %}"
-            >
-                <span class="notifications-page__dot" aria-hidden="true"></span>
-                <span class="notifications-page__content">
-                    <strong>{{ notificacao.titulo }}</strong>
-                    <span>{{ notificacao.mensagem }}</span>
-                </span>
-                <span class="notifications-page__meta">{{ notificacao.atualizada_em|timesince }} atrás</span>
-            </a>
+            <form method="post" action="{% url 'usuarios:abrir_notificacao' notificacao.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="notifications-page__item {% if not notificacao.lida %}is-unread{% endif %}">
+                    <span class="notifications-page__content">
+                        <strong>{{ notificacao.titulo }}</strong>
+                        <span>{{ notificacao.mensagem }}</span>
+                    </span>
+                    <span class="notifications-page__meta">
+                        {% if not notificacao.lida %}<strong>Não lida</strong>{% endif %}
+                        <time datetime="{{ notificacao.atualizada_em|date:'c' }}">{{ notificacao.atualizada_em|timesince }} atrás</time>
+                    </span>
+                </button>
+            </form>
         {% empty %}
             <div class="notifications-page__empty">
                 Nenhuma notificação encontrada.

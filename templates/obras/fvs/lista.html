@@ -5,7 +5,7 @@
 {% block extra_css %}
 {% include "obras/_operacional_styles.html" %}
 <style>
-.fvs-list-page{max-width:1540px;margin:0 auto}.fvs-list-page .op-head{margin-bottom:14px}.fvs-list-page .op-head h1{font-size:clamp(2rem,2.8vw,2.75rem)}.fvs-list-page .op-head p{font-size:12.5px}.fvs-list-page .op-btn{min-height:36px;padding:7px 12px;font-size:11.5px;border-radius:9px}.fvs-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}.fvs-kpis .op-kpi-card{padding:12px 14px;border-radius:11px}.fvs-kpis .op-kpi-card small{font-size:9.5px}.fvs-kpis .op-kpi-card strong{font-size:23px}.fvs-kpis .op-kpi-card span{font-size:10.5px}.fvs-toolbar{display:grid;grid-template-columns:minmax(260px,1.25fr) minmax(210px,.9fr) minmax(190px,.75fr) 104px;gap:8px;align-items:end;padding:11px;margin-bottom:12px;border-radius:11px}.fvs-toolbar .op-field label{font-size:10.5px;margin-bottom:4px}.fvs-toolbar .op-field input,.fvs-toolbar .op-field select{min-height:36px;padding:7px 9px;font-size:11.5px;border-radius:8px}.fvs-toolbar .op-btn{min-height:36px}.fvs-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;background:#f5f1e9;color:#5e4c45;white-space:nowrap}.fvs-status.wait{background:#fff3d8;color:#765b16}.fvs-status.ok{background:#eaf4ed;color:#356848}.fvs-status.back{background:#fff0ed;color:#9e3f3f}.fvs-amb{display:flex;gap:4px;flex-wrap:wrap}.fvs-amb .op-badge{min-height:22px;padding:3px 7px;font-size:9.5px}.fvs-list-panel{border-radius:12px}.fvs-list-panel .op-panel-head{padding:11px 14px}.fvs-list-panel .op-panel-head h2{font-size:15px}.fvs-list-panel .op-table{font-size:11.5px;min-width:1050px}.fvs-list-panel .op-table th{padding:9px 10px;font-size:9.5px}.fvs-list-panel .op-table td{padding:9px 10px}.fvs-list-panel .op-muted{font-size:10px}.fvs-open{min-height:30px!important;padding:5px 9px!important;font-size:10.5px!important}@media(max-width:900px){.fvs-toolbar{grid-template-columns:1fr}.fvs-kpis{grid-template-columns:1fr 1fr}}@media(max-width:560px){.fvs-kpis{grid-template-columns:1fr}}
+.fvs-list-page{max-width:1540px;margin:0 auto}.fvs-list-page .op-head{margin-bottom:14px}.fvs-list-page .op-head h1{font-size:clamp(2rem,2.8vw,2.75rem)}.fvs-list-page .op-head p{font-size:12.5px}.fvs-list-page .op-btn{min-height:42px;padding:7px 12px;font-size:.875rem;border-radius:9px}.fvs-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}.fvs-kpis .op-kpi-card{padding:12px 14px;border-radius:11px}.fvs-kpis .op-kpi-card small{font-size:.75rem}.fvs-kpis .op-kpi-card strong{font-size:23px}.fvs-kpis .op-kpi-card span{font-size:.8125rem}.fvs-toolbar{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr) minmax(0,.75fr) auto;gap:8px;align-items:end;padding:11px;margin-bottom:12px;border-radius:11px}.fvs-toolbar .op-field label{font-size:.8125rem;margin-bottom:4px}.fvs-toolbar .op-field input,.fvs-toolbar .op-field select{min-height:42px;padding:7px 9px;font-size:.875rem;border-radius:8px}.fvs-toolbar .op-btn{min-height:42px}.fvs-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:.75rem;font-weight:800;background:var(--op-soft);color:var(--op-text);white-space:nowrap}.fvs-status.wait{background:var(--op-warning-soft);color:var(--op-warning)}.fvs-status.ok{background:var(--op-success-soft);color:var(--op-success)}.fvs-status.back{background:var(--op-danger-soft);color:var(--op-danger)}.fvs-amb{display:flex;gap:4px;flex-wrap:wrap}.fvs-amb .op-badge{min-height:22px;padding:3px 7px;font-size:.75rem}.fvs-list-panel{border-radius:12px}.fvs-list-panel .op-panel-head{padding:11px 14px}.fvs-list-panel .op-panel-head h2{font-size:15px}.fvs-list-panel .op-table{font-size:.875rem;min-width:850px}.fvs-list-panel .op-table th{padding:9px 10px;font-size:.75rem}.fvs-list-panel .op-table td{padding:9px 10px}.fvs-list-panel .op-muted{font-size:.75rem}.fvs-open{min-height:30px!important;padding:5px 9px!important;font-size:.8125rem!important}@media(max-width:900px){.fvs-toolbar{grid-template-columns:1fr}.fvs-kpis{grid-template-columns:1fr 1fr}}@media(max-width:560px){.fvs-kpis .op-kpi-card{padding:10px}.fvs-list-page .op-btn{min-height:44px}}
 </style>
 {% endblock %}
 {% block content %}
@@ -14,7 +14,6 @@
     <div class="op-head-copy">
       <span class="op-eyebrow">Obras · Qualidade</span>
       <h1>Fichas de Verificação de Serviço</h1>
-      <p>Crie, acompanhe e aprove as FVS vinculadas aos ambientes cadastrados em cada obra.</p>
     </div>
     <div class="op-head-actions">
       <a class="op-btn secondary" href="{% url 'obras:menu' %}">Voltar</a>
@@ -30,14 +29,14 @@
   </div>
 
   <form method="get" class="op-toolbar fvs-toolbar">
-    <div class="op-field"><label>Busca</label><input type="search" name="q" value="{{ q }}" placeholder="Número, modelo ou executora"></div>
-    <div class="op-field"><label>Obra</label><select name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
-    <div class="op-field"><label>Status</label><select name="status"><option value="">Todos os status</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status_filtro == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-    <button class="op-btn" type="submit">Filtrar</button>
+    <div class="op-field"><label for="fvs-filtro-busca">Busca</label><input id="fvs-filtro-busca" type="search" name="q" value="{{ q }}" placeholder="Número, modelo ou executora"></div>
+    <div class="op-field"><label for="fvs-filtro-obra">Obra</label><select id="fvs-filtro-obra" name="obra"><option value="">Todas as obras</option>{% for o in obras %}<option value="{{ o.pk }}" {% if obra_filtro == o.pk %}selected{% endif %}>{{ o|nome_obra }}</option>{% endfor %}</select></div>
+    <div class="op-field"><label for="fvs-filtro-status">Status</label><select id="fvs-filtro-status" name="status"><option value="">Todos os status</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status_filtro == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="op-filter-actions"><button class="op-btn" type="submit">Filtrar</button>{% if q or obra_filtro or status_filtro %}<a class="op-btn secondary" href="{% url 'obras:fvs_lista' %}">Limpar</a>{% endif %}</div>
   </form>
 
   <section class="op-panel fvs-list-panel">
-    <div class="op-panel-head"><div><h2>FVS registradas</h2><span class="op-muted">Ordenadas da mais recente para a mais antiga</span></div></div>
+    <div class="op-panel-head"><div><h2>FVS registradas</h2></div></div>
     <div class="op-table-wrap">
       <table class="op-table">
         <thead><tr><th>Número</th><th>Obra</th><th>Modelo</th><th>Ambientes</th><th>Parecer</th><th>Status</th><th>Atualização</th><th></th></tr></thead>
@@ -51,7 +50,7 @@
             <td>{{ f.get_parecer_display|default:"—" }}</td>
             <td><span class="fvs-status {% if f.status == 'AGUARDANDO_APROVACAO' %}wait{% elif f.status == 'APROVADA' %}ok{% elif f.status == 'DEVOLVIDA' %}back{% endif %}">{{ f.get_status_display }}</span></td>
             <td>{{ f.atualizado_em|date:"d/m/Y H:i" }}</td>
-            <td><a class="op-btn secondary fvs-open" href="{% url 'obras:fvs_detalhe' f.pk %}">Abrir</a></td>
+            <td><a class="op-btn secondary fvs-open" href="{% url 'obras:fvs_detalhe' f.pk %}?retorno={{ request.get_full_path|urlencode:'' }}">Abrir</a></td>
           </tr>
           {% empty %}<tr><td colspan="8" class="op-empty">Nenhuma FVS encontrada.</td></tr>{% endfor %}
         </tbody>

@@ -6,54 +6,54 @@
   </div>
 </div>
 
-<div class="cad-grid">
-  <a class="cad-card" href="{% url 'cadastros:empresa' %}"><div class="cad-card__top"><span class="cad-card__icon">SA</span></div><h3>Informações da SAARI</h3><p>Razão social, CNPJ, endereço, contatos e logo institucional para os PDFs.</p><div class="cad-card__footer"><span>Gerenciar empresa</span><span>→</span></div></a>
-  <a class="cad-card" href="{% url 'cadastros:materiais_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">MA</span><strong class="cad-card__count">{{ total_materiais }}</strong></div>
-    <h3>Materiais</h3>
-    <div class="cad-card__footer"><span>Acessar materiais</span><span>→</span></div>
-  </a>
-  <a class="cad-card" href="{% url 'cadastros:fornecedores_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">FO</span><strong class="cad-card__count">{{ total_fornecedores }}</strong></div>
-    <h3>Fornecedores</h3>
-    <div class="cad-card__footer"><span>Acessar fornecedores</span><span>→</span></div>
-  </a>
-  <a class="cad-card" href="{% url 'cadastros:mao_obra_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">MO</span><strong class="cad-card__count">{{ total_mao_obra }}</strong></div>
-    <h3>Mão de obra</h3><p>Serviços e recursos de mão de obra com unidade e classificação centralizadas.</p>
-    <div class="cad-card__footer"><span>Acessar mão de obra</span><span>→</span></div>
-  </a>
+<section class="cad-directory" aria-labelledby="cad-directory-supply">
+  <h2 id="cad-directory-supply">Suprimentos</h2>
+  <div class="cad-grid">
+    <a class="cad-directory-link" href="{% url 'cadastros:materiais_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg><strong>Materiais</strong><span>{{ total_materiais }}</span>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:fornecedores_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-building"></use></svg><strong>Fornecedores</strong><span>{{ total_fornecedores }}</span>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:mao_obra_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-users"></use></svg><strong>Mão de obra</strong><span>{{ total_mao_obra }}</span>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:unidades_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Unidades de medida</strong><span>{{ total_unidades }}</span>
+    </a>
+  </div>
+</section>
 
-  <a class="cad-card" href="{% url 'cadastros:unidades_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">UM</span><strong class="cad-card__count">{{ total_unidades }}</strong></div>
-    <h3>Unidades de medida</h3>
-    <div class="cad-card__footer"><span>Acessar unidades</span><span>→</span></div>
-  </a>
-  <a class="cad-card" href="{% url 'cadastros:ficha_tecnica_cadastros' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">FT</span></div>
-    <h3>Ficha Técnica</h3><p>Ambientes, pavimentos, categorias, itens e especificações usados pelas fichas das obras.</p>
-    <div class="cad-card__footer"><span>Acessar cadastros</span><span>→</span></div>
-  </a>
+<section class="cad-directory" aria-labelledby="cad-directory-works">
+  <h2 id="cad-directory-works">Obras e qualidade</h2>
+  <div class="cad-grid">
+    <a class="cad-directory-link" href="{% url 'cadastros:ficha_tecnica_cadastros' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Ficha Técnica</strong>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:checklist_projetos_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Checklists de Projetos</strong><span>{{ total_checklist_projetos }}</span>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:checklist_projetos_lista' %}?tipo=DOCUMENTAL">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Checklist Documental</strong>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:modelos_fvs_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Modelos de FVS</strong><span>{{ total_modelos_fvs }}</span>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:modelos_vistoria_lista' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-file"></use></svg><strong>Modelos de Vistoria</strong>
+    </a>
+    <a class="cad-directory-link" href="{% url 'cadastros:pos_obra_lista' 'empreendimentos' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-building"></use></svg><strong>Empreendimentos Pós-Obra</strong>
+    </a>
+  </div>
+</section>
 
-  <a class="cad-card" href="{% url 'cadastros:checklist_projetos_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">CK</span><strong class="cad-card__count">{{ total_checklist_projetos }}</strong></div>
-    <h3>Checklists de Projetos</h3><p>Macro checklists, etapas, códigos e entregas utilizados no Acompanhamento de Projetos.</p>
-    <div class="cad-card__footer"><span>Acessar checklists</span><span>→</span></div>
-  </a>
-
-  <a class="cad-card" href="{% url 'cadastros:checklist_projetos_lista' %}?tipo=DOCUMENTAL">
-    <div class="cad-card__top"><span class="cad-card__icon">DC</span></div>
-    <h3>Checklist Documental</h3><p>Cadastre, edite e organize os documentos exigidos nas obras.</p>
-    <div class="cad-card__footer"><span>Gerenciar documentos</span><span>→</span></div>
-  </a>
-
-  <a class="cad-card" href="{% url 'cadastros:modelos_fvs_lista' %}">
-    <div class="cad-card__top"><span class="cad-card__icon">FVS</span><strong class="cad-card__count">{{ total_modelos_fvs }}</strong></div>
-    <h3>Modelos de FVS</h3><p>Cadastre revisões, critérios, tolerâncias e itens das fichas de verificação de serviço.</p>
-    <div class="cad-card__footer"><span>Acessar modelos</span><span>→</span></div>
-  </a>
-
-  <a class="cad-card" href="{% url 'cadastros:modelos_vistoria_lista' %}"><div class="cad-card__top"><span class="cad-card__icon">VC</span></div><h3>Modelos de Vistoria</h3><p>Configure os campos e as seções das vistorias técnicas cautelares.</p><div class="cad-card__footer"><span>Gerenciar modelos</span><span>→</span></div></a>
-  <a class="cad-card" href="{% url 'cadastros:pos_obra_lista' 'empreendimentos' %}"><div class="cad-card__top"><span class="cad-card__icon">PO</span></div><h3>Empreendimentos Pós-Obra</h3><p>Liberação e cadastro de obras concluídas.</p><div class="cad-card__footer"><span>Gerenciar imóveis</span><span>→</span></div></a>
-</div>
+<section class="cad-directory" aria-labelledby="cad-directory-company">
+  <h2 id="cad-directory-company">Empresa</h2>
+  <div class="cad-grid">
+    <a class="cad-directory-link" href="{% url 'cadastros:empresa' %}">
+      <svg class="icon" aria-hidden="true"><use href="#icon-building"></use></svg><strong>Informações da SAARI</strong>
+    </a>
+  </div>
+</section>
 {% endblock %}
