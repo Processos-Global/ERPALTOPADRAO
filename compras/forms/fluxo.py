@@ -161,6 +161,11 @@ class SolicitacaoCotacaoEnvioForm(forms.Form):
             ).values_list("fornecedor_id", flat=True)
             fornecedores = fornecedores.exclude(pk__in=ja_vinculados)
         self.fields["fornecedor"].queryset = fornecedores
+        self.fields["fornecedor"].widget.attrs.update({
+            "data-force-search": "1",
+            "data-search-prepare-hidden": "1",
+            "aria-label": "Fornecedor",
+        })
         _aplicar_classe_campos(self)
 
 
