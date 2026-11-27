@@ -137,7 +137,9 @@
     }
 
     function preparar(select) {
-        if (preparados.has(select) || select.disabled || select.multiple || !select.getClientRects().length ||
+        // Campos explicitamente marcados podem iniciar em abas ocultas (ex.: Visão geral de Compras).
+        if (preparados.has(select) || select.disabled || select.multiple ||
+            (!select.getClientRects().length && !select.hasAttribute('data-search-prepare-hidden')) ||
             select.matches('[data-no-search], [data-fin-catalogo], .select2-hidden-accessible') ||
             select.closest('.fin-combobox, .saari-obras-panel, .fin-searchable')) return;
         const explicito = select.matches('[data-searchable], [data-force-search]');

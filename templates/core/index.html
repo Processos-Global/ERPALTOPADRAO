@@ -3,10 +3,132 @@
 
 {% block title %}{% if is_cliente_pos_obra %}Minha área{% else %}Painel Geral{% endif %} | SAARI ERP{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261125">{% endblock %}
+{% block page_name %}{% if is_cliente_pos_obra %}Minha área{% else %}Painel Geral{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=20261125">
+<style>
+    /* Home interna: mesmos componentes dos menus de módulos, sem alterar o portal. */
+    .dashboard-home--main .dashboard-heading {
+        position: relative;
+        overflow: hidden;
+        padding: 20px 26px;
+        margin-bottom: 16px;
+        border: 1px solid var(--saari-border);
+        border-radius: 18px;
+        background: var(--saari-surface);
+        box-shadow: 0 5px 20px var(--saari-shadow-color);
+    }
+    .dashboard-home--main .dashboard-heading::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: var(--saari-gold);
+    }
+    .dashboard-home--main .dashboard-heading h1 {
+        font: 400 clamp(1.8rem, 3vw, 2.7rem)/1.05 var(--font-serif);
+        color: var(--saari-text);
+        letter-spacing: -.04em;
+        overflow-wrap: anywhere;
+    }
+    .dashboard-home--main .dashboard-heading h1 em { color: var(--saari-accent); font-style: normal; }
+    /* Favoritos em uma faixa compacta; recentes abrem somente sob demanda. */
+    .dashboard-home--main .home-quick[hidden],
+    .dashboard-home--main .home-quick [hidden] { display: none !important; }
+    .dashboard-home--main .home-quick {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 8px 12px;
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+    .dashboard-home--main .home-quick__favorites {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1 1 280px;
+        min-width: 0;
+    }
+    .dashboard-home--main .home-quick h2 {
+        font: 700 .85rem/1.4 var(--saari-font-sans);
+        margin: 0;
+        flex: none;
+        color: var(--saari-text);
+    }
+    .dashboard-home--main .home-quick .saari-quick-list {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        padding: 3px 2px;
+    }
+    .dashboard-home--main .home-quick .saari-route-row {
+        flex: 0 0 auto;
+        border: 1px solid var(--saari-border);
+        border-radius: 8px;
+        background: var(--saari-surface);
+    }
+    .dashboard-home--main .home-quick .saari-route-row:hover,
+    .dashboard-home--main .home-quick .saari-route-row:focus-within { background: var(--saari-hover); }
+    .dashboard-home--main .home-quick .saari-route-row > a {
+        padding: 7px 0 7px 10px;
+        font-size: .8rem;
+        white-space: nowrap;
+    }
+    .dashboard-home--main .home-quick .saari-route-row > button { min-height: 34px; min-width: 34px; }
+    .dashboard-home--main .home-quick__recent { flex: 0 0 auto; max-width: 100%; }
+    .dashboard-home--main .home-quick__recent summary {
+        cursor: pointer;
+        color: var(--saari-accent);
+        font-size: .82rem;
+        font-weight: 600;
+        padding: 8px 4px;
+    }
+    .dashboard-home--main .home-quick__recent[open] { flex: 1 0 100%; }
+    .dashboard-home--main .home-quick__recent .saari-quick-list { flex-wrap: wrap; }
+    .dashboard-home--main .modules { padding-top: 0; }
+    .dashboard-home--main .modules__header { margin-bottom: 15px; }
+    @media (max-width: 650px) {
+        .dashboard-home--main .home-quick__favorites { flex-wrap: wrap; gap: 4px; }
+        .dashboard-home--main .home-quick__favorites .saari-quick-list { flex: 1 1 100%; }
+    }
+    .dashboard-home--main .module-card { background: var(--saari-surface); border-color: var(--saari-border); }
+    .dashboard-home--main .module-card::before { background: linear-gradient(145deg, var(--saari-brand-primary), var(--saari-brand-deep)); }
+    .dashboard-home--main .module-card__content h3 { color: var(--saari-text); }
+    .dashboard-home--main .module-card__number,
+    .dashboard-home--main .module-card__icon,
+    .dashboard-home--main .module-card__footer { color: var(--saari-accent); }
+    .dashboard-home--main .module-card__permission { background: var(--saari-hover); color: var(--saari-text-muted); }
+    .dashboard-home--main .module-card__accent { background: var(--saari-gold); }
+    .dashboard-home--main .module-card:hover { border-color: var(--saari-gold); }
+    .dashboard-home.dashboard-home--main .module-card:hover .module-card__content h3,
+    .dashboard-home.dashboard-home--main .module-card:hover .module-card__content p,
+    .dashboard-home--main .module-card:hover .module-card__number,
+    .dashboard-home--main .module-card:hover .module-card__icon,
+    .dashboard-home--main .module-card:hover .module-card__footer,
+    .dashboard-home--main .module-card:hover .module-card__permission { color: var(--saari-on-primary) !important; }
+    .dashboard-home--main .module-card:hover .module-card__permission { background: rgb(255 255 255 / .12); }
+    .dashboard-home--main .module-card:hover .module-card__icon { border-color: rgb(255 255 255 / .30); }
+    .dashboard-home--main .module-card:focus-visible { outline: 2px solid var(--saari-focus-ring); outline-offset: 3px; }
+    @media (max-width: 650px) {
+        .dashboard-home--main .dashboard-heading { padding: 21px 19px 21px 23px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .dashboard-home--main .module-card, .dashboard-home--main .module-card::before,
+        .dashboard-home--main .module-card::after, .dashboard-home--main .module-card * { transition: none; }
+        .dashboard-home--main .module-card:hover, .dashboard-home--main .module-card:hover .module-card__icon,
+        .dashboard-home--main .module-card:hover .module-card__content { transform: none; }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="dashboard-home">
+<div class="dashboard-home{% if not is_cliente_pos_obra %} dashboard-home--main{% endif %}">
     {% if is_cliente_pos_obra %}
         {% url 'pos_obra:portal_novo' as abrir_solicitacao %}
         {% include "components/page_header.html" with heading="Minha área" action_url=abrir_solicitacao action_label="Nova solicitação" only %}
@@ -26,47 +148,63 @@
             </div>
         </section>
     {% else %}
-        {% include "components/page_header.html" with heading="Painel Geral" only %}
-        <div class="dashboard-home__grid">
-            <div>
+        <section class="dashboard-heading" aria-labelledby="home-title">
+            <div class="dashboard-heading__content">
+                <span class="dashboard-heading__eyebrow">Painel Geral</span>
+                <h1 id="home-title">Bem-vindo, <em>{{ request.user.first_name|default:request.user.username }}</em></h1>
+            </div>
+        </section>
+
+        <section class="home-quick saari-panel" aria-label="Acesso rápido" data-erp-quick hidden>
+            <div class="home-quick__favorites" hidden>
+                <h2>Favoritos</h2>
+                <ul class="saari-quick-list" data-quick-favorites></ul>
+            </div>
+            <details class="home-quick__recent" hidden>
+                <summary>Acessados recentemente</summary>
+                <ul class="saari-quick-list" data-quick-recent></ul>
+            </details>
+        </section>
+
+        <section class="modules" aria-labelledby="home-modules-title">
+            <div class="modules__header">
+                <h2 id="home-modules-title">Módulos</h2>
+            </div>
+            <div class="module-cards">
                 {% for group in erp_nav_groups %}
-                    {% ifchanged group.section %}
-                        {% if not forloop.first %}</div></section>{% endif %}
-                        <section class="dashboard-section" aria-labelledby="home-section-{{ forloop.counter }}">
-                            <h2 id="home-section-{{ forloop.counter }}">{{ group.section }}</h2>
-                            <div class="dashboard-modules">
-                    {% endifchanged %}
-                    <a href="{{ group.landing.url }}" class="dashboard-module saari-panel">
-                        <svg class="icon" aria-hidden="true"><use href="#icon-{{ group.icon }}"></use></svg>
-                        <strong>{{ group.label }}</strong>
-                        <svg class="icon dashboard-module__arrow" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+                    <a href="{{ group.landing.url }}" class="module-card" data-transition-link>
+                        <header class="module-card__header">
+                            <span class="module-card__number">{{ forloop.counter|stringformat:"02d" }}</span>
+                            <span class="module-card__permission">{{ group.section }}</span>
+                        </header>
+                        <div class="module-card__body">
+                            <span class="module-card__icon">
+                                <svg class="icon" aria-hidden="true"><use href="#icon-{{ group.icon }}"></use></svg>
+                            </span>
+                            <div class="module-card__content">
+                                <h3>{{ group.label }}</h3>
+                                {% if group.key == 'obras' %}<p>Acompanhamento de obras, diário, qualidade e estoque.</p>
+                                {% elif group.key == 'planejamento' %}<p>Cronogramas físicos e acompanhamento de suprimentos.</p>
+                                {% elif group.key == 'compras' %}<p>Processos de compra, fornecedores, pedidos e contratos.</p>
+                                {% elif group.key == 'financeiro' %}<p>Solicitações de pagamento, aprovações e planejamento financeiro.</p>
+                                {% elif group.key == 'projetos' %}<p>Compatibilização, documentação e alterações de projetos.</p>
+                                {% elif group.key == 'pos-obra' %}<p>Assistência técnica, ordens de serviço e atendimentos.</p>
+                                {% elif group.key == 'indicadores' %}<p>Relatórios, indicadores e análises gerenciais.</p>
+                                {% elif group.key == 'cadastros' %}<p>Materiais, fornecedores, mão de obra e cadastros do ERP.</p>
+                                {% elif group.key == 'usuarios' %}<p>Gestão de usuários, acessos e permissões do sistema.</p>{% endif %}
+                            </div>
+                        </div>
+                        <footer class="module-card__footer">
+                            <span>Acessar</span>
+                            <svg class="icon" aria-hidden="true"><use href="#icon-arrow"></use></svg>
+                        </footer>
+                        <span class="module-card__accent"></span>
                     </a>
-                    {% if forloop.last %}</div></section>{% endif %}
                 {% empty %}
                     <p class="saari-empty saari-panel">Nenhum módulo disponível para esta conta.</p>
                 {% endfor %}
             </div>
-            <div class="dashboard-home__aside">
-                <section class="dashboard-panel saari-panel" aria-labelledby="home-notifications-title">
-                    <h2 id="home-notifications-title">Notificações</h2>
-                    {% if notificacoes_nao_lidas %}
-                        <p>{{ notificacoes_nao_lidas }} não lida{{ notificacoes_nao_lidas|pluralize:"s" }}</p>
-                    {% endif %}
-                    <a href="{% url 'usuarios:notificacoes' %}">Ver notificações</a>
-                </section>
-                <section class="dashboard-panel saari-panel" aria-labelledby="home-quick-title" data-erp-quick hidden>
-                    <h2 id="home-quick-title">Acesso rápido</h2>
-                    <div hidden>
-                        <h3>Favoritos</h3>
-                        <ul class="saari-quick-list" data-quick-favorites></ul>
-                    </div>
-                    <div hidden>
-                        <h3>Acessados recentemente</h3>
-                        <ul class="saari-quick-list" data-quick-recent></ul>
-                    </div>
-                </section>
-            </div>
-        </div>
+        </section>
     {% endif %}
 </div>
 {% endblock %}

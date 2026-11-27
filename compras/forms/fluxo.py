@@ -125,6 +125,11 @@ class NecessidadeCompraForm(forms.Form):
             .select_related("unidade")
             .order_by("nome", "especificacao", "codigo")
         )
+        if not edicao:
+            self.fields["material"].widget.attrs.update({
+                "data-force-search": "1",
+                "data-search-prepare-hidden": "1",
+            })
         _aplicar_classe_campos(self)
 
 
