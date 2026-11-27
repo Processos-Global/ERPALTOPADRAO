@@ -1,0 +1,204 @@
+/* SAARI mobile v1. Desktop and client portal unchanged. */
+.saari-mobile-brand,
+.saari-mobile-profile-theme,
+.saari-mobile-nav { display: none; }
+
+@media screen and (max-width: 650px) {
+    body.saari-mobile-enabled .dashboard-home--main .dashboard-heading {
+        padding: 14px 16px 14px 20px;
+        margin-bottom: 12px;
+        gap: 0;
+        border-radius: 14px;
+        background: var(--saari-brand-primary);
+        box-shadow: none;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .dashboard-heading h1 {
+        font-size: clamp(1.25rem, 5vw, 1.65rem);
+        color: #fffaf3;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .dashboard-heading h1 em { color: #eee8d6; }
+    body.saari-mobile-enabled .dashboard-home--main .dashboard-heading__eyebrow {
+        margin-bottom: 6px;
+        color: #eee8d6;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .modules__header { margin-bottom: 10px; }
+    body.saari-mobile-enabled .dashboard-home--main .modules__header h2 { font-size: 1.45rem; }
+    body.saari-mobile-enabled .dashboard-home--main .module-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-cards > .saari-empty { grid-column: 1 / -1; }
+    body.saari-mobile-enabled .dashboard-home--main .module-card {
+        min-width: 0;
+        min-height: 98px;
+        padding: 10px 5px;
+        border-radius: 12px;
+        justify-content: center;
+        text-align: center;
+        transform: none;
+        will-change: auto;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__header,
+    body.saari-mobile-enabled .dashboard-home--main .module-card__footer,
+    body.saari-mobile-enabled .dashboard-home--main .module-card__content p,
+    body.saari-mobile-enabled .dashboard-home--main .module-card__accent { display: none; }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__icon {
+        width: 39px;
+        height: 39px;
+        border-radius: 10px;
+        background: var(--saari-hover);
+        border-color: var(--saari-border);
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__icon .icon { width: 23px; height: 23px; }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__content { margin: 0; width: 100%; }
+    body.saari-mobile-enabled .dashboard-home--main .module-card__content h3 {
+        font: 600 .77rem/1.25 var(--saari-font-sans);
+        letter-spacing: 0;
+        overflow-wrap: anywhere;
+        margin: 0;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-card::before,
+    body.saari-mobile-enabled .dashboard-home--main .module-card::after { display: none; }
+    body.saari-mobile-enabled .dashboard-home.dashboard-home--main .module-card:hover .module-card__content h3 { color: var(--saari-text) !important; }
+    body.saari-mobile-enabled .dashboard-home.dashboard-home--main .module-card:hover .module-card__icon {
+        color: var(--saari-accent) !important;
+        border-color: var(--saari-border);
+        transform: none;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .module-card:hover,
+    body.saari-mobile-enabled .dashboard-home--main .module-card:hover .module-card__content { transform: none; box-shadow: none; }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick { padding: 8px 10px; margin-bottom: 12px; gap: 4px; }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick__favorites { flex: 1 1 100%; min-width: 0; }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick .saari-quick-list {
+        flex-wrap: wrap;
+        width: 100%;
+        max-height: 8.5rem;
+        overflow: auto;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick .saari-route-row { flex: 1 1 100%; min-width: 0; }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick .saari-route-row > a {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        padding: 9px 0 9px 9px;
+    }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick .saari-route-row > button { min-width: 44px; min-height: 44px; }
+    body.saari-mobile-enabled .dashboard-home--main .home-quick__recent { width: 100%; }
+
+    body.saari-mobile-enabled .topbar { gap: .3rem; padding-inline: 10px; }
+    body.saari-mobile-enabled .topbar__context { display: none; }
+    body.saari-mobile-enabled .topbar__left,
+    body.saari-mobile-enabled .topbar__account { gap: .35rem; }
+    body.saari-mobile-enabled .saari-mobile-brand {
+        display: block;
+        font: 700 .9rem/1 var(--saari-font-sans);
+        letter-spacing: .08em;
+        color: var(--saari-text);
+    }
+    body.saari-mobile-enabled .topbar__account > .saari-theme-picker { display: none; }
+    body.saari-mobile-enabled .saari-mobile-profile-theme { display: grid; gap: 4px; margin-top: .7rem; font-size: .8rem; }
+    body.saari-mobile-enabled .saari-mobile-profile-theme select { width: 100%; max-width: none; min-height: 44px; }
+    body.saari-mobile-enabled .topbar__toggle,
+    body.saari-mobile-enabled .saari-command-trigger,
+    body.saari-mobile-enabled .notification-center__button,
+    body.saari-mobile-enabled .saari-profile__summary { min-width: 44px; min-height: 44px; padding: .3rem; }
+    body.saari-mobile-enabled .saari-command-trigger span,
+    body.saari-mobile-enabled .saari-command-trigger kbd { display: none; }
+    body.saari-mobile-enabled .notification-center__panel {
+        position: fixed;
+        top: calc(66px + env(safe-area-inset-top, 0px));
+        right: 10px;
+        width: min(345px, calc(100vw - 20px));
+    }
+    body.saari-mobile-enabled .page-content { padding: 16px 14px calc(86px + env(safe-area-inset-bottom, 0px)); }
+    body.saari-mobile-enabled .saari-mobile-nav {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        position: fixed;
+        z-index: 40;
+        inset: auto 0 0;
+        padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px));
+        background: var(--saari-surface-elevated);
+        border-top: 1px solid var(--saari-border);
+        box-shadow: 0 -4px 20px var(--saari-shadow-color);
+    }
+    body.saari-mobile-enabled .saari-mobile-nav__item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        min-height: 51px;
+        background: transparent;
+        border: 0;
+        border-radius: 9px;
+        color: var(--saari-text-muted);
+        font: 600 .69rem/1.2 var(--saari-font-sans);
+        text-decoration: none;
+        cursor: pointer;
+    }
+    body.saari-mobile-enabled .saari-mobile-nav__item .icon { width: 21px; height: 21px; }
+    body.saari-mobile-enabled .saari-mobile-nav__item[aria-current="page"],
+    body.saari-mobile-enabled .saari-mobile-nav__item[aria-expanded="true"] {
+        color: var(--saari-accent);
+        background: var(--saari-hover);
+    }
+    body.saari-mobile-enabled .saari-mobile-nav__item:focus-visible { outline: 2px solid var(--saari-focus-ring); }
+    body.saari-mobile-enabled.sidebar-mobile-open .saari-mobile-nav { visibility: hidden; }
+}
+@media screen and (min-width: 360px) and (max-width: 650px) {
+    body.saari-mobile-enabled .dashboard-home--main .module-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media screen and (max-width: 350px) {
+    body.saari-mobile-enabled .saari-mobile-brand { display: none; }
+}
+
+
+/* SAARI MOBILE - REFINAMENTO V2 */
+
+@media screen and (max-width: 650px) {
+
+    body.saari-mobile-enabled
+    .dashboard-home--main .dashboard-heading h1 {
+        color: #fffaf3 !important;
+        font-size: clamp(1.3rem, 5vw, 1.65rem);
+        line-height: 1.25;
+    }
+
+    body.saari-mobile-enabled
+    .dashboard-home--main .dashboard-heading h1 em {
+        color: #eee8d6 !important;
+    }
+
+    body.saari-mobile-enabled
+    .dashboard-home--main .home-quick .saari-quick-list {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+        align-content: start;
+        max-height: 12rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 3px 2px;
+        gap: 6px;
+    }
+
+    body.saari-mobile-enabled
+    .dashboard-home--main .home-quick .saari-route-row {
+        width: 100%;
+        min-height: 44px;
+        box-sizing: border-box;
+    }
+
+    body.saari-mobile-enabled
+    .dashboard-home--main .home-quick h2 {
+        margin-bottom: 4px;
+    }
+}

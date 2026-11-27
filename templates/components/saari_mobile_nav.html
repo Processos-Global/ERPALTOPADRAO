@@ -1,0 +1,14 @@
+<nav class="saari-mobile-nav" aria-label="Acesso rápido mobile">
+    <a class="saari-mobile-nav__item" href="{{ erp_nav_home.url }}" {% if erp_nav_home.current %}aria-current="page"{% endif %}>
+        <svg class="icon" aria-hidden="true"><use href="#icon-grid"></use></svg><span>Início</span>
+    </a>
+    <button type="button" class="saari-mobile-nav__item" data-mobile-favorites aria-haspopup="dialog" aria-controls="saari-command">
+        <svg class="icon" aria-hidden="true"><use href="#icon-star"></use></svg><span>Favoritos</span>
+    </button>
+    <a class="saari-mobile-nav__item" href="{% url 'usuarios:notificacoes' %}" {% if request.resolver_match.view_name == 'usuarios:notificacoes' %}aria-current="page"{% endif %}>
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg><span>Avisos</span>
+    </a>
+    <button type="button" class="saari-mobile-nav__item" data-mobile-profile aria-expanded="false">
+        <svg class="icon" aria-hidden="true"><use href="#icon-user"></use></svg><span>Perfil</span>
+    </button>
+</nav>

@@ -35,9 +35,10 @@
     <link rel="stylesheet" href="{% static 'css/saari-shell.css' %}?v=20261125">
     <link rel="stylesheet" href="{% static 'css/saari-select-search.css' %}?v=20261125">
     {% include "components/pwa_head.html" %}
+    <link rel="stylesheet" href="{% static 'css/saari-mobile.css' %}?v=2">
 </head>
 
-<body class="app-body" data-nav-account="{{ erp_nav_account }}">
+<body class="app-body{% if request.user.is_authenticated and not is_cliente_pos_obra and erp_nav_home %} saari-mobile-enabled{% endif %}" data-nav-account="{{ erp_nav_account }}">
     <a class="saari-skip-link" href="#main-content">Ir para o conteúdo</a>
     {% include "components/icons.html" %}
 
@@ -131,6 +132,7 @@
                         </svg>
                     </button>
 
+                    {% if request.user.is_authenticated and not is_cliente_pos_obra and erp_nav_home %}<span class="saari-mobile-brand" aria-hidden="true">SAARI</span>{% endif %}
                     <div class="topbar__context">
                         {% block breadcrumbs %}{% include "components/erp_breadcrumbs.html" %}{% endblock %}
                     </div>
@@ -213,6 +215,12 @@
                         <div class="saari-profile__panel">
                             <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
                             <span>{% if request.user.is_superuser %}Administrador{% else %}{{ request.user.perfil_erp.get_cargo_display|default:"Usuário" }}{% endif %}</span>
+                            {% if request.user.is_authenticated and not is_cliente_pos_obra and erp_nav_home %}
+                            <div class="saari-mobile-profile-theme">
+                                <span>Tema de exibição</span>
+                                {% include "components/theme_picker.html" %}
+                            </div>
+                            {% endif %}
                             <form method="post" action="{% url 'usuarios:logout' %}" data-logout-form>
                                 {% csrf_token %}
                                 <button type="submit" class="saari-profile__logout" data-logout-open>
@@ -285,5 +293,9 @@
 
     {% block extra_js %}{% endblock %}
     {% include "components/pwa_install_dialog.html" %}
+    {% if request.user.is_authenticated and not is_cliente_pos_obra and erp_nav_home %}
+        {% include "components/saari_mobile_nav.html" %}
+        <script defer src="{% static 'js/saari-mobile.js' %}?v=1"></script>
+    {% endif %}
 </body>
 </html>
