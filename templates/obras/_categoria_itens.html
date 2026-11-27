@@ -28,7 +28,7 @@
             <td><strong>{{ item.nome_item }}</strong>{% if item.observacao %}<small class="ft-row-note">{{ item.observacao }}</small>{% endif %}</td>
             <td>{{ item.quantidade|floatformat:2 }}</td>
             <td>{% if item.unidade %}{{ item.unidade.sigla }}{% else %}—{% endif %}</td>
-            <td class="ft-spec">{{ item.especificacao_completa|default:"—" }}{% if item.descricao_medidas %}<small class="ft-row-note"><strong>Medidas:</strong> {{ item.descricao_medidas }}</small>{% endif %}{% if item.material %}<small class="ft-row-note"><strong>Material:</strong> {{ item.material.descricao_completa }}</small>{% endif %}</td>
+            <td class="ft-spec">{{ item.especificacao_completa|default:"—"|linebreaksbr }}{% if item.descricao_medidas %}<small class="ft-row-note"><strong>Medidas:</strong> {{ item.descricao_medidas|linebreaksbr }}</small>{% endif %}{% if item.material %}<small class="ft-row-note"><strong>Material:</strong> {{ item.material.descricao_completa }}</small>{% endif %}</td>
             <td>
               {% if item.itens_compatibilizacao_gf.exists %}
                 <span class="ft-sync is-linked">Em compras</span>

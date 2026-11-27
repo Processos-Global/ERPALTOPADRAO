@@ -362,6 +362,42 @@ def ficha_tecnica_acao(request, obra_id):
 
         messages.success(request, "Categorias gerais da obra atualizadas.")
 
+    elif acao == "aplicar_categoria_todos_ambientes":
+        _, categorias_ambiente = _categorias_por_escopo()
+        categoria = get_object_or_404(
+            categorias_ambiente, pk=_pk_post(request, "categoria_lote")
+        )
+        ambientes = AmbienteFichaTecnica.objects.filter(
+            pavimento__ficha=ficha, ativo=True
+        ).select_related("caracteristica")
+        adicionados = existentes = ignorados = 0
+        for ambiente in ambientes:
+            if categoria.somente_area_molhada and ambiente.caracteristica.codigo != "AREA_MOLHADA":
+                ignorados += 1
+                continue
+            aplicacao, criada = CategoriaFichaTecnica.objects.get_or_create(
+                ficha=ficha, categoria=categoria, ambiente=ambiente
+            )
+            if criada:
+                adicionados += 1
+            elif not aplicacao.ativo:
+                aplicacao.ativo = True
+                aplicacao.save(update_fields=["ativo"])
+                adicionados += 1
+            else:
+                existentes += 1
+        if adicionados or existentes:
+            messages.success(request, (
+                f"{categoria.nome}: {adicionados} ambiente(s) atualizado(s), "
+                f"{existentes} já selecionado(s), {ignorados} não elegível(is)."
+            ))
+        else:
+            messages.warning(request, "Nenhum ambiente elegível para esta categoria.")
+        if adicionados and ficha.status != FichaTecnicaObra.Status.EM_PREENCHIMENTO:
+            ficha.status = FichaTecnicaObra.Status.EM_PREENCHIMENTO
+            ficha.save(update_fields=["status", "atualizado_em"])
+        return redirect(f"{reverse('obras:ficha_tecnica', args=[obra.pk])}?etapa=3")
+
     elif acao == "salvar_categorias_ambiente":
         ambiente = get_object_or_404(AmbienteFichaTecnica, pk=_pk_post(request, "ambiente_id"), pavimento__ficha=ficha)
         selecionadas = _categorias_post(request)

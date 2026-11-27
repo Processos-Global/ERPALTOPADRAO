@@ -12,6 +12,7 @@
 .ft-picker select,.ft-picker .fin-searchable{flex:1 1 min(100%,240px);max-width:520px}
 .ft-picker select{padding:11px 12px;border:1px solid var(--saari-control-border);border-radius:9px;background:var(--saari-input-bg);color:var(--saari-text);font:inherit;font-size:13px}
 .ft-picker-count{font-size:12px;color:var(--saari-text-muted)}
+.ft-bulk-categoria{margin-bottom:16px}.ft-bulk-help{font-size:12px;color:var(--saari-text-muted);margin:8px 0 0}.ft-bulk-categoria .ft-btn{white-space:normal}
 .ft-header-actions{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
 .ft-panel-head--with-action{flex-wrap:wrap}
 .ft-panel-head--with-action .ft-btn:focus-visible{outline:2px solid var(--saari-gold);outline-offset:2px}
@@ -184,6 +185,30 @@
           <div class="ft-picker"><label for="ft-select-categorias">Ambiente</label><select id="ft-select-categorias" data-ambiente-select data-searchable>
             {% for p in pavimentos %}<optgroup label="{{ p.nome }}">{% for a in ambientes %}{% if a.pavimento_id == p.pk %}<option value="?etapa=3&ambiente={{ a.pk|unlocalize }}" {% if ambiente_selecionado.pk == a.pk %}selected{% endif %}>{{ a.identificacao }} · {{ a.total_categorias_ativas }} categorias</option>{% endif %}{% endfor %}</optgroup>{% endfor %}
           </select><span class="ft-picker-count">{{ total_ambientes }} ambientes cadastrados</span></div>
+
+          {% if total_ambientes and categorias_ambiente %}
+            <details class="ft-add ft-bulk-categoria">
+              <summary>Aplicar categoria a todos os ambientes</summary>
+              <form method="post" action="{% url 'obras:ficha_tecnica_acao' obra.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="acao" value="aplicar_categoria_todos_ambientes">
+                <input type="hidden" name="etapa" value="3">
+                <div class="ft-grid compact">
+                  <div class="ft-field c9">
+                    <label for="ft-categoria-lote">Categoria</label>
+                    <select id="ft-categoria-lote" name="categoria_lote" required>
+                      <option value="">Selecione uma categoria...</option>
+                      {% for c in categorias_ambiente %}
+                        <option value="{{ c.pk|unlocalize }}">{{ c.nome }}{% if c.somente_area_molhada %} (somente áreas molhadas){% endif %}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="c3 ft-submit-cell"><button class="ft-btn" type="submit">Aplicar a todos</button></div>
+                </div>
+                <p class="ft-bulk-help">Adiciona a categoria aos ambientes cadastrados e elegíveis, sem remover outras categorias ou itens. Para ar-condicionado, utilize apenas se todos os ambientes elegíveis tiverem equipamento.</p>
+              </form>
+            </details>
+          {% endif %}
 
           {% if ambiente_selecionado %}
             <div class="ft-context">
