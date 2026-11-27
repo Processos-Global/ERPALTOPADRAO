@@ -1,0 +1,19 @@
+.saari-pwa-install[hidden] { display: none !important; }
+.saari-pwa-install { padding: .5rem .75rem; flex-shrink: 0; }
+.saari-pwa-install__button { width: 100%; display: flex; align-items: center; gap: .65rem;
+    min-height: 44px; padding: .55rem .65rem; border: 1px solid currentColor;
+    border-radius: 8px; background: transparent; color: var(--saari-sidebar-text, #f8efe2);
+    cursor: pointer; text-align: left; font: inherit; }
+.saari-pwa-install__button svg { flex-shrink: 0; }
+.saari-pwa-install__button:focus-visible { outline: 2px solid #b9aa72; outline-offset: 2px; }
+.sidebar-is-collapsed .saari-pwa-install__button { justify-content: center; }
+.sidebar-is-collapsed .saari-pwa-install__button span { display: none; }
+.saari-pwa-dialog { box-sizing: border-box; width: min(440px, calc(100% - 32px));
+    max-height: 85vh; overflow: auto; margin: auto; padding: 1.5rem;
+    background: var(--saari-surface, #fffdfa); color: var(--saari-text, #352923);
+    border: 1px solid var(--saari-border, #ded6ca); border-radius: 12px; }
+.saari-pwa-dialog::backdrop { background: rgb(0 0 0 / .5); }
+.saari-pwa-dialog h2 { margin: 0 0 .75rem; font-size: 1.25rem; }
+.saari-pwa-dialog p { margin: .75rem 0; }
+.saari-pwa-dialog button { min-height: 44px; border: 0; border-radius: 8px; padding: .5rem 1rem;
+    background: var(--saari-primary, #453330); color: var(--saari-on-primary, #fffaf3); cursor: pointer; }

@@ -34,6 +34,7 @@
     {% include "components/saari_theme.html" %}
     <link rel="stylesheet" href="{% static 'css/saari-shell.css' %}?v=20261125">
     <link rel="stylesheet" href="{% static 'css/saari-select-search.css' %}?v=20261125">
+    {% include "components/pwa_head.html" %}
 </head>
 
 <body class="app-body" data-nav-account="{{ erp_nav_account }}">
@@ -106,6 +107,7 @@
 
             {% endif %}
             {% if erp_nav_home %}{% include "components/erp_sidebar_navigation.html" %}{% endif %}
+            {% include "components/pwa_install_button.html" %}
         </aside>
 
         <div
@@ -282,5 +284,6 @@
     <script defer src="{% static 'js/saari-select-search.js' %}?v=20261127"></script>
 
     {% block extra_js %}{% endblock %}
+    {% include "components/pwa_install_dialog.html" %}
 </body>
 </html>

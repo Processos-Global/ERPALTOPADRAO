@@ -1,0 +1,5 @@
+{% load static %}
+<link rel="manifest" href="{% static 'pwa/manifest.json' %}">
+<link rel="apple-touch-icon" href="{% static 'pwa/icons/apple-touch-icon.png' %}">
+<link rel="stylesheet" href="{% static 'pwa/install.css' %}?v=1">
+<script defer src="{% static 'pwa/install.js' %}?v=1" data-worker-url="{% url 'saari_service_worker' %}"></script>

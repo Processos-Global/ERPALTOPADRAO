@@ -3,8 +3,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from .pwa import service_worker
+
 
 urlpatterns = [
+    path("service-worker.js", service_worker, name="saari_service_worker"),
     path("admin/", admin.site.urls),
 
     path("", include("core.urls")),
